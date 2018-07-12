@@ -176,7 +176,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   static boolean isReady(TaskActionClient actionClient, SortedSet<Interval> intervals) throws IOException
   {
     final List<TaskLock> locks = getTaskLocks(actionClient);
-    if (locks.size() == 0) {
+    if (locks.isEmpty()) {
       try {
         Tasks.tryAcquireExclusiveLocks(actionClient, intervals);
       }

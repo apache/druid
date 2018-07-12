@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -64,14 +62,14 @@ import io.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.timeline.DataSegment;
-import org.codehaus.plexus.util.FileUtils;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -230,23 +228,20 @@ public class ParallelIndexSubTask extends AbstractTask
     return TaskStatus.success(getId());
   }
 
-  private Map<Interval, TaskLock> tryAcquireExclusiveSurrogateLocks(
+  private void tryAcquireExclusiveSurrogateLocks(
       TaskActionClient client,
       SortedSet<Interval> intervals
   )
       throws IOException
   {
-    final Map<Interval, TaskLock> lockMap = new HashMap<>();
     for (Interval interval : Tasks.computeCompactIntervals(intervals)) {
-      final TaskLock lock = Preconditions.checkNotNull(
+      Preconditions.checkNotNull(
           client.submit(
               new SurrogateAction<>(supervisorTaskId, new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval))
           ),
           "Cannot acquire a lock for interval[%s]", interval
       );
-      lockMap.put(interval, lock);
     }
-    return lockMap;
   }
 
   /**
@@ -284,8 +279,8 @@ public class ParallelIndexSubTask extends AbstractTask
     if (toolbox.getMonitorScheduler() != null) {
       toolbox.getMonitorScheduler().addMonitor(
           new RealtimeMetricsMonitor(
-              ImmutableList.of(fireDepartmentForMetrics),
-              ImmutableMap.of(DruidMetrics.TASK_ID, new String[]{getId()})
+              Collections.singletonList(fireDepartmentForMetrics),
+              Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
           )
       );
     }

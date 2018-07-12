@@ -36,7 +36,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
 {
   private final String subtaskId;
 
-  public ParallelIndexTaskClient(
+  ParallelIndexTaskClient(
       HttpClient httpClient,
       ObjectMapper objectMapper,
       TaskInfoProvider taskInfoProvider,
@@ -49,7 +49,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
     this.subtaskId = callerId;
   }
 
-  public String getSubtaskId()
+  String getSubtaskId()
   {
     return subtaskId;
   }
