@@ -24,6 +24,14 @@ import io.druid.indexing.common.actions.TaskAction;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 
+/**
+ * This class is used in {@link ActionBasedSegmentAllocator} and expected to generate a
+ * {@link TaskAction<SegmentIdentifier>} which is submitted to overlords to allocate a new segment.
+ * The {@link #generate} method can return any implementation of {@link TaskAction<SegmentIdentifier>}.
+ *
+ * @see io.druid.indexing.common.actions.SegmentAllocateAction
+ * @see io.druid.indexing.common.actions.SurrogateAction
+ */
 public interface SegmentAllocateActionGenerator
 {
   TaskAction<SegmentIdentifier> generate(

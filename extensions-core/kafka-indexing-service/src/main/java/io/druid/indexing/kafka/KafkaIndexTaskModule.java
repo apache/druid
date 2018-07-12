@@ -53,8 +53,10 @@ public class KafkaIndexTaskModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(new TypeLiteral<IndexTaskClientFactory<KafkaIndexTaskClient>>(){})
-          .to(KafkaIndexTaskClientFactory.class)
-          .in(LazySingleton.class);
+    binder.bind(
+        new TypeLiteral<IndexTaskClientFactory<KafkaIndexTaskClient>>()
+        {
+        }
+    ).to(KafkaIndexTaskClientFactory.class).in(LazySingleton.class);
   }
 }
