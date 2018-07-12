@@ -187,11 +187,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-Xmx2048m -Xms512m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
-                        -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                        <!--@TODO After fixing https://github.com/druid-io/druid/issues/4964 remove this parameter-->
-                        -Ddruid.indexing.doubleStorage=double
-                    </argLine>
                     <excludedGroups>io.druid.collections.test.annotation.Benchmark</excludedGroups>
                 </configuration>
             </plugin>
