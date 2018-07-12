@@ -127,9 +127,11 @@ public interface TaskStorage
    * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No particular order
    * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
+   * @param datasource datasource
+   *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<Task>> getActiveTaskInfo();
+  List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String datasource);
 
   /**
    * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage facility. No
@@ -137,7 +139,8 @@ public interface TaskStorage
    * No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
    *
    * @param maxTaskStatuses maxTaskStatuses
-   * @param duration duration
+   * @param duration        duration
+   * @param datasource      datasource
    *
    * @return list of {@link TaskInfo}
    */

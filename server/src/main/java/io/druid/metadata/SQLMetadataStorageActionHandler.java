@@ -350,18 +350,50 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<EntryType>> getActiveTaskInfo()
+  public List<TaskInfo<EntryType>> getActiveTaskInfo(@Nullable String datasource)
   {
     return getConnector().retryWithHandle(
         handle -> {
-          return handle.createQuery(
-              StringUtils.format(
-                  "SELECT id, status_payload, payload, datasource, created_date FROM %s WHERE active = TRUE ORDER BY created_date",
-                  entryTable
-              )
-          ).map(new TaskInfoMapper()).list();
+          final Query<Map<String, Object>> query = createActiveStatusesQuery(
+              handle,
+              datasource
+          );
+          return query.map(new TaskInfoMapper()).list();
         }
     );
+  }
+
+  private Query<Map<String, Object>> createActiveStatusesQuery(Handle handle, @Nullable String datasource)
+  {
+    String sql = StringUtils.format(
+        "SELECT "
+        + "  id, "
+        + "  status_payload, "
+        + "  payload, "
+        + "  datasource, "
+        + "  created_date "
+        + "FROM "
+        + "  %s "
+        + "WHERE "
+        + getWhereClauseForActiveStatusesQuery(datasource)
+        + "ORDER BY created_date",
+        entryTable
+    );
+
+    Query<Map<String, Object>> query = handle.createQuery(sql);
+    if (datasource != null) {
+      query = query.bind("ds", datasource);
+    }
+    return query;
+  }
+
+  private String getWhereClauseForActiveStatusesQuery(String datasource)
+  {
+    String sql = StringUtils.format("active = TRUE ");
+    if (datasource != null) {
+      sql += " AND datasource = :ds ";
+    }
+    return sql;
   }
 
   class TaskInfoMapper implements ResultSetMapper<TaskInfo<EntryType>>

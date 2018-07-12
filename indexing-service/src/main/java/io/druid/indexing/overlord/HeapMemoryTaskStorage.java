@@ -170,7 +170,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task>> getActiveTaskInfo()
+  public List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String datasource)
   {
     giant.lock();
 

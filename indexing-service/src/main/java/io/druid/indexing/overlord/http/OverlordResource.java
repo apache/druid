@@ -632,14 +632,14 @@ public class OverlordResource
     List<TaskInfo<Task>> allActiveTaskInfo = Lists.newArrayList();
     final List<AnyTask> allActiveTasks = Lists.newArrayList();
     if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
-      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
+      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
       for (final TaskInfo<Task> task : allActiveTaskInfo) {
         allActiveTasks.add(
             new AnyTask(
                 task.getId(),
                 task.getTask() == null ? null : task.getTask().getType(),
                 SettableFuture.create(),
-                task.getDataSource(),
+                task.getDataSource(), // ?
                 null,
                 null,
                 DateTimes.EPOCH,
