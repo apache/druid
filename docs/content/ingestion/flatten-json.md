@@ -9,7 +9,7 @@ layout: doc_page
 | useFieldDiscovery | Boolean | If true, interpret all fields with singular values (not a map or list) and flat lists (lists of singular values) at the root level as columns. | no (default == true) |
 | fields | JSON Object array | Specifies the fields of interest and how they are accessed | no (default == []) |
 
-Defining the JSON Flatten Spec allows nested JSON fields to be flattened during ingestion time. Only the JSON ParseSpec supports flattening.
+Defining the JSON Flatten Spec allows nested JSON fields to be flattened during ingestion time. Only parseSpecs of types "json" or ["avro"](../development/extensions-core/avro.html) support flattening.
 
 'fields' is a list of JSON Objects, describing the field names and how the fields are accessed:
 
