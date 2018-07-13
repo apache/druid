@@ -125,6 +125,8 @@ String functions accept strings, and return a type appropriate to the function.
 |Function|Notes|
 |--------|-----|
 |`x \|\| y`|Concat strings x and y.|
+|`CONCAT(expr, expr...)`|Concats a list of expressions.|
+|`TEXTCAT(expr, expr)`|Two argument version of CONCAT.|
 |`LENGTH(expr)`|Length of expr in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|
