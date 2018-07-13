@@ -40,6 +40,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  */
@@ -152,13 +153,14 @@ public class Execs
     );
   }
 
-  private static final AtomicLong fjpWorkerThreadCount = new AtomicLong(0L);
+  private static final LongAdder fjpWorkerThreadCount = new LongAdder();
 
   public static ForkJoinWorkerThread makeWorkerThread(String name, ForkJoinPool pool)
   {
     final FJPWorkerThread t = new FJPWorkerThread(pool);
     t.setDaemon(true);
-    t.setName(StringUtils.nonStrictFormat(name, fjpWorkerThreadCount.getAndIncrement()));
+    fjpWorkerThreadCount.increment();
+    t.setName(StringUtils.nonStrictFormat(name, fjpWorkerThreadCount.longValue()));
     return t;
   }
 
