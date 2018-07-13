@@ -1090,13 +1090,16 @@ public class KafkaSupervisor implements Supervisor
                           } else {
                             final TaskGroup taskGroup = taskGroups.computeIfAbsent(
                                 taskGroupId,
-                                k -> new TaskGroup(
-                                    ImmutableMap.copyOf(
-                                        kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap()
-                                    ),
-                                    kafkaTask.getIOConfig().getMinimumMessageTime(),
-                                    kafkaTask.getIOConfig().getMaximumMessageTime()
-                                )
+                                k -> {
+                                  log.info("Creating a new task group for taskGroupId[%d]", taskGroupId);
+                                  return new TaskGroup(
+                                      ImmutableMap.copyOf(
+                                          kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap()
+                                      ),
+                                      kafkaTask.getIOConfig().getMinimumMessageTime(),
+                                      kafkaTask.getIOConfig().getMaximumMessageTime()
+                                  );
+                                }
                             );
                             taskGroupsToVerify.add(taskGroupId);
                             taskGroup.tasks.putIfAbsent(taskId, new TaskData());
