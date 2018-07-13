@@ -32,8 +32,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.IOException;
-
 public class KafkaIOConfigTest
 {
   private final ObjectMapper mapper;
@@ -258,26 +256,5 @@ public class KafkaIOConfigTest
     exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
     exception.expectMessage(CoreMatchers.containsString("end offset must be >= start offset"));
     mapper.readValue(jsonStr, IOConfig.class);
-  }
-
-  @Test
-  public void testSerdeWithoutGroupId() throws IOException
-  {
-    final String jsonStr =
-        "{\n"
-        + "  \"type\": \"kafka\",\n"
-        + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-        + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
-        + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":15, \"1\":200}},\n"
-        + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"}\n"
-        + "}";
-
-    exception.expect(CoreMatchers.instanceOf(JsonMappingException.class));
-    exception.expectCause(CoreMatchers.instanceOf(NullPointerException.class));
-    exception.expectMessage("taskGroupId");
-    mapper.readValue(
-        mapper.writeValueAsString(mapper.readValue(jsonStr, IOConfig.class)),
-        IOConfig.class
-    );
   }
 }
