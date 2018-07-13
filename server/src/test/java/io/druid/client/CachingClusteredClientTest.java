@@ -3102,7 +3102,7 @@ public class CachingClusteredClientTest
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
                                     .dataSource(DATA_SOURCE)
                                     .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(interval)))
-                                    .context(ImmutableMap.<String, Object>of(
+                                    .context(ImmutableMap.of(
                                         "If-None-Match",
                                         "aVJV29CJY93rszVW/QBy0arWZo0="
                                     ))
