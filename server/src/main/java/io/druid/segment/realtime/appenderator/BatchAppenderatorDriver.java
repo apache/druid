@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -33,11 +33,11 @@ import io.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -129,13 +129,11 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       long pushAndClearTimeoutMs
   ) throws InterruptedException, ExecutionException, TimeoutException
   {
-    final List<SegmentIdentifier> segmentIdentifierList = getSegmentWithStates(sequenceNames)
-        .filter(segmentWithState -> segmentWithState.getState() == SegmentState.APPENDING)
-        .map(SegmentWithState::getSegmentIdentifier)
-        .collect(Collectors.toList());
+    final Map<SegmentIdentifier, SegmentWithState> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames)
+        .collect(Collectors.toMap(SegmentWithState::getSegmentIdentifier, Function.identity()));
 
     final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures.transformAsync(
-        pushInBackground(null, segmentIdentifierList, false),
+        pushInBackground(null, requestedSegmentIdsForSequences.keySet(), false),
         this::dropInBackground
     );
 
@@ -147,17 +145,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     final Map<SegmentIdentifier, DataSegment> pushedSegmentIdToSegmentMap = segmentsAndMetadata
         .getSegments()
         .stream()
-        .collect(Collectors.toMap(
-            SegmentIdentifier::fromDataSegment,
-            dataSegment -> dataSegment
-        ));
-
-    final Map<SegmentIdentifier, SegmentWithState> requestedSegmentIdsForSequences = getSegmentWithStates(sequenceNames)
-        .filter(segmentWithState -> segmentWithState.getState() == SegmentState.APPENDING)
-        .collect(Collectors.toMap(
-            SegmentWithState::getSegmentIdentifier,
-            segmentWithState -> segmentWithState
-        ));
+        .collect(Collectors.toMap(SegmentIdentifier::fromDataSegment, Function.identity()));
 
     if (!pushedSegmentIdToSegmentMap.keySet().equals(requestedSegmentIdsForSequences.keySet())) {
       throw new ISE(
@@ -167,12 +155,28 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       );
     }
 
-    // State transition
-    requestedSegmentIdsForSequences.forEach(
-        (segmentId, segmentWithState) -> {
-          segmentWithState.pushAndDrop(pushedSegmentIdToSegmentMap.get(segmentId));
+    synchronized (segments) {
+      for (String sequenceName : sequenceNames) {
+        final SegmentsForSequence segmentsForSequence = segments.get(sequenceName);
+        if (segmentsForSequence == null) {
+          throw new ISE("Can't find segmentsForSequence for sequence[%s]", sequenceName);
         }
-    );
+
+        segmentsForSequence.getAllSegmentsOfInterval().forEach(segmentsOfInterval -> {
+          final SegmentWithState appendingSegment = segmentsOfInterval.getAppendingSegment();
+          if (appendingSegment != null) {
+            final DataSegment pushedSegment = pushedSegmentIdToSegmentMap.get(appendingSegment.getSegmentIdentifier());
+            if (pushedSegment == null) {
+              throw new ISE("Can't find pushedSegments for segment[%s]", appendingSegment.getSegmentIdentifier());
+            }
+
+            segmentsOfInterval.finishAppendingToCurrentActiveSegment(
+                segmentWithState -> segmentWithState.pushAndDrop(pushedSegment)
+            );
+          }
+        });
+      }
+    }
 
     return segmentsAndMetadata;
   }
@@ -196,7 +200,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
             snapshot
                 .values()
                 .stream()
-                .flatMap(SegmentsForSequence::segmentStateStream)
+                .flatMap(SegmentsForSequence::allSegmentStateStream)
                 .map(segmentWithState -> Preconditions
                     .checkNotNull(
                         segmentWithState.getDataSegment(),

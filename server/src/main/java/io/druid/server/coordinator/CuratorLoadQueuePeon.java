@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -174,7 +174,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       }
     }
 
-    log.info("Asking server peon[%s] to load segment[%s]", basePath, segment.getIdentifier());
+    log.debug("Asking server peon[%s] to load segment[%s]", basePath, segment.getIdentifier());
     queuedSize.addAndGet(segment.getSize());
     segmentsToLoad.put(segment, new SegmentHolder(segment, LOAD, Collections.singletonList(callback)));
   }
@@ -205,7 +205,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       }
     }
 
-    log.info("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
+    log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
     segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
   }
 
@@ -244,16 +244,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     }
 
     try {
-      if (currentlyProcessing == null) {
-        if (!stopped) {
-          log.makeAlert("Crazy race condition! server[%s]", basePath)
-             .emit();
-        }
-        actionCompleted();
-        return;
-      }
-
-      log.info("Server[%s] processing segment[%s]", basePath, currentlyProcessing.getSegmentIdentifier());
       final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentIdentifier());
       final byte[] payload = jsonMapper.writeValueAsBytes(currentlyProcessing.getChangeRequest());
       curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
@@ -396,8 +386,13 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         );
         return;
       }
+      log.info(
+          "Server[%s] done processing %s of segment [%s]",
+          basePath,
+          currentlyProcessing.getType() == LOAD ? "load" : "drop",
+          path
+      );
       actionCompleted();
-      log.info("Server[%s] done processing [%s]", basePath, path);
     }
   }
 
