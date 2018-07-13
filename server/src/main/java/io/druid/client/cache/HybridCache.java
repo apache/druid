@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,8 +43,8 @@ public class HybridCache implements Cache
   private final Cache level1;
   private final Cache level2;
 
-  private final AtomicLong hitCount = new AtomicLong(0);
-  private final AtomicLong missCount = new AtomicLong(0);
+  private final LongAdder hitCount = new LongAdder();
+  private final LongAdder missCount = new LongAdder();
 
   public HybridCache(HybridCacheConfig config, Cache level1, Cache level2)
   {
@@ -66,10 +66,10 @@ public class HybridCache implements Cache
       }
     }
     if (res != null) {
-      hitCount.incrementAndGet();
+      hitCount.increment();
       return res;
     } else {
-      missCount.incrementAndGet();
+      missCount.increment();
       return null;
     }
   }
@@ -98,7 +98,7 @@ public class HybridCache implements Cache
   {
     Set<NamedKey> remaining = Sets.newHashSet(keys);
     Map<NamedKey, byte[]> res = level1.getBulk(keys);
-    hitCount.addAndGet(res.size());
+    hitCount.add(res.size());
 
     remaining = Sets.difference(remaining, res.keySet());
 
@@ -109,8 +109,8 @@ public class HybridCache implements Cache
       }
 
       int size = res2.size();
-      hitCount.addAndGet(size);
-      missCount.addAndGet(remaining.size() - size);
+      hitCount.add(size);
+      missCount.add(remaining.size() - size);
 
       if (size != 0) {
         res = Maps.newHashMap(res);
@@ -161,6 +161,14 @@ public class HybridCache implements Cache
         materializedL1Results.set(i, other);
       }
     }
+    // Register hits/misses early so it doesn't require the stream to be consumed
+    materializedL1Results.forEach(sp -> {
+      if (sp.getRhs().isPresent()) {
+        hitCount.increment();
+      } else {
+        missCount.increment();
+      }
+    });
     return materializedL1Results.stream();
   }
 
@@ -177,8 +185,8 @@ public class HybridCache implements Cache
     CacheStats stats1 = level1.getStats();
     CacheStats stats2 = level2.getStats();
     return new CacheStats(
-        hitCount.get(),
-        missCount.get(),
+        hitCount.longValue(),
+        missCount.longValue(),
         stats1.getNumEntries() + stats2.getNumEntries(),
         stats1.getSizeInBytes() + stats2.getSizeInBytes(),
         stats1.getNumEvictions() + stats2.getNumEvictions(),

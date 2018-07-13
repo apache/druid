@@ -22,11 +22,10 @@ package io.druid.client.cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.name.Names;
+import io.druid.collections.SerializablePair;
 import io.druid.guice.CacheModule;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.annotations.Global;
@@ -35,8 +34,12 @@ import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class HybridCacheTest
 {
@@ -53,17 +56,12 @@ public class HybridCacheTest
     System.setProperty(prefix + ".l2.hosts", "localhost:11711");
 
     final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("hybridTest");
-                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-                binder.install(new CacheModule(prefix));
-              }
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
+            binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("hybridTest");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+              binder.install(new CacheModule(prefix));
             }
         )
     );
@@ -96,7 +94,6 @@ public class HybridCacheTest
     final byte[] value1 = Ints.toByteArray(1);
     final byte[] value2 = Ints.toByteArray(2);
     final byte[] value3 = Ints.toByteArray(3);
-
 
 
     // test put puts to both
@@ -137,6 +134,24 @@ public class HybridCacheTest
       Assert.assertEquals(hits, cache.getStats().getNumHits());
     }
 
+    // test streaming bulk get with l1 and l2
+    {
+      final List<Cache.NamedKey> keys = ImmutableList.of(key1, key2, key3);
+      final List<SerializablePair<Cache.NamedKey, Optional<byte[]>>> res = cache
+          .getBulk(keys.stream()).collect(Collectors.toList());
+      Assert.assertNotNull(res);
+      Assert.assertEquals(Arrays.asList(
+          new SerializablePair<>(key1, Optional.of(value1)),
+          new SerializablePair<>(key2, Optional.of(value2)),
+          new SerializablePair<>(key3, Optional.of(value3))
+      ), res);
+
+      hits += 3;
+      Assert.assertEquals(0, cache.getStats().getNumMisses());
+      Assert.assertEquals(hits, cache.getStats().getNumHits());
+    }
+
+
     // test bulk get with l1 entries only
     {
       final HashSet<Cache.NamedKey> keys = Sets.newHashSet(key1, key2);
@@ -174,6 +189,32 @@ public class HybridCacheTest
 
       Assert.assertEquals(++hits, cache.getStats().getNumHits());
       Assert.assertEquals(++misses, cache.getStats().getNumMisses());
+    }
+
+    {
+      final List<Cache.NamedKey> keys = ImmutableList.of(key3, key4);
+      final List<SerializablePair<Cache.NamedKey, Optional<byte[]>>> res = cache
+          .getBulk(keys.stream()).collect(Collectors.toList());
+      Assert.assertNotNull(res);
+      Assert.assertEquals(Arrays.asList(
+          new SerializablePair<>(key3, Optional.of(value3)),
+          new SerializablePair<>(key4, Optional.empty())
+      ), res);
+      Assert.assertEquals(++misses, cache.getStats().getNumMisses());
+      Assert.assertEquals(++hits, cache.getStats().getNumHits());
+    }
+
+    {
+      final List<Cache.NamedKey> keys = ImmutableList.of(key1, key4);
+      final List<SerializablePair<Cache.NamedKey, Optional<byte[]>>> res = cache
+          .getBulk(keys.stream()).collect(Collectors.toList());
+      Assert.assertNotNull(res);
+      Assert.assertEquals(Arrays.asList(
+          new SerializablePair<>(key1, Optional.of(value1)),
+          new SerializablePair<>(key4, Optional.empty())
+      ), res);
+      Assert.assertEquals(++misses, cache.getStats().getNumMisses());
+      Assert.assertEquals(++hits, cache.getStats().getNumHits());
     }
   }
 }
