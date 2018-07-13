@@ -19,12 +19,13 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -35,14 +36,19 @@ import io.druid.data.input.InputSplit;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import io.druid.indexing.common.Counters;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.task.ParallelIndexSupervisorTask.Status;
 import io.druid.indexing.common.task.TaskMonitor.MonitorEntry;
 import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
 import io.druid.indexing.common.task.TaskMonitor.TaskHistory;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.appenderator.UsedSegmentChecker;
@@ -52,6 +58,9 @@ import io.druid.segment.realtime.firehose.ChatHandlers;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -71,7 +80,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -91,6 +102,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
 {
   private static final Logger log = new Logger(SinglePhaseParallelIndexTaskRunner.class);
 
+  private final TaskToolbox toolbox;
   private final String taskId;
   private final String groupId;
   private final ParallelIndexIngestionSpec ingestionSchema;
@@ -107,21 +119,25 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   // subTaskId -> report
   private final ConcurrentMap<String, PushedSegmentsReport> segmentsMap = new ConcurrentHashMap<>();
 
+  private final Counters counters = new Counters();
+
   private volatile boolean stopped;
   private volatile TaskMonitor<ParallelIndexSubTask> taskMonitor;
 
   private int nextSpecId = 0;
 
   SinglePhaseParallelIndexTaskRunner(
-      @JsonProperty("id") String taskId,
+      TaskToolbox toolbox,
+      String taskId,
       String groupId,
-      @JsonProperty("spec") ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper
+      ParallelIndexIngestionSpec ingestionSchema,
+      Map<String, Object> context,
+      IndexingServiceClient indexingServiceClient,
+      ChatHandlerProvider chatHandlerProvider,
+      AuthorizerMapper authorizerMapper
   )
   {
+    this.toolbox = toolbox;
     this.taskId = taskId;
     this.groupId = groupId;
     this.ingestionSchema = ingestionSchema;
@@ -134,7 +150,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   }
 
   @Override
-  public TaskState run(TaskToolbox toolbox) throws Exception
+  public TaskState run() throws Exception
   {
     log.info(
         "Found chat handler of class[%s]",
@@ -256,6 +272,12 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   }
 
   @VisibleForTesting
+  TaskToolbox getToolbox()
+  {
+    return toolbox;
+  }
+
+  @VisibleForTesting
   ParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
@@ -266,8 +288,87 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
     return ingestionSchema.getDataSchema().getDataSource();
   }
 
-  // Internal API for collecting reports from subTasks
+  // Internal APIs
 
+  /**
+   * Allocate a new {@link SegmentIdentifier} for a request from {@link ParallelIndexSubTask}.
+   * The returned segmentIdentifiers have different {@code partitionNum} (thereby different {@link NumberedShardSpec})
+   * per bucket interval.
+   */
+  @POST
+  @Path("/segment/allocate")
+  @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+  public Response allocateSegment(
+      DateTime timestamp,
+      @Context final HttpServletRequest req
+  )
+  {
+    ChatHandlers.authorizationCheck(
+        req,
+        Action.READ,
+        getDataSource(),
+        authorizerMapper
+    );
+
+    try {
+      final SegmentIdentifier segmentIdentifier = allocateNewSegment(timestamp);
+      return Response.ok(toolbox.getObjectMapper().writeValueAsBytes(segmentIdentifier)).build();
+    }
+    catch (IOException | IllegalStateException e) {
+      return Response.serverError().entity(Throwables.getStackTraceAsString(e)).build();
+    }
+    catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST).entity(Throwables.getStackTraceAsString(e)).build();
+    }
+  }
+
+  @VisibleForTesting
+  SegmentIdentifier allocateNewSegment(DateTime timestamp) throws IOException
+  {
+    final String dataSource = getDataSource();
+    final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
+    final SortedSet<Interval> bucketIntervals = Preconditions.checkNotNull(
+        granularitySpec.bucketIntervals().orNull(),
+        "bucketIntervals"
+    );
+    // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
+    final Map<Interval, String> versions = toolbox
+        .getTaskActionClient()
+        .submit(new LockListAction())
+        .stream()
+        .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
+
+    final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
+    if (!maybeInterval.isPresent()) {
+      throw new IAE("Could not find interval for timestamp [%s]", timestamp);
+    }
+
+    final Interval interval = maybeInterval.get();
+    if (!bucketIntervals.contains(interval)) {
+      throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
+    }
+
+    final int partitionNum = counters.increment(interval.toString(), 1);
+    return new SegmentIdentifier(
+        dataSource,
+        interval,
+        findVersion(versions, interval),
+        new NumberedShardSpec(partitionNum, 0)
+    );
+  }
+
+  private static String findVersion(Map<Interval, String> versions, Interval interval)
+  {
+    return versions.entrySet().stream()
+                   .filter(entry -> entry.getKey().contains(interval))
+                   .map(Entry::getValue)
+                   .findFirst()
+                   .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
+  }
+
+  /**
+   * {@link ParallelIndexSubTask}s call this API to report the segments they've generated and pushed.
+   */
   @POST
   @Path("/report")
   @Consumes(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
@@ -283,7 +384,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
         authorizerMapper
     );
     collectReport(report);
-    return Response.status(Response.Status.OK).build();
+    return Response.ok().build();
   }
 
   @VisibleForTesting

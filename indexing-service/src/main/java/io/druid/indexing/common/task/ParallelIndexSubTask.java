@@ -31,16 +31,12 @@ import io.druid.data.input.InputRow;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import io.druid.indexing.appenderator.CountingActionBasedSegmentAllocator;
-import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SurrogateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
@@ -75,7 +71,6 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 /**
  * A worker task of {@link ParallelIndexSupervisorTask}. Similar to {@link IndexTask}, but this task
@@ -182,11 +177,6 @@ public class ParallelIndexSubTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
-    final boolean explicitIntervals = ingestionSchema.getDataSchema()
-                                                     .getGranularitySpec()
-                                                     .bucketIntervals()
-                                                     .isPresent();
-
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
     if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
@@ -198,30 +188,18 @@ public class ParallelIndexSubTask extends AbstractTask
     // Firehose temporary directory is automatically removed when this IndexTask completes.
     FileUtils.forceMkdir(firehoseTempDir);
 
-    final DataSchema dataSchema = ingestionSchema.getDataSchema();
-    final Map<Interval, String> versions;
-
-    if (explicitIntervals) {
-      versions = toolbox.getTaskActionClient().submit(new SurrogateAction<>(supervisorTaskId, new LockListAction()))
-                        .stream()
-                        .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
-    } else {
-      versions = null;
-    }
-
-    final List<DataSegment> pushedSegments = generateAndPushSegments(
-        toolbox,
-        dataSchema,
-        versions,
-        firehoseFactory,
-        firehoseTempDir
-    );
     final ParallelIndexTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
         getId(),
         1, // always use a single http thread
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
+    );
+    final List<DataSegment> pushedSegments = generateAndPushSegments(
+        toolbox,
+        taskClient,
+        firehoseFactory,
+        firehoseTempDir
     );
     taskClient.report(supervisorTaskId, pushedSegments);
 
@@ -240,6 +218,40 @@ public class ParallelIndexSubTask extends AbstractTask
               new SurrogateAction<>(supervisorTaskId, new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval))
           ),
           "Cannot acquire a lock for interval[%s]", interval
+      );
+    }
+  }
+
+  private SegmentAllocator createSegmentAllocator(
+      TaskToolbox toolbox,
+      ParallelIndexTaskClient taskClient,
+      ParallelIndexIngestionSpec ingestionSchema
+  )
+  {
+    final DataSchema dataSchema = ingestionSchema.getDataSchema();
+    final boolean explicitIntervals = dataSchema.getGranularitySpec().bucketIntervals().isPresent();
+    final ParallelIndexIOConfig ioConfig = ingestionSchema.getIOConfig();
+    if (ioConfig.isAppendToExisting() || !explicitIntervals) {
+      return new ActionBasedSegmentAllocator(
+          toolbox.getTaskActionClient(),
+          dataSchema,
+          (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SurrogateAction<>(
+              supervisorTaskId,
+              new SegmentAllocateAction(
+                  schema.getDataSource(),
+                  row.getTimestamp(),
+                  schema.getGranularitySpec().getQueryGranularity(),
+                  schema.getGranularitySpec().getSegmentGranularity(),
+                  sequenceName,
+                  previousSegmentId,
+                  skipSegmentLineageCheck
+              )
+          )
+      );
+    } else {
+      return (row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> taskClient.allocateSegment(
+          supervisorTaskId,
+          row.getTimestamp()
       );
     }
   }
@@ -264,12 +276,12 @@ public class ParallelIndexSubTask extends AbstractTask
    */
   private List<DataSegment> generateAndPushSegments(
       final TaskToolbox toolbox,
-      final DataSchema dataSchema,
-      @Nullable final Map<Interval, String> versions,
+      final ParallelIndexTaskClient taskClient,
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir
   ) throws IOException, InterruptedException
   {
+    final DataSchema dataSchema = ingestionSchema.getDataSchema();
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final FireDepartment fireDepartmentForMetrics = new FireDepartment(
         dataSchema, new RealtimeIOConfig(null, null, null), null
@@ -285,37 +297,10 @@ public class ParallelIndexSubTask extends AbstractTask
       );
     }
 
-    final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
-
-    final SegmentAllocator segmentAllocator;
-    if (ioConfig.isAppendToExisting() || !explicitIntervals) {
-      segmentAllocator = new ActionBasedSegmentAllocator(
-          toolbox.getTaskActionClient(),
-          dataSchema,
-          (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SurrogateAction<>(
-              supervisorTaskId,
-              new SegmentAllocateAction(
-                  schema.getDataSource(),
-                  row.getTimestamp(),
-                  schema.getGranularitySpec().getQueryGranularity(),
-                  schema.getGranularitySpec().getSegmentGranularity(),
-                  sequenceName,
-                  previousSegmentId,
-                  skipSegmentLineageCheck
-              )
-          )
-      );
-    } else {
-      segmentAllocator = new CountingActionBasedSegmentAllocator(
-          toolbox.getTaskActionClient(),
-          getDataSource(),
-          granularitySpec,
-          versions
-      );
-    }
+    final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient, ingestionSchema);
 
     try (
         final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);

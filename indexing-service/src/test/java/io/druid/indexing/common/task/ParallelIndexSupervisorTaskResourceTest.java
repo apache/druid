@@ -506,6 +506,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
       this.runner = new TestRunner(
+          toolbox,
           this,
           indexingServiceClient,
           new NoopChatHandlerProvider(),
@@ -513,7 +514,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       );
       return TaskStatus.fromCode(
           getId(),
-          runner.run(toolbox)
+          runner.run()
       );
     }
 
@@ -529,6 +530,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     private final ParallelIndexSupervisorTask supervisorTask;
 
     TestRunner(
+        TaskToolbox toolbox,
         ParallelIndexSupervisorTask supervisorTask,
         @Nullable IndexingServiceClient indexingServiceClient,
         @Nullable ChatHandlerProvider chatHandlerProvider,
@@ -536,6 +538,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     )
     {
       super(
+          toolbox,
           supervisorTask.getId(),
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),
@@ -554,6 +557,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           .getIOConfig()
           .getFirehoseFactory();
       final TestSubTaskSpec spec = new TestSubTaskSpec(
+          toolbox,
           supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
           supervisorTask.getGroupId(),
           supervisorTask,
@@ -576,9 +580,11 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
   private class TestSubTaskSpec extends ParallelIndexSubTaskSpec
   {
+    private final TaskToolbox toolbox;
     private final SinglePhaseParallelIndexTaskRunner runner;
 
     TestSubTaskSpec(
+        TaskToolbox toolbox,
         String id,
         String groupId,
         ParallelIndexSupervisorTask supervisorTask,
@@ -589,6 +595,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     )
     {
       super(id, groupId, supervisorTask.getId(), ingestionSpec, context, inputSplit);
+      this.toolbox = toolbox;
       this.runner = runner;
     }
 

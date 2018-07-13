@@ -106,7 +106,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
 
-    final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.createRunner();
+    final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.createRunner(toolbox);
     final Iterator<ParallelIndexSubTaskSpec> subTaskSpecIterator = runner.subTaskSpecIterator().iterator();
 
     while (subTaskSpecIterator.hasNext()) {
@@ -279,11 +279,12 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
       return TaskStatus.fromCode(
           getId(),
           new TestRunner(
+              toolbox,
               this,
               indexingServiceClient,
               new NoopChatHandlerProvider(),
               new AuthorizerMapper(Collections.emptyMap())
-          ).run(toolbox)
+          ).run()
       );
     }
   }
@@ -293,6 +294,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     private final ParallelIndexSupervisorTask supervisorTask;
 
     TestRunner(
+        TaskToolbox toolbox,
         ParallelIndexSupervisorTask supervisorTask,
         @Nullable IndexingServiceClient indexingServiceClient,
         @Nullable ChatHandlerProvider chatHandlerProvider,
@@ -300,6 +302,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     )
     {
       super(
+          toolbox,
           supervisorTask.getId(),
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),

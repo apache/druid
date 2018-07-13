@@ -48,12 +48,14 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
+import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -296,6 +298,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       return TaskStatus.fromCode(
           getId(),
           new TestParallelIndexTaskRunner(
+              toolbox,
               getId(),
               getGroupId(),
               getIngestionSchema(),
@@ -303,7 +306,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               new NoopIndexingServiceClient(),
               new NoopChatHandlerProvider(),
               new AuthorizerMapper(Collections.emptyMap())
-          ).run(toolbox)
+          ).run()
       );
     }
   }
@@ -311,6 +314,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   static class TestParallelIndexTaskRunner extends SinglePhaseParallelIndexTaskRunner
   {
     TestParallelIndexTaskRunner(
+        TaskToolbox toolbox,
         String taskId,
         String groupId,
         ParallelIndexIngestionSpec ingestionSchema,
@@ -320,7 +324,16 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         AuthorizerMapper authorizerMapper
     )
     {
-      super(taskId, groupId, ingestionSchema, context, indexingServiceClient, chatHandlerProvider, authorizerMapper);
+      super(
+          toolbox,
+          taskId,
+          groupId,
+          ingestionSchema,
+          context,
+          indexingServiceClient,
+          chatHandlerProvider,
+          authorizerMapper
+      );
     }
 
     @Override
@@ -368,10 +381,16 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   {
     private final SinglePhaseParallelIndexTaskRunner runner;
 
-    public LocalParallelIndexTaskClient(String callerId, SinglePhaseParallelIndexTaskRunner runner)
+    LocalParallelIndexTaskClient(String callerId, SinglePhaseParallelIndexTaskRunner runner)
     {
       super(null, null, null, null, callerId, 0);
       this.runner = runner;
+    }
+
+    @Override
+    public SegmentIdentifier allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
+    {
+      return runner.allocateNewSegment(timestamp);
     }
 
     @Override

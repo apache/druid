@@ -19,14 +19,17 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.indexing.common.IndexTaskClient;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.response.FullResponseHolder;
+import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.io.IOException;
@@ -52,6 +55,33 @@ public class ParallelIndexTaskClient extends IndexTaskClient
   String getSubtaskId()
   {
     return subtaskId;
+  }
+
+  public SegmentIdentifier allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
+  {
+    final FullResponseHolder response = submitSmileRequest(
+        supervisorTaskId,
+        HttpMethod.POST,
+        "segment/allocate",
+        null,
+        serialize(timestamp),
+        true
+    );
+    if (!isSuccess(response)) {
+      throw new ISE(
+          "task[%s] failed to allocate a new segment identifier with the HTTP code[%d] and content[%s]",
+          supervisorTaskId,
+          response.getStatus().getCode(),
+          response.getContent()
+      );
+    } else {
+      return deserialize(
+          response.getContent(),
+          new TypeReference<SegmentIdentifier>()
+          {
+          }
+      );
+    }
   }
 
   public void report(String supervisorTaskId, List<DataSegment> pushedSegments)

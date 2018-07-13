@@ -145,12 +145,13 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   }
 
   @VisibleForTesting
-  ParallelIndexTaskRunner createRunner()
+  ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
   {
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
       throw new UnsupportedOperationException("Perfect roll-up is not supported yet");
     } else {
       runner = new SinglePhaseParallelIndexTaskRunner(
+          toolbox,
           getId(),
           getGroupId(),
           ingestionSchema,
@@ -204,8 +205,8 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
 
   private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
-    createRunner();
-    return TaskStatus.fromCode(getId(), runner.run(toolbox));
+    createRunner(toolbox);
+    return TaskStatus.fromCode(getId(), runner.run());
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception

@@ -37,7 +37,6 @@ import io.druid.indexing.common.task.Task;
     @JsonSubTypes.Type(name = "segmentNuke", value = SegmentNukeAction.class),
     @JsonSubTypes.Type(name = "segmentMetadataUpdate", value = SegmentMetadataUpdateAction.class),
     @JsonSubTypes.Type(name = "segmentAllocate", value = SegmentAllocateAction.class),
-    @JsonSubTypes.Type(name = "countingSegmentAllocate", value = CountingSegmentAllocateAction.class),
     @JsonSubTypes.Type(name = "resetDataSourceMetadata", value = ResetDataSourceMetadataAction.class),
     @JsonSubTypes.Type(name = "checkPointDataSourceMetadata", value = CheckPointDataSourceMetadataAction.class),
     @JsonSubTypes.Type(name = "surrogateAction", value = SurrogateAction.class)

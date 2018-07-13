@@ -20,7 +20,6 @@
 package io.druid.indexing.common.task;
 
 import io.druid.indexer.TaskState;
-import io.druid.indexing.common.TaskToolbox;
 
 /**
  * ParallelIndexTaskRunner is the actual task runner of {@link ParallelIndexSupervisorTask}. There is currently a single
@@ -29,5 +28,5 @@ import io.druid.indexing.common.TaskToolbox;
  */
 public interface ParallelIndexTaskRunner
 {
-  TaskState run(TaskToolbox toolbox) throws Exception;
+  TaskState run() throws Exception;
 }
