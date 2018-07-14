@@ -356,8 +356,9 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
 
       private Object[] arrayToObjectArray(Object array)
       {
-        final Object[] objectArray = new Object[Array.getLength(array)];
-        for (int j = 0; j < Array.getLength(array); j++) {
+        int len = Array.getLength(array);
+        final Object[] objectArray = new Object[len];
+        for (int j = 0; j < len; j++) {
           objectArray[j] = Array.get(array, j);
         }
         return objectArray;
