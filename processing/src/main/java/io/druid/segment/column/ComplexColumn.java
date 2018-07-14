@@ -56,7 +56,8 @@ public class ComplexColumn implements BaseColumn
     return index.get(rowNum);
   }
 
-  public int getLength() {
+  public int getLength()
+  {
     return index.size();
   }
 
