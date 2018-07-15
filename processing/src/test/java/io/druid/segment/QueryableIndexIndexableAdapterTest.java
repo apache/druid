@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.segment.data.BitmapValues;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -96,9 +97,11 @@ public class QueryableIndexIndexableAdapterTest
     String dimension = "dim1";
     @SuppressWarnings("UnusedAssignment") //null is added to all dimensions with value
     BitmapValues bitmapValues = adapter.getBitmapValues(dimension, 0);
-    for (int i = 0; i < adapter.getDimValueLookup(dimension).size(); i++) {
-      bitmapValues = adapter.getBitmapValues(dimension, i);
-      Assert.assertEquals(1, bitmapValues.size());
+    try (CloseableIndexed<String> dimValueLookup = adapter.getDimValueLookup(dimension)) {
+      for (int i = 0; i < dimValueLookup.size(); i++) {
+        bitmapValues = adapter.getBitmapValues(dimension, i);
+        Assert.assertEquals(1, bitmapValues.size());
+      }
     }
   }
 }

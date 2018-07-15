@@ -23,6 +23,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.RowIterator;
 import io.druid.segment.data.BitmapValues;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -54,9 +55,11 @@ public class IncrementalIndexAdapterTest
         INDEX_SPEC.getBitmapSerdeFactory().getBitmapFactory()
     );
     String dimension = "dim1";
-    for (int i = 0; i < adapter.getDimValueLookup(dimension).size(); i++) {
-      BitmapValues bitmapValues = adapter.getBitmapValues(dimension, i);
-      Assert.assertEquals(1, bitmapValues.size());
+    try (CloseableIndexed<String> dimValueLookup = adapter.getDimValueLookup(dimension)) {
+      for (int i = 0; i < dimValueLookup.size(); i++) {
+        BitmapValues bitmapValues = adapter.getBitmapValues(dimension, i);
+        Assert.assertEquals(1, bitmapValues.size());
+      }
     }
   }
 
