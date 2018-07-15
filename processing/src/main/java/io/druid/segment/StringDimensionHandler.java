@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ZeroIndexedInts;
@@ -161,7 +162,8 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      ProgressIndicator progress
+      ProgressIndicator progress,
+      Closer closer
   )
   {
     // Sanity-check capabilities.
@@ -173,6 +175,6 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       );
     }
 
-    return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress);
+    return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
   }
 }

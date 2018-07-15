@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.selector.settable.SettableColumnValueSelector;
 import io.druid.segment.selector.settable.SettableLongColumnValueSelector;
@@ -62,7 +63,8 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      ProgressIndicator progress
+      ProgressIndicator progress,
+      Closer closer
   )
   {
     return new LongDimensionMergerV9(

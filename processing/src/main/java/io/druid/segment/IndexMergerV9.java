@@ -116,7 +116,7 @@ public class IndexMergerV9 implements IndexMerger
 
     List<Metadata> metadataList = Lists.transform(adapters, IndexableAdapter::getMetadata);
 
-    Metadata segmentMetadata = null;
+    Metadata segmentMetadata;
     if (metricAggs != null) {
       AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
       for (int i = 0; i < metricAggs.length; i++) {
@@ -161,10 +161,10 @@ public class IndexMergerV9 implements IndexMerger
       mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
 
       final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
-      final List<DimensionMerger> mergers = new ArrayList<>();
+      final List<DimensionMergerV9> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionHandler handler = handlers.get(mergedDimensions.get(i));
-        mergers.add(handler.makeMerger(indexSpec, segmentWriteOutMedium, dimCapabilities.get(i), progress));
+        mergers.add(handler.makeMerger(indexSpec, segmentWriteOutMedium, dimCapabilities.get(i), progress, closer));
       }
 
       /************* Setup Dim Conversions **************/
@@ -212,7 +212,7 @@ public class IndexMergerV9 implements IndexMerger
       );
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
-        DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
+        DimensionMergerV9 merger = mergers.get(i);
         merger.writeIndexes(rowNumConversions);
         if (merger.canSkip()) {
           continue;
@@ -262,7 +262,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final ProgressIndicator progress,
       final IndexSpec indexSpec,
-      final List<DimensionMerger> mergers
+      final List<DimensionMergerV9> mergers
   ) throws IOException
   {
     final String section = "make index.drd";
@@ -468,7 +468,7 @@ public class IndexMergerV9 implements IndexMerger
       final TimeAndDimsIterator timeAndDimsIterator,
       final ColumnSerializer timeWriter,
       final ArrayList<ColumnSerializer> metricWriters,
-      final List<DimensionMerger> mergers,
+      final List<DimensionMergerV9> mergers,
       final boolean fillRowNumConversions
   ) throws IOException
   {
@@ -686,7 +686,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<IndexableAdapter> indexes,
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
-      final List<DimensionMerger> mergers
+      final List<DimensionMergerV9> mergers
   ) throws IOException
   {
     final String section = "setup dimension conversions";
@@ -1009,7 +1009,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
       final Map<String, DimensionHandler> handlers,
-      final List<DimensionMerger> mergers
+      final List<DimensionMergerV9> mergers
   )
   {
     List<TransformableRowIterator> perIndexRowIterators = Lists.newArrayListWithCapacity(indexes.size());

@@ -307,7 +307,7 @@ public interface IndexMerger
   static TransformableRowIterator toMergedIndexRowIterator(
       TransformableRowIterator sourceRowIterator,
       int indexNumber,
-      final List<DimensionMerger> mergers
+      final List<DimensionMergerV9> mergers
   )
   {
     RowPointer sourceRowPointer = sourceRowIterator.getPointer();

@@ -31,6 +31,7 @@ import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -91,24 +92,29 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   private int rowCount = 0;
   private ColumnCapabilities capabilities;
   private List<IndexableAdapter> adapters;
-  private ProgressIndicator progress;
   private final IndexSpec indexSpec;
   private IndexMerger.DictionaryMergeIterator dictionaryMergeIterator;
+
+  private final ProgressIndicator progress;
+  private final Closer closer;
 
   public StringDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      ProgressIndicator progress
+      ProgressIndicator progress,
+      Closer closer
   )
   {
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    this.progress = progress;
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+
+    this.progress = progress;
+    this.closer = closer;
   }
 
   @Override
@@ -130,7 +136,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     Indexed<String> dimValueLookup = null;
     Indexed<String>[] dimValueLookups = new Indexed[adapters.size() + 1];
     for (int i = 0; i < adapters.size(); i++) {
-      Indexed<String> dimValues = adapters.get(i).getDimValueLookup(dimensionName);
+      Indexed<String> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
       if (dimValues != null && !allNull(dimValues)) {
         dimHasValues = true;
         hasNull |= dimValues.indexOf(null) >= 0;

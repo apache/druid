@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.selector.settable.SettableColumnValueSelector;
 import io.druid.segment.selector.settable.SettableDoubleColumnValueSelector;
@@ -62,7 +63,8 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      ProgressIndicator progress
+      ProgressIndicator progress,
+      Closer closer
   )
   {
     return new DoubleDimensionMergerV9(
