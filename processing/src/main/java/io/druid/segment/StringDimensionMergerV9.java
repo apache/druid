@@ -136,6 +136,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     Indexed<String> dimValueLookup = null;
     Indexed<String>[] dimValueLookups = new Indexed[adapters.size() + 1];
     for (int i = 0; i < adapters.size(); i++) {
+      @SuppressWarnings("MustBeClosedChecker") // we register dimValues in the closer
       Indexed<String> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
       if (dimValues != null && !allNull(dimValues)) {
         dimHasValues = true;
