@@ -474,11 +474,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       ).collect(Collectors.toList());
 
       // Do bulk fetch
-      final Map<Cache.NamedKey, Optional<byte[]>> cachedValues = computeCachedValues(
-          materializedKeyList.stream()
-      ).collect(
-          SerializablePair.mapCollector()
-      );
+      final Map<Cache.NamedKey, Optional<byte[]>> cachedValues = computeCachedValues(materializedKeyList.stream())
+          .collect(SerializablePair.mapCollector());
+
       // A limitation of the cache system is that the cached values are returned without passing through the original
       // objects. This hash join is a way to get the ServerToSegment and Optional<byte[]> matched up again
       return materializedKeyList.stream().map(
@@ -604,15 +602,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
         // See io.druid.java.util.common.guava.MergeSequenceTest.testScrewsUpOnOutOfOrder for an example
         // With zero results actually being found (no segments no caches) this should essentially return a no-op
         // merge sequence
-        return new MergeSequence<>(query.getResultOrdering(), Sequences.fromStream(
-            segmentOrResult
-                .stream()
-                .map(ServerMaybeSegmentMaybeCache::getCachedValue)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .map(Collections::singletonList)
-                .map(Sequences::simple)
-        ));
+        return new MergeSequence<>(
+            query.getResultOrdering(),
+            Sequences.fromStream(
+                segmentOrResult
+                    .stream()
+                    .map(ServerMaybeSegmentMaybeCache::getCachedValue)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .map(Collections::singletonList)
+                    .map(Sequences::simple)
+            )
+        );
       } else {
         return runOnServer(segmentOrResult.get(0).getServer(), segmentsOfServer);
       }
