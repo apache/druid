@@ -174,7 +174,7 @@ public class AlertEventTest
       @Override
       public boolean apply(String k)
       {
-        return !k.equals("timestamp");
+        return !"timestamp".equals(k);
       }
     });
   }
