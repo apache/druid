@@ -161,64 +161,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
-  {
-    return (queryPlus, responseContext) -> runAndMergeWithTimelineChange(
-        query,
-        queryPlus,
-        responseContext,
-        // No change, but Function.identity() doesn't work here for some reason
-        serverSelectorTimelineLookup -> serverSelectorTimelineLookup
-    );
-  }
-
-  /**
-   * Run a query. The timelineConverter will be given the "master" timeline and can be used to return a different
-   * timeline, if desired. This is used by getQueryRunnerForSegments.
-   */
-  @VisibleForTesting
-  <T> Stream<Sequence<T>> run(
-      final QueryPlus<T> queryPlus,
-      final Map<String, Object> responseContext,
-      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
-  )
-  {
-    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
-  }
-
-  private <T> Sequence<T> runAndMergeWithTimelineChange(
-      final Query<T> query,
-      final QueryPlus<T> queryPlus,
-      final Map<String, Object> responseContext,
-      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
-  )
-  {
-    final Stream<? extends Sequence<T>> sequences = run(
-        queryPlus,
-        responseContext,
-        timelineConverter
-    );
-    final OptionalLong mergeBatch = QueryContexts.getIntermediateMergeBatchThreshold(query);
-    if (mergeBatch.isPresent()) {
-      return MergeWorkTask.parallelMerge(
-          query.getResultOrdering(),
-          sequences.parallel(),
-          mergeBatch.getAsLong(),
-          mergeFjp
-      );
-    } else {
-      return new MergeSequence<>(
-          query.getResultOrdering(),
-          Sequences.fromStream(sequences)
-      );
-    }
-  }
-
-  @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
     return (queryPlus, responseContext) -> runAndMergeWithTimelineChange(
-        query,
         queryPlus,
         responseContext,
         timeline -> {
@@ -244,6 +189,59 @@ public class CachingClusteredClient implements QuerySegmentWalker
           return timeline2;
         }
     );
+  }
+
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
+  {
+    return (queryPlus, responseContext) -> runAndMergeWithTimelineChange(
+        queryPlus,
+        responseContext,
+        // No change, but Function.identity() doesn't work here for some reason
+        serverSelectorTimelineLookup -> serverSelectorTimelineLookup
+    );
+  }
+
+  private <T> Sequence<T> runAndMergeWithTimelineChange(
+      final QueryPlus<T> queryPlus,
+      final Map<String, Object> responseContext,
+      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
+  )
+  {
+    final Query<T> query = queryPlus.getQuery();
+    final Stream<? extends Sequence<T>> sequences = run(
+        queryPlus,
+        responseContext,
+        timelineConverter
+    );
+    final OptionalLong mergeBatch = QueryContexts.getIntermediateMergeBatchThreshold(query);
+    if (mergeBatch.isPresent()) {
+      return MergeWorkTask.parallelMerge(
+          query.getResultOrdering(),
+          sequences.parallel(),
+          mergeBatch.getAsLong(),
+          mergeFjp
+      );
+    } else {
+      return new MergeSequence<>(
+          query.getResultOrdering(),
+          Sequences.fromStream(sequences)
+      );
+    }
+  }
+
+  /**
+   * Run a query. The timelineConverter will be given the "master" timeline and can be used to return a different
+   * timeline, if desired. This is used by getQueryRunnerForSegments.
+   */
+  @VisibleForTesting
+  <T> Stream<Sequence<T>> run(
+      final QueryPlus<T> queryPlus,
+      final Map<String, Object> responseContext,
+      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
+  )
+  {
+    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
   }
 
   /**
