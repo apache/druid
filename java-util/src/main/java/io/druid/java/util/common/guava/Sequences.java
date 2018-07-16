@@ -59,7 +59,7 @@ public class Sequences
     );
   }
 
-  public static <T> Sequence<T> simple(final Stream<? extends T> stream)
+  public static <T> Sequence<T> fromStream(final Stream<? extends T> stream)
   {
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()

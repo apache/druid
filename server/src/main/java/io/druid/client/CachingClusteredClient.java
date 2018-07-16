@@ -209,7 +209,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     } else {
       return new MergeSequence<>(
           query.getResultOrdering(),
-          Sequences.simple(sequences)
+          Sequences.fromStream(sequences)
       );
     }
   }
@@ -581,7 +581,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         // See io.druid.java.util.common.guava.MergeSequenceTest.testScrewsUpOnOutOfOrder for an example
         // With zero results actually being found (no segments no caches) this should essentially return a no-op
         // merge sequence
-        return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(
+        return new MergeSequence<>(query.getResultOrdering(), Sequences.fromStream(
             segmentOrResult.stream(
             ).map(
                 ServerMaybeSegmentMaybeCache::getCachedValue

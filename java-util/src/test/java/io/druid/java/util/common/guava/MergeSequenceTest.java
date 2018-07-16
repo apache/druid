@@ -55,7 +55,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(
         () -> new MergeSequence<>(
             Ordering.natural(),
-            Sequences.simple(
+            Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
@@ -85,7 +85,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(
         () -> new MergeSequence<>(
             Ordering.natural(),
-            Sequences.simple(
+            Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
@@ -118,7 +118,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(
         () -> new MergeSequence<>(
             Ordering.natural(),
-            Sequences.simple(
+            Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
@@ -151,7 +151,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(
         () -> new MergeSequence<>(
             Ordering.natural(),
-            Sequences.simple(
+            Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
@@ -185,7 +185,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(
         () -> new MergeSequence<>(
             Ordering.natural(),
-            Sequences.simple(
+            Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
@@ -214,7 +214,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(
         () -> new MergeSequence<>(
             Ordering.natural(),
-            Sequences.simple(
+            Sequences.fromStream(
                 testSeqs.stream()
             )
         ),

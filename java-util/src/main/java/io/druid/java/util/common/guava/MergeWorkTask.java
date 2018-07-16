@@ -71,7 +71,7 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
   {
     if (!baseSequences.isParallel()) {
       // Don't even try.
-      return new MergeSequence<>(ordering, Sequences.simple(baseSequences));
+      return new MergeSequence<>(ordering, Sequences.fromStream(baseSequences));
     }
     @SuppressWarnings("unchecked") // Wildcard erasure is fine here
     final Spliterator<? extends Sequence<T>> baseSpliterator = (Spliterator<? extends Sequence<T>>) baseSequences.spliterator();
