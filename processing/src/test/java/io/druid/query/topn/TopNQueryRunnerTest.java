@@ -3305,7 +3305,7 @@ public class TopNQueryRunnerTest
       @Override
       public String apply(String dimValue)
       {
-        return dimValue.equals("total_market") ? null : dimValue;
+        return "total_market".equals(dimValue) ? null : dimValue;
       }
 
       @Override
@@ -3393,7 +3393,7 @@ public class TopNQueryRunnerTest
       @Override
       public String apply(String dimValue)
       {
-        return dimValue.equals("total_market") ? "" : dimValue;
+        return "total_market".equals(dimValue) ? "" : dimValue;
       }
 
       @Override

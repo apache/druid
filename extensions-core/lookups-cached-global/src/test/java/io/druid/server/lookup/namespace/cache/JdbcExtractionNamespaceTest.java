@@ -411,7 +411,7 @@ public class JdbcExtractionNamespaceTest
         String field = val[0];
         String filterVal = val[1];
 
-        if (filterVal.equals("1")) {
+        if ("1".equals(filterVal)) {
           Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
         } else {
           Assert.assertEquals("non-null check", null, Strings.emptyToNull(map.get(key)));

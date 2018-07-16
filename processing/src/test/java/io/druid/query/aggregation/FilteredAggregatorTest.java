@@ -92,7 +92,7 @@ public class FilteredAggregatorTest
       {
         final String dimensionName = dimensionSpec.getDimension();
 
-        if (dimensionName.equals("dim")) {
+        if ("dim".equals(dimensionName)) {
           return dimensionSpec.decorate(
               new DimensionSelector()
               {
@@ -194,7 +194,7 @@ public class FilteredAggregatorTest
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
       {
-        if (columnName.equals("value")) {
+        if ("value".equals(columnName)) {
           return selector;
         } else {
           throw new UnsupportedOperationException();
@@ -205,7 +205,7 @@ public class FilteredAggregatorTest
       public ColumnCapabilities getColumnCapabilities(String columnName)
       {
         ColumnCapabilitiesImpl caps;
-        if (columnName.equals("value")) {
+        if ("value".equals(columnName)) {
           caps = new ColumnCapabilitiesImpl();
           caps.setType(ValueType.FLOAT);
           caps.setDictionaryEncoded(false);

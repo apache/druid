@@ -2182,7 +2182,7 @@ public class GroupByQueryRunnerTest
       @Override
       public String apply(String dimValue)
       {
-        return dimValue.equals("mezzanine") ? null : super.apply(dimValue);
+        return "mezzanine".equals(dimValue) ? null : super.apply(dimValue);
       }
     };
     GroupByQuery query = GroupByQuery
@@ -2250,7 +2250,7 @@ public class GroupByQueryRunnerTest
       @Override
       public String apply(String dimValue)
       {
-        return dimValue.equals("mezzanine") ? "" : super.apply(dimValue);
+        return "mezzanine".equals(dimValue) ? "" : super.apply(dimValue);
       }
     };
 
