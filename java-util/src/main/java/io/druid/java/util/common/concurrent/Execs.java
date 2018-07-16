@@ -156,25 +156,13 @@ public class Execs
 
   public static ForkJoinWorkerThread makeWorkerThread(String name, ForkJoinPool pool)
   {
-    final FJPWorkerThread t = new FJPWorkerThread(pool);
+    final ForkJoinWorkerThread t = new ForkJoinWorkerThread(pool)
+    {
+      // No special handling in subclass
+    };
     t.setDaemon(true);
     fjpWorkerThreadCount.increment();
     t.setName(StringUtils.nonStrictFormat(name, fjpWorkerThreadCount.longValue()));
     return t;
-  }
-
-  static class FJPWorkerThread extends ForkJoinWorkerThread
-  {
-    /**
-     * Creates a ForkJoinWorkerThread operating in the given pool.
-     *
-     * @param pool the pool this thread works in
-     *
-     * @throws NullPointerException if pool is null
-     */
-    FJPWorkerThread(ForkJoinPool pool)
-    {
-      super(pool);
-    }
   }
 }
