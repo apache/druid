@@ -33,12 +33,14 @@ public class QueryContexts
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
+  public static final String ENABLE_BROKER_BACKPRESSURE = "enableBrokerBackpressure";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
+  public static final boolean DEFAULT_ENABLE_BROKER_BACKPRESSURE = false;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = 300_000; // 5 minutes
@@ -208,6 +210,10 @@ public class QueryContexts
     final long defaultTimeout = parseLong(query, DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
     Preconditions.checkState(defaultTimeout >= 0, "Timeout must be a non negative value, but was [%s]", defaultTimeout);
     return defaultTimeout;
+  }
+
+  public static <T> boolean isEnableBrokerBackpressure(Query<T> query) {
+    return parseBoolean(query, ENABLE_BROKER_BACKPRESSURE, DEFAULT_ENABLE_BROKER_BACKPRESSURE);
   }
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)
