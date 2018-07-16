@@ -168,7 +168,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         queryPlus,
         responseContext,
         // No change, but Function.identity() doesn't work here for some reason
-        stringServerSelectorTimelineLookup -> stringServerSelectorTimelineLookup
+        serverSelectorTimelineLookup -> serverSelectorTimelineLookup
     );
   }
 
