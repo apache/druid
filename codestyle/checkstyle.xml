@@ -171,5 +171,11 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use java.lang.Primitive.BYTES instead."/>
     </module>
+
+    <module name="Regexp">
+      <property name="format" value='[a-z][a-zA-Z0-9_]*\.equals\((\"|[A-Z_]+\))'/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value='Use "string".equals(javaVar) and STRING_CONSTANT.equals(javaVar) instead of javaVar.equals("string") and javaVar.equals(STRING_CONSTANT)'/>
+    </module>
   </module>
 </module>
