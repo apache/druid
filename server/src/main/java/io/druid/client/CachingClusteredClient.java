@@ -338,17 +338,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
               segments
           )
       );
-      return groupCachedResultsByServer(
-          cacheResolvedResults
-      ).map(
-          this::runOnServer
-      ).collect(
+      return groupCachedResultsByServer(cacheResolvedResults)
+          .map(this::mergeCacheOrRunOnServer)
           // We do a hard materialization here so that the resulting spliterators have properties that we want
           // Otherwise the stream's spliterator is of a hash map entry spliterator from the group-by-server operation
           // This also causes eager initialization of the **sequences**, aka forking off the direct druid client requests
           // Sequence result accumulation should still be lazy
-          Collectors.toList()
-      ).stream();
+          .collect(Collectors.toList())
+          .stream();
     }
 
     private Stream<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
@@ -356,15 +353,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return toolChest.filterSegments(
           query,
           query.getIntervals().stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
-      ).stream(
-      ).flatMap(
+      ).stream().flatMap(
           holder -> DimFilterUtils.filterShards(
               query.getFilter(),
               holder.getObject(),
               partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
               Maps.newHashMap()
-          ).stream(
-          ).map(
+          ).stream().map(
               chunk -> {
                 ServerSelector server = chunk.getObject();
                 final SegmentDescriptor segment = new SegmentDescriptor(
@@ -456,7 +451,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     /**
-     * This materializes the input segment stream in order to let the BulgGet stuff in the cache system work
+     * This materializes the input segment stream in order to let the BulkGet stuff in the cache system work
      *
      * @param queryCacheKey The cache key that is for the query (not-segment) portion
      * @param segments      The segments to check if they are in cache
@@ -482,19 +477,20 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Map<Cache.NamedKey, Optional<byte[]>> cachedValues = computeCachedValues(
           materializedKeyList.stream()
       ).collect(
-          Collectors.toMap(
-              SerializablePair::getLhs,
-              SerializablePair::getRhs
-          )
+          SerializablePair.mapCollector()
       );
-      // Hash join to return the stream
+      // A limitation of the cache system is that the cached values are returned without passing through the original
+      // objects. This hash join is a way to get the ServerToSegment and Optional<byte[]> matched up again
       return materializedKeyList.stream().map(
-          psck -> {
-            final ServerToSegment segment = psck.getLhs();
-            final Cache.NamedKey segmentCacheKey = psck.getRhs();
+          serializedPairSegmentAndKey -> {
+            final ServerToSegment segment = serializedPairSegmentAndKey.getLhs();
+            final Cache.NamedKey segmentCacheKey = serializedPairSegmentAndKey.getRhs();
             final Interval segmentQueryInterval = segment.getSegmentDescriptor().getInterval();
-            final Optional<byte[]> cachedValue = Optional.ofNullable(cachedValues.get(segmentCacheKey))
-                                                         .orElse(Optional.empty()); // Shouldn't happen in practice, but can screw up unit tests
+            final Optional<byte[]> cachedValue = Optional
+                .ofNullable(cachedValues.get(segmentCacheKey))
+                // Shouldn't happen in practice, but can screw up unit tests where cache state is mutated in crazy
+                // ways
+                .orElse(Optional.empty());
             if (!cachedValue.isPresent()) {
               // if populating cache, add segment to list of segments to cache if it is not cached
               final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
@@ -523,7 +519,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
     }
 
-    private Stream<SerializablePair<Cache.NamedKey, Optional<byte[]>>> computeCachedValues(Stream<SerializablePair<ServerToSegment, Cache.NamedKey>> cacheKeys)
+    private Stream<SerializablePair<Cache.NamedKey, Optional<byte[]>>> computeCachedValues(
+        Stream<SerializablePair<ServerToSegment, Cache.NamedKey>> cacheKeys
+    )
     {
       if (useCache) {
         return cache.getBulk(cacheKeys.limit(cacheConfig.getCacheBulkMergeLimit()).map(SerializablePair::getRhs));
@@ -551,51 +549,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     /**
-     * Check the input stream to see what was cached and what was not. For the ones that were cached, merge the results
-     * and return the merged sequence. For the ones that were NOT cached, get the server result sequence queued up into
-     * the stream response
+     * Run all the queries for the specific segments on the specific server
      *
-     * @param segmentOrResult A list that is traversed in order to determine what should be sent back. All segments
-     *                        should be on the same server.
+     * @param server           The server to target
+     * @param segmentsOfServer The segments on the server
      *
-     * @return A sequence of either the merged cached results, or the server results from any particular server
+     * @return The sequence of results for this specific server
      */
-    private Sequence<T> runOnServer(List<ServerMaybeSegmentMaybeCache<T>> segmentOrResult)
+    private Sequence<T> runOnServer(final DruidServer server, final List<SegmentDescriptor> segmentsOfServer)
     {
-      final List<SegmentDescriptor> segmentsOfServer = segmentOrResult.stream(
-      ).map(
-          ServerMaybeSegmentMaybeCache::getSegmentDescriptor
-      ).filter(
-          Optional::isPresent
-      ).map(
-          Optional::get
-      ).collect(
-          Collectors.toList()
-      );
-
-      // We should only ever have cache or queries to run, not both. So if we have no segments, try caches
-      if (segmentsOfServer.isEmpty()) {
-        // Have a special sequence for the cache results so the merge doesn't go all crazy.
-        // See io.druid.java.util.common.guava.MergeSequenceTest.testScrewsUpOnOutOfOrder for an example
-        // With zero results actually being found (no segments no caches) this should essentially return a no-op
-        // merge sequence
-        return new MergeSequence<>(query.getResultOrdering(), Sequences.fromStream(
-            segmentOrResult.stream(
-            ).map(
-                ServerMaybeSegmentMaybeCache::getCachedValue
-            ).filter(
-                Optional::isPresent
-            ).map(
-                Optional::get
-            ).map(
-                Collections::singletonList
-            ).map(
-                Sequences::simple
-            )
-        ));
-      }
-
-      final DruidServer server = segmentOrResult.get(0).getServer();
       final QueryRunner serverRunner = serverView.getQueryRunner(server);
 
       if (serverRunner == null) {
@@ -614,6 +576,46 @@ public class CachingClusteredClient implements QuerySegmentWalker
         serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
       }
       return serverResults;
+    }
+
+    /**
+     * Check the input stream to see what was cached and what was not. For the ones that were cached, merge the results
+     * and return the merged sequence. For the ones that were NOT cached, get the server result sequence queued up into
+     * the stream response
+     *
+     * @param segmentOrResult A list that is traversed in order to determine what should be sent back. All segments
+     *                        should be on the same server.
+     *
+     * @return A sequence of either the merged cached results, or the server results from any particular server
+     */
+    private Sequence<T> mergeCacheOrRunOnServer(List<ServerMaybeSegmentMaybeCache<T>> segmentOrResult)
+    {
+      final List<SegmentDescriptor> segmentsOfServer = segmentOrResult
+          .stream()
+          .map(ServerMaybeSegmentMaybeCache::getSegmentDescriptor)
+          // Later versions of Java have better Optional + Stream builtin methods
+          .filter(Optional::isPresent)
+          .map(Optional::get)
+          .collect(Collectors.toList());
+
+      // We should only ever have cache or queries to run, not both. So if we have no segments, try caches
+      if (segmentsOfServer.isEmpty()) {
+        // Have a special sequence for the cache results so the merge doesn't go all crazy.
+        // See io.druid.java.util.common.guava.MergeSequenceTest.testScrewsUpOnOutOfOrder for an example
+        // With zero results actually being found (no segments no caches) this should essentially return a no-op
+        // merge sequence
+        return new MergeSequence<>(query.getResultOrdering(), Sequences.fromStream(
+            segmentOrResult
+                .stream()
+                .map(ServerMaybeSegmentMaybeCache::getCachedValue)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(Collections::singletonList)
+                .map(Sequences::simple)
+        ));
+      } else {
+        return runOnServer(segmentOrResult.get(0).getServer(), segmentsOfServer);
+      }
     }
 
     private ServerMaybeSegmentMaybeCache<T> pickServer(SerializablePair<ServerToSegment, Optional<T>> tuple)
@@ -644,29 +646,34 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
     }
 
-    // This materializes the input stream in order to group it by server
-    // This method takes in the stream of cache resolved items and will group all the items by server.
-    // Each entry in the output stream contains a list whose entries' getServer is the same
-    // Each entry will either have a present segemnt descriptor or a present result, but not both
-    // Downstream consumers should check each and handle appropriately.
-    private Stream<List<ServerMaybeSegmentMaybeCache<T>>> groupCachedResultsByServer(Stream<SerializablePair<ServerToSegment, Optional<T>>> cacheResolvedStream)
+    /**
+     * This materializes the input stream in order to group it by server. This method takes in the stream of cache
+     * resolved items and will group all the items by server. Each entry in the output stream contains a list whose
+     * entries' getServer is the same. Each entry will either have a present segemnt descriptor or a present result,
+     * but not both. Downstream consumers should check each and handle appropriately.
+     *
+     * @param cacheResolvedStream A stream of the cached results for different segment queries
+     *
+     * @return A stream of potentially cached results per server
+     */
+
+    private Stream<List<ServerMaybeSegmentMaybeCache<T>>> groupCachedResultsByServer(
+        Stream<SerializablePair<ServerToSegment, Optional<T>>> cacheResolvedStream
+    )
     {
-      return cacheResolvedStream.map(
-          this::pickServer
-      ).collect(
-          Collectors.groupingBy(ServerMaybeSegmentMaybeCache::getServer)
-      ).values(
-          // Even though we have matrialized the map, and are iterating across the values,
-          // the java.util.HashMap.ValueSpliterator does not currently support things like sizing or subsetting,
-          // so we want to convert the collection into a form conducive with embarassing parallelization down the line
-      ).stream(
-          // At this point we have the segments per server, and a special entry for the pre-cached stuff
-      ).filter(
-          l -> !l.isEmpty()
-      ).filter(
+      return cacheResolvedStream
+          .map(this::pickServer)
+          .collect(Collectors.groupingBy(ServerMaybeSegmentMaybeCache::getServer))
+          .values()
+          // At this point we have the segments per server, and a special entry for the pre-cached results.
+          // As of the time of this writing, this results in a java.util.HashMap.ValueSpliterator which
+          // does not have great properties for splitting in parallel since it does not have total size awareness
+          // yet. I hope future implementations of the grouping collector can handle such a scenario where the
+          // grouping result is immutable and can be split very easily into parallel spliterators
+          .stream()
+          .filter(l -> !l.isEmpty())
           // Get rid of any alerted conditions missing queryableDruidServer
-          l -> l.get(0).getCachedValue().isPresent() || l.get(0).getSegmentDescriptor().isPresent()
-      );
+          .filter(l -> l.get(0).getCachedValue().isPresent() || l.get(0).getSegmentDescriptor().isPresent());
     }
 
     private Stream<SerializablePair<ServerToSegment, Optional<T>>> deserializeFromCache(

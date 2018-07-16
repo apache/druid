@@ -23,6 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.Pair;
 
+import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+
 public class SerializablePair<T1, T2> extends Pair<T1, T2>
 {
   @JsonCreator
@@ -41,5 +45,13 @@ public class SerializablePair<T1, T2> extends Pair<T1, T2>
   public T2 getRhs()
   {
     return rhs;
+  }
+
+  public static <T1, T2> Collector<SerializablePair<T1, T2>, ?, Map<T1, T2>> mapCollector()
+  {
+    return Collectors.toMap(
+        SerializablePair<T1, T2>::getLhs,
+        SerializablePair<T1, T2>::getRhs
+    );
   }
 }
