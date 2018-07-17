@@ -30,7 +30,6 @@ import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
-import io.druid.indexing.common.task.TaskMonitor.TaskHistory;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.concurrent.Execs;
 import org.junit.After;

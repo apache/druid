@@ -34,10 +34,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import io.druid.server.security.AuthorizerMapper;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -281,9 +278,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
           new TestRunner(
               toolbox,
               this,
-              indexingServiceClient,
-              new NoopChatHandlerProvider(),
-              new AuthorizerMapper(Collections.emptyMap())
+              indexingServiceClient
           ).run()
       );
     }
@@ -296,9 +291,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     TestRunner(
         TaskToolbox toolbox,
         ParallelIndexSupervisorTask supervisorTask,
-        @Nullable IndexingServiceClient indexingServiceClient,
-        @Nullable ChatHandlerProvider chatHandlerProvider,
-        AuthorizerMapper authorizerMapper
+        @Nullable IndexingServiceClient indexingServiceClient
     )
     {
       super(
@@ -307,9 +300,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),
           supervisorTask.getContext(),
-          indexingServiceClient,
-          chatHandlerProvider,
-          authorizerMapper
+          indexingServiceClient
       );
       this.supervisorTask = supervisorTask;
     }
@@ -341,7 +332,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
 
   private static class TestParallelIndexSubTaskSpec extends ParallelIndexSubTaskSpec
   {
-    private final SinglePhaseParallelIndexTaskRunner runner;
+    private final ParallelIndexSupervisorTask supervisorTask;
 
     TestParallelIndexSubTaskSpec(
         String id,
@@ -354,7 +345,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     )
     {
       super(id, groupId, supervisorTask.getId(), ingestionSpec, context, inputSplit);
-      this.runner = runner;
+      this.supervisorTask = supervisorTask;
     }
 
     @Override
@@ -369,7 +360,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
           getIngestionSpec(),
           getContext(),
           null,
-          new LocalParallelIndexTaskClientFactory(runner)
+          new LocalParallelIndexTaskClientFactory(supervisorTask)
       );
     }
   }

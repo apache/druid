@@ -49,7 +49,6 @@ import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
-import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.Authorizer;
@@ -64,7 +63,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -303,9 +301,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               getGroupId(),
               getIngestionSchema(),
               getContext(),
-              new NoopIndexingServiceClient(),
-              new NoopChatHandlerProvider(),
-              new AuthorizerMapper(Collections.emptyMap())
+              new NoopIndexingServiceClient()
           ).run()
       );
     }
@@ -319,9 +315,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         String groupId,
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context,
-        @Nullable IndexingServiceClient indexingServiceClient,
-        @Nullable ChatHandlerProvider chatHandlerProvider,
-        AuthorizerMapper authorizerMapper
+        @Nullable IndexingServiceClient indexingServiceClient
     )
     {
       super(
@@ -330,9 +324,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           groupId,
           ingestionSchema,
           context,
-          indexingServiceClient,
-          chatHandlerProvider,
-          authorizerMapper
+          indexingServiceClient
       );
     }
 
@@ -357,11 +349,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   static class LocalParallelIndexTaskClientFactory implements IndexTaskClientFactory<ParallelIndexTaskClient>
   {
-    private final SinglePhaseParallelIndexTaskRunner runner;
+    private final ParallelIndexSupervisorTask supervisorTask;
 
-    LocalParallelIndexTaskClientFactory(SinglePhaseParallelIndexTaskRunner runner)
+    LocalParallelIndexTaskClientFactory(ParallelIndexSupervisorTask supervisorTask)
     {
-      this.runner = runner;
+      this.supervisorTask = supervisorTask;
     }
 
     @Override
@@ -373,30 +365,30 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         long numRetries
     )
     {
-      return new LocalParallelIndexTaskClient(callerId, runner);
+      return new LocalParallelIndexTaskClient(callerId, supervisorTask);
     }
   }
 
   static class LocalParallelIndexTaskClient extends ParallelIndexTaskClient
   {
-    private final SinglePhaseParallelIndexTaskRunner runner;
+    private final ParallelIndexSupervisorTask supervisorTask;
 
-    LocalParallelIndexTaskClient(String callerId, SinglePhaseParallelIndexTaskRunner runner)
+    LocalParallelIndexTaskClient(String callerId, ParallelIndexSupervisorTask supervisorTask)
     {
       super(null, null, null, null, callerId, 0);
-      this.runner = runner;
+      this.supervisorTask = supervisorTask;
     }
 
     @Override
     public SegmentIdentifier allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
     {
-      return runner.allocateNewSegment(timestamp);
+      return supervisorTask.allocateNewSegment(timestamp);
     }
 
     @Override
     public void report(String supervisorTaskId, List<DataSegment> pushedSegments)
     {
-      runner.collectReport(new PushedSegmentsReport(getSubtaskId(), pushedSegments));
+      supervisorTask.getRunner().collectReport(new PushedSegmentsReport(getSubtaskId(), pushedSegments));
     }
   }
 }

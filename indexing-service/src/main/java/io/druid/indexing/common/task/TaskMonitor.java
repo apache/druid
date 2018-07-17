@@ -20,7 +20,6 @@
 package io.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -28,7 +27,6 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.client.indexing.TaskStatusResponse;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
-import io.druid.indexing.common.task.ParallelIndexSupervisorTask.Status;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
@@ -74,6 +72,9 @@ public class TaskMonitor<T extends Task>
   // lock for updating numRunningTasks, numSucceededTasks, and numFailedTasks
   private final Object taskCountLock = new Object();
 
+  // lock for updating running state
+  private final Object startStopLock = new Object();
+
   // overlord client
   private final IndexingServiceClient indexingServiceClient;
   private final int maxRetry;
@@ -83,7 +84,7 @@ public class TaskMonitor<T extends Task>
   private int numSucceededTasks;
   private int numFailedTasks;
 
-  private volatile boolean running = false;
+  private boolean running = false;
 
   TaskMonitor(IndexingServiceClient indexingServiceClient, int maxRetry, int expectedNumSucceededTasks)
   {
@@ -96,99 +97,105 @@ public class TaskMonitor<T extends Task>
 
   public void start(long taskStatusCheckingPeriod)
   {
-    running = true;
-    log.info("Starting taskMonitor");
-    // NOTE: This polling can be improved to event-driven pushing by registering TaskRunnerListener to TaskRunner.
-    // That listener should be able to send the events reported to TaskRunner to this TaskMonitor.
-    taskStatusChecker.scheduleAtFixedRate(
-        () -> {
-          try {
-            final Iterator<Entry<String, MonitorEntry>> iterator = runningTasks.entrySet().iterator();
-            while (iterator.hasNext()) {
-              final Entry<String, MonitorEntry> entry = iterator.next();
-              final String specId = entry.getKey();
-              final MonitorEntry monitorEntry = entry.getValue();
-              final String taskId = monitorEntry.runningTask.getId();
-              final TaskStatusResponse taskStatusResponse = indexingServiceClient.getTaskStatus(taskId);
-              final TaskStatusPlus taskStatus = taskStatusResponse.getStatus();
-              if (taskStatus != null) {
-                switch (Preconditions.checkNotNull(taskStatus.getState(), "taskState")) {
-                  case SUCCESS:
-                    incrementNumSucceededTasks();
+    synchronized (startStopLock) {
+      running = true;
+      log.info("Starting taskMonitor");
+      // NOTE: This polling can be improved to event-driven pushing by registering TaskRunnerListener to TaskRunner.
+      // That listener should be able to send the events reported to TaskRunner to this TaskMonitor.
+      taskStatusChecker.scheduleAtFixedRate(
+          () -> {
+            try {
+              final Iterator<Entry<String, MonitorEntry>> iterator = runningTasks.entrySet().iterator();
+              while (iterator.hasNext()) {
+                final Entry<String, MonitorEntry> entry = iterator.next();
+                final String specId = entry.getKey();
+                final MonitorEntry monitorEntry = entry.getValue();
+                final String taskId = monitorEntry.runningTask.getId();
+                final TaskStatusResponse taskStatusResponse = indexingServiceClient.getTaskStatus(taskId);
+                final TaskStatusPlus taskStatus = taskStatusResponse.getStatus();
+                if (taskStatus != null) {
+                  switch (Preconditions.checkNotNull(taskStatus.getState(), "taskState")) {
+                    case SUCCESS:
+                      incrementNumSucceededTasks();
 
-                    // Remote the current entry after updating taskHistories to make sure that task history
-                    // exists either runningTasks or taskHistories.
-                    monitorEntry.setLastStatus(taskStatus);
-                    iterator.remove();
-                    break;
-                  case FAILED:
-                    incrementNumFailedTasks();
-
-                    log.warn("task[%s] failed!", taskId);
-                    if (monitorEntry.numTries() < maxRetry) {
-                      log.info(
-                          "We still have chances[%d/%d] to complete for spec[%s].",
-                          monitorEntry.numTries(),
-                          maxRetry,
-                          monitorEntry.spec.getId()
-                      );
-                      retry(specId, monitorEntry, taskStatus);
-                    } else {
-                      log.error(
-                          "spec[%s] failed after [%d] tries",
-                          monitorEntry.spec.getId(),
-                          monitorEntry.numTries()
-                      );
                       // Remote the current entry after updating taskHistories to make sure that task history
                       // exists either runningTasks or taskHistories.
                       monitorEntry.setLastStatus(taskStatus);
                       iterator.remove();
-                    }
-                    break;
-                  case RUNNING:
-                    monitorEntry.updateStatus(taskStatus);
-                    break;
-                  default:
-                    throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getState(), taskId);
+                      break;
+                    case FAILED:
+                      incrementNumFailedTasks();
+
+                      log.warn("task[%s] failed!", taskId);
+                      if (monitorEntry.numTries() < maxRetry) {
+                        log.info(
+                            "We still have chances[%d/%d] to complete for spec[%s].",
+                            monitorEntry.numTries(),
+                            maxRetry,
+                            monitorEntry.spec.getId()
+                        );
+                        retry(specId, monitorEntry, taskStatus);
+                      } else {
+                        log.error(
+                            "spec[%s] failed after [%d] tries",
+                            monitorEntry.spec.getId(),
+                            monitorEntry.numTries()
+                        );
+                        // Remote the current entry after updating taskHistories to make sure that task history
+                        // exists either runningTasks or taskHistories.
+                        monitorEntry.setLastStatus(taskStatus);
+                        iterator.remove();
+                      }
+                      break;
+                    case RUNNING:
+                      monitorEntry.updateStatus(taskStatus);
+                      break;
+                    default:
+                      throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getState(), taskId);
+                  }
                 }
               }
             }
-          }
-          catch (Throwable t) {
-            log.error(t, "Error while monitoring");
-            throw t;
-          }
-        },
-        taskStatusCheckingPeriod,
-        taskStatusCheckingPeriod,
-        TimeUnit.MILLISECONDS
-    );
+            catch (Throwable t) {
+              log.error(t, "Error while monitoring");
+              throw t;
+            }
+          },
+          taskStatusCheckingPeriod,
+          taskStatusCheckingPeriod,
+          TimeUnit.MILLISECONDS
+      );
+    }
   }
 
   public void stop()
   {
-    running = false;
-    taskStatusChecker.shutdownNow();
-    log.info("Stopped taskMonitor");
+    synchronized (startStopLock) {
+      running = false;
+      taskStatusChecker.shutdownNow();
+      log.info("Stopped taskMonitor");
+    }
   }
 
   public ListenableFuture<SubTaskCompleteEvent<T>> submit(SubTaskSpec<T> spec)
   {
-    if (!running) {
-      return Futures.immediateFailedFuture(new ISE("TaskMonitore is not running"));
+    synchronized (startStopLock) {
+      if (!running) {
+        return Futures.immediateFailedFuture(new ISE("TaskMonitore is not running"));
+      }
+      final T task = spec.newSubTask(0);
+      log.info("Submitting a new task[%s] for spec[%s]", task.getId(), spec.getId());
+      indexingServiceClient.runTask(task);
+      incrementNumRunningTasks();
+
+      final SettableFuture<SubTaskCompleteEvent<T>> taskFuture = SettableFuture.create();
+      runningTasks.put(
+          spec.getId(),
+          new MonitorEntry(spec, task, indexingServiceClient.getTaskStatus(task.getId()).getStatus(), taskFuture)
+      );
+
+      return taskFuture;
     }
-    final T task = spec.newSubTask(0);
-    log.info("Submitting a new task[%s] for spec[%s]", task.getId(), spec.getId());
-    indexingServiceClient.runTask(task);
-    incrementNumRunningTasks();
-
-    final SettableFuture<SubTaskCompleteEvent<T>> taskFuture = SettableFuture.create();
-    runningTasks.put(
-        spec.getId(),
-        new MonitorEntry(spec, task, indexingServiceClient.getTaskStatus(task.getId()).getStatus(), taskFuture)
-    );
-
-    return taskFuture;
   }
 
   /**
@@ -197,21 +204,23 @@ public class TaskMonitor<T extends Task>
    */
   private void retry(String subTaskSpecId, MonitorEntry monitorEntry, TaskStatusPlus lastFailedTaskStatus)
   {
-    if (running) {
-      final SubTaskSpec<T> spec = monitorEntry.spec;
-      final T task = spec.newSubTask(monitorEntry.taskHistory.size() + 1);
-      log.info("Submitting a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
-      indexingServiceClient.runTask(task);
-      incrementNumRunningTasks();
+    synchronized (startStopLock) {
+      if (running) {
+        final SubTaskSpec<T> spec = monitorEntry.spec;
+        final T task = spec.newSubTask(monitorEntry.taskHistory.size() + 1);
+        log.info("Submitting a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
+        indexingServiceClient.runTask(task);
+        incrementNumRunningTasks();
 
-      runningTasks.put(
-          subTaskSpecId,
-          monitorEntry.withNewRunningTask(
-              task,
-              indexingServiceClient.getTaskStatus(task.getId()).getStatus(),
-              lastFailedTaskStatus
-          )
-      );
+        runningTasks.put(
+            subTaskSpecId,
+            monitorEntry.withNewRunningTask(
+                task,
+                indexingServiceClient.getTaskStatus(task.getId()).getStatus(),
+                lastFailedTaskStatus
+            )
+        );
+      }
     }
   }
 
@@ -266,10 +275,10 @@ public class TaskMonitor<T extends Task>
     }
   }
 
-  Status getStatus()
+  ParallelIndexingStatus getStatus()
   {
     synchronized (taskCountLock) {
-      return new Status(
+      return new ParallelIndexingStatus(
           numRunningTasks,
           numSucceededTasks,
           numFailedTasks,
@@ -302,7 +311,7 @@ public class TaskMonitor<T extends Task>
 
   List<SubTaskSpec<T>> getCompleteSubTaskSpecs()
   {
-    return taskHistories.values().stream().map(history -> history.spec).collect(Collectors.toList());
+    return taskHistories.values().stream().map(TaskHistory::getSpec).collect(Collectors.toList());
   }
 
   @Nullable
@@ -410,41 +419,6 @@ public class TaskMonitor<T extends Task>
     List<TaskStatusPlus> getTaskHistory()
     {
       return taskHistory;
-    }
-  }
-
-  static class TaskHistory<T extends Task>
-  {
-    private final SubTaskSpec<T> spec;
-    private final List<TaskStatusPlus> attemptHistory; // old to recent
-
-    TaskHistory(SubTaskSpec<T> spec, List<TaskStatusPlus> attemptHistory)
-    {
-      attemptHistory.forEach(status -> {
-        Preconditions.checkState(
-            status.getState() == TaskState.SUCCESS || status.getState() == TaskState.FAILED,
-            "Complete tasks should be recorded, but the state of task[%s] is [%s]",
-            status.getId(),
-            status.getState()
-        );
-      });
-      this.spec = spec;
-      this.attemptHistory = ImmutableList.copyOf(attemptHistory);
-    }
-
-    SubTaskSpec<T> getSpec()
-    {
-      return spec;
-    }
-
-    List<TaskStatusPlus> getAttemptHistory()
-    {
-      return attemptHistory;
-    }
-
-    boolean isEmpty()
-    {
-      return attemptHistory.isEmpty();
     }
   }
 

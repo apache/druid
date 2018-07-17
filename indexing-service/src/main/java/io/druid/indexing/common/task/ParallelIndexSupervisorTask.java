@@ -22,30 +22,56 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.data.input.FiniteFirehoseFactory;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.Counters;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import io.druid.indexing.common.task.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.segment.indexing.granularity.GranularitySpec;
+import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.realtime.firehose.ChatHandlers;
+import io.druid.server.security.Action;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.SortedSet;
+import java.util.stream.Collectors;
 
 /**
  * ParallelIndexSupervisorTask is capable of running multiple subTasks for parallel indexing. This is
@@ -67,7 +93,12 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   private final AuthorizerMapper authorizerMapper;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
-  private ParallelIndexTaskRunner runner;
+  private final Counters counters = new Counters();
+
+  private volatile ParallelIndexTaskRunner runner;
+
+  // toolbox is initlized when run() is called, and can be used for processing HTTP endpoint requests.
+  private volatile TaskToolbox toolbox;
 
   @JsonCreator
   public ParallelIndexSupervisorTask(
@@ -156,9 +187,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
           getGroupId(),
           ingestionSchema,
           getContext(),
-          indexingServiceClient,
-          chatHandlerProvider,
-          authorizerMapper
+          indexingServiceClient
       );
     }
     return runner;
@@ -192,14 +221,27 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    if (baseFirehoseFactory.isSplittable()) {
-      return runParallel(toolbox);
-    } else {
-      log.warn(
-          "firehoseFactory[%s] is not splittable. Running sequentially",
-          baseFirehoseFactory.getClass().getSimpleName()
-      );
-      return runSequential(toolbox);
+    this.toolbox = toolbox;
+
+    log.info(
+        "Found chat handler of class[%s]",
+        Preconditions.checkNotNull(chatHandlerProvider, "chatHandlerProvider").getClass().getName()
+    );
+    chatHandlerProvider.register(getId(), this, false);
+
+    try {
+      if (baseFirehoseFactory.isSplittable()) {
+        return runParallel(toolbox);
+      } else {
+        log.warn(
+            "firehoseFactory[%s] is not splittable. Running sequentially",
+            baseFirehoseFactory.getClass().getSimpleName()
+        );
+        return runSequential(toolbox);
+      }
+    }
+    finally {
+      chatHandlerProvider.unregister(getId());
     }
   }
 
@@ -252,72 +294,248 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     );
   }
 
-  static class Status
+  // Internal APIs
+
+  /**
+   * Allocate a new {@link SegmentIdentifier} for a request from {@link ParallelIndexSubTask}.
+   * The returned segmentIdentifiers have different {@code partitionNum} (thereby different {@link NumberedShardSpec})
+   * per bucket interval.
+   */
+  @POST
+  @Path("/segment/allocate")
+  @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+  public Response allocateSegment(
+      DateTime timestamp,
+      @Context final HttpServletRequest req
+  )
   {
-    private final int running;
-    private final int succeeded;
-    private final int failed;
-    private final int complete;
-    private final int total;
-    private final int expectedSucceeded;
+    ChatHandlers.authorizationCheck(
+        req,
+        Action.READ,
+        getDataSource(),
+        authorizerMapper
+    );
 
-    static Status empty()
-    {
-      return new Status(0, 0, 0, 0, 0, 0);
+    if (toolbox == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
     }
 
-    @JsonCreator
-    Status(
-        @JsonProperty("running") int running,
-        @JsonProperty("succeeded") int succeeded,
-        @JsonProperty("failed") int failed,
-        @JsonProperty("complete") int complete,
-        @JsonProperty("total") int total,
-        @JsonProperty("expectedSucceeded") int expectedSucceeded
-    )
-    {
-      this.running = running;
-      this.succeeded = succeeded;
-      this.failed = failed;
-      this.complete = complete;
-      this.total = total;
-      this.expectedSucceeded = expectedSucceeded;
+    try {
+      final SegmentIdentifier segmentIdentifier = allocateNewSegment(timestamp);
+      return Response.ok(toolbox.getObjectMapper().writeValueAsBytes(segmentIdentifier)).build();
+    }
+    catch (IOException | IllegalStateException e) {
+      return Response.serverError().entity(Throwables.getStackTraceAsString(e)).build();
+    }
+    catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST).entity(Throwables.getStackTraceAsString(e)).build();
+    }
+  }
+
+  @VisibleForTesting
+  SegmentIdentifier allocateNewSegment(DateTime timestamp) throws IOException
+  {
+    final String dataSource = getDataSource();
+    final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
+    final SortedSet<Interval> bucketIntervals = Preconditions.checkNotNull(
+        granularitySpec.bucketIntervals().orNull(),
+        "bucketIntervals"
+    );
+    // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
+    final Map<Interval, String> versions = toolbox
+        .getTaskActionClient()
+        .submit(new LockListAction())
+        .stream()
+        .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
+
+    final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
+    if (!maybeInterval.isPresent()) {
+      throw new IAE("Could not find interval for timestamp [%s]", timestamp);
     }
 
-    @JsonProperty
-    public int getRunning()
-    {
-      return running;
+    final Interval interval = maybeInterval.get();
+    if (!bucketIntervals.contains(interval)) {
+      throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
     }
 
-    @JsonProperty
-    public int getSucceeded()
-    {
-      return succeeded;
-    }
+    final int partitionNum = counters.increment(interval.toString(), 1);
+    return new SegmentIdentifier(
+        dataSource,
+        interval,
+        findVersion(versions, interval),
+        new NumberedShardSpec(partitionNum, 0)
+    );
+  }
 
-    @JsonProperty
-    public int getFailed()
-    {
-      return failed;
-    }
+  private static String findVersion(Map<Interval, String> versions, Interval interval)
+  {
+    return versions.entrySet().stream()
+                   .filter(entry -> entry.getKey().contains(interval))
+                   .map(Entry::getValue)
+                   .findFirst()
+                   .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
+  }
 
-    @JsonProperty
-    public int getComplete()
-    {
-      return complete;
+  /**
+   * {@link ParallelIndexSubTask}s call this API to report the segments they've generated and pushed.
+   */
+  @POST
+  @Path("/report")
+  @Consumes(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+  public Response report(
+      PushedSegmentsReport report,
+      @Context final HttpServletRequest req
+  )
+  {
+    ChatHandlers.authorizationCheck(
+        req,
+        Action.WRITE,
+        getDataSource(),
+        authorizerMapper
+    );
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      runner.collectReport(report);
+      return Response.ok().build();
     }
+  }
 
-    @JsonProperty
-    public int getTotal()
-    {
-      return total;
+  // External APIs to get running status
+
+  @GET
+  @Path("/mode")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getMode(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      return Response.ok(baseFirehoseFactory.isSplittable() ? "parallel" : "sequential").build();
     }
+  }
 
-    @JsonProperty
-    public int getExpectedSucceeded()
-    {
-      return expectedSucceeded;
+  @GET
+  @Path("/status")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getStatus(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      return Response.ok(runner.getStatus()).build();
+    }
+  }
+
+  @GET
+  @Path("/subtasks/running")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRunningTasks(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      return Response.ok(runner.getRunningTaskIds()).build();
+    }
+  }
+
+  @GET
+  @Path("/subtaskspecs")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSubTaskSpecs(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      return Response.ok(runner.getSubTaskSpecs()).build();
+    }
+  }
+
+  @GET
+  @Path("/subtaskspecs/running")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRunningSubTaskSpecs(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      return Response.ok(runner.getRunningSubTaskSpecs()).build();
+    }
+  }
+
+  @GET
+  @Path("/subtaskspecs/complete")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getCompleteSubTaskSpecs(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      return Response.ok(runner.getCompleteSubTaskSpecs()).build();
+    }
+  }
+
+  @GET
+  @Path("/subtaskspec/{id}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSubTaskSpec(@PathParam("id") String id, @Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      final SubTaskSpec subTaskSpec = runner.getSubTaskSpec(id);
+      if (subTaskSpec == null) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      } else {
+        return Response.ok(subTaskSpec).build();
+      }
+    }
+  }
+
+  @GET
+  @Path("/subtaskspec/{id}/state")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSubTaskState(@PathParam("id") String id, @Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      final SubTaskSpecStatus subTaskSpecStatus = runner.getSubTaskState(id);
+      if (subTaskSpecStatus == null) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      } else {
+        return Response.ok(subTaskSpecStatus).build();
+      }
+    }
+  }
+
+  @GET
+  @Path("/subtaskspec/{id}/history")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getCompleteSubTaskSpecAttemptHistory(
+      @PathParam("id") String id,
+      @Context final HttpServletRequest req
+  )
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (runner == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
+    } else {
+      final TaskHistory taskHistory = runner.getCompleteSubTaskSpecAttemptHistory(id);
+      if (taskHistory == null) {
+        return Response.status(Status.NOT_FOUND).build();
+      } else {
+        return Response.ok(taskHistory.getAttemptHistory()).build();
+      }
     }
   }
 }
