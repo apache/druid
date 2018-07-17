@@ -21,8 +21,6 @@ package io.druid.indexing.overlord.supervisor;
 
 import io.druid.indexing.overlord.DataSourceMetadata;
 
-import javax.annotation.Nullable;
-
 public interface Supervisor
 {
   void start();
@@ -45,13 +43,9 @@ public interface Supervisor
    * for example - Kafka Supervisor uses this to merge and handoff segments containing at least the data
    * represented by {@param currentCheckpoint} DataSourceMetadata
    *
-   * @param sequenceName       unique Identifier to figure out for which sequence to do checkpointing
+   * @param taskGroupId        unique Identifier to figure out for which sequence to do checkpointing
    * @param previousCheckPoint DataSourceMetadata checkpointed in previous call
    * @param currentCheckPoint  current DataSourceMetadata to be checkpointed
    */
-  void checkpoint(
-      @Nullable String sequenceName,
-      @Nullable DataSourceMetadata previousCheckPoint,
-      @Nullable DataSourceMetadata currentCheckPoint
-  );
+  void checkpoint(int taskGroupId, DataSourceMetadata previousCheckPoint, DataSourceMetadata currentCheckPoint);
 }
