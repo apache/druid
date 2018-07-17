@@ -172,7 +172,6 @@ public class QueryContexts
   }
 
 
-
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
   {
     return parseLong(query, MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
@@ -212,7 +211,8 @@ public class QueryContexts
     return defaultTimeout;
   }
 
-  public static <T> boolean isEnableBrokerBackpressure(Query<T> query) {
+  public static <T> boolean isEnableBrokerBackpressure(Query<T> query)
+  {
     return parseBoolean(query, ENABLE_BROKER_BACKPRESSURE, DEFAULT_ENABLE_BROKER_BACKPRESSURE);
   }
 
