@@ -156,9 +156,22 @@ The supervisor task provides some HTTP endpoints to get running status.
 
 Returns 'parallel' if the indexing task is running in parallel. Otherwise, it returns 'sequential'.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/status`
+* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/progress`
 
-Returns the current running status if the supervisor task is running in the parallel mode.
+Returns the current progress if the supervisor task is running in the parallel mode.
+
+An example of the result is
+
+```json
+{
+  "running":10,
+  "succeeded":0,
+  "failed":0,
+  "complete":0,
+  "total":10,
+  "expectedSucceeded":10
+}
+```
 
 * `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtasks/running`
 

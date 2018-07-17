@@ -163,7 +163,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
                     state = TaskState.SUCCESS;
                   } else {
                     // Failed
-                    final ParallelIndexingStatus monitorStatus = taskMonitor.getStatus();
+                    final SinglePhaseParallelIndexingProgress monitorStatus = taskMonitor.getProgress();
                     throw new ISE(
                         "Expected for [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
                         monitorStatus.getExpectedSucceeded(),
@@ -261,9 +261,9 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   }
 
   @Override
-  public ParallelIndexingStatus getStatus()
+  public SinglePhaseParallelIndexingProgress getProgress()
   {
-    return taskMonitor == null ? ParallelIndexingStatus.notRunning() : taskMonitor.getStatus();
+    return taskMonitor == null ? SinglePhaseParallelIndexingProgress.notRunning() : taskMonitor.getProgress();
   }
 
   @Override

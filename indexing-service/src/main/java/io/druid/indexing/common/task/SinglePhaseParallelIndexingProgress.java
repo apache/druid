@@ -21,22 +21,48 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-class ParallelIndexingStatus
+/**
+ * Represents the current progress of {@link SinglePhaseParallelIndexTaskRunner}.
+ */
+class SinglePhaseParallelIndexingProgress implements ParallelIndexingProgress
 {
+  /**
+   * Number of running tasks.
+   */
   private final int running;
+
+  /**
+   * Number of succeeded tasks.
+   */
   private final int succeeded;
+
+  /**
+   * Number of failed tasks.
+   */
   private final int failed;
+
+  /**
+   * Number of complete (succeeded + failed) tasks.
+   */
   private final int complete;
+
+  /**
+   * Number of total (running + complete) tasks.
+   */
   private final int total;
+
+  /**
+   * Number of succeeded tasks for {@link SinglePhaseParallelIndexTaskRunner} to succeed.
+   */
   private final int expectedSucceeded;
 
-  static ParallelIndexingStatus notRunning()
+  static SinglePhaseParallelIndexingProgress notRunning()
   {
-    return new ParallelIndexingStatus(0, 0, 0, 0, 0, -1);
+    return new SinglePhaseParallelIndexingProgress(0, 0, 0, 0, 0, -1);
   }
 
   @JsonCreator
-  ParallelIndexingStatus(
+  SinglePhaseParallelIndexingProgress(
       @JsonProperty("running") int running,
       @JsonProperty("succeeded") int succeeded,
       @JsonProperty("failed") int failed,

@@ -145,13 +145,13 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     Assert.assertEquals("parallel", response.getEntity());
 
     // test expectedNumSucceededTasks
-    response = task.getStatus(newRequest());
+    response = task.getProgress(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(NUM_SUB_TASKS, ((ParallelIndexingStatus) response.getEntity()).getExpectedSucceeded());
+    Assert.assertEquals(NUM_SUB_TASKS, ((SinglePhaseParallelIndexingProgress) response.getEntity()).getExpectedSucceeded());
 
     // Since taskMonitor works based on polling, it's hard to use a fancier way to check its state.
     // We use polling to check the state of taskMonitor in this test.
-    while (getNumSubTasks(ParallelIndexingStatus::getRunning) < NUM_SUB_TASKS) {
+    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getRunning) < NUM_SUB_TASKS) {
       Thread.sleep(100);
     }
 
@@ -169,7 +169,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       runningTasks.get(0).setState(TaskState.SUCCESS);
     }
 
-    while (getNumSubTasks(ParallelIndexingStatus::getSucceeded) < succeededTasks) {
+    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getSucceeded) < succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -186,7 +186,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     // Wait for new tasks to be started
-    while (getNumSubTasks(ParallelIndexingStatus::getFailed) < failedTasks || runningTasks.size() < NUM_SUB_TASKS - succeededTasks) {
+    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getFailed) < failedTasks || runningTasks.size() < NUM_SUB_TASKS - succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -202,7 +202,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       runningTasks.get(0).setState(TaskState.SUCCESS);
     }
 
-    while (getNumSubTasks(ParallelIndexingStatus::getSucceeded) < succeededTasks) {
+    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getSucceeded) < succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -221,10 +221,10 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     // Test one more failure
     runningTasks.get(0).setState(TaskState.FAILED);
     failedTasks++;
-    while (getNumSubTasks(ParallelIndexingStatus::getFailed) < failedTasks) {
+    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getFailed) < failedTasks) {
       Thread.sleep(100);
     }
-    while (getNumSubTasks(ParallelIndexingStatus::getRunning) < 1) {
+    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getRunning) < 1) {
       Thread.sleep(100);
     }
 
@@ -237,7 +237,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
     runningTasks.get(0).setState(TaskState.SUCCESS);
     succeededTasks++;
-    while (getNumSubTasks(ParallelIndexingStatus::getSucceeded) < succeededTasks) {
+    while (getNumSubTasks(SinglePhaseParallelIndexingProgress::getSucceeded) < succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -245,11 +245,11 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   }
 
   @SuppressWarnings({"ConstantConditions"})
-  private int getNumSubTasks(Function<ParallelIndexingStatus, Integer> func)
+  private int getNumSubTasks(Function<SinglePhaseParallelIndexingProgress, Integer> func)
   {
-    final Response response = task.getStatus(newRequest());
+    final Response response = task.getProgress(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    return func.apply((ParallelIndexingStatus) response.getEntity());
+    return func.apply((SinglePhaseParallelIndexingProgress) response.getEntity());
   }
 
   private Map<String, SubTaskSpecStatus> buildStateMap()
@@ -275,9 +275,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       Map<String, SubTaskSpecStatus> expectedSubTaskStateResponses // subTaskSpecId -> response
   )
   {
-    Response response = task.getStatus(newRequest());
+    Response response = task.getProgress(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    final ParallelIndexingStatus monitorStatus = (ParallelIndexingStatus) response.getEntity();
+    final SinglePhaseParallelIndexingProgress monitorStatus = (SinglePhaseParallelIndexingProgress) response.getEntity();
 
     // numRunningTasks
     Assert.assertEquals(runningTasks.size(), monitorStatus.getRunning());

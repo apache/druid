@@ -417,15 +417,15 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   }
 
   @GET
-  @Path("/status")
+  @Path("/progress")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getStatus(@Context final HttpServletRequest req)
+  public Response getProgress(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     if (runner == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
     } else {
-      return Response.ok(runner.getStatus()).build();
+      return Response.ok(runner.getProgress()).build();
     }
   }
 

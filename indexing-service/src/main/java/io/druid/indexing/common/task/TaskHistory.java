@@ -25,10 +25,14 @@ import io.druid.indexer.TaskStatusPlus;
 
 import java.util.List;
 
+/**
+ * Task attempt history for complete {@link SubTaskSpec}s. A {@link SubTaskSpec} is complete if its last status is
+ * succeeded or failed.
+ */
 class TaskHistory<T extends Task>
 {
   private final SubTaskSpec<T> spec;
-  private final List<TaskStatusPlus> attemptHistory; // old to recent
+  private final List<TaskStatusPlus> attemptHistory; // old attempts to recent ones
 
   TaskHistory(SubTaskSpec<T> spec, List<TaskStatusPlus> attemptHistory)
   {

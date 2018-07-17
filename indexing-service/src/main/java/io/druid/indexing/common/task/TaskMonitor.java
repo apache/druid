@@ -275,10 +275,10 @@ public class TaskMonitor<T extends Task>
     }
   }
 
-  ParallelIndexingStatus getStatus()
+  SinglePhaseParallelIndexingProgress getProgress()
   {
     synchronized (taskCountLock) {
-      return new ParallelIndexingStatus(
+      return new SinglePhaseParallelIndexingProgress(
           numRunningTasks,
           numSucceededTasks,
           numFailedTasks,
