@@ -327,7 +327,7 @@ public abstract class IndexTaskClient implements AutoCloseable
         }
         String urlForLog = (request != null
                             ? request.getUrl().toString()
-                            : StringUtils.format(
+                            : StringUtils.nonStrictFormat(
                                 "%s://%s:%d%s",
                                 scheme,
                                 host,
