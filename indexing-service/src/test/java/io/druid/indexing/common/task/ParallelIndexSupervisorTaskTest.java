@@ -273,13 +273,17 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     @Override
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
-      return TaskStatus.fromCode(
-          getId(),
+      setToolbox(toolbox);
+      setRunner(
           new TestRunner(
               toolbox,
               this,
               indexingServiceClient
-          ).run()
+          )
+      );
+      return TaskStatus.fromCode(
+          getId(),
+          getRunner().run()
       );
     }
   }
@@ -315,7 +319,6 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
           supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
           supervisorTask.getGroupId(),
           supervisorTask,
-          this,
           new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
               new ParallelIndexIOConfig(
@@ -338,7 +341,6 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
         String id,
         String groupId,
         ParallelIndexSupervisorTask supervisorTask,
-        SinglePhaseParallelIndexTaskRunner runner,
         ParallelIndexIngestionSpec ingestionSpec,
         Map<String, Object> context,
         InputSplit inputSplit

@@ -100,7 +100,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   private ExecutorService service;
 
   private TestSupervisorTask task;
-  private SinglePhaseParallelIndexTaskRunner runner;
 
   @Before
   public void setup() throws IOException
@@ -136,7 +135,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     final Future<TaskStatus> supervisorTaskFuture = service.submit(() -> task.run(toolbox));
     Thread.sleep(1000);
 
-    runner = (SinglePhaseParallelIndexTaskRunner) task.getRunner();
+    final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.getRunner();
     Assert.assertNotNull("runner is null", runner);
 
     // test getMode
@@ -479,8 +478,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
   private class TestSupervisorTask extends TestParallelIndexSupervisorTask
   {
-    private TestRunner runner;
-
     TestSupervisorTask(
         String id,
         TaskResource taskResource,
@@ -501,21 +498,17 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     @Override
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
-      this.runner = new TestRunner(
-          toolbox,
-          this,
-          indexingServiceClient
+      setRunner(
+          new TestRunner(
+              toolbox,
+              this,
+              indexingServiceClient
+          )
       );
       return TaskStatus.fromCode(
           getId(),
-          runner.run()
+          getRunner().run()
       );
-    }
-
-    @Override
-    public ParallelIndexTaskRunner getRunner()
-    {
-      return runner;
     }
   }
 
@@ -674,7 +667,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
                                           .submit(new SurrogateAction<>(getSupervisorTaskId(), new LockListAction()));
       Preconditions.checkState(locks.size() == 1, "There should be a single lock");
 
-      runner.collectReport(
+      task.getRunner().collectReport(
           new PushedSegmentsReport(
               getId(),
               Collections.singletonList(

@@ -193,6 +193,12 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     return runner;
   }
 
+  @VisibleForTesting
+  void setRunner(ParallelIndexTaskRunner runner)
+  {
+    this.runner = runner;
+  }
+
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
@@ -221,7 +227,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    this.toolbox = toolbox;
+    setToolbox(toolbox);
 
     log.info(
         "Found chat handler of class[%s]",
@@ -243,6 +249,12 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     finally {
       chatHandlerProvider.unregister(getId());
     }
+  }
+
+  @VisibleForTesting
+  void setToolbox(TaskToolbox toolbox)
+  {
+    this.toolbox = toolbox;
   }
 
   private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
@@ -410,6 +422,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     if (runner == null) {
+      System.err.println("runner: " + runner);
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
     } else {
       return Response.ok(baseFirehoseFactory.isSplittable() ? "parallel" : "sequential").build();
