@@ -246,7 +246,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   )
               );
             }
-            queue.put(new ChannelBufferInputStream(response.getContent()));
+            final InputStream inputStream = new ChannelBufferInputStream(response.getContent());
+            if (isEnableBrokerBackpressure) {
+              queue.transfer(inputStream);
+            } else {
+              queue.put(inputStream);
+            }
           }
           catch (final IOException e) {
             log.error(e, "Error parsing response context from url [%s]", url);
@@ -325,7 +330,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           if (bytes > 0) {
             try {
-              queue.put(new ChannelBufferInputStream(channelBuffer));
+              final InputStream inputStream = new ChannelBufferInputStream(channelBuffer);
+              if (isEnableBrokerBackpressure) {
+                queue.transfer(inputStream);
+              } else {
+                queue.put(inputStream);
+              }
             }
             catch (InterruptedException e) {
               log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
@@ -360,6 +370,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
               // after done is set to true, regardless of the rest of the stream's state.
+              // We don't need to "transfer" this one because there's no more results to force backpressure with
               queue.put(ByteSource.empty().openStream());
             }
             catch (InterruptedException e) {
@@ -394,6 +405,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           fail.set(msg);
           queue.clear();
+          // Don't need to transfer because this is a terminal state, so no need to block more items coming in
           queue.offer(new InputStream()
           {
             @Override
