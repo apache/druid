@@ -56,7 +56,7 @@ public class TaskMonitor<T extends Task>
   /**
    * A map of subTaskSpecId to {@link MonitorEntry}. This map stores the state of running {@link SubTaskSpec}s. This is
    * read in {@link java.util.concurrent.Callable} executed by {@link #taskStatusChecker} and updated in {@link #submit}
-   * and {@link #retry}. This can also be read by calling {@link #getRunningTaskMonitorEntory},
+   * and {@link #retry}. This can also be read by calling {@link #getRunningTaskMonitorEntry},
    * {@link #getRunningTaskIds}, and {@link #getRunningSubTaskSpecs}.
    */
   private final ConcurrentMap<String, MonitorEntry> runningTasks = new ConcurrentHashMap<>();
@@ -300,7 +300,7 @@ public class TaskMonitor<T extends Task>
   }
 
   @Nullable
-  MonitorEntry getRunningTaskMonitorEntory(String subTaskSpecId)
+  MonitorEntry getRunningTaskMonitorEntry(String subTaskSpecId)
   {
     return runningTasks.values()
                        .stream()

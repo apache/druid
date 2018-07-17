@@ -311,7 +311,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
     if (taskMonitor != null) {
       // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
       // adding them to taskHistory.
-      final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntory(subTaskSpecId);
+      final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntry(subTaskSpecId);
       final TaskHistory<ParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(subTaskSpecId);
       final SubTaskSpec<ParallelIndexSubTask> subTaskSpec;
 
@@ -340,7 +340,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
     } else {
       // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
       // adding them to taskHistory.
-      final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntory(subTaskSpecId);
+      final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntry(subTaskSpecId);
       final TaskHistory<ParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(subTaskSpecId);
 
       final SubTaskSpecStatus subTaskSpecStatus;
