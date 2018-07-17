@@ -1,17 +1,8 @@
 [![Build Status](https://travis-ci.org/druid-io/druid.svg?branch=master)](https://travis-ci.org/druid-io/druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/druid-io/druid/badge.svg?branch=master)](https://coveralls.io/r/druid-io/druid?branch=master)
 
-## Druid
+## Apache Druid (incubating)
 
-Druid is a distributed, column-oriented, real-time analytics data store
-that is commonly used to power exploratory dashboards in multi-tenant
-environments.
-
-Druid excels as a data warehousing solution for fast aggregate queries on
-petabyte sized data sets. Druid supports a variety of flexible filters, exact
-calculations, approximate algorithms, and other useful calculations.
-
-Druid can load both streaming and batch data and integrates with
-Samza, Kafka, Storm, Spark, and Hadoop.
+Apache Druid (incubating) is a high performance analytics data store for event-driven data.
 
 ### License
 
