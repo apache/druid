@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -37,9 +37,14 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
+import io.druid.indexing.common.task.AbstractTask;
+import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
-import io.druid.indexing.common.task.ParallelIndexTaskRunner.SubTaskSpecStatus;
+import io.druid.indexing.common.task.IndexTaskUtils;
+import io.druid.indexing.common.task.TaskResource;
+import io.druid.indexing.common.task.Tasks;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
@@ -82,7 +87,7 @@ import java.util.stream.Collectors;
  */
 public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHandler
 {
-  static final String TYPE = "index_parallel";
+  public static final String TYPE = "index_parallel";
 
   private static final Logger log = new Logger(ParallelIndexSupervisorTask.class);
 

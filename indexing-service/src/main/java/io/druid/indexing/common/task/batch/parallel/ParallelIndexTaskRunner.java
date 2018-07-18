@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
+import io.druid.indexing.common.task.Task;
 
 import javax.annotation.Nullable;
 import java.util.List;

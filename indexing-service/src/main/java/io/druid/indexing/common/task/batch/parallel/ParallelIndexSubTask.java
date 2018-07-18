@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -37,6 +37,12 @@ import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SurrogateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.task.AbstractTask;
+import io.druid.indexing.common.task.ClientBasedTaskInfoProvider;
+import io.druid.indexing.common.task.IndexTask;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
+import io.druid.indexing.common.task.TaskResource;
+import io.druid.indexing.common.task.Tasks;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
@@ -79,7 +85,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class ParallelIndexSubTask extends AbstractTask
 {
-  static final String TYPE = "index_sub";
+  public static final String TYPE = "index_sub";
 
   private static final Logger log = new Logger(ParallelIndexSubTask.class);
 

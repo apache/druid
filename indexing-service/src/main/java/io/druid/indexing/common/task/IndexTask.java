@@ -204,7 +204,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  IndexTask(
+  public IndexTask(
       String id,
       String groupId,
       TaskResource resource,

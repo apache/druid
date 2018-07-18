@@ -58,7 +58,7 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTaskClientFactory;
-import io.druid.indexing.common.task.ParallelIndexTaskClient;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClient;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;

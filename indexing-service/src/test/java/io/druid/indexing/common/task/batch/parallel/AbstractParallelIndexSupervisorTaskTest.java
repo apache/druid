@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -42,6 +42,11 @@ import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
+import io.druid.indexing.common.task.IngestionTestBase;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
+import io.druid.indexing.common.task.Task;
+import io.druid.indexing.common.task.TaskResource;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;

@@ -77,7 +77,7 @@ public abstract class AbstractTask implements Task
     this.context = context;
   }
 
-  static String getOrMakeId(String id, final String typeName, String dataSource)
+  public static String getOrMakeId(String id, final String typeName, String dataSource)
   {
     return getOrMakeId(id, typeName, dataSource, null);
   }
@@ -216,7 +216,7 @@ public abstract class AbstractTask implements Task
     return id.hashCode();
   }
 
-  static List<TaskLock> getTaskLocks(TaskActionClient client) throws IOException
+  public static List<TaskLock> getTaskLocks(TaskActionClient client) throws IOException
   {
     return client.submit(new LockListAction());
   }

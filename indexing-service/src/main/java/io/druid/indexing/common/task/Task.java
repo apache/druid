@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexSubTask;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 

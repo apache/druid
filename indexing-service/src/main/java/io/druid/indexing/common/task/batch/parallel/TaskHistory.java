@@ -16,12 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
+import io.druid.indexing.common.task.Task;
 
 import java.util.List;
 

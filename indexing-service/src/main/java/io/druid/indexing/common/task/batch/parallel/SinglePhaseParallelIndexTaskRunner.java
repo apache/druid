@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -33,8 +33,8 @@ import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import io.druid.indexing.common.task.TaskMonitor.MonitorEntry;
-import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
+import io.druid.indexing.common.task.batch.parallel.TaskMonitor.MonitorEntry;
+import io.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;

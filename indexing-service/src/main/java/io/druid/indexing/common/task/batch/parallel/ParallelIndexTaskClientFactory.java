@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Smile;
 import io.druid.indexing.common.TaskInfoProvider;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
 import io.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 

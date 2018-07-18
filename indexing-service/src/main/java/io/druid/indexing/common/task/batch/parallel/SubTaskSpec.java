@@ -17,51 +17,68 @@
  * under the License.
  */
 
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.InputSplit;
+import io.druid.indexing.common.task.Task;
 
 import java.util.Map;
 
-class ParallelIndexSubTaskSpec extends SubTaskSpec<ParallelIndexSubTask>
+public abstract class SubTaskSpec<T extends Task>
 {
-  private final ParallelIndexIngestionSpec ingestionSpec;
+  private final String id;
+  private final String groupId;
+  private final String supervisorTaskId;
+  private final Map<String, Object> context;
+  private final InputSplit inputSplit;
 
   @JsonCreator
-  ParallelIndexSubTaskSpec(
+  public SubTaskSpec(
       String id,
       String groupId,
       String supervisorTaskId,
-      ParallelIndexIngestionSpec indexIngestionSpec,
       Map<String, Object> context,
       InputSplit inputSplit
   )
   {
-    super(id, groupId, supervisorTaskId, context, inputSplit);
-    this.ingestionSpec = indexIngestionSpec;
+    this.id = id;
+    this.groupId = groupId;
+    this.supervisorTaskId = supervisorTaskId;
+    this.context = context;
+    this.inputSplit = inputSplit;
   }
 
   @JsonProperty
-  public ParallelIndexIngestionSpec getIngestionSpec()
+  public String getId()
   {
-    return ingestionSpec;
+    return id;
   }
 
-  @Override
-  public ParallelIndexSubTask newSubTask(int numAttempts)
+  @JsonProperty
+  public String getGroupId()
   {
-    return new ParallelIndexSubTask(
-        null,
-        getGroupId(),
-        null,
-        getSupervisorTaskId(),
-        numAttempts,
-        getIngestionSpec(),
-        getContext(),
-        null,
-        null
-    );
+    return groupId;
   }
+
+  @JsonProperty
+  public String getSupervisorTaskId()
+  {
+    return supervisorTaskId;
+  }
+
+  @JsonProperty
+  public Map<String, Object> getContext()
+  {
+    return context;
+  }
+
+  @JsonProperty
+  public InputSplit getInputSplit()
+  {
+    return inputSplit;
+  }
+
+  public abstract T newSubTask(int numAttempts);
 }

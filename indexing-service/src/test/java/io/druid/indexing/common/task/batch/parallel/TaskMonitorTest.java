@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.common.task;
+package io.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.client.indexing.NoopIndexingServiceClient;
@@ -29,7 +29,8 @@ import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
+import io.druid.indexing.common.task.NoopTask;
+import io.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.concurrent.Execs;
 import org.junit.After;

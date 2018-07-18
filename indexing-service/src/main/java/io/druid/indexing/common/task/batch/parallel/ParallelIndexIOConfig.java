@@ -16,12 +16,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package io.druid.indexing.common.task;
+
+package io.druid.indexing.common.task.batch.parallel;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import io.druid.data.input.FirehoseFactory;
+import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+
+import javax.annotation.Nullable;
 
 /**
- * Represents the current progress of {@link ParallelIndexSupervisorTask}. Implementations can be different depending on
- * the distributed indexing algorithm.
+ * Same with {@link IndexIOConfig} except its JSON type name.
  */
-interface ParallelIndexingProgress
+@JsonTypeName("index_parallel")
+public class ParallelIndexIOConfig extends IndexIOConfig
 {
+  public ParallelIndexIOConfig(
+      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+  )
+  {
+    super(firehoseFactory, appendToExisting);
+  }
 }
