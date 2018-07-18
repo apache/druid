@@ -42,13 +42,12 @@ public class WrappedRoaringBitmapTest
   public static List<RoaringBitmapFactory[]> factoryClasses()
   {
     return Arrays.asList(
-        // DO NOT use `Collections.singletonList` here, otherwise it will cause a ClassCastException!
-        (RoaringBitmapFactory[]) Arrays.asList(
+        new RoaringBitmapFactory[] {
             new RoaringBitmapFactory(false)
-        ).toArray(),
-        (RoaringBitmapFactory[]) Arrays.asList(
-            new RoaringBitmapFactory(true)
-        ).toArray()
+        },
+        new RoaringBitmapFactory[] {
+            new RoaringBitmapFactory(false)
+        }
     );
   }
 

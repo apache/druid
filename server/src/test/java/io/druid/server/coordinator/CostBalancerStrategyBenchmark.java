@@ -44,15 +44,14 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
   public static List<CostBalancerStrategy[]> factoryClasses()
   {
     return Arrays.asList(
-        // DO NOT use `Collections.singletonList` here, otherwise it will cause a ClassCastException!
-        (CostBalancerStrategy[]) Arrays.asList(
+        new CostBalancerStrategy[] {
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
                 Executors.newFixedThreadPool(1)))
-        ).toArray(),
-        (CostBalancerStrategy[]) Arrays.asList(
+        },
+        new CostBalancerStrategy[] {
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
                 Executors.newFixedThreadPool(4)))
-        ).toArray()
+        }
     );
   }
 
