@@ -1,17 +1,10 @@
-[![Build Status](https://travis-ci.org/druid-io/druid.svg?branch=master)](https://travis-ci.org/druid-io/druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/druid-io/druid/badge.svg?branch=master)](https://coveralls.io/r/druid-io/druid?branch=master)
+[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/druid-io/druid/badge.svg?branch=master)](https://coveralls.io/r/druid-io/druid?branch=master)
 
-## Druid
+## Apache Druid (incubating)
 
-Druid is a distributed, column-oriented, real-time analytics data store
-that is commonly used to power exploratory dashboards in multi-tenant
-environments.
+Apache Druid (incubating) is a high performance analytics data store for event-driven data.
 
-Druid excels as a data warehousing solution for fast aggregate queries on
-petabyte sized data sets. Druid supports a variety of flexible filters, exact
-calculations, approximate algorithms, and other useful calculations.
-
-Druid can load both streaming and batch data and integrates with
-Samza, Kafka, Storm, Spark, and Hadoop.
+*Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.*
 
 ### License
 
