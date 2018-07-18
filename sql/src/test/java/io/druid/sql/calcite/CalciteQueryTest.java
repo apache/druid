@@ -169,6 +169,14 @@ public class CalciteQueryTest extends CalciteTestBase
       return 1;
     }
   };
+  private static final PlannerConfig PLANNER_CONFIG_LOS_ANGELES = new PlannerConfig()
+  {
+    @Override
+    public DateTimeZone getSqlTimeZone()
+    {
+      return DateTimes.inferTzfromString("America/Los_Angeles");
+    }
+  };
 
   private static final String LOS_ANGELES = "America/Los_Angeles";
 
@@ -5562,7 +5570,7 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testTimeseriesLosAngeles() throws Exception
+  public void testTimeseriesLosAngelesViaQueryContext() throws Exception
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -5581,6 +5589,37 @@ public class CalciteQueryTest extends CalciteTestBase
                   .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzfromString(LOS_ANGELES)))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, T("1999-12-01", LOS_ANGELES)},
+            new Object[]{2L, T("2000-01-01", LOS_ANGELES)},
+            new Object[]{1L, T("2000-12-01", LOS_ANGELES)},
+            new Object[]{2L, T("2001-01-01", LOS_ANGELES)}
+        )
+    );
+  }
+
+  @Test
+  public void testTimeseriesLosAngelesViaPlannerConfig() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_LOS_ANGELES,
+        QUERY_CONTEXT_DEFAULT,
+        "SELECT SUM(cnt), gran FROM (\n"
+        + "  SELECT FLOOR(__time TO MONTH) AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzfromString(LOS_ANGELES)))
+                  .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
