@@ -174,7 +174,7 @@ public class CalciteQueryTest extends CalciteTestBase
     @Override
     public DateTimeZone getSqlTimeZone()
     {
-      return DateTimeZone.forID("America/Los_Angeles");
+      return DateTimes.inferTzfromString("America/Los_Angeles");
     }
   };
 
