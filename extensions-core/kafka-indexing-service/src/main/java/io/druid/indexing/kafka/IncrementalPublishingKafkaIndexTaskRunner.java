@@ -600,12 +600,13 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
                 sequences
             );
             requestPause();
-            if (!toolbox.getTaskActionClient().submit(new CheckPointDataSourceMetadataAction(
+            final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
                 task.getDataSource(),
-                ioConfig.getBaseSequenceName(),
+                ioConfig.getTaskGroupId(),
                 new KafkaDataSourceMetadata(new KafkaPartitions(topic, sequenceToCheckpoint.getStartOffsets())),
                 new KafkaDataSourceMetadata(new KafkaPartitions(topic, nextOffsets))
-            ))) {
+            );
+            if (!toolbox.getTaskActionClient().submit(checkpointAction)) {
               throw new ISE("Checkpoint request with offsets [%s] failed, dying", nextOffsets);
             }
           }
