@@ -55,9 +55,9 @@ public class TaskStorageQueryAdapter
     return storage.getActiveTasks();
   }
 
-  public List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String datasource)
+  public List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String dataSource)
   {
-    return storage.getActiveTaskInfo(datasource);
+    return storage.getActiveTaskInfo(dataSource);
   }
 
   public List<TaskInfo<Task>> getRecentlyCompletedTaskInfo(

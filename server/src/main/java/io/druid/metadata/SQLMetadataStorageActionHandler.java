@@ -333,7 +333,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public List<TaskInfo<EntryType>> getCompletedTaskInfo(
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
-      @Nullable String datasource
+      @Nullable String dataSource
   )
   {
     return getConnector().retryWithHandle(
@@ -342,7 +342,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
               handle,
               timestamp,
               maxNumStatuses,
-              datasource
+              dataSource
           );
           return query.map(new TaskInfoMapper()).list();
         }
@@ -350,20 +350,20 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<EntryType>> getActiveTaskInfo(@Nullable String datasource)
+  public List<TaskInfo<EntryType>> getActiveTaskInfo(@Nullable String dataSource)
   {
     return getConnector().retryWithHandle(
         handle -> {
           final Query<Map<String, Object>> query = createActiveStatusesQuery(
               handle,
-              datasource
+              dataSource
           );
           return query.map(new TaskInfoMapper()).list();
         }
     );
   }
 
-  private Query<Map<String, Object>> createActiveStatusesQuery(Handle handle, @Nullable String datasource)
+  private Query<Map<String, Object>> createActiveStatusesQuery(Handle handle, @Nullable String dataSource)
   {
     String sql = StringUtils.format(
         "SELECT "
@@ -375,22 +375,22 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         + "FROM "
         + "  %s "
         + "WHERE "
-        + getWhereClauseForActiveStatusesQuery(datasource)
+        + getWhereClauseForActiveStatusesQuery(dataSource)
         + "ORDER BY created_date",
         entryTable
     );
 
     Query<Map<String, Object>> query = handle.createQuery(sql);
-    if (datasource != null) {
-      query = query.bind("ds", datasource);
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
     }
     return query;
   }
 
-  private String getWhereClauseForActiveStatusesQuery(String datasource)
+  private String getWhereClauseForActiveStatusesQuery(String dataSource)
   {
     String sql = StringUtils.format("active = TRUE ");
-    if (datasource != null) {
+    if (dataSource != null) {
       sql += " AND datasource = :ds ";
     }
     return sql;
@@ -433,7 +433,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       Handle handle,
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
-      @Nullable String datasource
+      @Nullable String dataSource
   );
 
   @Override

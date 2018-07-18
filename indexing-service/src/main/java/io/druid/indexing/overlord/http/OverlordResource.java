@@ -629,7 +629,7 @@ public class OverlordResource
       finalTaskList.addAll(completedTasks);
     }
 
-    List<TaskInfo<Task>> allActiveTaskInfo = Lists.newArrayList();
+    final List<TaskInfo<Task>> allActiveTaskInfo;
     final List<AnyTask> allActiveTasks = Lists.newArrayList();
     if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
       allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
@@ -639,7 +639,7 @@ public class OverlordResource
                 task.getId(),
                 task.getTask() == null ? null : task.getTask().getType(),
                 SettableFuture.create(),
-                task.getDataSource(), // ?
+                task.getDataSource(),
                 null,
                 null,
                 DateTimes.EPOCH,

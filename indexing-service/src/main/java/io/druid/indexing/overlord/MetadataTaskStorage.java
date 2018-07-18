@@ -214,10 +214,10 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String datasource)
+  public List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String dataSource)
   {
     return ImmutableList.copyOf(
-        handler.getActiveTaskInfo(datasource)
+        handler.getActiveTaskInfo(dataSource)
     );
   }
 
