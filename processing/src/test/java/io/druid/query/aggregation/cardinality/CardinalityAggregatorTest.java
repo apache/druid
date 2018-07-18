@@ -437,7 +437,7 @@ public class CardinalityAggregatorTest
   public void testBufferAggregateRows()
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList.toArray(new ColumnSelectorPlus[] {}),
+        dimInfoList.toArray(new ColumnSelectorPlus[0]),
         true
     );
 
@@ -459,7 +459,7 @@ public class CardinalityAggregatorTest
   public void testBufferAggregateValues()
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList.toArray(new ColumnSelectorPlus[] {}),
+        dimInfoList.toArray(new ColumnSelectorPlus[0]),
         false
     );
 

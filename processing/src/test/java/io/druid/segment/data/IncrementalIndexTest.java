@@ -536,7 +536,7 @@ public class IncrementalIndexTest
 
 
     final IncrementalIndex index = closer.closeLater(
-        indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[dimensionCount]))
+        indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[0]))
     );
     final int concurrentThreads = 2;
     final int elementsPerThread = 10_000;
@@ -650,7 +650,7 @@ public class IncrementalIndexTest
                             }
                             queriesAccumualted.incrementAndGet();
                             return Lists.asList(in.getValue().getDoubleMetric("doubleSumResult0"), accumulated)
-                                        .toArray(new Double[accumulated.length + 1]);
+                                        .toArray(new Double[0]);
                           }
                         }
                     );
