@@ -427,7 +427,6 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     if (runner == null) {
-      System.err.println("runner: " + runner);
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
     } else {
       return Response.ok(baseFirehoseFactory.isSplittable() ? "parallel" : "sequential").build();
