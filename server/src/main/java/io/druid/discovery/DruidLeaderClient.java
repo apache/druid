@@ -159,8 +159,7 @@ public class DruidLeaderClient
       }
       catch (IOException | ChannelException ex) {
         // can happen if the node is stopped.
-        log.info("Request[%s] failed with msg [%s].", request.getUrl(), ex.getMessage());
-        log.debug(ex, "Request[%s] failed.", request.getUrl());
+        log.warn(ex, "Request[%s] failed.", request.getUrl());
 
         try {
           if (request.getUrl().getQuery() == null) {
