@@ -172,7 +172,7 @@ public class OverlordResourceTest
   public void testSecuredGetWaitingTask()
   {
     expectAuthorizationTokenCheck();
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -278,7 +278,7 @@ public class OverlordResourceTest
             new MockTaskRunnerWorkItem(tasksIds.get(1), null)
         )
     );
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -337,7 +337,7 @@ public class OverlordResourceTest
         )
     );
     //active tasks
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -427,7 +427,7 @@ public class OverlordResourceTest
         )
     );
     //active tasks
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("allow")).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -491,7 +491,7 @@ public class OverlordResourceTest
   {
     expectAuthorizationTokenCheck();
     //active tasks
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -549,7 +549,7 @@ public class OverlordResourceTest
   public void testGetTasksFilterRunningState()
   {
     expectAuthorizationTokenCheck();
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("allow")).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -615,7 +615,7 @@ public class OverlordResourceTest
             new MockTaskRunnerWorkItem(tasksIds.get(1), null)
         )
     );
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",

@@ -46,7 +46,7 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
 
   @Override
   protected Query<Map<String, Object>> createInactiveStatusesSinceQuery(
-      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String datasource
+      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
   )
   {
     String sql = maxNumStatuses == null ? "SELECT " : "SELECT TOP (:n) ";
@@ -60,7 +60,7 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
         + "FROM "
         + "  %s "
         + "WHERE "
-        + getWhereClauseForInactiveStatusesSinceQuery(datasource)
+        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
         + "ORDER BY created_date DESC",
         getEntryTable()
     );
@@ -70,8 +70,8 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
     if (maxNumStatuses != null) {
       query = query.bind("n", maxNumStatuses);
     }
-    if (datasource != null) {
-      query = query.bind("ds", datasource);
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
     }
     return query;
   }
