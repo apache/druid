@@ -6824,6 +6824,114 @@ public class CalciteQueryTest extends CalciteTestBase
     );
   }
 
+  @Test
+  public void testConcat() throws Exception
+  {
+    testQuery(
+        "SELECT CONCAT(dim1, '-', dim1, '_', dim1) as dimX FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(EXPRESSION_VIRTUAL_COLUMN(
+                    "v0",
+                    "concat(\"dim1\",'-',\"dim1\",'_',\"dim1\")",
+                    ValueType.STRING
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"-_"},
+            new Object[]{"10.1-10.1_10.1"},
+            new Object[]{"2-2_2"},
+            new Object[]{"1-1_1"},
+            new Object[]{"def-def_def"},
+            new Object[]{"abc-abc_abc"}
+        )
+    );
+
+    testQuery(
+        "SELECT CONCAT(dim1, CONCAT(dim2,'x'), m2, 9999, dim1) as dimX FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(EXPRESSION_VIRTUAL_COLUMN(
+                    "v0",
+                    "concat(\"dim1\",concat(\"dim2\",'x'),\"m2\",9999,\"dim1\")",
+                    ValueType.STRING
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"ax1.09999"},
+            new Object[]{"10.1x2.0999910.1"},
+            new Object[]{"2x3.099992"},
+            new Object[]{"1ax4.099991"},
+            new Object[]{"defabcx5.09999def"},
+            new Object[]{"abcx6.09999abc"}
+        )
+    );
+  }
+
+  @Test
+  public void testTextcat() throws Exception
+  {
+    testQuery(
+        "SELECT textcat(dim1, dim1) as dimX FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("v0", "concat(\"dim1\",\"dim1\")", ValueType.STRING))
+                .columns("v0")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"10.110.1"},
+            new Object[]{"22"},
+            new Object[]{"11"},
+            new Object[]{"defdef"},
+            new Object[]{"abcabc"}
+        )
+    );
+
+    testQuery(
+        "SELECT textcat(dim1, CAST(m2 as VARCHAR)) as dimX FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(EXPRESSION_VIRTUAL_COLUMN(
+                    "v0",
+                    "concat(\"dim1\",CAST(\"m2\", 'STRING'))",
+                    ValueType.STRING
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1.0"},
+            new Object[]{"10.12.0"},
+            new Object[]{"23.0"},
+            new Object[]{"14.0"},
+            new Object[]{"def5.0"},
+            new Object[]{"abc6.0"}
+        )
+    );
+  }
+
   private void testQuery(
       final String sql,
       final List<Query> expectedQueries,
