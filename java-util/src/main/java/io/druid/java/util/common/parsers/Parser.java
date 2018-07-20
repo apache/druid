@@ -38,7 +38,8 @@ public interface Parser<K, V>
   }
 
   /**
-   * Parse a String into a Map.  The result can be null which means the given input string will be ignored.
+   * Parse a String into a Map.  The result can be null which means the given input string will be ignored. The caller
+   * of this method should be able to safely mutate the map (e. g. put new entries), retuned from this method.
    *
    * @throws ParseException if the String cannot be parsed
    */
@@ -57,6 +58,7 @@ public interface Parser<K, V>
    * Returns the fieldNames that we expect to see in parsed Maps, if known, or null otherwise. Deprecated; Parsers
    * should not, in general, be expected to know what fields they will return.
    */
+  @Nullable
   @Deprecated
   List<String> getFieldNames();
 }

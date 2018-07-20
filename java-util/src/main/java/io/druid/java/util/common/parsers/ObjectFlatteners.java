@@ -165,32 +165,10 @@ public class ObjectFlatteners
           @Override
           public Set<Entry<String, Object>> entrySet()
           {
-            return keySet().stream()
-                           .map(
-                               field -> {
-                                 return new Map.Entry<String, Object>()
-                                 {
-                                   @Override
-                                   public String getKey()
-                                   {
-                                     return field;
-                                   }
-
-                                   @Override
-                                   public Object getValue()
-                                   {
-                                     return get(field);
-                                   }
-
-                                   @Override
-                                   public Object setValue(final Object value)
-                                   {
-                                     throw new UnsupportedOperationException();
-                                   }
-                                 };
-                               }
-                           )
-                           .collect(Collectors.toCollection(LinkedHashSet::new));
+            return keySet()
+                .stream()
+                .map(field -> new SimpleImmutableEntry<>(field, get(field)))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
           }
         };
       }
