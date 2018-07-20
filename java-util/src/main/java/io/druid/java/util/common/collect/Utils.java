@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class Utils
 {
@@ -34,9 +33,9 @@ public class Utils
    * Create a Map from iterables of keys and values. If there are more keys than values, or more values than keys,
    * the excess will be omitted.
    */
-  public static <K, V> Map<K, V> zipMapPartial(Iterable<K> keys, Iterable<V> values)
+  public static <K, V> LinkedHashMap<K, V> zipMapPartial(Iterable<K> keys, Iterable<V> values)
   {
-    Map<K, V> retVal = new LinkedHashMap<>();
+    LinkedHashMap<K, V> retVal = new LinkedHashMap<>();
 
     Iterator<K> keysIter = keys.iterator();
     Iterator<V> valsIter = values.iterator();

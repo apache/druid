@@ -27,8 +27,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.collect.Utils;
 
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -84,7 +84,7 @@ public class RegexParser implements Parser<String, Object>
   }
 
   @Override
-  public Map<String, Object> parseToMap(String input)
+  public LinkedHashMap<String, Object> parseToMap(String input)
   {
     try {
       final Matcher matcher = compiled.matcher(input);

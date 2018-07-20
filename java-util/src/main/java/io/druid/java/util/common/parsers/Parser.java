@@ -20,8 +20,8 @@
 package io.druid.java.util.common.parsers;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Class that can parse Strings into Maps.
@@ -38,13 +38,15 @@ public interface Parser<K, V>
   }
 
   /**
-   * Parse a String into a Map.  The result can be null which means the given input string will be ignored. The caller
-   * of this method should be able to safely mutate the map (e. g. put new entries), retuned from this method.
+   * Parse a String into a Map.  The result can be null which means the given input string will be ignored.
+   *
+   * This method is defined to return LinkedHashMap instead of just Map to guarantee the mutability (that is needed
+   * for https://github.com/apache/incubator-druid/pull/6027) and the order of the entries.
    *
    * @throws ParseException if the String cannot be parsed
    */
   @Nullable
-  Map<K, V> parseToMap(String input);
+  LinkedHashMap<K, V> parseToMap(String input);
 
   /**
    * Set the fieldNames that you expect to see in parsed Maps. Deprecated; Parsers should not, in general, be

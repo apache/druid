@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.parsers.Parser;
 
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -48,7 +48,7 @@ public class TimeAndDimsParseSpec extends ParseSpec
     return new Parser<String, Object>()
     {
       @Override
-      public Map<String, Object> parseToMap(String input)
+      public LinkedHashMap<String, Object> parseToMap(String input)
       {
         throw new UnsupportedOperationException("not supported");
       }

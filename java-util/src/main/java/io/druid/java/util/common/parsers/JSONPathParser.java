@@ -67,13 +67,11 @@ public class JSONPathParser implements Parser<String, Object>
    */
   @Override
   @Nullable
-  public Map<String, Object> parseToMap(String input)
+  public LinkedHashMap<String, Object> parseToMap(String input)
   {
     try {
       JsonNode document = mapper.readValue(input, JsonNode.class);
       Map<String, Object> mapFromFlattener = flattener.flatten(document);
-      // The map from the flattener might be immutable, so moving the data into a LinkedHashMap. Using LinkedHashMap
-      // to preserve the order of entries, if it matters.
       return mapFromFlattener != null ? new LinkedHashMap<>(mapFromFlattener) : null;
     }
     catch (Exception e) {

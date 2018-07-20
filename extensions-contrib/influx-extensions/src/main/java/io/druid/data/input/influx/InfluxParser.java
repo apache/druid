@@ -50,7 +50,7 @@ public class InfluxParser implements Parser<String, Object>
 
   @Nullable
   @Override
-  public Map<String, Object> parseToMap(String input)
+  public LinkedHashMap<String, Object> parseToMap(String input)
   {
     CharStream charStream = new ANTLRInputStream(input);
     InfluxLineProtocolLexer lexer = new InfluxLineProtocolLexer(charStream);
@@ -65,7 +65,7 @@ public class InfluxParser implements Parser<String, Object>
       throw new ParseException("Multiple lines present; unable to parse more than one per record.");
     }
 
-    Map<String, Object> out = new LinkedHashMap<>();
+    LinkedHashMap<String, Object> out = new LinkedHashMap<>();
 
     InfluxLineProtocolParser.LineContext line = lines.get(0);
     String measurement = parseIdentifier(line.identifier());

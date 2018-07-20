@@ -19,19 +19,18 @@
 
 package io.druid.java.util.common.parsers;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.collect.Utils;
+
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 public abstract class AbstractFlatTextFormatParser implements Parser<String, Object>
 {
@@ -129,7 +128,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
 
   @Override
   @Nullable
-  public Map<String, Object> parseToMap(final String input)
+  public LinkedHashMap<String, Object> parseToMap(final String input)
   {
     if (!supportSkipHeaderRows && (hasHeaderRow || maxSkipHeaderRows > 0)) {
       throw new UnsupportedOperationException("hasHeaderRow or maxSkipHeaderRows is not supported. "

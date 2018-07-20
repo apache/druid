@@ -50,7 +50,6 @@ import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -213,7 +212,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public Map<String, String> parseToMap(String input)
+    public LinkedHashMap<String, String> parseToMap(String input)
     {
       final Map<String, Object> inner = delegate.parseToMap(input);
       final String k = Preconditions.checkNotNull(
@@ -225,7 +224,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       final Object val = inner.get(value);
       // The map returned from parseToMap() should be mutable, therefore using a HashMap instead of an ImmutableMap or
       // Collections.emptyMap().
-      Map<String, String> result = new HashMap<>(1);
+      LinkedHashMap<String, String> result = new LinkedHashMap<>(1);
       // Skip null or missing values, treat them as if there were no row at all.
       if (val != null) {
         result.put(k, val.toString());
@@ -616,13 +615,11 @@ public class UriExtractionNamespace implements ExtractionNamespace
       {
         @Override
         @Nullable
-        public Map<String, String> parseToMap(String input)
+        public LinkedHashMap<String, String> parseToMap(String input)
         {
           try {
             Map<String, String> mapFromJackson =
                 jsonFactory.createParser(input).readValueAs(JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING);
-            // The Map from Jackson might be immutable(?), so moving the data into a LinkedHashMap. Using LinkedHashMap
-            // to preserve the order of entries, if it matters.
             return mapFromJackson != null ? new LinkedHashMap<>(mapFromJackson) : null;
           }
           catch (IOException e) {
