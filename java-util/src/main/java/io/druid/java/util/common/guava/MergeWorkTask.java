@@ -20,7 +20,6 @@
 package io.druid.java.util.common.guava;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Ordering;
 import io.druid.java.util.common.Pair;
 
 import java.util.ArrayList;
@@ -30,12 +29,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
 {
@@ -51,7 +52,7 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
    * Exceptions that happen during execution of the merge are passed through and bubbled up during the resulting sequence
    * iteration
    *
-   * @param ordering      The ordering to pass into MergeSequence
+   * @param mergerFn      The function that will merge a stream of sequences into a single sequence. If the baseSequences stream is parallel, this work will be done in the FJP, otherwise it will be called directly.
    * @param baseSequences The sequences that need merged
    * @param batchSize     The input stream should be split down to this number if possible. This sets the target number of segments per merge thread work
    * @param fjp           The ForkJoinPool to do the intermediate merges in.
@@ -63,15 +64,19 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
    *                          was encountered in an intermediate merge
    */
   public static <T> Sequence<T> parallelMerge(
-      Ordering<? super T> ordering,
       Stream<? extends Sequence<? extends T>> baseSequences,
+      Function<Stream<? extends Sequence<? extends T>>, Sequence<T>> mergerFn,
       long batchSize,
       ForkJoinPool fjp
   )
   {
     if (!baseSequences.isParallel()) {
       // Don't even try.
+<<<<<<< HEAD
       return new MergeSequence<>(ordering, Sequences.fromStream(baseSequences));
+=======
+      return mergerFn.apply(baseSequences);
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
     }
     @SuppressWarnings("unchecked") // Wildcard erasure is fine here
     final Spliterator<? extends Sequence<T>> baseSpliterator = (Spliterator<? extends Sequence<T>>) baseSequences.spliterator();
@@ -87,14 +92,14 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
       final Spliterator<? extends Sequence<T>> pop = spliteratorStack.pop();
       if (pop.estimateSize() <= batchSize) {
         // Batch is small enough, yay!
-        tasks.add(fjp.submit(new MergeWorkTask<>(ordering, pop)));
+        tasks.add(fjp.submit(new MergeWorkTask<>(mergerFn, pop)));
         continue;
       }
 
       final Spliterator<? extends Sequence<T>> other = pop.trySplit();
       if (other == null) {
         // splits are too big, but we can't split any more
-        tasks.add(fjp.submit(new MergeWorkTask<>(ordering, pop)));
+        tasks.add(fjp.submit(new MergeWorkTask<>(mergerFn, pop)));
         continue;
       }
       spliteratorStack.push(pop);
@@ -114,15 +119,10 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
     }));
 
     final long totalAdditions = tasks.size();
-    return new MergeSequence<>(
-        ordering,
-        new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Sequence<T>, Iterator<Sequence<T>>>()
-            {
-              @Override
-              public Iterator<Sequence<T>> make()
-              {
-                return new Iterator<Sequence<T>>()
+    return mergerFn.apply(
+        StreamSupport.stream(
+            Spliterators.spliterator(
+                new Iterator<Sequence<? extends T>>()
                 {
                   long taken = 0L;
 
@@ -133,7 +133,7 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
                   }
 
                   @Override
-                  public Sequence<T> next() throws NoSuchElementException
+                  public Sequence<? extends T> next() throws NoSuchElementException
                   {
                     if (taken >= totalAdditions) {
                       throw new NoSuchElementException();
@@ -151,27 +151,26 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
                       throw new RuntimeException("Interrupted waiting for intermediate merge", e);
                     }
                   }
-                };
-              }
-
-              @Override
-              public void cleanup(Iterator<Sequence<T>> iterFromMake)
-              {
-                tasks.forEach(t -> t.cancel(true));
-              }
-            }
-        )
+                },
+                totalAdditions,
+                Spliterator.NONNULL | Spliterator.SIZED
+            ),
+            false
+        ).onClose(() -> tasks.forEach(t -> t.cancel(true)))
     );
   }
 
-  private final Ordering<? super T> ordering;
-  private final Spliterator<? extends Sequence<T>> baseSpliterator;
+  private final Spliterator<? extends Sequence<? extends T>> baseSpliterator;
+  private final Function<Stream<? extends Sequence<? extends T>>, Sequence<T>> mergerFn;
   private Sequence<T> result;
 
   @VisibleForTesting
-  MergeWorkTask(Ordering<? super T> ordering, Spliterator<? extends Sequence<T>> baseSpliterator)
+  MergeWorkTask(
+      Function<Stream<? extends Sequence<? extends T>>, Sequence<T>> mergerFn,
+      Spliterator<? extends Sequence<? extends T>> baseSpliterator
+  )
   {
-    this.ordering = ordering;
+    this.mergerFn = mergerFn;
     this.baseSpliterator = baseSpliterator;
   }
 
@@ -190,13 +189,10 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
   @Override
   protected boolean exec()
   {
-    final long estSize = baseSpliterator.estimateSize();
-    final List<Sequence<T>> sequences = new ArrayList<>(estSize > 0 ? (int) estSize : 8);
-    baseSpliterator.forEachRemaining((Consumer<Sequence<T>>) sequences::add);
     // Force materialization "work" in this thread
     // For singleton lists it is not clear it is even worth the optimization of short circuiting the merge for the
     // extra code maintenance overhead
-    result = Sequences.simple(new MergeSequence<>(ordering, Sequences.simple(sequences)).toList());
+    result = mergerFn.apply(StreamSupport.stream(baseSpliterator, false));
     return true;
   }
 }

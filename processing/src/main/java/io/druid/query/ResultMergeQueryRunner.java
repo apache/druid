@@ -20,8 +20,8 @@
 package io.druid.query;
 
 import com.google.common.collect.Ordering;
-import io.druid.common.guava.CombiningSequence;
 import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.guava.CombiningSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 

@@ -26,12 +26,30 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  */
 public class MergeSequenceTest
 {
+  public static <T extends Comparable> Supplier<Sequence<T>> naturalMergeSupplier(
+      Supplier<Stream<? extends Sequence<? extends T>>> stream
+  )
+  {
+    return () -> naturalMerge(stream.get());
+  }
+
+  public static <T extends Comparable> Sequence<T> naturalMerge(Stream<? extends Sequence<? extends T>> stream)
+  {
+    return new MergeSequence<>(
+        Ordering.natural(),
+        Sequences.fromStream(stream)
+    );
+  }
+
   @Test
   public void testSanity() throws Exception
   {
@@ -53,12 +71,16 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
+<<<<<<< HEAD
         () -> new MergeSequence<>(
             Ordering.natural(),
             Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
+=======
+        naturalMergeSupplier(testSeqs::stream),
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
 
@@ -83,12 +105,16 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
+<<<<<<< HEAD
         () -> new MergeSequence<>(
             Ordering.natural(),
             Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
+=======
+        naturalMergeSupplier(testSeqs::stream),
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -116,12 +142,16 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
+<<<<<<< HEAD
         () -> new MergeSequence<>(
             Ordering.natural(),
             Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
+=======
+        naturalMergeSupplier(testSeqs::stream),
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -149,12 +179,16 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
+<<<<<<< HEAD
         () -> new MergeSequence<>(
             Ordering.natural(),
             Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
+=======
+        naturalMergeSupplier(testSeqs::stream),
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -183,12 +217,16 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
+<<<<<<< HEAD
         () -> new MergeSequence<>(
             Ordering.natural(),
             Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
+=======
+        naturalMergeSupplier(testSeqs::stream),
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -212,12 +250,16 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
+<<<<<<< HEAD
         () -> new MergeSequence<>(
             Ordering.natural(),
             Sequences.fromStream(
                 testSeqs.stream()
             )
         ),
+=======
+        naturalMergeSupplier(testSeqs::stream),
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -247,14 +289,15 @@ public class MergeSequenceTest
   public void testMergeOne() throws Exception
   {
     final Sequence<Integer> mergeOne = new MergeSequence<>(
-        Ordering.<Integer>natural(), Sequences.<Sequence<Integer>>simple(
-        Lists.<Sequence<Integer>>newArrayList(
-            TestSequence.create(1)
+        Ordering.natural(),
+        Sequences.<Sequence<Integer>>simple(
+            Collections.singletonList(
+                TestSequence.create(1)
+            )
         )
-    )
     );
 
-    SequenceTestHelper.testAll(mergeOne, Arrays.asList(1));
+    SequenceTestHelper.testAll(mergeOne, Collections.singletonList(1));
   }
 
 }

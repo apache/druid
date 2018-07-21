@@ -49,8 +49,8 @@ public class MergeWorkTaskTest
     final List<Integer> expected = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9);
 
     SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
-        Ordering.natural(),
         testSeqs.stream(),
+        s -> new MergeSequence<>(Ordering.natural(), Sequences.fromStream(s)),
         999,
         ForkJoinPool.commonPool()
     ), expected);
@@ -67,8 +67,8 @@ public class MergeWorkTaskTest
     final List<Integer> expected = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9);
 
     SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
-        Ordering.natural(),
         testSeqs.stream().parallel(),
+        MergeSequenceTest::naturalMerge,
         999,
         ForkJoinPool.commonPool()
     ), expected);
@@ -85,8 +85,8 @@ public class MergeWorkTaskTest
     final List<Integer> expected = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9);
 
     SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
-        Ordering.natural(),
         testSeqs.stream().parallel(),
+        MergeSequenceTest::naturalMerge,
         1,
         ForkJoinPool.commonPool()
     ), expected);
@@ -103,8 +103,8 @@ public class MergeWorkTaskTest
     final List<Integer> expected = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9);
 
     SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
-        Ordering.natural(),
         testSeqs.stream().parallel(),
+        MergeSequenceTest::naturalMerge,
         2,
         ForkJoinPool.commonPool()
     ), expected);
@@ -128,8 +128,8 @@ public class MergeWorkTaskTest
         false
     );
     SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
-        Ordering.natural(),
         testSeqs.stream().parallel(),
+        MergeSequenceTest::naturalMerge,
         1,
         fjp
     ), expected);
@@ -148,27 +148,27 @@ public class MergeWorkTaskTest
         (t, e) -> exception.set(e),
         false
     );
+    try (AutoCloseable closeable = fjp::shutdown) {
+      // Take a big list of numbers, scatter them among a bunch of different buckets, then make sure the parallel merge
+      // returns the original list
 
-    // Take a big list of numbers, scatter them among a bunch of different buckets, then make sure the parallel merge
-    // returns the original list
-
-    final List<Integer> intList = IntStream.range(0, 10000).boxed().collect(Collectors.toList());
-    final List<List<Integer>> listList = new ArrayList<>();
-    for (int i = 0; i < 500; i++) {
-      listList.add(new ArrayList<>());
+      final List<Integer> intList = IntStream.range(0, 10000).boxed().collect(Collectors.toList());
+      final List<List<Integer>> listList = new ArrayList<>();
+      for (int i = 0; i < 500; i++) {
+        listList.add(new ArrayList<>());
+      }
+      final Random r = new Random(37489165L);
+      intList.forEach(i -> listList.get(r.nextInt(listList.size())).add(i));
+      SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
+          listList.stream(
+          ).map(
+              TestSequence::create
+          ).parallel(),
+          MergeSequenceTest::naturalMerge,
+          10,
+          fjp
+      ), intList);
     }
-    final Random r = new Random(37489165L);
-    intList.forEach(i -> listList.get(r.nextInt(listList.size())).add(i));
-    SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
-        Ordering.natural(),
-        listList.stream(
-        ).map(
-            TestSequence::create
-        ).parallel(),
-        10,
-        fjp
-    ), intList);
-    fjp.shutdown();
     Assert.assertTrue(fjp.awaitTermination(5, TimeUnit.SECONDS));
     Assert.assertNull(exception.get());
   }

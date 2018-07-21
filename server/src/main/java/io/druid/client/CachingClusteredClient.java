@@ -51,10 +51,13 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
+import io.druid.query.FluentQueryRunnerBuilder;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -113,6 +116,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       new DruidServerConfig(),
       ServerType.HISTORICAL
   );
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final QueryToolChestWarehouse warehouse;
   private final TimelineServerView serverView;
   private final Cache cache;
@@ -123,6 +127,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
   @Inject
   public CachingClusteredClient(
+      QueryRunnerFactoryConglomerate conglomerate,
       QueryToolChestWarehouse warehouse,
       TimelineServerView serverView,
       Cache cache,
@@ -132,6 +137,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Processing ForkJoinPool mergeFjp
   )
   {
+    this.conglomerate = conglomerate;
     this.warehouse = warehouse;
     this.serverView = serverView;
     this.cache = cache;
@@ -163,6 +169,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
+<<<<<<< HEAD
     return (queryPlus, responseContext) -> runAndMergeWithTimelineChange(
         queryPlus,
         responseContext,
@@ -188,6 +195,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
           }
           return timeline2;
         }
+=======
+    return runAndMergeWithTimelineChange(
+        query,
+        // No change, but Function.identity() doesn't work here for some reason
+        stringServerSelectorTimelineLookup -> stringServerSelectorTimelineLookup
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
     );
   }
 
@@ -202,6 +215,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     );
   }
 
+<<<<<<< HEAD
   private <T> Sequence<T> runAndMergeWithTimelineChange(
       final QueryPlus<T> queryPlus,
       final Map<String, Object> responseContext,
@@ -214,19 +228,63 @@ public class CachingClusteredClient implements QuerySegmentWalker
         responseContext,
         timelineConverter
     );
+=======
+  private <T> QueryRunner<T> runAndMergeWithTimelineChange(
+      final Query<T> query,
+      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
+  )
+  {
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
     final OptionalLong mergeBatch = QueryContexts.getIntermediateMergeBatchThreshold(query);
+
     if (mergeBatch.isPresent()) {
-      return MergeWorkTask.parallelMerge(
-          query.getResultOrdering(),
-          sequences.parallel(),
-          mergeBatch.getAsLong(),
-          mergeFjp
-      );
+      final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
+      final QueryToolChest<T, Query<T>> toolChest = queryRunnerFactory.getToolchest();
+      return (queryPlus, responseContext) -> {
+        final Stream<? extends Sequence<T>> sequences = run(
+            queryPlus,
+            responseContext,
+            timelineConverter
+        );
+        return MergeWorkTask.parallelMerge(
+            sequences.parallel(),
+            sequenceStream ->
+                new FluentQueryRunnerBuilder<>(toolChest)
+                    .create(
+                        queryRunnerFactory.mergeRunners(
+                            mergeFjp,
+                            sequenceStream.map(
+                                s -> (QueryRunner<T>) (ignored0, ignored1) -> (Sequence<T>) s
+                            ).collect(
+                                Collectors.toList()
+                            )
+                        )
+                    )
+                    .mergeResults()
+                    .run(queryPlus, responseContext),
+            mergeBatch.getAsLong(),
+            mergeFjp
+        );
+      };
     } else {
+<<<<<<< HEAD
       return new MergeSequence<>(
           query.getResultOrdering(),
           Sequences.fromStream(sequences)
       );
+=======
+      return (queryPlus, responseContext) -> {
+        final Stream<? extends Sequence<T>> sequences = run(
+            queryPlus,
+            responseContext,
+            timelineConverter
+        );
+        return new MergeSequence<>(
+            query.getResultOrdering(),
+            Sequences.fromStream(sequences)
+        );
+      };
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
     }
   }
 
@@ -241,7 +299,35 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
+<<<<<<< HEAD
     return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+=======
+    return runAndMergeWithTimelineChange(
+        query,
+        timeline -> {
+          final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
+              new VersionedIntervalTimeline<>(Ordering.natural());
+          for (SegmentDescriptor spec : specs) {
+            final PartitionHolder<ServerSelector> entry = timeline.findEntry(
+                spec.getInterval(),
+                spec.getVersion()
+            );
+            if (entry != null) {
+              final PartitionChunk<ServerSelector> chunk = entry.getChunk(
+                  spec.getPartitionNumber());
+              if (chunk != null) {
+                timeline2.add(
+                    spec.getInterval(),
+                    spec.getVersion(),
+                    chunk
+                );
+              }
+            }
+          }
+          return timeline2;
+        }
+    );
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
   }
 
   /**
@@ -556,6 +642,43 @@ public class CachingClusteredClient implements QuerySegmentWalker
      */
     private Sequence<T> runOnServer(final DruidServer server, final List<SegmentDescriptor> segmentsOfServer)
     {
+<<<<<<< HEAD
+=======
+      final List<SegmentDescriptor> segmentsOfServer = segmentOrResult.stream(
+      ).map(
+          ServerMaybeSegmentMaybeCache::getSegmentDescriptor
+      ).filter(
+          Optional::isPresent
+      ).map(
+          Optional::get
+      ).collect(
+          Collectors.toList()
+      );
+
+      // We should only ever have cache or queries to run, not both. So if we have no segments, try caches
+      if (segmentsOfServer.isEmpty()) {
+        // Have a special sequence for the cache results so the merge doesn't go all crazy.
+        // See io.druid.java.util.common.guava.MergeSequenceTest.testScrewsUpOnOutOfOrder for an example
+        // With zero results actually being found (no segments no caches) this should essentially return a no-op
+        // merge sequence
+        return new MergeSequence<>(query.getResultOrdering(), Sequences.fromStream(
+            segmentOrResult.stream(
+            ).map(
+                ServerMaybeSegmentMaybeCache::getCachedValue
+            ).filter(
+                Optional::isPresent
+            ).map(
+                Optional::get
+            ).map(
+                Collections::singletonList
+            ).map(
+                Sequences::simple
+            )
+        ));
+      }
+
+      final DruidServer server = segmentOrResult.get(0).getServer();
+>>>>>>> 3753a98a3... Change streams to use fjp for merge work
       final QueryRunner serverRunner = serverView.getQueryRunner(server);
 
       if (serverRunner == null) {

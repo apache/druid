@@ -65,12 +65,14 @@ import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
+import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.MergeWorkTask;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.TrinaryFn;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.DataSource;
+import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MapQueryToolChestWarehouse;
@@ -2658,6 +2660,9 @@ public class CachingClusteredClientTest
   )
   {
     return new CachingClusteredClient(
+        new DefaultQueryRunnerFactoryConglomerate(
+            QueryRunnerTestHelper.DEFAULT_CONGLOMERATE_MAP
+        ),
         WAREHOUSE,
         new TimelineServerView()
         {
@@ -3209,12 +3214,12 @@ public class CachingClusteredClientTest
 
 
     final Sequence<Result<TimeseriesResultValue>> parallelMergeResults = MergeWorkTask.parallelMerge(
-        query.getResultOrdering(),
         client.run(
             QueryPlus.wrap(query),
             context,
             stringServerSelectorTimelineLookup -> stringServerSelectorTimelineLookup
         ).parallel(),
+        s -> new MergeSequence<>(query.getResultOrdering(), Sequences.fromStream(s)),
         1,
         ForkJoinPool.commonPool()
     );

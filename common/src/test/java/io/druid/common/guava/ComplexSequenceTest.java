@@ -20,6 +20,7 @@
 package io.druid.common.guava;
 
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.guava.CombiningSequence;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;

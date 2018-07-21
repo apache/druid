@@ -33,10 +33,12 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.DataSource;
+import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.server.coordination.ServerType;
@@ -229,6 +231,9 @@ public class CachingClusteredClientFunctionalityTest
   )
   {
     return new CachingClusteredClient(
+        new DefaultQueryRunnerFactoryConglomerate(
+            QueryRunnerTestHelper.DEFAULT_CONGLOMERATE_MAP
+        ),
         CachingClusteredClientTest.WAREHOUSE,
         new TimelineServerView()
         {

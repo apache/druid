@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.common.guava;
+package io.druid.java.util.common.guava;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -25,10 +25,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
-import io.druid.java.util.common.guava.Yielder;
-import io.druid.java.util.common.guava.YieldingAccumulator;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

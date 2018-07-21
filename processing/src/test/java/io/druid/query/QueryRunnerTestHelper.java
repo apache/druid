@@ -20,11 +20,13 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.collections.StupidPool;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
@@ -49,16 +51,40 @@ import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
+import io.druid.query.metadata.SegmentMetadataQueryConfig;
+import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
+import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
+import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.query.scan.ScanQuery;
+import io.druid.query.scan.ScanQueryConfig;
+import io.druid.query.scan.ScanQueryEngine;
+import io.druid.query.scan.ScanQueryQueryToolChest;
+import io.druid.query.scan.ScanQueryRunnerFactory;
+import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryConfig;
+import io.druid.query.select.SelectQueryEngine;
+import io.druid.query.select.SelectQueryQueryToolChest;
+import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentSpec;
+import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNQueryConfig;
+import io.druid.query.topn.TopNQueryQueryToolChest;
+import io.druid.query.topn.TopNQueryRunnerFactory;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.timeline.TimelineObjectHolder;
@@ -67,6 +93,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -81,7 +108,8 @@ import java.util.Map;
 public class QueryRunnerTestHelper
 {
 
-  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
+  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {
+  };
 
   public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
@@ -275,6 +303,104 @@ public class QueryRunnerTestHelper
         }
     );
   }
+
+
+  public static final Map<Class<? extends Query>, QueryRunnerFactory> DEFAULT_CONGLOMERATE_MAP = ImmutableMap
+      .<Class<? extends Query>, QueryRunnerFactory>builder()
+      .put(
+          SegmentMetadataQuery.class,
+          new SegmentMetadataQueryRunnerFactory(
+              new SegmentMetadataQueryQueryToolChest(
+                  new SegmentMetadataQueryConfig("P1W")
+              ),
+              QueryRunnerTestHelper.NOOP_QUERYWATCHER
+          )
+      )
+      .put(
+          ScanQuery.class,
+          new ScanQueryRunnerFactory(
+              new ScanQueryQueryToolChest(
+                  new ScanQueryConfig(),
+                  new DefaultGenericQueryMetricsFactory(TestHelper.makeJsonMapper())
+              ),
+              new ScanQueryEngine()
+          )
+      )
+      .put(
+          SelectQuery.class,
+          new SelectQueryRunnerFactory(
+              new SelectQueryQueryToolChest(
+                  TestHelper.makeJsonMapper(),
+                  QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+                  Suppliers.ofInstance(
+                      new SelectQueryConfig(true)
+                  )
+              ),
+              new SelectQueryEngine(),
+              QueryRunnerTestHelper.NOOP_QUERYWATCHER
+          )
+      )
+      .put(
+          TimeseriesQuery.class,
+          new TimeseriesQueryRunnerFactory(
+              new TimeseriesQueryQueryToolChest(
+                  QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              ),
+              new TimeseriesQueryEngine(),
+              QueryRunnerTestHelper.NOOP_QUERYWATCHER
+          )
+      )
+      .put(
+          TopNQuery.class,
+          new TopNQueryRunnerFactory(
+              new StupidPool<>(
+                  "test-TopNQueryRunnerFactory-bufferPool",
+                  () -> ByteBuffer.allocate(10 << 20)
+              ),
+              new TopNQueryQueryToolChest(
+                  new TopNQueryConfig(),
+                  QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              ),
+              QueryRunnerTestHelper.NOOP_QUERYWATCHER
+          )
+      )
+      .put(
+          GroupByQuery.class,
+          GroupByQueryRunnerTest.makeQueryRunnerFactory(
+              GroupByQueryRunnerTest.DEFAULT_MAPPER,
+              new GroupByQueryConfig()
+              {
+                @Override
+                public String getDefaultStrategy()
+                {
+                  return GroupByStrategySelector.STRATEGY_V2;
+                }
+              },
+              new DruidProcessingConfig()
+              {
+                @Override
+                public String getFormatString()
+                {
+                  return "test-processing-%s";
+                }
+
+                @Override
+                public int intermediateComputeSizeBytes()
+                {
+                  return 10 << 20;
+                }
+
+                @Override
+                public int getNumMergeBuffers()
+                {
+                  // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
+                  // Two buffers for the broker and one for the queryable
+                  return 3;
+                }
+              }
+          )
+      )
+      .build();
 
   // simple cartesian iterable
   public static Iterable<Object[]> cartesian(final Iterable... iterables)

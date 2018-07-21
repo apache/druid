@@ -22,8 +22,12 @@ package io.druid.common.guava;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  */
@@ -61,5 +65,10 @@ public class GuavaUtils
     }
 
     return null;
+  }
+
+  public static <V> ListenableFuture<List<V>> allFuturesAsList(Stream<ListenableFuture<? extends V>> futures)
+  {
+    return Futures.allAsList(futures::iterator);
   }
 }
