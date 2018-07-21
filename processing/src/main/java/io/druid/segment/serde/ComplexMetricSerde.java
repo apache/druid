@@ -107,8 +107,8 @@ public abstract class ComplexMetricSerde
 
   /**
    * This method provides the ability for a ComplexMetricSerde to control its own serialization.
-   * For large column (i.e columns greater than Integer.MAX) use
-   * (@link LargeColumnSupportedComplexColumnSerializer)
+   * For large column (i.e columns greater than {@link Integer#MAX_VALUE}) use
+   * {@link LargeColumnSupportedComplexColumnSerializer}
    *
    * @return an instance of ColumnSerializer used for serialization.
    */

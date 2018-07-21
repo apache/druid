@@ -98,7 +98,7 @@ public class EmptyIndexTest
       Assert.assertEquals(
           "getReadOnlyTimestamps",
           0,
-          emptyQueryableIndex.getColumn(ColumnHolder.TIME_COLUMN_NAME).getLength()
+          emptyQueryableIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength()
       );
     }
     finally {

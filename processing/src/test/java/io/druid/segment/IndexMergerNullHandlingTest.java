@@ -117,7 +117,7 @@ public class IndexMergerNullHandlingTest
 
       final File tempDir = temporaryFolder.newFolder();
       try (QueryableIndex index = indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))) {
-        final ColumnHolder columnHolder = index.getColumn("d");
+        final ColumnHolder columnHolder = index.getColumnHolder("d");
 
         if (subsetList.stream().allMatch(nullFlavors::contains)) {
           // all null -> should be missing

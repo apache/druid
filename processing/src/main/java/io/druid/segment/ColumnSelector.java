@@ -31,5 +31,5 @@ public interface ColumnSelector
   List<String> getColumnNames();
 
   @Nullable
-  ColumnHolder getColumn(String columnName);
+  ColumnHolder getColumnHolder(String columnName);
 }

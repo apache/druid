@@ -397,7 +397,7 @@ public class CompactionTask extends AbstractTask
 
       for (String dimension : queryableIndex.getAvailableDimensions()) {
         final ColumnHolder columnHolder = Preconditions.checkNotNull(
-            queryableIndex.getColumn(dimension),
+            queryableIndex.getColumnHolder(dimension),
             "Cannot find column for dimension[%s]",
             dimension
         );

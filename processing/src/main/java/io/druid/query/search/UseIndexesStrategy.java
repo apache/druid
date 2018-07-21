@@ -165,7 +165,7 @@ public class UseIndexesStrategy extends SearchStrategy
     final ImmutableBitmap timeFilteredBitmap;
     if (!interval.contains(segment.getDataInterval())) {
       final MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
-      final ColumnHolder timeColumnHolder = index.getColumn(ColumnHolder.TIME_COLUMN_NAME);
+      final ColumnHolder timeColumnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
       try (final NumericColumn timeValues = (NumericColumn) timeColumnHolder.getColumn()) {
 
         int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
@@ -246,7 +246,7 @@ public class UseIndexesStrategy extends SearchStrategy
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
       for (DimensionSpec dimension : dimsToSearch) {
-        final ColumnHolder columnHolder = index.getColumn(dimension.getDimension());
+        final ColumnHolder columnHolder = index.getColumnHolder(dimension.getDimension());
         if (columnHolder == null) {
           continue;
         }

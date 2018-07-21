@@ -99,7 +99,7 @@ public class SegmentAnalyzer
     Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
 
     for (String columnName : columnNames) {
-      final ColumnHolder columnHolder = index == null ? null : index.getColumn(columnName);
+      final ColumnHolder columnHolder = index == null ? null : index.getColumnHolder(columnName);
       final ColumnCapabilities capabilities = columnHolder != null
                                               ? columnHolder.getCapabilities()
                                               : storageAdapter.getColumnCapabilities(columnName);

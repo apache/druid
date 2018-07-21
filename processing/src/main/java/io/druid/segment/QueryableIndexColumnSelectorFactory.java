@@ -78,7 +78,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    final ColumnHolder columnHolder = index.getColumn(dimension);
+    final ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder == null) {
       return DimensionSelectorUtils.constantSelector(null, extractionFn);
     }
@@ -117,7 +117,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     }
 
     BaseColumn column = columnCache.computeIfAbsent(columnName, name -> {
-      ColumnHolder holder = index.getColumn(name);
+      ColumnHolder holder = index.getColumnHolder(name);
       if (holder != null) {
         return closer.register(holder.getColumn());
       } else {

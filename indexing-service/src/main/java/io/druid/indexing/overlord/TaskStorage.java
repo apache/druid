@@ -127,8 +127,6 @@ public interface TaskStorage
    * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No particular order
    * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
-   * @param datasource datasource
-   *
    * @return list of {@link TaskInfo}
    */
   List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String dataSource);

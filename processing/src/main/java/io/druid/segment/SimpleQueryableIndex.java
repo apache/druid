@@ -134,7 +134,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
 
   @Nullable
   @Override
-  public ColumnHolder getColumn(String columnName)
+  public ColumnHolder getColumnHolder(String columnName)
   {
     return columns.get(columnName);
   }
@@ -172,7 +172,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   private void initDimensionHandlers()
   {
     for (String dim : availableDimensions) {
-      ColumnCapabilities capabilities = getColumn(dim).getCapabilities();
+      ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
       DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
       dimensionHandlers.put(dim, handler);
     }

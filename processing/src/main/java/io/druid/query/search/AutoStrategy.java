@@ -114,7 +114,7 @@ public class AutoStrategy extends SearchStrategy
   {
     long totalCard = 0;
     for (DimensionSpec dimension : dimensionSpecs) {
-      final ColumnHolder columnHolder = index.getColumn(dimension.getDimension());
+      final ColumnHolder columnHolder = index.getColumnHolder(dimension.getDimension());
       if (columnHolder != null) {
         final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
         if (bitmapIndex != null) {

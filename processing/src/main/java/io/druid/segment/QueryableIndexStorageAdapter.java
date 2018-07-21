@@ -100,7 +100,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    ColumnHolder columnHolder = index.getColumn(dimension);
+    ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder == null) {
       return 0;
     }
@@ -124,7 +124,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public DateTime getMinTime()
   {
-    try (final NumericColumn column = (NumericColumn) index.getColumn(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
+    try (final NumericColumn column = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
       return DateTimes.utc(column.getLongSingleValueRow(0));
     }
   }
@@ -132,7 +132,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public DateTime getMaxTime()
   {
-    try (final NumericColumn column = (NumericColumn) index.getColumn(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
+    try (final NumericColumn column = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
       return DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
     }
   }
@@ -141,7 +141,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   public Comparable getMinValue(String dimension)
   {
-    ColumnHolder columnHolder = index.getColumn(dimension);
+    ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
       BitmapIndex bitmap = columnHolder.getBitmapIndex();
       return bitmap.getCardinality() > 0 ? bitmap.getValue(0) : null;
@@ -153,7 +153,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   public Comparable getMaxValue(String dimension)
   {
-    ColumnHolder columnHolder = index.getColumn(dimension);
+    ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
       BitmapIndex bitmap = columnHolder.getBitmapIndex();
       return bitmap.getCardinality() > 0 ? bitmap.getValue(bitmap.getCardinality() - 1) : null;
@@ -177,7 +177,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public String getColumnTypeName(String columnName)
   {
-    final ColumnHolder columnHolder = index.getColumn(columnName);
+    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
     try (final BaseColumn col = columnHolder.getColumn()) {
       if (col instanceof ComplexColumn) {
         return ((ComplexColumn) col).getTypeName();
@@ -329,7 +329,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   static ColumnCapabilities getColumnCapabilities(ColumnSelector index, String columnName)
   {
-    ColumnHolder columnHolder = index.getColumn(columnName);
+    ColumnHolder columnHolder = index.getColumnHolder(columnName);
     if (columnHolder == null) {
       return null;
     }
@@ -382,7 +382,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       // Column caches shared amongst all cursors in this sequence.
       final Map<String, BaseColumn> columnCache = new HashMap<>();
 
-      final NumericColumn timestamps = (NumericColumn) index.getColumn(ColumnHolder.TIME_COLUMN_NAME).getColumn();
+      final NumericColumn timestamps = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn();
 
       final Closer closer = Closer.create();
       closer.register(timestamps);

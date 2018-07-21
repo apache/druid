@@ -98,7 +98,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension)
   {
-    final ColumnHolder columnHolder = input.getColumn(dimension);
+    final ColumnHolder columnHolder = input.getColumnHolder(dimension);
 
     if (columnHolder == null) {
       return null;
@@ -236,7 +236,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           .toArray(SettableColumnValueSelector[]::new);
       rowMetricSelectors = metricNames
           .stream()
-          .map(metric -> input.getColumn(metric).makeNewSettableColumnValueSelector())
+          .map(metric -> input.getColumnHolder(metric).makeNewSettableColumnValueSelector())
           .toArray(SettableColumnValueSelector[]::new);
 
       rowPointer = new RowPointer(
@@ -255,7 +255,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           .toArray(SettableColumnValueSelector[]::new);
       markedMetricSelectors = metricNames
           .stream()
-          .map(metric -> input.getColumn(metric).makeNewSettableColumnValueSelector())
+          .map(metric -> input.getColumnHolder(metric).makeNewSettableColumnValueSelector())
           .toArray(SettableColumnValueSelector[]::new);
       markedRowPointer = new TimeAndDimsPointer(
           markedTimestampSelector,
@@ -359,7 +359,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public String getMetricType(String metric)
   {
-    final ColumnHolder columnHolder = input.getColumn(metric);
+    final ColumnHolder columnHolder = input.getColumnHolder(metric);
 
     final ValueType type = columnHolder.getCapabilities().getType();
     switch (type) {
@@ -382,13 +382,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public ColumnCapabilities getCapabilities(String column)
   {
-    return input.getColumn(column).getCapabilities();
+    return input.getColumnHolder(column).getCapabilities();
   }
 
   @Override
   public BitmapValues getBitmapValues(String dimension, int dictId)
   {
-    final ColumnHolder columnHolder = input.getColumn(dimension);
+    final ColumnHolder columnHolder = input.getColumnHolder(dimension);
     if (columnHolder == null) {
       return BitmapValues.EMPTY;
     }
@@ -408,7 +408,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @VisibleForTesting
   BitmapValues getBitmapIndex(String dimension, String value)
   {
-    final ColumnHolder columnHolder = input.getColumn(dimension);
+    final ColumnHolder columnHolder = input.getColumnHolder(dimension);
 
     if (columnHolder == null) {
       return BitmapValues.EMPTY;

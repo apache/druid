@@ -138,6 +138,7 @@ public class GenericIndexedWriter<T> implements Serializer
   private final int fileSizeLimit;
   private final byte[] fileNameByteArray;
   private boolean objectsSorted = true;
+  @Nullable
   private T prevObject = null;
   private WriteOutBytes headerOut = null;
   private WriteOutBytes valuesOut = null;
@@ -207,7 +208,7 @@ public class GenericIndexedWriter<T> implements Serializer
     objectsSorted = false;
   }
 
-  public void write(T objectToWrite) throws IOException
+  public void write(@Nullable T objectToWrite) throws IOException
   {
     if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
       objectsSorted = false;

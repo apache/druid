@@ -350,7 +350,7 @@ public class DumpSegment extends GuiceRunnable
               jg.writeStartObject();
 
               for (final String columnName : columnNames) {
-                final ColumnHolder columnHolder = index.getColumn(columnName);
+                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
                 final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
 
                 if (bitmapIndex == null) {
@@ -404,7 +404,7 @@ public class DumpSegment extends GuiceRunnable
     } else {
       // Remove any provided columns that do not exist in this segment.
       for (String columnName : ImmutableList.copyOf(columnNames)) {
-        if (index.getColumn(columnName) == null) {
+        if (index.getColumnHolder(columnName) == null) {
           columnNames.remove(columnName);
         }
       }
