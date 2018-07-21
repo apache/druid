@@ -46,7 +46,7 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
 
   @Override
   protected Query<Map<String, Object>> createInactiveStatusesSinceQuery(
-      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String datasource
+      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
   )
   {
     String sql = StringUtils.format(
@@ -59,7 +59,7 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
         + "FROM "
         + "  %s "
         + "WHERE "
-        + getWhereClauseForInactiveStatusesSinceQuery(datasource)
+        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
         + "ORDER BY created_date DESC",
         getEntryTable()
     );
@@ -72,8 +72,8 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
     if (maxNumStatuses != null) {
       query = query.bind("n", maxNumStatuses);
     }
-    if (datasource != null) {
-      query = query.bind("ds", datasource);
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
     }
     return query;
   }

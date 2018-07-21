@@ -629,10 +629,10 @@ public class OverlordResource
       finalTaskList.addAll(completedTasks);
     }
 
-    List<TaskInfo<Task>> allActiveTaskInfo = Lists.newArrayList();
+    final List<TaskInfo<Task>> allActiveTaskInfo;
     final List<AnyTask> allActiveTasks = Lists.newArrayList();
     if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
-      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
+      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
       for (final TaskInfo<Task> task : allActiveTaskInfo) {
         allActiveTasks.add(
             new AnyTask(

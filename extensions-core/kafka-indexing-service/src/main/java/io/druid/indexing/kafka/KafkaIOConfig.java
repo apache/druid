@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import io.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class KafkaIOConfig implements IOConfig
@@ -33,6 +34,8 @@ public class KafkaIOConfig implements IOConfig
   private static final boolean DEFAULT_USE_TRANSACTION = true;
   private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
+  @Nullable
+  private final Integer taskGroupId;
   private final String baseSequenceName;
   private final KafkaPartitions startPartitions;
   private final KafkaPartitions endPartitions;
@@ -44,6 +47,7 @@ public class KafkaIOConfig implements IOConfig
 
   @JsonCreator
   public KafkaIOConfig(
+      @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
       @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") KafkaPartitions startPartitions,
       @JsonProperty("endPartitions") KafkaPartitions endPartitions,
@@ -54,6 +58,7 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
   )
   {
+    this.taskGroupId = taskGroupId;
     this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
     this.startPartitions = Preconditions.checkNotNull(startPartitions, "startPartitions");
     this.endPartitions = Preconditions.checkNotNull(endPartitions, "endPartitions");
@@ -81,6 +86,13 @@ public class KafkaIOConfig implements IOConfig
           partition
       );
     }
+  }
+
+  @Nullable
+  @JsonProperty
+  public Integer getTaskGroupId()
+  {
+    return taskGroupId;
   }
 
   @JsonProperty
@@ -135,7 +147,8 @@ public class KafkaIOConfig implements IOConfig
   public String toString()
   {
     return "KafkaIOConfig{" +
-           "baseSequenceName='" + baseSequenceName + '\'' +
+           "taskGroupId=" + taskGroupId +
+           ", baseSequenceName='" + baseSequenceName + '\'' +
            ", startPartitions=" + startPartitions +
            ", endPartitions=" + endPartitions +
            ", consumerProperties=" + consumerProperties +
