@@ -120,7 +120,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType>> getActiveTaskInfo();
+  List<TaskInfo<EntryType>> getActiveTaskInfo(@Nullable String dataSource);
 
   /**
    * Return createdDate and dataSource for the given id

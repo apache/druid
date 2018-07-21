@@ -46,7 +46,7 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
 
   @Override
   protected Query<Map<String, Object>> createInactiveStatusesSinceQuery(
-      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String datasource
+      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
   )
   {
     String sql = StringUtils.format(
@@ -59,7 +59,7 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
         + "FROM "
         + "  %s "
         + "WHERE "
-        + getWhereClauseForInactiveStatusesSinceQuery(datasource)
+        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
         + "ORDER BY created_date DESC",
         getEntryTable()
     );
@@ -73,8 +73,8 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
     if (maxNumStatuses != null) {
       query = query.bind("n", maxNumStatuses);
     }
-    if (datasource != null) {
-      query = query.bind("ds", datasource);
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
     }
     return query;
   }
