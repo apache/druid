@@ -2424,7 +2424,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           QueryRunnerTestHelper.qualityUniques
                                       )
