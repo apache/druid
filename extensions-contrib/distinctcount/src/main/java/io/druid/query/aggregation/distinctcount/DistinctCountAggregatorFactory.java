@@ -137,7 +137,8 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.singletonList(
-        new DistinctCountAggregatorFactory(fieldName, fieldName, bitMapFactory));
+        new DistinctCountAggregatorFactory(fieldName, fieldName, bitMapFactory)
+    );
   }
 
   @Override

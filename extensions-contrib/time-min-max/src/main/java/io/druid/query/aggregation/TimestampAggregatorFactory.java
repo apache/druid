@@ -148,7 +148,8 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.singletonList(
-        new TimestampAggregatorFactory(fieldName, fieldName, timeFormat, comparator, initValue));
+        new TimestampAggregatorFactory(fieldName, fieldName, timeFormat, comparator, initValue)
+    );
   }
 
   @Override
