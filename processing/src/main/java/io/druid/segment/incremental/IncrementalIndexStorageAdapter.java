@@ -74,7 +74,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<>(index.getDimensionNames(), String.class);
+    return new ListIndexed<>(index.getDimensionNames());
   }
 
   @Override

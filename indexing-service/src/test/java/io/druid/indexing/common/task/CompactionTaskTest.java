@@ -649,7 +649,7 @@ public class CompactionTaskTest
             entry.getValue(),
             new SimpleQueryableIndex(
                 segment.getInterval(),
-                new ListIndexed<>(segment.getDimensions(), String.class),
+                new ListIndexed<>(segment.getDimensions()),
                 null,
                 columnMap,
                 null,

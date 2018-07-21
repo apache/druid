@@ -28,7 +28,6 @@ import javax.annotation.Nullable;
 @PublicApi
 public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
-  Class<? extends T> getClazz();
 
   int size();
 

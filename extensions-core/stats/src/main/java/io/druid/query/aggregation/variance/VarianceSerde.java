@@ -93,7 +93,7 @@ public class VarianceSerde extends ComplexMetricSerde
     return new ObjectStrategy<VarianceAggregatorCollector>()
     {
       @Override
-      public Class<? extends VarianceAggregatorCollector> getClazz()
+      public Class<VarianceAggregatorCollector> getClazz()
       {
         return VarianceAggregatorCollector.class;
       }

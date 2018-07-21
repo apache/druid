@@ -371,7 +371,10 @@ public class DumpSegment extends GuiceRunnable
                         }
                         jg.writeEndArray();
                       } else {
-                        jg.writeBinary(bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap));
+                        byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                        if (bytes != null) {
+                          jg.writeBinary(bytes);
+                        }
                       }
                     }
                   }

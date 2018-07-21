@@ -38,7 +38,6 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.ByteBufferWriter;
@@ -52,6 +51,7 @@ import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.SingleValueColumnarIntsSerializer;
 import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
 import io.druid.segment.data.VSizeColumnarIntsSerializer;
@@ -67,13 +67,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class StringDimensionMergerV9 implements DimensionMergerV9
 {
   private static final Logger log = new Logger(StringDimensionMergerV9.class);
 
-  private static final Indexed<String> NULL_STR_DIM_VAL = new ArrayIndexed<>(new String[]{null}, String.class);
+  private static final Indexed<String> NULL_STR_DIM_VAL = new ListIndexed<>(Collections.singletonList(null));
   private static final Splitter SPLITTER = Splitter.on(",");
 
   private ColumnarIntsSerializer encodedValueSerializer;

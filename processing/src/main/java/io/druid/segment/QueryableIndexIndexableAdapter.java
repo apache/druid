@@ -115,11 +115,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
     return new CloseableIndexed<T>()
     {
-      @Override
-      public Class<? extends T> getClazz()
-      {
-        return dict.getClazz();
-      }
 
       @Override
       public int size()

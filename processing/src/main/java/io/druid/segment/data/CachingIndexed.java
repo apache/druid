@@ -61,12 +61,6 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
   }
 
   @Override
-  public Class<? extends T> getClazz()
-  {
-    return delegate.getClazz();
-  }
-
-  @Override
   public int size()
   {
     return delegate.size();

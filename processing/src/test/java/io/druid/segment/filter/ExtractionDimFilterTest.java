@@ -36,11 +36,12 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.Indexed;
+import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import org.junit.Assert;
@@ -49,7 +50,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -101,14 +101,9 @@ public class ExtractionDimFilterTest
       if (vals == null) {
         return null;
       } else {
-        ArrayIndexed<String> indexed = new ArrayIndexed<>(vals, String.class);
+        Indexed<String> indexed = new ListIndexed<>(vals);
         return new CloseableIndexed<String>()
         {
-          @Override
-          public Class<? extends String> getClazz()
-          {
-            return indexed.getClazz();
-          }
 
           @Override
           public int size()
@@ -136,7 +131,7 @@ public class ExtractionDimFilterTest
           }
 
           @Override
-          public void close() throws IOException
+          public void close()
           {
             // close nothing
           }

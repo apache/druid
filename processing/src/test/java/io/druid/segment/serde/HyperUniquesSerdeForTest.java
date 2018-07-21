@@ -29,6 +29,7 @@ import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -135,7 +136,7 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
       public byte[] toBytes(HyperLogLogCollector collector)
       {
         if (collector == null) {
-          return new byte[]{};
+          return ByteArrays.EMPTY_ARRAY;
         }
         ByteBuffer val = collector.toByteBuffer();
         byte[] retVal = new byte[val.remaining()];

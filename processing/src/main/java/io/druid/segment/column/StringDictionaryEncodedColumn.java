@@ -62,12 +62,6 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   }
 
   @Override
-  public Class<String> getClazz()
-  {
-    return String.class;
-  }
-
-  @Override
   public int length()
   {
     return hasMultipleValues() ? multiValueColumn.size() : column.size();

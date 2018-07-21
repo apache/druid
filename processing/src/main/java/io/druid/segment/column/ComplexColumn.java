@@ -40,11 +40,6 @@ public class ComplexColumn implements BaseColumn
     this.typeName = typeName;
   }
 
-  public Class<?> getClazz()
-  {
-    return index.getClazz();
-  }
-
   public String getTypeName()
   {
     return typeName;
@@ -76,7 +71,7 @@ public class ComplexColumn implements BaseColumn
       @Override
       public Class classOfObject()
       {
-        return getClazz();
+        return index.getClazz();
       }
 
       @Override

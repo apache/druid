@@ -104,7 +104,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
     return new ObjectStrategy<HyperLogLogCollector>()
     {
       @Override
-      public Class<? extends HyperLogLogCollector> getClazz()
+      public Class<HyperLogLogCollector> getClazz()
       {
         return HyperLogLogCollector.class;
       }

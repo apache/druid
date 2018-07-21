@@ -164,12 +164,6 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
     }
 
     @Override
-    public Class<? extends IndexedInts> getClazz()
-    {
-      return IndexedInts.class;
-    }
-
-    @Override
     public int size()
     {
       return offsets.size() - 1;

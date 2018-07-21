@@ -272,7 +272,6 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     }
   }
 
-  @Override
   public Class<? extends T> getClazz()
   {
     return strategy.getClazz();
@@ -300,12 +299,12 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
    * @return index of value, or negative number equal to (-(insertion point) - 1).
    */
   @Override
-  public int indexOf(T value)
+  public int indexOf(@Nullable T value)
   {
     return indexOf(this, value);
   }
 
-  private int indexOf(Indexed<T> indexed, T value)
+  private int indexOf(Indexed<T> indexed, @Nullable T value)
   {
     if (!allowReverseLookup) {
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
@@ -368,6 +367,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return versionOne ? singleThreadedVersionOne() : singleThreadedVersionTwo();
   }
 
+  @Nullable
   private T copyBufferAndGet(ByteBuffer valueBuffer, int startOffset, int endOffset)
   {
     ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
@@ -418,17 +418,12 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     int lastReadSize;
 
     @Override
-    public Class<? extends T> getClazz()
-    {
-      return strategy.getClazz();
-    }
-
-    @Override
     public int size()
     {
       return size;
     }
 
+    @Nullable
     T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
       int size = endOffset - startOffset;
@@ -460,7 +455,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     }
 
     @Override
-    public int indexOf(T value)
+    public int indexOf(@Nullable T value)
     {
       return GenericIndexed.this.indexOf(this, value);
     }
@@ -524,9 +519,11 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
           allowReverseLookup = false;
         }
 
-        valuesOut.writeInt(next == null ? NULL_VALUE_SIZE_MARKER : 0);
         if (next != null) {
+          valuesOut.writeInt(0);
           strategy.writeTo(next, valuesOut);
+        } else {
+          valuesOut.writeInt(NULL_VALUE_SIZE_MARKER);
         }
 
         headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
@@ -559,6 +556,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return metaSerdeHelper.size(this) + (long) theBuffer.remaining();
   }
 
+  @Nullable
   private T getVersionOne(int index)
   {
     checkIndex(index);
@@ -660,6 +658,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     }
   }
 
+  @Nullable
   private T getVersionTwo(int index)
   {
     checkIndex(index);

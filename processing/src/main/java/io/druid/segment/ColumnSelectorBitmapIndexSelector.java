@@ -78,11 +78,6 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     final DictionaryEncodedColumn<String> column = (DictionaryEncodedColumn<String>) col;
     return new CloseableIndexed<String>()
     {
-      @Override
-      public Class<? extends String> getClazz()
-      {
-        return String.class;
-      }
 
       @Override
       public int size()
