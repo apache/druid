@@ -28,10 +28,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.logger.Logger;
+import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -40,6 +42,7 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -146,11 +149,32 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQuery(query, futures);
 
             try {
+              final DateTime deadline = QueryContexts.hasTimeout(query) ?
+                                        new DateTime(DateTime.now().getMillis() + QueryContexts.getTimeout(query)) :
+                                        new DateTime(JodaUtils.MAX_INSTANT);
+              ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker()
+              {
+                @Override
+                public boolean block() throws InterruptedException
+                {
+                  try {
+                    futures.get(JodaUtils.timeoutForDeadline(deadline), TimeUnit.MILLISECONDS);
+                  }
+                  catch (ExecutionException | TimeoutException e) {
+                    // Will get caught later
+                  }
+                  return true;
+                }
+
+                @Override
+                public boolean isReleasable()
+                {
+                  return futures.isDone() || deadline.isBefore(DateTime.now());
+                }
+              });
               return new MergeIterable<>(
                   ordering.nullsFirst(),
-                  QueryContexts.hasTimeout(query) ?
-                      futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
-                      futures.get()
+                  futures.get(JodaUtils.timeoutForDeadline(deadline), TimeUnit.MILLISECONDS)
               ).iterator();
             }
             catch (InterruptedException e) {

@@ -28,6 +28,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.SortedSet;
+import java.util.concurrent.TimeoutException;
 
 /**
  */
@@ -137,5 +138,25 @@ public class JodaUtils
         }
         return max;
     }
+  }
+
+  /**
+   * Return a qty of millisconds approximately until deadline. If deadline has passed, throw TimeoutException
+   *
+   * @param deadline The time on or after which things should be considered "timed out"
+   *
+   * @return A millisecond number where, if one were to wait that many milliseconds, the deadline would
+   * probably have passed. Always greater than zero
+   *
+   * @throws TimeoutException If the deadline has already passed (ties are treated as having passed the deadline)
+   */
+  public static long timeoutForDeadline(DateTime deadline) throws TimeoutException
+  {
+    final DateTime now = DateTime.now();
+    final long diff = deadline.getMillis() - now.getMillis();
+    if (now.isAfter(deadline) || diff == 0) {
+      throw new TimeoutException(StringUtils.format("Deadline passed: [%s]", deadline));
+    }
+    return diff;
   }
 }

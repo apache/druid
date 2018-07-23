@@ -84,6 +84,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -590,6 +591,27 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     {
       if (jp == null) {
         try {
+          // Safety for if we are in a FJP
+          ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker()
+          {
+            @Override
+            public boolean block() throws InterruptedException
+            {
+              try {
+                future.get();
+              }
+              catch (ExecutionException e) {
+                // Ignore, will be caught when get is called below
+              }
+              return true;
+            }
+
+            @Override
+            public boolean isReleasable()
+            {
+              return future.isDone();
+            }
+          });
           InputStream is = future.get();
           if (is == null) {
             throw new QueryInterruptedException(
