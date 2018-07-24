@@ -22,6 +22,7 @@ The query context is used for various query configuration parameters. The follow
 |chunkPeriod      | `P0D` (off)                            | At the broker node level, long interval queries (of any type) may be broken into shorter interval queries to parallelize merging more than normal. Broken up queries will use a larger share of cluster resources, but may be able to complete faster as a result. Use ISO 8601 periods. For example, if this property is set to `P1M` (one month), then a query covering a year would be broken into 12 smaller queries. The broker uses its query processing executor service to initiate processing for query chunks, so make sure "druid.processing.numThreads" is configured appropriately on the broker. [groupBy queries](groupbyquery.html) do not support chunkPeriod by default, although they do if using the legacy "v1" engine. |
 |serializeDateTimeAsLong| `false`       | If true, DateTime is serialized as long in the result returned by broker and the data transportation between broker and compute node|
 |serializeDateTimeAsLongInner| `false`  | If true, DateTime is serialized as long in the data transportation between broker and compute node|
+|enableBrokerBackpressure|`false`|If true, brokers will refuse to accept new http chunks from query nodes until it is ready to process more chunks. This can reduce heap memory pressure on brokers for large query results at the potential expense of query latency|
 
 In addition, some query types offer context parameters specific to that query type.
 

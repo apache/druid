@@ -80,18 +80,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TransferQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  */
@@ -164,19 +165,27 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> context)
   {
     final Query<T> query = queryPlus.getQuery();
-    QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    boolean isBySegment = QueryContexts.isBySegment(query);
+    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    final boolean isBySegment = QueryContexts.isBySegment(query);
+    final boolean isEnableBrokerBackpressure = QueryContexts.isEnableBrokerBackpressure(query);
 
-    Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
-    if (types == null) {
-      final TypeFactory typeFactory = objectMapper.getTypeFactory();
-      JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
-      JavaType bySegmentType = typeFactory.constructParametricType(
-          Result.class, typeFactory.constructParametricType(BySegmentResultValueClass.class, baseType)
-      );
-      types = Pair.of(baseType, bySegmentType);
-      typesMap.put(query.getClass(), types);
-    }
+    final Pair<JavaType, JavaType> types = typesMap.computeIfAbsent(
+        query.getClass(),
+        ignored -> {
+          final TypeFactory typeFactory = objectMapper.getTypeFactory();
+          final JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
+          final JavaType bySegmentType = typeFactory.constructParametrizedType(
+              Result.class,
+              Result.class,
+              typeFactory.constructParametrizedType(
+                  BySegmentResultValueClass.class,
+                  BySegmentResultValueClass.class,
+                  baseType
+              )
+          );
+          return Pair.of(baseType, bySegmentType);
+        }
+    );
 
     final JavaType typeRef;
     if (isBySegment) {
@@ -200,8 +209,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
       {
-        private final AtomicLong byteCount = new AtomicLong(0);
-        private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
+        private final LongAdder byteCount = new LongAdder();
+        private final TransferQueue<InputStream> queue = new LinkedTransferQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
 
@@ -237,11 +246,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   )
               );
             }
-            queue.put(new ChannelBufferInputStream(response.getContent()));
+            final InputStream inputStream = new ChannelBufferInputStream(response.getContent());
+            if (isEnableBrokerBackpressure) {
+              queue.transfer(inputStream);
+            } else {
+              queue.put(inputStream);
+            }
           }
           catch (final IOException e) {
             log.error(e, "Error parsing response context from url [%s]", url);
-            return ClientResponse.<InputStream>finished(
+            return ClientResponse.finished(
                 new InputStream()
                 {
                   @Override
@@ -257,8 +271,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             Thread.currentThread().interrupt();
             throw Throwables.propagate(e);
           }
-          byteCount.addAndGet(response.getContent().readableBytes());
-          return ClientResponse.<InputStream>finished(
+          byteCount.add(response.getContent().readableBytes());
+          return ClientResponse.finished(
               new SequenceInputStream(
                   new Enumeration<InputStream>()
                   {
@@ -316,14 +330,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           if (bytes > 0) {
             try {
-              queue.put(new ChannelBufferInputStream(channelBuffer));
+              final InputStream inputStream = new ChannelBufferInputStream(channelBuffer);
+              if (isEnableBrokerBackpressure) {
+                queue.transfer(inputStream);
+              } else {
+                queue.put(inputStream);
+              }
             }
             catch (InterruptedException e) {
               log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
               Thread.currentThread().interrupt();
               throw Throwables.propagate(e);
             }
-            byteCount.addAndGet(bytes);
+            byteCount.add(bytes);
           }
           return clientResponse;
         }
@@ -331,25 +350,27 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public ClientResponse<InputStream> done(ClientResponse<InputStream> clientResponse)
         {
-          long stopTimeNs = System.nanoTime();
-          long nodeTimeNs = stopTimeNs - requestStartTimeNs;
+          final long stopTimeNs = System.nanoTime();
+          final long nodeTimeNs = stopTimeNs - requestStartTimeNs;
           final long nodeTimeMs = TimeUnit.NANOSECONDS.toMillis(nodeTimeNs);
+          final long byteCount = this.byteCount.sum();
           log.debug(
               "Completed queryId[%s] request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
               query.getId(),
               url,
-              byteCount.get(),
+              byteCount,
               nodeTimeMs,
-              byteCount.get() / (0.001 * nodeTimeMs) // Floating math; division by zero will yield Inf, not exception
+              byteCount / (0.001 * nodeTimeMs) // Floating math; division by zero will yield Inf, not exception
           );
-          QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
+          final QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
           responseMetrics.reportNodeTime(nodeTimeNs);
-          responseMetrics.reportNodeBytes(byteCount.get());
+          responseMetrics.reportNodeBytes(byteCount);
           responseMetrics.emit(emitter);
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
               // after done is set to true, regardless of the rest of the stream's state.
+              // We don't need to "transfer" this one because there's no more results to force backpressure with
               queue.put(ByteSource.empty().openStream());
             }
             catch (InterruptedException e) {
@@ -365,7 +386,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               done.set(true);
             }
           }
-          return ClientResponse.<InputStream>finished(clientResponse.getObj());
+          return ClientResponse.finished(clientResponse.getObj());
         }
 
         @Override
@@ -384,6 +405,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           fail.set(msg);
           queue.clear();
+          // Don't need to transfer because this is a terminal state, so no need to block more items coming in
           queue.offer(new InputStream()
           {
             @Override
