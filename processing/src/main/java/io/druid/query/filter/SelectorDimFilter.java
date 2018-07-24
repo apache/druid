@@ -40,6 +40,7 @@ import io.druid.segment.filter.SelectorFilter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 
@@ -95,7 +96,7 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    return new InDimFilter(dimension, Arrays.asList(value), extractionFn).optimize();
+    return new InDimFilter(dimension, Collections.singletonList(value), extractionFn).optimize();
   }
 
   @Override

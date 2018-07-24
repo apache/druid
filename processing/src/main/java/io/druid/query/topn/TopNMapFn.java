@@ -49,17 +49,13 @@ public class TopNMapFn
     }
   }
 
-  private static Function<Object, Object> STRING_TRANSFORMER = input -> Objects.toString(input, null);
+  private static Function<Object, Object> STRING_TRANSFORMER = Objects::toString;
 
-  private static Function<Object, Object> LONG_TRANSFORMER = input -> {
-    final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
-    return longVal == null ? DimensionHandlerUtils.ZERO_LONG : longVal;
-  };
+  private static Function<Object, Object> LONG_TRANSFORMER = DimensionHandlerUtils::convertObjectToLong;
 
-  private static Function<Object, Object> FLOAT_TRANSFORMER = input -> DimensionHandlerUtils.convertObjectToFloat(input);
+  private static Function<Object, Object> FLOAT_TRANSFORMER = DimensionHandlerUtils::convertObjectToFloat;
 
-  private static Function<Object, Object> DOUBLE_TRANSFORMER = input -> DimensionHandlerUtils.convertObjectToDouble(
-      input);
+  private static Function<Object, Object> DOUBLE_TRANSFORMER = DimensionHandlerUtils::convertObjectToDouble;
 
   private static final TopNColumnSelectorStrategyFactory STRATEGY_FACTORY = new TopNColumnSelectorStrategyFactory();
 

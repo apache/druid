@@ -296,7 +296,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
             for (int i : rightKeys) {
               final Object value = row[i];
               if (value == null) {
-                // NULLS are not supposed to match NULLs in a join. So ignore them.
+                // NULLs are not supposed to match NULLs in a join. So ignore them.
                 continue;
               }
               final String stringValue = DimensionHandlerUtils.convertObjectToString(value);
@@ -313,7 +313,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
               for (int i = 0; i < values.size(); i++) {
                 final String value = values.get(i);
-                // NULLS are not supposed to match NULLs in a join. So ignore them.
+                // NULLs are not supposed to match NULLs in a join. So ignore them.
                 if (value != null) {
                   subConditions.add(
                       getCluster().getRexBuilder().makeCall(
