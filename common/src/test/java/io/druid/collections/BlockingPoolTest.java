@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -79,7 +79,7 @@ public class BlockingPoolTest
     emptyPool.takeBatch(1, 0);
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testTake()
   {
     final ReferenceCountingResourceHolder<Integer> holder = pool.take(100);
@@ -89,7 +89,7 @@ public class BlockingPoolTest
     assertEquals(10, pool.getPoolSize());
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testTakeTimeout()
   {
     final List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 100L);
@@ -98,7 +98,7 @@ public class BlockingPoolTest
     batchHolder.forEach(ReferenceCountingResourceHolder::close);
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testTakeBatch()
   {
     final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(6, 100L);
@@ -109,7 +109,7 @@ public class BlockingPoolTest
     assertEquals(10, pool.getPoolSize());
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testWaitAndTakeBatch() throws InterruptedException, ExecutionException
   {
     List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 10);
@@ -132,14 +132,14 @@ public class BlockingPoolTest
     assertEquals(10, pool.getPoolSize());
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testTakeBatchTooManyObjects()
   {
     final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(100, 100L);
     assertTrue(holder.isEmpty());
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testConcurrentTake() throws ExecutionException, InterruptedException
   {
     final int limit1 = pool.maxSize() / 2;
@@ -225,7 +225,7 @@ public class BlockingPoolTest
     assertEquals(pool.maxSize(), pool.getPoolSize());
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testConcurrentTakeBatch() throws ExecutionException, InterruptedException
   {
     final int batch1 = pool.maxSize() / 2;
@@ -255,7 +255,7 @@ public class BlockingPoolTest
     assertEquals(pool.maxSize(), pool.getPoolSize());
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testConcurrentBatchClose() throws ExecutionException, InterruptedException
   {
     final int batch1 = pool.maxSize() / 2;
@@ -299,7 +299,7 @@ public class BlockingPoolTest
     assertEquals(pool.maxSize(), pool.getPoolSize());
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testConcurrentTakeBatchClose() throws ExecutionException, InterruptedException
   {
     final List<ReferenceCountingResourceHolder<Integer>> r1 = pool.takeBatch(1, 10);

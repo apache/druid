@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,7 +25,6 @@ import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.security.AuthenticationResult;
-import io.druid.server.security.AuthorizerMapper;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.QueryProvider;
@@ -53,9 +52,7 @@ public class PlannerContext
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
-  private final long queryStartTimeMillis;
   private final Map<String, Object> queryContext;
-  private final AuthorizerMapper authorizerMapper;
 
   private AuthenticationResult authenticationResult;
 
@@ -64,7 +61,6 @@ public class PlannerContext
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
-      final AuthorizerMapper authorizerMapper,
       final Map<String, Object> queryContext
   )
   {
@@ -73,15 +69,12 @@ public class PlannerContext
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.queryContext = queryContext != null ? Maps.newHashMap(queryContext) : Maps.newHashMap();
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
-    this.queryStartTimeMillis = System.currentTimeMillis();
-    this.authorizerMapper = authorizerMapper;
   }
 
   public static PlannerContext create(
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
-      final AuthorizerMapper authorizerMapper,
       final Map<String, Object> queryContext
   )
   {
@@ -101,11 +94,11 @@ public class PlannerContext
       if (tzParam != null) {
         timeZone = DateTimes.inferTzfromString(String.valueOf(tzParam));
       } else {
-        timeZone = DateTimeZone.UTC;
+        timeZone = plannerConfig.getSqlTimeZone();
       }
     } else {
       utcNow = new DateTime(DateTimeZone.UTC);
-      timeZone = DateTimeZone.UTC;
+      timeZone = plannerConfig.getSqlTimeZone();
     }
 
     return new PlannerContext(
@@ -113,7 +106,6 @@ public class PlannerContext
         macroTable,
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
-        authorizerMapper,
         queryContext
     );
   }
@@ -146,11 +138,6 @@ public class PlannerContext
   public Map<String, Object> getQueryContext()
   {
     return queryContext;
-  }
-
-  public long getQueryStartTimeMillis()
-  {
-    return queryStartTimeMillis;
   }
 
   public AuthenticationResult getAuthenticationResult()

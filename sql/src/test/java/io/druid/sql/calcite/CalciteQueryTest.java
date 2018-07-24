@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -170,6 +170,14 @@ public class CalciteQueryTest extends CalciteTestBase
     public int getMaxQueryCount()
     {
       return 1;
+    }
+  };
+  private static final PlannerConfig PLANNER_CONFIG_LOS_ANGELES = new PlannerConfig()
+  {
+    @Override
+    public DateTimeZone getSqlTimeZone()
+    {
+      return DateTimes.inferTzfromString("America/Los_Angeles");
     }
   };
 
@@ -5817,7 +5825,7 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testTimeseriesLosAngeles() throws Exception
+  public void testTimeseriesLosAngelesViaQueryContext() throws Exception
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -5836,6 +5844,37 @@ public class CalciteQueryTest extends CalciteTestBase
                   .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzfromString(LOS_ANGELES)))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, T("1999-12-01", LOS_ANGELES)},
+            new Object[]{2L, T("2000-01-01", LOS_ANGELES)},
+            new Object[]{1L, T("2000-12-01", LOS_ANGELES)},
+            new Object[]{2L, T("2001-01-01", LOS_ANGELES)}
+        )
+    );
+  }
+
+  @Test
+  public void testTimeseriesLosAngelesViaPlannerConfig() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_LOS_ANGELES,
+        QUERY_CONTEXT_DEFAULT,
+        "SELECT SUM(cnt), gran FROM (\n"
+        + "  SELECT FLOOR(__time TO MONTH) AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzfromString(LOS_ANGELES)))
+                  .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
@@ -7059,6 +7098,114 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(
             new Object[]{1.0, 2.0},
             new Object[]{4.0, 8.0}
+        )
+    );
+  }
+
+  @Test
+  public void testConcat() throws Exception
+  {
+    testQuery(
+        "SELECT CONCAT(dim1, '-', dim1, '_', dim1) as dimX FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(EXPRESSION_VIRTUAL_COLUMN(
+                    "v0",
+                    "concat(\"dim1\",'-',\"dim1\",'_',\"dim1\")",
+                    ValueType.STRING
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"-_"},
+            new Object[]{"10.1-10.1_10.1"},
+            new Object[]{"2-2_2"},
+            new Object[]{"1-1_1"},
+            new Object[]{"def-def_def"},
+            new Object[]{"abc-abc_abc"}
+        )
+    );
+
+    testQuery(
+        "SELECT CONCAT(dim1, CONCAT(dim2,'x'), m2, 9999, dim1) as dimX FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(EXPRESSION_VIRTUAL_COLUMN(
+                    "v0",
+                    "concat(\"dim1\",concat(\"dim2\",'x'),\"m2\",9999,\"dim1\")",
+                    ValueType.STRING
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"ax1.09999"},
+            new Object[]{"10.1x2.0999910.1"},
+            new Object[]{"2x3.099992"},
+            new Object[]{"1ax4.099991"},
+            new Object[]{"defabcx5.09999def"},
+            new Object[]{"abcx6.09999abc"}
+        )
+    );
+  }
+
+  @Test
+  public void testTextcat() throws Exception
+  {
+    testQuery(
+        "SELECT textcat(dim1, dim1) as dimX FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("v0", "concat(\"dim1\",\"dim1\")", ValueType.STRING))
+                .columns("v0")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"10.110.1"},
+            new Object[]{"22"},
+            new Object[]{"11"},
+            new Object[]{"defdef"},
+            new Object[]{"abcabc"}
+        )
+    );
+
+    testQuery(
+        "SELECT textcat(dim1, CAST(m2 as VARCHAR)) as dimX FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(EXPRESSION_VIRTUAL_COLUMN(
+                    "v0",
+                    "concat(\"dim1\",CAST(\"m2\", 'STRING'))",
+                    ValueType.STRING
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1.0"},
+            new Object[]{"10.12.0"},
+            new Object[]{"23.0"},
+            new Object[]{"14.0"},
+            new Object[]{"def5.0"},
+            new Object[]{"abc6.0"}
         )
     );
   }
