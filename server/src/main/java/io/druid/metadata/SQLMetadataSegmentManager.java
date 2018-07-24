@@ -29,9 +29,6 @@ import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidDataSource;
@@ -73,6 +70,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -96,9 +94,18 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSourcesRef;
   private final SQLMetadataConnector connector;
 
-  private volatile ListeningScheduledExecutorService exec = null;
-  private volatile ListenableFuture<?> future = null;
-  private volatile boolean started;
+  /** The number of times this SQLMetadataSegmentManager was started. */
+  private long startCount = 0;
+  /**
+   * Equal to the current {@link #startCount} value, if the SQLMetadataSegmentManager is currently started; -1 if
+   * currently stopped.
+   *
+   * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
+   * the theoretical situation of two tasks scheduled in {@link #start()} calling {@link #poll()} concurrently, if
+   * the sequence of {@link #start()} - {@link #stop()} - {@link #start()} actions occurs quickly.
+   */
+  private long currentStartOrder = -1;
+  private ScheduledExecutorService exec = null;
 
   @Inject
   public SQLMetadataSegmentManager(
@@ -120,21 +127,34 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public void start()
   {
     synchronized (lock) {
-      if (started) {
+      if (isStarted()) {
         return;
       }
 
-      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d"));
+      startCount++;
+      currentStartOrder = startCount;
+      final long localStartOrder = currentStartOrder;
+
+      exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
-      future = exec.scheduleWithFixedDelay(
+      exec.scheduleWithFixedDelay(
           new Runnable()
           {
             @Override
             public void run()
             {
               try {
-                poll();
+                // poll() is synchronized together with start() and stop() to ensure that when stop() exists, poll()
+                // won't actually run anymore after that (it could only enter the syncrhonized section and exit
+                // immediately because the localStartedOrder doesn't match the new currentStartOrder). It's needed
+                // to avoid flakiness in SQLMetadataSegmentManagerTest.
+                // See https://github.com/apache/incubator-druid/issues/6028
+                synchronized (lock) {
+                  if (localStartOrder == currentStartOrder) {
+                    poll();
+                  }
+                }
               }
               catch (Exception e) {
                 log.makeAlert(e, "uncaught exception in segment manager polling thread").emit();
@@ -146,7 +166,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           delay.getMillis(),
           TimeUnit.MILLISECONDS
       );
-      started = true;
+      // TODO: check this
+//      started = true;
     }
   }
 
@@ -155,7 +176,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public void stop()
   {
     synchronized (lock) {
-      if (!started) {
+      if (!isStarted()) {
         return;
       }
 
@@ -165,11 +186,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         current = dataSourcesRef.get();
       } while (!dataSourcesRef.compareAndSet(current, emptyMap));
 
-      future.cancel(false);
-      future = null;
+      currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
-      started = false;
     }
   }
 
@@ -340,7 +359,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public boolean isStarted()
   {
-    return started;
+    synchronized (lock) {
+      return currentStartOrder >= 0;
+    }
   }
 
   @Override
@@ -394,10 +415,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public void poll()
   {
     try {
-      if (!started) {
-        return;
-      }
-
       ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<>();
 
       log.debug("Starting polling of segment table");
