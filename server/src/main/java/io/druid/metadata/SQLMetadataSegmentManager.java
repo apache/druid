@@ -166,8 +166,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           delay.getMillis(),
           TimeUnit.MILLISECONDS
       );
-      // TODO: check this
-//      started = true;
     }
   }
 
