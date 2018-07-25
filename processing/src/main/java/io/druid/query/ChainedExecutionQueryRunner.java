@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.common.guava.GuavaUtils;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.guava.BaseSequence;
@@ -154,7 +155,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 
             try {
               final DateTime deadline = QueryContexts.hasTimeout(query) ?
-                                        new DateTime(DateTime.now().getMillis() + QueryContexts.getTimeout(query)) :
+                                        new DateTime(DateTimes.nowUtc().getMillis() + QueryContexts.getTimeout(query)) :
                                         new DateTime(JodaUtils.MAX_INSTANT);
               ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker()
               {
@@ -173,7 +174,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                 @Override
                 public boolean isReleasable()
                 {
-                  return futures.isDone() || deadline.isBefore(DateTime.now());
+                  return futures.isDone() || deadline.isBefore(DateTimes.nowUtc());
                 }
               });
               return new MergeIterable<>(
