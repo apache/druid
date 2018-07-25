@@ -167,74 +167,34 @@ public class CachingClusteredClient implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-<<<<<<< HEAD
-    return (queryPlus, responseContext) -> runAndMergeWithTimelineChange(
-        queryPlus,
-        responseContext,
-        timeline -> {
-          final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
-              new VersionedIntervalTimeline<>(Ordering.natural());
-          for (SegmentDescriptor spec : specs) {
-            final PartitionHolder<ServerSelector> entry = timeline.findEntry(
-                spec.getInterval(),
-                spec.getVersion()
-            );
-            if (entry != null) {
-              final PartitionChunk<ServerSelector> chunk = entry.getChunk(
-                  spec.getPartitionNumber());
-              if (chunk != null) {
-                timeline2.add(
-                    spec.getInterval(),
-                    spec.getVersion(),
-                    chunk
-                );
-              }
-            }
-          }
-          return timeline2;
-        }
-=======
     return runAndMergeWithTimelineChange(
         query,
         // No change, but Function.identity() doesn't work here for some reason
         stringServerSelectorTimelineLookup -> stringServerSelectorTimelineLookup
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
     );
   }
 
-  @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
-  {
-    return (queryPlus, responseContext) -> runAndMergeWithTimelineChange(
-        queryPlus,
-        responseContext,
-        // No change, but Function.identity() doesn't work here for some reason
-        serverSelectorTimelineLookup -> serverSelectorTimelineLookup
-    );
-  }
-
-<<<<<<< HEAD
-  private <T> Sequence<T> runAndMergeWithTimelineChange(
+  /**
+   * Run a query. The timelineConverter will be given the "master" timeline and can be used to return a different
+   * timeline, if desired. This is used by getQueryRunnerForSegments.
+   */
+  @VisibleForTesting
+  <T> Stream<Sequence<T>> run(
       final QueryPlus<T> queryPlus,
       final Map<String, Object> responseContext,
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
-    final Query<T> query = queryPlus.getQuery();
-    final Stream<? extends Sequence<T>> sequences = run(
-        queryPlus,
-        responseContext,
-        timelineConverter
-    );
-=======
+    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+  }
+
   private <T> QueryRunner<T> runAndMergeWithTimelineChange(
       final Query<T> query,
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
     final OptionalLong mergeBatch = QueryContexts.getIntermediateMergeBatchThreshold(query);
 
     if (mergeBatch.isPresent()) {
@@ -267,12 +227,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         );
       };
     } else {
-<<<<<<< HEAD
-      return new MergeSequence<>(
-          query.getResultOrdering(),
-          Sequences.fromStream(sequences)
-      );
-=======
       return (queryPlus, responseContext) -> {
         final Stream<? extends Sequence<T>> sequences = run(
             queryPlus,
@@ -284,24 +238,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
             Sequences.fromStream(sequences)
         );
       };
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
     }
   }
 
-  /**
-   * Run a query. The timelineConverter will be given the "master" timeline and can be used to return a different
-   * timeline, if desired. This is used by getQueryRunnerForSegments.
-   */
-  @VisibleForTesting
-  <T> Stream<Sequence<T>> run(
-      final QueryPlus<T> queryPlus,
-      final Map<String, Object> responseContext,
-      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
-  )
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
-<<<<<<< HEAD
-    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
-=======
     return runAndMergeWithTimelineChange(
         query,
         timeline -> {
@@ -327,7 +269,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
           return timeline2;
         }
     );
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
   }
 
   /**
@@ -425,7 +366,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           )
       );
       return groupCachedResultsByServer(cacheResolvedResults)
-          .map(this::mergeCacheOrRunOnServer)
+          .map(this::runOnServer)
           // We do a hard materialization here so that the resulting spliterators have properties that we want
           // Otherwise the stream's spliterator is of a hash map entry spliterator from the group-by-server operation
           // This also causes eager initialization of the **sequences**, aka forking off the direct druid client requests
@@ -633,27 +574,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     /**
-     * Run all the queries for the specific segments on the specific server
+     * Check the input stream to see what was cached and what was not. For the ones that were cached, merge the results
+     * and return the merged sequence. For the ones that were NOT cached, get the server result sequence queued up into
+     * the stream response
      *
-     * @param server           The server to target
-     * @param segmentsOfServer The segments on the server
+     * @param segmentOrResult A list that is traversed in order to determine what should be sent back. All segments
+     *                        should be on the same server.
      *
-     * @return The sequence of results for this specific server
+     * @return A sequence of either the merged cached results, or the server results from any particular server
      */
-    private Sequence<T> runOnServer(final DruidServer server, final List<SegmentDescriptor> segmentsOfServer)
+    private Sequence<T> runOnServer(List<ServerMaybeSegmentMaybeCache<T>> segmentOrResult)
     {
-<<<<<<< HEAD
-=======
-      final List<SegmentDescriptor> segmentsOfServer = segmentOrResult.stream(
-      ).map(
-          ServerMaybeSegmentMaybeCache::getSegmentDescriptor
-      ).filter(
-          Optional::isPresent
-      ).map(
-          Optional::get
-      ).collect(
-          Collectors.toList()
-      );
+      final List<SegmentDescriptor> segmentsOfServer = segmentOrResult
+          .stream()
+          .map(ServerMaybeSegmentMaybeCache::getSegmentDescriptor)
+          .filter(Optional::isPresent)
+          .map(Optional::get)
+          .collect(Collectors.toList());
 
       // We should only ever have cache or queries to run, not both. So if we have no segments, try caches
       if (segmentsOfServer.isEmpty()) {
@@ -678,7 +615,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final DruidServer server = segmentOrResult.get(0).getServer();
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
       final QueryRunner serverRunner = serverView.getQueryRunner(server);
 
       if (serverRunner == null) {
@@ -697,49 +633,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
       }
       return serverResults;
-    }
-
-    /**
-     * Check the input stream to see what was cached and what was not. For the ones that were cached, merge the results
-     * and return the merged sequence. For the ones that were NOT cached, get the server result sequence queued up into
-     * the stream response
-     *
-     * @param segmentOrResult A list that is traversed in order to determine what should be sent back. All segments
-     *                        should be on the same server.
-     *
-     * @return A sequence of either the merged cached results, or the server results from any particular server
-     */
-    private Sequence<T> mergeCacheOrRunOnServer(List<ServerMaybeSegmentMaybeCache<T>> segmentOrResult)
-    {
-      final List<SegmentDescriptor> segmentsOfServer = segmentOrResult
-          .stream()
-          .map(ServerMaybeSegmentMaybeCache::getSegmentDescriptor)
-          // Later versions of Java have better Optional + Stream builtin methods
-          .filter(Optional::isPresent)
-          .map(Optional::get)
-          .collect(Collectors.toList());
-
-      // We should only ever have cache or queries to run, not both. So if we have no segments, try caches
-      if (segmentsOfServer.isEmpty()) {
-        // Have a special sequence for the cache results so the merge doesn't go all crazy.
-        // See io.druid.java.util.common.guava.MergeSequenceTest.testScrewsUpOnOutOfOrder for an example
-        // With zero results actually being found (no segments no caches) this should essentially return a no-op
-        // merge sequence
-        return new MergeSequence<>(
-            query.getResultOrdering(),
-            Sequences.fromStream(
-                segmentOrResult
-                    .stream()
-                    .map(ServerMaybeSegmentMaybeCache::getCachedValue)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .map(Collections::singletonList)
-                    .map(Sequences::simple)
-            )
-        );
-      } else {
-        return runOnServer(segmentOrResult.get(0).getServer(), segmentsOfServer);
-      }
     }
 
     private ServerMaybeSegmentMaybeCache<T> pickServer(SerializablePair<ServerToSegment, Optional<T>> tuple)
