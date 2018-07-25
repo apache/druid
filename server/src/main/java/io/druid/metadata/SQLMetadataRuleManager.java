@@ -153,7 +153,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
    */
   private long currentStartOrder = -1;
   private ScheduledExecutorService exec = null;
-  private long lastFailTimeMs = 0;
+  private long failStartTimeMs = 0;
 
   @Inject
   public SQLMetadataRuleManager(
@@ -313,17 +313,17 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       log.info("Polled and found rules for %,d datasource(s)", newRules.size());
 
       rules.set(newRules);
-      lastFailTimeMs = 0;
+      failStartTimeMs = 0;
     }
     catch (Exception e) {
-      if (lastFailTimeMs == 0) {
-        lastFailTimeMs = System.currentTimeMillis();
+      if (failStartTimeMs == 0) {
+        failStartTimeMs = System.currentTimeMillis();
       }
 
-      if (System.currentTimeMillis() - lastFailTimeMs > config.getAlertThreshold().toStandardDuration().getMillis()) {
+      if (System.currentTimeMillis() - failStartTimeMs > config.getAlertThreshold().toStandardDuration().getMillis()) {
         log.makeAlert(e, "Exception while polling for rules")
            .emit();
-        lastFailTimeMs = 0;
+        failStartTimeMs = 0;
       } else {
         log.error(e, "Exception while polling for rules");
       }
