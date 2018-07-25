@@ -72,11 +72,7 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
   {
     if (!baseSequences.isParallel()) {
       // Don't even try.
-<<<<<<< HEAD
-      return new MergeSequence<>(ordering, Sequences.fromStream(baseSequences));
-=======
       return mergerFn.apply(baseSequences);
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
     }
     @SuppressWarnings("unchecked") // Wildcard erasure is fine here
     final Spliterator<? extends Sequence<T>> baseSpliterator = (Spliterator<? extends Sequence<T>>) baseSequences.spliterator();
