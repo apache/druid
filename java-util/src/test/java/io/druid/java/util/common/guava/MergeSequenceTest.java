@@ -71,16 +71,7 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
-<<<<<<< HEAD
-        () -> new MergeSequence<>(
-            Ordering.natural(),
-            Sequences.fromStream(
-                testSeqs.stream()
-            )
-        ),
-=======
         naturalMergeSupplier(testSeqs::stream),
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
 
@@ -105,16 +96,7 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
-<<<<<<< HEAD
-        () -> new MergeSequence<>(
-            Ordering.natural(),
-            Sequences.fromStream(
-                testSeqs.stream()
-            )
-        ),
-=======
         naturalMergeSupplier(testSeqs::stream),
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -142,16 +124,7 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
-<<<<<<< HEAD
-        () -> new MergeSequence<>(
-            Ordering.natural(),
-            Sequences.fromStream(
-                testSeqs.stream()
-            )
-        ),
-=======
         naturalMergeSupplier(testSeqs::stream),
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -179,16 +152,7 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
-<<<<<<< HEAD
-        () -> new MergeSequence<>(
-            Ordering.natural(),
-            Sequences.fromStream(
-                testSeqs.stream()
-            )
-        ),
-=======
         naturalMergeSupplier(testSeqs::stream),
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -217,16 +181,7 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
-<<<<<<< HEAD
-        () -> new MergeSequence<>(
-            Ordering.natural(),
-            Sequences.fromStream(
-                testSeqs.stream()
-            )
-        ),
-=======
         naturalMergeSupplier(testSeqs::stream),
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
@@ -250,16 +205,7 @@ public class MergeSequenceTest
     }
 
     SequenceTestHelper.testAll(
-<<<<<<< HEAD
-        () -> new MergeSequence<>(
-            Ordering.natural(),
-            Sequences.fromStream(
-                testSeqs.stream()
-            )
-        ),
-=======
         naturalMergeSupplier(testSeqs::stream),
->>>>>>> 3753a98a3... Change streams to use fjp for merge work
         expected
     );
   }
