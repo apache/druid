@@ -118,6 +118,7 @@ public class SQLMetadataSegmentManagerTest
   {
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         manager.getAllDatasourceNames()
@@ -149,6 +150,7 @@ public class SQLMetadataSegmentManagerTest
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
 
     Assert.assertEquals(
         "wikipedia", Iterables.getOnlyElement(manager.getInventory()).getName()
@@ -160,6 +162,7 @@ public class SQLMetadataSegmentManagerTest
   {
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
     Assert.assertTrue(manager.removeDatasource("wikipedia"));
 
     Assert.assertEquals(
@@ -178,6 +181,7 @@ public class SQLMetadataSegmentManagerTest
   {
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
 
     final String newDataSource = "wikipedia2";
     final DataSegment newSegment = new DataSegment(
@@ -207,6 +211,7 @@ public class SQLMetadataSegmentManagerTest
   {
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
 
     final String newDataSource = "wikipedia2";
     final DataSegment newSegment = new DataSegment(
