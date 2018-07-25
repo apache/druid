@@ -26,7 +26,6 @@ import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.segment.column.ValueType;
-import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import io.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import io.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -72,7 +71,6 @@ public class ExpressionsTest extends CalciteTestBase
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
-      AuthTestUtils.TEST_AUTHORIZER_MAPPER,
       ImmutableMap.of()
   );
   private final RowSignature rowSignature = RowSignature

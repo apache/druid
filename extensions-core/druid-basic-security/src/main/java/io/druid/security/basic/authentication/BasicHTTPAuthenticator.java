@@ -149,6 +149,7 @@ public class BasicHTTPAuthenticator implements Authenticator
 
     }
 
+
     @Override
     public void doFilter(
         ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
@@ -163,9 +164,12 @@ public class BasicHTTPAuthenticator implements Authenticator
         return;
       }
 
+      // At this point, encodedUserSecret is not null, indicating that the request intends to perform
+      // Basic HTTP authentication. If any errors occur with the authentication, we send a 401 response immediately
+      // and do not proceed further down the filter chain.
       String decodedUserSecret = BasicAuthUtils.decodeUserSecret(encodedUserSecret);
       if (decodedUserSecret == null) {
-        // we recognized a Basic auth header, but could not decode the user secret
+        // We recognized a Basic auth header, but could not decode the user secret.
         httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         return;
       }
@@ -182,12 +186,10 @@ public class BasicHTTPAuthenticator implements Authenticator
       if (checkCredentials(user, password)) {
         AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+        filterChain.doFilter(servletRequest, servletResponse);
       } else {
         httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-        return;
       }
-
-      filterChain.doFilter(servletRequest, servletResponse);
     }
 
     @Override
