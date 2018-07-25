@@ -154,9 +154,10 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQuery(query, futures);
 
             try {
-              final DateTime deadline = QueryContexts.hasTimeout(query) ?
-                                        new DateTime(DateTimes.nowUtc().getMillis() + QueryContexts.getTimeout(query)) :
-                                        new DateTime(JodaUtils.MAX_INSTANT);
+              final DateTime deadline =
+                  QueryContexts.hasTimeout(query) ?
+                  DateTimes.utc(DateTimes.nowUtc().getMillis() + QueryContexts.getTimeout(query)) :
+                  DateTimes.utc(JodaUtils.MAX_INSTANT);
               ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker()
               {
                 @Override
