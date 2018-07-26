@@ -33,8 +33,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
-import io.druid.indexing.common.TaskLock;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
@@ -133,9 +133,9 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
+    return Tasks.DEFAULT_MERGE_TASK_PRIORITY;
   }
 
   @Override

@@ -151,6 +151,12 @@ public class NoopTask extends AbstractTask
     }
   }
 
+  @Override
+  public int getDefaultPriority()
+  {
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
+  }
+
   public static NoopTask create()
   {
     return new NoopTask(null, null, 0, 0, null, null, null);
