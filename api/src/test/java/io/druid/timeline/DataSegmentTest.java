@@ -82,9 +82,15 @@ public class DataSegmentTest
       }
 
       @Override
-      public Map<String, RangeSet<String>> getDomain()
+      public List<String> getDomainDimensions()
       {
-        return ImmutableMap.of();
+        return ImmutableList.of();
+      }
+
+      @Override
+      public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
+      {
+        return true;
       }
     };
   }

@@ -21,7 +21,7 @@ package io.druid.query.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Range;
+import com.google.common.collect.Maps;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import io.druid.timeline.partition.ShardSpec;
@@ -122,15 +122,18 @@ public class DimFilterUtils
       boolean include = true;
 
       if (dimFilter != null && shard != null) {
-        Map<String, RangeSet<String>> domain = shard.getDomain();
-        for (Map.Entry<String, RangeSet<String>> entry : domain.entrySet()) {
-          String dimension = entry.getKey();
+        Map<String, RangeSet<String>> filterDomain = Maps.newHashMap();
+        List<String> dimensions = shard.getDomainDimensions();
+        for (String dimension : dimensions) {
           Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
               .computeIfAbsent(dimension, d -> Optional.fromNullable(dimFilter.getDimensionRangeSet(d)));
 
-          if (optFilterRangeSet.isPresent() && hasEmptyIntersection(optFilterRangeSet.get(), entry.getValue())) {
-            include = false;
+          if (optFilterRangeSet.isPresent()) {
+            filterDomain.put(dimension, optFilterRangeSet.get());
           }
+        }
+        if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
+          include = false;
         }
       }
 
@@ -139,16 +142,5 @@ public class DimFilterUtils
       }
     }
     return retSet;
-  }
-
-  private static boolean hasEmptyIntersection(RangeSet<String> r1, RangeSet<String> r2)
-  {
-    for (Range<String> range : r2.asRanges()) {
-      if (!r1.subRangeSet(range).isEmpty()) {
-        return false;
-      }
-    }
-
-    return true;
   }
 }
