@@ -24,7 +24,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.Expr;
-import org.apache.commons.lang.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;

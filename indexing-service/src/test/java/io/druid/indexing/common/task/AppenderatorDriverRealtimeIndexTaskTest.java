@@ -145,6 +145,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -1505,6 +1506,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     );
   }
 
+  @Nullable
   public Long sumMetric(final Task task, final DimFilter filter, final String metric)
   {
     // Do a query.
