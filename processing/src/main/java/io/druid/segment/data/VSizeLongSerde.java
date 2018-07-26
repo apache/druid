@@ -210,6 +210,8 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      curByte = (byte) ((curByte << 1) | (value & 1));
+      count++;
       if (count == 8) {
         buffer.put(curByte);
         count = 0;
@@ -218,25 +220,28 @@ public class VSizeLongSerde
           buffer.rewind();
         }
       }
-      curByte = (byte) ((curByte << 1) | (value & 1));
-      count++;
     }
 
     @Override
     public void close() throws IOException
     {
-      if (closed) {
-        return;
-      }
-      buffer.put((byte) (curByte << (8 - count)));
       if (output != null) {
-        output.write(buffer.array());
+        if (closed) {
+          return;
+        }
+        if (count > 0) {
+          buffer.put((byte) (curByte << (8 - count)));
+          output.write(buffer.array());
+        }
         output.write(EMPTY);
         output.flush();
+        closed = true;
       } else {
+        if (count > 0) {
+          buffer.put((byte) (curByte << (8 - count)));
+        }
         buffer.putInt(0);
       }
-      closed = true;
     }
   }
 
@@ -263,6 +268,9 @@ public class VSizeLongSerde
     @Override
     public void write(long value) throws IOException
     {
+      curByte = (byte) ((curByte << 2) | (value & 3));
+      count += 2;
+
       if (count == 8) {
         buffer.put(curByte);
         count = 0;
@@ -271,25 +279,28 @@ public class VSizeLongSerde
           buffer.rewind();
         }
       }
-      curByte = (byte) ((curByte << 2) | (value & 3));
-      count += 2;
     }
 
     @Override
     public void close() throws IOException
     {
-      if (closed) {
-        return;
-      }
-      buffer.put((byte) (curByte << (8 - count)));
       if (output != null) {
-        output.write(buffer.array());
+        if (closed) {
+          return;
+        }
+        if (count > 0) {
+          buffer.put((byte) (curByte << (8 - count)));
+          output.write(buffer.array());
+        }
         output.write(EMPTY);
         output.flush();
+        closed = true;
       } else {
+        if (count > 0) {
+          buffer.put((byte) (curByte << (8 - count)));
+        }
         buffer.putInt(0);
       }
-      closed = true;
     }
   }
 
@@ -342,20 +353,24 @@ public class VSizeLongSerde
     @Override
     public void close() throws IOException
     {
-      if (closed) {
-        return;
-      }
-      if (!first) {
-        buffer.put((byte) (curByte << 4));
-      }
+
       if (output != null) {
-        output.write(buffer.array(), 0, buffer.position());
+        if (closed) {
+          return;
+        }
+        if (!first) {
+          buffer.put((byte) (curByte << 4));
+          output.write(buffer.array(), 0, buffer.position());
+        }
         output.write(EMPTY);
         output.flush();
+        closed = true;
       } else {
+        if (!first) {
+          buffer.put((byte) (curByte << 4));
+        }
         buffer.putInt(0);
       }
-      closed = true;
     }
   }
 
@@ -395,16 +410,16 @@ public class VSizeLongSerde
     @Override
     public void close() throws IOException
     {
-      if (closed) {
-        return;
-      }
       if (output != null) {
+        if (closed) {
+          return;
+        }
         output.write(EMPTY);
         output.flush();
+        closed = true;
       } else {
         buffer.putInt(0);
       }
-      closed = true;
     }
   }
 
