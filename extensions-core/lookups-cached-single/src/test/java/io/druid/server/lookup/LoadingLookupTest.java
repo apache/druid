@@ -41,15 +41,19 @@ public class LoadingLookupTest
   LoadingLookup loadingLookup = new LoadingLookup(dataFetcher, lookupCache, reverseLookupCache);
 
   @Test
-  public void testApplyEmptyOrNull()
+  public void testApplyEmptyOrNull() throws ExecutionException
   {
-    Assert.assertNull(loadingLookup.apply(null));
+    EasyMock.expect(lookupCache.get(EasyMock.eq(""), EasyMock.anyObject(Callable.class)))
+            .andReturn("empty").atLeastOnce();
+    EasyMock.replay(lookupCache);
+    Assert.assertEquals("empty", loadingLookup.apply(""));
     if (!NullHandling.sqlCompatible()) {
-      // empty string should also have same behavior
-      Assert.assertNull(loadingLookup.apply(""));
+      // Nulls and empty strings should have same behavior
+      Assert.assertEquals("empty", loadingLookup.apply(null));
     } else {
-      Assert.assertEquals("", loadingLookup.apply(""));
+      Assert.assertNull(loadingLookup.apply(null));
     }
+    EasyMock.verify(lookupCache);
   }
 
   @Test
