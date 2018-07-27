@@ -48,7 +48,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
   private static final String NETFLIX_STACK = System.getenv("NETFLIX_STACK");
   private static final String NETFLIX_DETAIL = System.getenv("NETFLIX_DETAIL");
   private static final String EC2_REGION = System.getenv("EC2_REGION");
-  private static final String DRUID_LOG_STREAM = "druidLogs";
+  private static final String DRUID_LOG_STREAM = "druid_logs";
   private static final String URL = "ksgateway-"
                                     + EC2_REGION
                                     + NETFLIX_STACK
