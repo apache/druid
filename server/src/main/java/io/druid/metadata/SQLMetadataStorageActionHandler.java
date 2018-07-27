@@ -22,9 +22,8 @@ package io.druid.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -121,51 +120,40 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   ) throws EntryExistsException
   {
     try {
-      connector.retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  StringUtils.format(
-                      "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
-                      entryTable
-                  )
-              )
-                    .bind("id", id)
-                    .bind("created_date", timestamp.toString())
-                    .bind("datasource", dataSource)
-                    .bind("payload", jsonMapper.writeValueAsBytes(entry))
-                    .bind("active", active)
-                    .bind("status_payload", jsonMapper.writeValueAsBytes(status))
-                    .execute();
-              return null;
-            }
+      getConnector().retryWithHandle(
+          (HandleCallback<Void>) handle -> {
+            final String sql = StringUtils.format(
+                "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) "
+                + "VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
+                getEntryTable()
+            );
+            handle.createStatement(sql)
+                  .bind("id", id)
+                  .bind("created_date", timestamp.toString())
+                  .bind("datasource", dataSource)
+                  .bind("payload", jsonMapper.writeValueAsBytes(entry))
+                  .bind("active", active)
+                  .bind("status_payload", jsonMapper.writeValueAsBytes(status))
+                  .execute();
+            return null;
           },
-          new Predicate<Throwable>()
-          {
-            @Override
-            public boolean apply(Throwable e)
-            {
-              final boolean isStatementException = e instanceof StatementException ||
-                                                   (e instanceof CallbackFailedException
-                                                    && e.getCause() instanceof StatementException);
-              return connector.isTransientException(e) && !(isStatementException && getEntry(id).isPresent());
-            }
-          }
+          e -> getConnector().isTransientException(e) && !(isStatementException(e) && getEntry(id).isPresent())
       );
     }
     catch (Exception e) {
-      final boolean isStatementException = e instanceof StatementException ||
-                                           (e instanceof CallbackFailedException
-                                            && e.getCause() instanceof StatementException);
-      if (isStatementException && getEntry(id).isPresent()) {
+      if (isStatementException(e) && getEntry(id).isPresent()) {
         throw new EntryExistsException(id, e);
       } else {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
+  }
+
+  @VisibleForTesting
+  protected static boolean isStatementException(Throwable e)
+  {
+    return e instanceof StatementException ||
+           (e instanceof CallbackFailedException && e.getCause() instanceof StatementException);
   }
 
   @Override
