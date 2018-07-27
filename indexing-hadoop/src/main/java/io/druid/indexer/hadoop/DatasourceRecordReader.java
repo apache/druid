@@ -52,12 +52,12 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   private DatasourceIngestionSpec spec;
   private IngestSegmentFirehose firehose;
 
-  private int rowNum;
+  private long rowNum;
   private Row currRow;
 
   private List<QueryableIndex> indexes = Lists.newArrayList();
   private List<File> tmpSegmentDirs = Lists.newArrayList();
-  private int numRows;
+  private long numRows;
 
   @Override
   public void initialize(InputSplit split, final TaskAttemptContext context) throws IOException
