@@ -41,6 +41,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.common.task.Tasks;
 import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
@@ -164,6 +165,11 @@ public class OverlordResource
           public Response apply(TaskQueue taskQueue)
           {
             try {
+              // Set default priority if needed
+              final Integer priority = task.getContextValue(Tasks.PRIORITY_KEY);
+              if (priority == null) {
+                task.addToContext(Tasks.PRIORITY_KEY, task.getDefaultPriority());
+              }
               taskQueue.add(task);
               return Response.ok(ImmutableMap.of("task", task.getId())).build();
             }

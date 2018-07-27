@@ -36,6 +36,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -64,17 +65,17 @@ public abstract class AbstractTask implements Task
 
   protected AbstractTask(
       String id,
-      String groupId,
-      TaskResource taskResource,
+      @Nullable String groupId,
+      @Nullable TaskResource taskResource,
       String dataSource,
-      Map<String, Object> context
+      @Nullable Map<String, Object> context
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = groupId == null ? id : groupId;
     this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.context = context;
+    this.context = context == null ? new HashMap<>() : context;
   }
 
   static String getOrMakeId(String id, final String typeName, String dataSource)
@@ -162,11 +163,13 @@ public abstract class AbstractTask implements Task
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("type", getType())
-                  .add("dataSource", dataSource)
-                  .toString();
+    return "AbstractTask{" +
+           "id='" + id + '\'' +
+           ", groupId='" + groupId + '\'' +
+           ", taskResource=" + taskResource +
+           ", dataSource='" + dataSource + '\'' +
+           ", context=" + context +
+           '}';
   }
 
   /**
@@ -207,13 +210,21 @@ public abstract class AbstractTask implements Task
       return false;
     }
 
-    return true;
+    if (!groupId.equals(that.groupId)) {
+      return false;
+    }
+
+    if (!dataSource.equals(that.dataSource)) {
+      return false;
+    }
+
+    return context.equals(that.context);
   }
 
   @Override
   public int hashCode()
   {
-    return id.hashCode();
+    return Objects.hashCode(id, groupId, dataSource, context);
   }
 
   static List<TaskLock> getTaskLocks(TaskActionClient client) throws IOException

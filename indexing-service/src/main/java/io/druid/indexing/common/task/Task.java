@@ -27,7 +27,6 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -84,13 +83,26 @@ public interface Task
    * Returns task priority. The task priority is currently used only for prioritized locking, but, in the future, it can
    * be used for task scheduling, cluster resource management, etc.
    *
+   * The task priority must be in taskContext if the task is submitted to the proper Overlord endpoint.
+   *
+   * It might not be in taskContext in rolling update. This returns {@link Tasks#DEFAULT_TASK_PRIORITY} in this case.
+   *
    * @return task priority
    *
    * @see Tasks for default task priorities
+   * @see io.druid.indexing.overlord.http.OverlordResource#taskPost
    */
   default int getPriority()
   {
     return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_TASK_PRIORITY);
+  }
+
+  /**
+   * Returns the default task priority. It can vary depending on the task type.
+   */
+  default int getDefaultPriority()
+  {
+    return Tasks.DEFAULT_TASK_PRIORITY;
   }
 
   /**
@@ -179,13 +191,17 @@ public interface Task
    */
   TaskStatus run(TaskToolbox toolbox) throws Exception;
 
-  @Nullable
+  default Map<String, Object> addToContext(String key, Object val)
+  {
+    getContext().put(key, val);
+    return getContext();
+  }
+
   Map<String, Object> getContext();
 
-  @Nullable
   default <ContextValueType> ContextValueType getContextValue(String key)
   {
-    return getContext() == null ? null : (ContextValueType) getContext().get(key);
+    return (ContextValueType) getContext().get(key);
   }
 
   default <ContextValueType> ContextValueType getContextValue(String key, ContextValueType defaultValue)
