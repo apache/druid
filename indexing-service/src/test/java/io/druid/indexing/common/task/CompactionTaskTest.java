@@ -453,6 +453,28 @@ public class CompactionTaskTest
     );
   }
 
+  @Test
+  public void testEmptyInterval() throws Exception
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(CoreMatchers.containsString("must specify a nonempty interval"));
+
+    final CompactionTask task = new CompactionTask(
+        null,
+        null,
+        "foo",
+        new Interval("2000-01-01/2000-01-01"),
+        null,
+        null,
+        null,
+        null,
+        objectMapper,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        null
+    );
+  }
+
   private static DimensionsSpec getExpectedDimensionsSpecForAutoGeneration()
   {
     return new DimensionsSpec(
