@@ -51,18 +51,20 @@ public class StringLastBufferAggregatorTest
     final long[] timestamps = {1526724600L, 1526724700L, 1526724800L, 1526725900L, 1526725000L};
     final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
     Integer maxStringBytes = 1024;
+    Boolean filterNullValues = false;
 
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", maxStringBytes, filterNullValues
     );
 
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        filterNullValues
     );
 
     String testString = "ZZZZ";
@@ -92,21 +94,108 @@ public class StringLastBufferAggregatorTest
   public void testNullBufferAggregate() throws Exception
   {
 
-    final long[] timestamps = {1526724000L, 1526724600L, 1526724700L, 1526728900L, 1526725000L};
+    final long[] timestamps = {1111L, 2222L, 6666L, 4444L, 5555L};
     final String[] strings = {"CCCC", "AAAA", "BBBB", null, "EEEE"};
     Integer maxStringBytes = 1024;
+    Boolean filterNullValues = false;
 
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", maxStringBytes, filterNullValues
     );
 
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        filterNullValues
+    );
+
+    String testString = "ZZZZ";
+
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
+    buf.putLong(1526728500L);
+    buf.putInt(testString.length());
+    buf.put(testString.getBytes(StandardCharsets.UTF_8));
+
+    int position = 0;
+
+    agg.init(buf, position);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < timestamps.length; i++) {
+      aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
+    }
+
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
+
+
+    Assert.assertEquals("expectec last string value", strings[2], sp.rhs);
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[2]), new Long(sp.lhs));
+
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testNoStringValue()
+  {
+
+    final long[] timestamps = {1526724000L, 1526724600L};
+    final Double[] doubles = {null, 2.00};
+    Integer maxStringBytes = 1024;
+    Boolean filterNullValues = false;
+
+    TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
+    TestObjectColumnSelector<Double> objectColumnSelector = new TestObjectColumnSelector<>(doubles);
+
+    StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
+        "billy", "billy", maxStringBytes, filterNullValues
+    );
+
+    StringLastBufferAggregator agg = new StringLastBufferAggregator(
+        longColumnSelector,
+        objectColumnSelector,
+        maxStringBytes,
+        filterNullValues
+    );
+
+    String testString = "ZZZZ";
+
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
+    buf.putLong(1526728500L);
+    buf.putInt(testString.length());
+    buf.put(testString.getBytes(StandardCharsets.UTF_8));
+
+    int position = 0;
+
+    agg.init(buf, position);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < timestamps.length; i++) {
+      aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
+    }
+  }
+
+  @Test
+  public void testFilterNullValues() throws Exception
+  {
+
+    final long[] timestamps = {1111L, 2222L, 3333L, 6666L, 5555L};
+    final String[] strings = {"CCCC", "AAAA", "BBBB", null, "EEEE"};
+    Integer maxStringBytes = 1024;
+    Boolean filterNullValues = true;
+
+    TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
+
+    StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
+        "billy", "billy", maxStringBytes, filterNullValues
+    );
+
+    StringLastBufferAggregator agg = new StringLastBufferAggregator(
+        longColumnSelector,
+        objectColumnSelector,
+        maxStringBytes,
+        filterNullValues
     );
 
     String testString = "ZZZZ";
@@ -129,28 +218,29 @@ public class StringLastBufferAggregatorTest
 
     Assert.assertEquals("expectec last string value", strings[4], sp.rhs);
     Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[4]), new Long(sp.lhs));
-
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void testNoStringValue()
+  @Test
+  public void testNotFilterNullValues() throws Exception
   {
 
-    final long[] timestamps = {1526724000L, 1526724600L};
-    final Double[] doubles = {null, 2.00};
+    final long[] timestamps = {1111L, 2222L, 3333L, 6666L, 5555L};
+    final String[] strings = {"CCCC", "AAAA", "BBBB", null, "EEEE"};
     Integer maxStringBytes = 1024;
+    Boolean filterNullValues = false;
 
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
-    TestObjectColumnSelector<Double> objectColumnSelector = new TestObjectColumnSelector<>(doubles);
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", maxStringBytes, filterNullValues
     );
 
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        filterNullValues
     );
 
     String testString = "ZZZZ";
@@ -167,6 +257,11 @@ public class StringLastBufferAggregatorTest
     for (int i = 0; i < timestamps.length; i++) {
       aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
     }
-  }
 
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
+
+
+    Assert.assertEquals("expectec last string value", strings[3], sp.rhs);
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[3]), new Long(sp.lhs));
+  }
 }

@@ -67,12 +67,14 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   private final String fieldName;
   private final String name;
   protected final int maxStringBytes;
+  protected final boolean filterNullValues;
 
   @JsonCreator
   public StringFirstAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("maxStringBytes") Integer maxStringBytes
+      @JsonProperty("maxStringBytes") Integer maxStringBytes,
+      @JsonProperty("filterNullValues") Boolean filterNullValues
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -80,6 +82,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     this.name = name;
     this.fieldName = fieldName;
     this.maxStringBytes = maxStringBytes == null ? DEFAULT_MAX_STRING_SIZE : maxStringBytes;
+    this.filterNullValues = filterNullValues == null ? false : filterNullValues;
   }
 
   @Override
@@ -88,7 +91,8 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     return new StringFirstAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         metricFactory.makeColumnValueSelector(fieldName),
-        maxStringBytes
+        maxStringBytes,
+        filterNullValues
     );
   }
 
@@ -98,7 +102,8 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     return new StringFirstBufferAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         metricFactory.makeColumnValueSelector(fieldName),
-        maxStringBytes
+        maxStringBytes,
+        filterNullValues
     );
   }
 
@@ -123,13 +128,13 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringFirstFoldingAggregatorFactory(name, name, maxStringBytes);
+    return new StringFirstFoldingAggregatorFactory(name, name, maxStringBytes, filterNullValues);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.asList(new StringFirstAggregatorFactory(fieldName, fieldName, maxStringBytes));
+    return Arrays.asList(new StringFirstAggregatorFactory(fieldName, fieldName, maxStringBytes, filterNullValues));
   }
 
   @Override
@@ -164,6 +169,12 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     return maxStringBytes;
   }
 
+  @JsonProperty
+  public Boolean getFilterNullValues()
+  {
+    return filterNullValues;
+  }
+
   @Override
   public List<String> requiredFields()
   {
@@ -176,6 +187,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     return new CacheKeyBuilder(AggregatorUtil.STRING_FIRST_CACHE_TYPE_ID)
         .appendString(fieldName)
         .appendInt(maxStringBytes)
+        .appendBoolean(filterNullValues)
         .build();
   }
 
@@ -203,13 +215,14 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
 
     StringFirstAggregatorFactory that = (StringFirstAggregatorFactory) o;
 
-    return fieldName.equals(that.fieldName) && name.equals(that.name) && maxStringBytes == that.maxStringBytes;
+    return fieldName.equals(that.fieldName) && name.equals(that.name) &&
+           maxStringBytes == that.maxStringBytes && filterNullValues ==  that.filterNullValues;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, maxStringBytes);
+    return Objects.hash(name, fieldName, maxStringBytes, filterNullValues);
   }
 
   @Override
@@ -219,6 +232,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            ", maxStringBytes=" + maxStringBytes + '\'' +
+           ", filterNullValues=" + filterNullValues + '\'' +
            '}';
   }
 }

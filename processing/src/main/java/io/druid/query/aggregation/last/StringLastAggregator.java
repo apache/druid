@@ -31,6 +31,7 @@ public class StringLastAggregator implements Aggregator
   private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
   private final int maxStringBytes;
+  private final boolean filterNullValues;
 
   protected long lastTime;
   protected String lastValue;
@@ -38,12 +39,14 @@ public class StringLastAggregator implements Aggregator
   public StringLastAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes
+      int maxStringBytes,
+      boolean filterNullValues
   )
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
+    this.filterNullValues = filterNullValues;
 
     lastTime = Long.MIN_VALUE;
     lastValue = null;
@@ -57,19 +60,23 @@ public class StringLastAggregator implements Aggregator
       lastTime = time;
       Object value = valueSelector.getObject();
 
-      if (value instanceof String) {
-        lastValue = (String) value;
-      } else if (value instanceof SerializablePairLongString) {
-        lastValue = ((SerializablePairLongString) value).rhs;
-      } else if (value != null) {
-        throw new ISE(
-            "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-            value.getClass().getCanonicalName()
-        );
-      }
+      if (value != null) {
+        if (value instanceof String) {
+          lastValue = (String) value;
+        } else if (value instanceof SerializablePairLongString) {
+          lastValue = ((SerializablePairLongString) value).rhs;
+        } else {
+          throw new ISE(
+              "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
+              value.getClass().getCanonicalName()
+          );
+        }
 
-      if (lastValue != null && lastValue.length() > maxStringBytes) {
-        lastValue = lastValue.substring(0, maxStringBytes);
+        if (lastValue != null && lastValue.length() > maxStringBytes) {
+          lastValue = lastValue.substring(0, maxStringBytes);
+        }
+      } else if (!filterNullValues) {
+        lastValue = null;
       }
     }
   }

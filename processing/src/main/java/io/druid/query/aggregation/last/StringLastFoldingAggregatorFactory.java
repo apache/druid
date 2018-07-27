@@ -37,17 +37,18 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
   public StringLastFoldingAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("maxStringBytes") Integer maxStringBytes
+      @JsonProperty("maxStringBytes") Integer maxStringBytes,
+      @JsonProperty("filterNullValues") Boolean filterNullValues
   )
   {
-    super(name, fieldName, maxStringBytes);
+    super(name, fieldName, maxStringBytes, filterNullValues);
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(getName());
-    return new StringLastAggregator(null, null, maxStringBytes)
+    return new StringLastAggregator(null, null, maxStringBytes, filterNullValues)
     {
       @Override
       public void aggregate()
@@ -65,13 +66,13 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(getName());
-    return new StringLastBufferAggregator(null, null, maxStringBytes)
+    return new StringLastBufferAggregator(null, null, maxStringBytes, filterNullValues)
     {
       @Override
       public void aggregate(ByteBuffer buf, int position)
       {
         SerializablePairLongString pair = (SerializablePairLongString) selector.getObject();
-        if (pair != null && pair.rhs != null && pair.lhs != null) {
+        if (pair != null && pair.lhs != null) {
           ByteBuffer mutationBuffer = buf.duplicate();
           mutationBuffer.position(position);
 
@@ -79,11 +80,15 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
 
           if (pair.lhs >= lastTime) {
             mutationBuffer.putLong(position, pair.lhs);
-            byte[] valueBytes = StringUtils.toUtf8(pair.rhs);
+            if (pair.rhs != null) {
+              byte[] valueBytes = StringUtils.toUtf8(pair.rhs);
 
-            mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
-            mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
-            mutationBuffer.put(valueBytes);
+              mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
+              mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
+              mutationBuffer.put(valueBytes);
+            } else if (!filterNullValues) {
+              mutationBuffer.putInt(position + Long.BYTES, 0);
+            }
           }
         }
       }

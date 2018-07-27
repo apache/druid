@@ -47,19 +47,24 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   private final String fieldName;
   private final String name;
   protected final int maxStringBytes;
+  protected final boolean filterNullValues;
 
   @JsonCreator
   public StringLastAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("maxStringBytes") Integer maxStringBytes
+      @JsonProperty("maxStringBytes") Integer maxStringBytes,
+      @JsonProperty("filterNullValues") Boolean filterNullValues
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
-    this.maxStringBytes = maxStringBytes == null ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE : maxStringBytes;
+    this.maxStringBytes = maxStringBytes == null
+                          ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
+                          : maxStringBytes;
+    this.filterNullValues = filterNullValues == null ? false : filterNullValues;
   }
 
   @Override
@@ -68,7 +73,8 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     return new StringLastAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         metricFactory.makeColumnValueSelector(fieldName),
-        maxStringBytes
+        maxStringBytes,
+        filterNullValues
     );
   }
 
@@ -78,7 +84,8 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     return new StringLastBufferAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
         metricFactory.makeColumnValueSelector(fieldName),
-        maxStringBytes
+        maxStringBytes,
+        filterNullValues
     );
   }
 
@@ -103,13 +110,13 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringLastFoldingAggregatorFactory(name, name, maxStringBytes);
+    return new StringLastFoldingAggregatorFactory(name, name, maxStringBytes, filterNullValues);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.asList(new StringLastAggregatorFactory(fieldName, fieldName, maxStringBytes));
+    return Arrays.asList(new StringLastAggregatorFactory(fieldName, fieldName, maxStringBytes, filterNullValues));
   }
 
   @Override
@@ -144,6 +151,12 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     return maxStringBytes;
   }
 
+  @JsonProperty
+  public Boolean getFilterNullValues()
+  {
+    return filterNullValues;
+  }
+
   @Override
   public List<String> requiredFields()
   {
@@ -156,6 +169,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     return new CacheKeyBuilder(AggregatorUtil.STRING_LAST_CACHE_TYPE_ID)
         .appendString(fieldName)
         .appendInt(maxStringBytes)
+        .appendBoolean(filterNullValues)
         .build();
   }
 
@@ -183,13 +197,14 @@ public class StringLastAggregatorFactory extends AggregatorFactory
 
     StringLastAggregatorFactory that = (StringLastAggregatorFactory) o;
 
-    return fieldName.equals(that.fieldName) && name.equals(that.name) && maxStringBytes == that.maxStringBytes;
+    return fieldName.equals(that.fieldName) && name.equals(that.name) &&
+           maxStringBytes == that.maxStringBytes && filterNullValues == that.filterNullValues;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, maxStringBytes);
+    return Objects.hash(name, fieldName, maxStringBytes, filterNullValues);
   }
 
   @Override
@@ -199,6 +214,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            ", maxStringBytes=" + maxStringBytes + '\'' +
+           ", filterNullValues=" + filterNullValues + '\'' +
            '}';
   }
 }

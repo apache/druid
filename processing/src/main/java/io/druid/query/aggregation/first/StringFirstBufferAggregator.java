@@ -34,16 +34,19 @@ public class StringFirstBufferAggregator implements BufferAggregator
   private final BaseLongColumnValueSelector timeSelector;
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
+  private final boolean filterNullValues;
 
   public StringFirstBufferAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes
+      int maxStringBytes,
+      boolean filterNullValues
   )
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
+    this.filterNullValues = filterNullValues;
   }
 
   @Override
@@ -61,36 +64,43 @@ public class StringFirstBufferAggregator implements BufferAggregator
 
     Object value = valueSelector.getObject();
 
-    long time = Long.MAX_VALUE;
+    long time = timeSelector.getLong();
     String firstString = null;
 
-    if (value instanceof SerializablePairLongString) {
-      SerializablePairLongString serializablePair = (SerializablePairLongString) value;
-      time = serializablePair.lhs;
-      firstString = serializablePair.rhs;
-    } else if (value instanceof String) {
-      time = timeSelector.getLong();
-      firstString = (String) value;
-    } else if (value != null) {
-      throw new ISE(
-          "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-          value.getClass().getCanonicalName()
-      );
+    if (value != null) {
+      if (value instanceof SerializablePairLongString) {
+        SerializablePairLongString serializablePair = (SerializablePairLongString) value;
+        time = serializablePair.lhs;
+        firstString = serializablePair.rhs;
+      } else if (value instanceof String) {
+        firstString = (String) value;
+      } else {
+        throw new ISE(
+            "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
+            value.getClass().getCanonicalName()
+        );
+      }
     }
 
     long lastTime = mutationBuffer.getLong(position);
-    if (firstString != null && time < lastTime) {
-      if (firstString.length() > maxStringBytes) {
-        firstString = firstString.substring(0, maxStringBytes);
+
+    if (time < lastTime) {
+      if (firstString != null) {
+        if (firstString.length() > maxStringBytes) {
+          firstString = firstString.substring(0, maxStringBytes);
+        }
+
+        byte[] valueBytes = StringUtils.toUtf8(firstString);
+
+        mutationBuffer.putLong(position, time);
+        mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
+
+        mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
+        mutationBuffer.put(valueBytes);
+      } else if (!filterNullValues) {
+        mutationBuffer.putLong(position, time);
+        mutationBuffer.putInt(position + Long.BYTES, 0);
       }
-
-      byte[] valueBytes = StringUtils.toUtf8(firstString);
-
-      mutationBuffer.putLong(position, time);
-      mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
-
-      mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
-      mutationBuffer.put(valueBytes);
     }
   }
 

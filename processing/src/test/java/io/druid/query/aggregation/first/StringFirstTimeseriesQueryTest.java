@@ -59,7 +59,7 @@ public class StringFirstTimeseriesQueryTest
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
                 .withMetrics(new StringFirstAggregatorFactory(
-                    "last_client_type", "client_type", 1024)
+                    "last_client_type", "client_type", 1024, false)
                 )
                 .build()
         )
@@ -100,7 +100,9 @@ public class StringFirstTimeseriesQueryTest
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Lists.newArrayList(
-                                          new StringFirstAggregatorFactory("last_client_type", client_type, 1024)
+                                          new StringFirstAggregatorFactory(
+                                              "last_client_type", client_type, 1024, false
+                                          )
                                       )
                                   )
                                   .build();

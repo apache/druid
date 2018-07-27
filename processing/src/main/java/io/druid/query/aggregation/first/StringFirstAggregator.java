@@ -31,6 +31,7 @@ public class StringFirstAggregator implements Aggregator
   private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
   private final int maxStringBytes;
+  private final boolean filterNullValues;
 
   protected long firstTime;
   protected String firstValue;
@@ -38,12 +39,14 @@ public class StringFirstAggregator implements Aggregator
   public StringFirstAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes
+      int maxStringBytes,
+      boolean filterNullValues
   )
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
+    this.filterNullValues = filterNullValues;
 
     firstTime = Long.MAX_VALUE;
     firstValue = null;
@@ -57,19 +60,23 @@ public class StringFirstAggregator implements Aggregator
       firstTime = time;
       Object value = valueSelector.getObject();
 
-      if (value instanceof String) {
-        firstValue = (String) value;
-      } else if (value instanceof SerializablePairLongString) {
-        firstValue = ((SerializablePairLongString) value).rhs;
-      } else if (value != null) {
-        throw new ISE(
-            "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
-            value.getClass().getCanonicalName()
-        );
-      }
+      if (value != null) {
+        if (value instanceof String) {
+          firstValue = (String) value;
+        } else if (value instanceof SerializablePairLongString) {
+          firstValue = ((SerializablePairLongString) value).rhs;
+        } else {
+          throw new ISE(
+              "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
+              value.getClass().getCanonicalName()
+          );
+        }
 
-      if (firstValue != null && firstValue.length() > maxStringBytes) {
-        firstValue = firstValue.substring(0, maxStringBytes);
+        if (firstValue != null && firstValue.length() > maxStringBytes) {
+          firstValue = firstValue.substring(0, maxStringBytes);
+        }
+      } else if (!filterNullValues) {
+        firstValue = null;
       }
     }
   }

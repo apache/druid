@@ -59,7 +59,7 @@ public class StringLastTimeseriesQueryTest
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
                 .withMetrics(new StringLastAggregatorFactory(
-                    "last_client_type", "client_type", 1024)
+                    "last_client_type", "client_type", 1024, false)
                 )
                 .build()
         )
@@ -100,7 +100,9 @@ public class StringLastTimeseriesQueryTest
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Lists.newArrayList(
-                                          new StringLastAggregatorFactory("last_client_type", client_type, 1024)
+                                          new StringLastAggregatorFactory(
+                                              "last_client_type", client_type, 1024, false
+                                          )
                                       )
                                   )
                                   .build();
@@ -112,7 +114,10 @@ public class StringLastTimeseriesQueryTest
         new Result<>(
             time,
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("last_client_type", new SerializablePairLongString(timestamp1, "android"))
+                ImmutableMap.<String, Object>of(
+                    "last_client_type",
+                    new SerializablePairLongString(timestamp1, "android")
+                )
             )
         )
     );
