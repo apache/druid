@@ -129,7 +129,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new StringFirstAggregatorFactory(fieldName, fieldName, maxStringBytes));
+    return Arrays.asList(new StringFirstAggregatorFactory(fieldName, fieldName, maxStringBytes));
   }
 
   @Override

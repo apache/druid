@@ -109,7 +109,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new StringLastAggregatorFactory(fieldName, fieldName, maxStringBytes));
+    return Arrays.asList(new StringLastAggregatorFactory(fieldName, fieldName, maxStringBytes));
   }
 
   @Override
