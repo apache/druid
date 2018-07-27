@@ -148,10 +148,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
    * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
    * the theoretical situation of two tasks scheduled in {@link #start()} calling {@link #poll()} concurrently, if
    * the sequence of {@link #start()} - {@link #stop()} - {@link #start()} actions occurs quickly.
+   *
+   * {@link SQLMetadataSegmentManager} also have a similar issue.
    */
   private long currentStartOrder = -1;
   private ScheduledExecutorService exec = null;
-  private long retryStartTime = 0;
+  private long failStartTimeMs = 0;
 
   @Inject
   public SQLMetadataRuleManager(
@@ -311,17 +313,17 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       log.info("Polled and found rules for %,d datasource(s)", newRules.size());
 
       rules.set(newRules);
-      retryStartTime = 0;
+      failStartTimeMs = 0;
     }
     catch (Exception e) {
-      if (retryStartTime == 0) {
-        retryStartTime = System.currentTimeMillis();
+      if (failStartTimeMs == 0) {
+        failStartTimeMs = System.currentTimeMillis();
       }
 
-      if (System.currentTimeMillis() - retryStartTime > config.getAlertThreshold().toStandardDuration().getMillis()) {
+      if (System.currentTimeMillis() - failStartTimeMs > config.getAlertThreshold().toStandardDuration().getMillis()) {
         log.makeAlert(e, "Exception while polling for rules")
            .emit();
-        retryStartTime = 0;
+        failStartTimeMs = 0;
       } else {
         log.error(e, "Exception while polling for rules");
       }
