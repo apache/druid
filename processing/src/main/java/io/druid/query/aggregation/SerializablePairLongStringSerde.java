@@ -154,7 +154,6 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
         String rhsString = val.rhs;
         ByteBuffer bbuf;
 
-
         if (rhsString != null) {
           byte[] rhsBytes = StringUtils.toUtf8(rhsString);
           bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES + rhsBytes.length);
