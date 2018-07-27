@@ -55,25 +55,18 @@ public class TaskStorageQueryAdapter
     return storage.getActiveTasks();
   }
 
-  public List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
     return storage.getActiveTaskInfo(dataSource);
   }
 
-  public List<TaskInfo<Task>> getRecentlyCompletedTaskInfo(
+  public List<TaskInfo<Task, TaskStatus>> getRecentlyCompletedTaskInfo(
       @Nullable Integer maxTaskStatuses,
       @Nullable Duration duration,
       @Nullable String dataSource
   )
   {
     return storage.getRecentlyFinishedTaskInfo(maxTaskStatuses, duration, dataSource);
-  }
-
-  @Nullable
-  public DateTime getCreatedTime(String taskId)
-  {
-    final Pair<DateTime, String> pair = storage.getCreatedDateTimeAndDataSource(taskId);
-    return pair == null ? null : pair.lhs;
   }
 
   public Optional<Task> getTask(final String taskid)
@@ -107,10 +100,5 @@ public class TaskStorageQueryAdapter
       }
     }
     return segments;
-  }
-  
-  public Pair<DateTime, String> getCreatedDateAndDataSource(String taskId)
-  {
-    return storage.getCreatedDateTimeAndDataSource(taskId);
   }
 }

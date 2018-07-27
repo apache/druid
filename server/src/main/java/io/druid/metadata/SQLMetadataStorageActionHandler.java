@@ -28,7 +28,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.indexer.TaskInfo;
-import io.druid.indexer.TaskStatus;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -249,88 +248,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus()
-  {
-    return connector.retryWithHandle(
-        new HandleCallback<List<Pair<EntryType, StatusType>>>()
-        {
-          @Override
-          public List<Pair<EntryType, StatusType>> withHandle(Handle handle)
-          {
-            return handle
-                .createQuery(
-                    StringUtils.format(
-                        "SELECT id, payload, status_payload FROM %s WHERE active = TRUE ORDER BY created_date",
-                        entryTable
-                    )
-                )
-                .map(
-                    new ResultSetMapper<Pair<EntryType, StatusType>>()
-                    {
-                      @Override
-                      public Pair<EntryType, StatusType> map(int index, ResultSet r, StatementContext ctx)
-                          throws SQLException
-                      {
-                        try {
-                          return Pair.of(
-                              jsonMapper.<EntryType>readValue(
-                                  r.getBytes("payload"),
-                                  entryType
-                              ),
-                              jsonMapper.<StatusType>readValue(
-                                  r.getBytes("status_payload"),
-                                  statusType
-                              )
-                          );
-                        }
-                        catch (IOException e) {
-                          log.makeAlert(e, "Failed to parse entry payload").addData("entry", r.getString("id")).emit();
-                          throw new SQLException(e);
-                        }
-                      }
-                    }
-                ).list();
-          }
-        }
-    );
-
-  }
-
-  @Override
-  public List<StatusType> getInactiveStatusesSince(DateTime timestamp, @Nullable Integer maxNumStatuses)
-  {
-    return getConnector().retryWithHandle(
-        handle -> {
-          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(
-              handle,
-              timestamp,
-              maxNumStatuses,
-              null
-          );
-
-          return query
-              .map(
-                  (ResultSetMapper<StatusType>) (index, r, ctx) -> {
-                    try {
-                      return getJsonMapper().readValue(
-                          r.getBytes("status_payload"),
-                          getStatusType()
-                      );
-                    }
-                    catch (IOException e) {
-                      log.makeAlert(e, "Failed to parse status payload")
-                         .addData("entry", r.getString("id"))
-                         .emit();
-                      throw new SQLException(e);
-                    }
-                  }
-              ).list();
-        }
-    );
-  }
-
-  @Override
-  public List<TaskInfo<EntryType>> getCompletedTaskInfo(
+  public List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
       @Nullable String dataSource
@@ -338,7 +256,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     return getConnector().retryWithHandle(
         handle -> {
-          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(
+          final Query<Map<String, Object>> query = createCompletedTaskInfoQuery(
               handle,
               timestamp,
               maxNumStatuses,
@@ -350,11 +268,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<EntryType>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource)
   {
     return getConnector().retryWithHandle(
         handle -> {
-          final Query<Map<String, Object>> query = createActiveStatusesQuery(
+          final Query<Map<String, Object>> query = createActiveTaskInfoQuery(
               handle,
               dataSource
           );
@@ -363,7 +281,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
-  private Query<Map<String, Object>> createActiveStatusesQuery(Handle handle, @Nullable String dataSource)
+  private Query<Map<String, Object>> createActiveTaskInfoQuery(Handle handle, @Nullable String dataSource)
   {
     String sql = StringUtils.format(
         "SELECT "
@@ -396,14 +314,14 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return sql;
   }
 
-  class TaskInfoMapper implements ResultSetMapper<TaskInfo<EntryType>>
+  class TaskInfoMapper implements ResultSetMapper<TaskInfo<EntryType, StatusType>>
   {
     @Override
-    public TaskInfo<EntryType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
+    public TaskInfo<EntryType, StatusType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
     {
-      final TaskInfo<EntryType> taskInfo;
+      final TaskInfo<EntryType, StatusType> taskInfo;
       EntryType task;
-      TaskStatus status;
+      StatusType status;
       try {
         task = getJsonMapper().readValue(resultSet.getBytes("payload"), getEntryType());
       }
@@ -429,34 +347,12 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     }
   }
 
-  protected abstract Query<Map<String, Object>> createInactiveStatusesSinceQuery(
+  protected abstract Query<Map<String, Object>> createCompletedTaskInfoQuery(
       Handle handle,
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
       @Nullable String dataSource
   );
-
-  @Override
-  @Nullable
-  public Pair<DateTime, String> getCreatedDateAndDataSource(String entryId)
-  {
-    return connector.retryWithHandle(
-        handle -> handle
-        .createQuery(
-            StringUtils.format(
-                "SELECT created_date, datasource FROM %s WHERE id = :entryId",
-                entryTable
-            )
-        )
-        .bind("entryId", entryId)
-        .map(
-            (index, resultSet, ctx) -> Pair.of(
-                DateTimes.of(resultSet.getString("created_date")), resultSet.getString("datasource")
-            )
-        )
-        .first()
-    );
-  }
 
   @Override
   public boolean addLock(final String entryId, final LockType lock)

@@ -80,27 +80,6 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   Optional<StatusType> getStatus(String entryId);
 
   /**
-   * Return all active entries with their respective status
-   *
-   * @return list of (entry, status) pairs
-   */
-  List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus();
-
-  default List<StatusType> getInactiveStatusesSince(DateTime timestamp)
-  {
-    return getInactiveStatusesSince(timestamp, null);
-  }
-
-  /**
-   * Return up to {@code maxNumStatuses} statuses for inactive entries created on or later than the given timestamp
-   *
-   * @param timestamp timestamp
-   * @param maxNumStatuses maxNumStatuses
-   * @return list of statuses
-   */
-  List<StatusType> getInactiveStatusesSince(DateTime timestamp, @Nullable Integer maxNumStatuses);
-
-  /**
    * Return up to {@code maxNumStatuses} {@link TaskInfo} objects for all inactive entries
    * created on or later than the given timestamp
    *
@@ -109,7 +88,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType>> getCompletedTaskInfo(
+  List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
       @Nullable String datasource
@@ -120,15 +99,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType>> getActiveTaskInfo(@Nullable String dataSource);
-
-  /**
-   * Return createdDate and dataSource for the given id
-   *
-   * @return a pair of createdDate and dataSource or null if an entry for the given id is not found
-   */
-  @Nullable
-  Pair<DateTime, String> getCreatedDateAndDataSource(String entryId);
+  List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource);
 
   /**
    * Add a lock to the given entry
