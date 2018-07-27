@@ -463,7 +463,7 @@ public class CompactionTaskTest
         null,
         null,
         "foo",
-        new Interval("2000-01-01/2000-01-01"),
+        Intervals.of("2000-01-01/2000-01-01"),
         null,
         null,
         null,
