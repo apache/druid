@@ -31,6 +31,7 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -83,7 +84,7 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
     return new ObjectStrategy<SerializablePairLongString>()
     {
       @Override
-      public int compare(SerializablePairLongString o1, SerializablePairLongString o2)
+      public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)
       {
         int comparation;
 
