@@ -21,7 +21,6 @@ package io.druid.metadata;
 
 import com.google.common.base.Optional;
 import io.druid.indexer.TaskInfo;
-import io.druid.java.util.common.Pair;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
