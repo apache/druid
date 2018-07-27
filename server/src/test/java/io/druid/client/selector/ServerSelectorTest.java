@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -32,6 +32,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.easymock.EasyMock.expect;
+
 /**
  */
 public class ServerSelectorTest
@@ -42,7 +44,7 @@ public class ServerSelectorTest
   public void setUp()
   {
     tierSelectorStrategy = EasyMock.createMock(TierSelectorStrategy.class);
-    EasyMock.expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
+    expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
   }
 
   @Test
@@ -53,7 +55,7 @@ public class ServerSelectorTest
                    .dataSource("test_broker_server_view")
                    .interval(Intervals.of("2012/2013"))
                    .loadSpec(
-                       ImmutableMap.<String, Object>of(
+                       ImmutableMap.of(
                            "type",
                            "local",
                            "path",
@@ -61,13 +63,13 @@ public class ServerSelectorTest
                        )
                    )
                    .version("v1")
-                   .dimensions(ImmutableList.<String>of())
-                   .metrics(ImmutableList.<String>of())
+                   .dimensions(ImmutableList.of())
+                   .metrics(ImmutableList.of())
                    .shardSpec(NoneShardSpec.instance())
                    .binaryVersion(9)
                    .size(0)
                    .build(),
-        EasyMock.createMock(TierSelectorStrategy.class)
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
     );
 
     selector.addServerAndUpdateSegment(
@@ -80,7 +82,7 @@ public class ServerSelectorTest
                        "test_broker_server_view")
                    .interval(Intervals.of("2012/2013"))
                    .loadSpec(
-                       ImmutableMap.<String, Object>of(
+                       ImmutableMap.of(
                            "type",
                            "local",
                            "path",
@@ -89,13 +91,13 @@ public class ServerSelectorTest
                    )
                    .version("v1")
                    .dimensions(
-                       ImmutableList.<String>of(
+                       ImmutableList.of(
                            "a",
                            "b",
                            "c"
                        ))
                    .metrics(
-                       ImmutableList.<String>of())
+                       ImmutableList.of())
                    .shardSpec(NoneShardSpec.instance())
                    .binaryVersion(9)
                    .size(0)

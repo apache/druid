@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -149,21 +149,32 @@ public class BasicHTTPAuthenticator implements Authenticator
 
     }
 
+
     @Override
     public void doFilter(
         ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
     ) throws IOException, ServletException
     {
       HttpServletResponse httpResp = (HttpServletResponse) servletResponse;
-      String userSecret = BasicAuthUtils.getBasicUserSecretFromHttpReq((HttpServletRequest) servletRequest);
 
-      if (userSecret == null) {
+      String encodedUserSecret = BasicAuthUtils.getEncodedUserSecretFromHttpReq((HttpServletRequest) servletRequest);
+      if (encodedUserSecret == null) {
         // Request didn't have HTTP Basic auth credentials, move on to the next filter
         filterChain.doFilter(servletRequest, servletResponse);
         return;
       }
 
-      String[] splits = userSecret.split(":");
+      // At this point, encodedUserSecret is not null, indicating that the request intends to perform
+      // Basic HTTP authentication. If any errors occur with the authentication, we send a 401 response immediately
+      // and do not proceed further down the filter chain.
+      String decodedUserSecret = BasicAuthUtils.decodeUserSecret(encodedUserSecret);
+      if (decodedUserSecret == null) {
+        // We recognized a Basic auth header, but could not decode the user secret.
+        httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return;
+      }
+
+      String[] splits = decodedUserSecret.split(":");
       if (splits.length != 2) {
         httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         return;
@@ -175,9 +186,10 @@ public class BasicHTTPAuthenticator implements Authenticator
       if (checkCredentials(user, password)) {
         AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+        filterChain.doFilter(servletRequest, servletResponse);
+      } else {
+        httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
       }
-
-      filterChain.doFilter(servletRequest, servletResponse);
     }
 
     @Override

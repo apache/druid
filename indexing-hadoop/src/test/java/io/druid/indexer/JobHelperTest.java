@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,6 +25,8 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -34,7 +36,10 @@ import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.util.Progressable;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,8 +48,10 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -176,6 +183,42 @@ public class JobHelperTest
         new URI("gs://test-test/tmp/foo%3Abar/index1.zip"),
         JobHelper.getURIFromSegment(segment)
     );
+  }
+
+  @Test
+  public void testEvilZip() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testEvilZip");
+
+    final File evilResult = new File("/tmp/evil.txt");
+    Files.deleteIfExists(evilResult.toPath());
+
+    File evilZip = new File(tmpDir, "evil.zip");
+    Files.deleteIfExists(evilZip.toPath());
+    CompressionUtils.makeEvilZip(evilZip);
+
+    try {
+      JobHelper.unzipNoGuava(
+          new Path(evilZip.getCanonicalPath()),
+          new Configuration(),
+          tmpDir,
+          new Progressable()
+          {
+            @Override
+            public void progress()
+            {
+
+            }
+          },
+          RetryPolicies.TRY_ONCE_THEN_FAIL
+      );
+    }
+    catch (ISE ise) {
+      Assert.assertTrue(ise.getMessage().contains("does not start with outDir"));
+      Assert.assertFalse("Zip exploit triggered, /tmp/evil.txt was written.", evilResult.exists());
+      return;
+    }
+    Assert.fail("Exception was not thrown for malicious zip file");
   }
 
   private static class HadoopDruidIndexerConfigSpy extends HadoopDruidIndexerConfig

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -28,9 +28,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
@@ -39,6 +39,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.MetadataStorageActionHandler;
 import io.druid.metadata.MetadataStorageActionHandlerFactory;
@@ -46,11 +47,11 @@ import io.druid.metadata.MetadataStorageActionHandlerTypes;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
 {
@@ -213,17 +214,26 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
+  public List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String dataSource)
   {
     return ImmutableList.copyOf(
-        handler
-            .getInactiveStatusesSince(
-                DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold()),
-                maxTaskStatuses
-            )
-            .stream()
-            .filter(TaskStatus::isComplete)
-            .collect(Collectors.toList())
+        handler.getActiveTaskInfo(dataSource)
+    );
+  }
+
+  @Override
+  public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
+      @Nullable Integer maxTaskStatuses,
+      @Nullable Duration duration,
+      @Nullable String datasource
+  )
+  {
+    return ImmutableList.copyOf(
+        handler.getCompletedTaskInfo(
+            DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
+            maxTaskStatuses,
+            datasource
+        )
     );
   }
 
@@ -258,15 +268,15 @@ public class MetadataTaskStorage implements TaskStorage
     Preconditions.checkNotNull(newLock, "newLock");
 
     log.info(
-        "Replacing lock on interval[%s] version[%s] for task: %s",
-        oldLock.getInterval(),
-        oldLock.getVersion(),
+        "Replacing an existing lock[%s] with a new lock[%s] for task: %s",
+        oldLock,
+        newLock,
         taskid
     );
 
     final Long oldLockId = handler.getLockId(taskid, oldLock);
     if (oldLockId == null) {
-      throw new ISE("Cannot find lock[%s]", oldLock);
+      throw new ISE("Cannot find an existing lock[%s]", oldLock);
     }
 
     handler.replaceLock(taskid, oldLockId, newLock);

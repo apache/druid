@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -55,6 +55,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
@@ -79,48 +80,61 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     private final Object2IntMap<String> valueToId = new Object2IntOpenHashMap<>();
 
     private final List<String> idToValue = Lists.newArrayList();
-    private final Object lock;
+    private final ReentrantReadWriteLock lock;
 
     public DimensionDictionary()
     {
-      this.lock = new Object();
+      this.lock = new ReentrantReadWriteLock();
       valueToId.defaultReturnValue(-1);
     }
 
     public int getId(String value)
     {
-      synchronized (lock) {
+      lock.readLock().lock();
+      try {
         if (value == null) {
           return idForNull;
         }
         return valueToId.getInt(value);
       }
+      finally {
+        lock.readLock().unlock();
+      }
     }
 
     public String getValue(int id)
     {
-      synchronized (lock) {
+      lock.readLock().lock();
+      try {
         if (id == idForNull) {
           return null;
         }
         return idToValue.get(id);
       }
+      finally {
+        lock.readLock().unlock();
+      }
     }
 
     public int size()
     {
-      synchronized (lock) {
+      lock.readLock().lock();
+      try {
         // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
         return idToValue.size();
+      }
+      finally {
+        lock.readLock().unlock();
       }
     }
 
     public int add(@Nullable String originalValue)
     {
-      synchronized (lock) {
+      lock.writeLock().lock();
+      try {
         if (originalValue == null) {
           if (idForNull == ABSENT_VALUE_ID) {
-            idForNull = size();
+            idForNull = idToValue.size();
             idToValue.add(null);
           }
           return idForNull;
@@ -129,33 +143,48 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         if (prev >= 0) {
           return prev;
         }
-        final int index = size();
+        final int index = idToValue.size();
         valueToId.put(originalValue, index);
         idToValue.add(originalValue);
         minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
         maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
         return index;
       }
+      finally {
+        lock.writeLock().unlock();
+      }
     }
 
     public String getMinValue()
     {
-      synchronized (lock) {
+      lock.readLock().lock();
+      try {
         return minValue;
+      }
+      finally {
+        lock.readLock().unlock();
       }
     }
 
     public String getMaxValue()
     {
-      synchronized (lock) {
+      lock.readLock().lock();
+      try {
         return maxValue;
+      }
+      finally {
+        lock.readLock().unlock();
       }
     }
 
     public SortedDimensionDictionary sort()
     {
-      synchronized (lock) {
-        return new SortedDimensionDictionary(idToValue, size());
+      lock.readLock().lock();
+      try {
+        return new SortedDimensionDictionary(idToValue, idToValue.size());
+      }
+      finally {
+        lock.readLock().unlock();
       }
     }
   }

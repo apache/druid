@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -27,7 +27,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -37,7 +37,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @JsonCreator
   public FloatSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
+      @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("expression") String expression,
       @JacksonInject ExprMacroTable macroTable
   )
@@ -53,13 +53,13 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f));
+    return new FloatSumAggregator(getFloatColumnSelector(metricFactory, 0.0f));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f));
+    return new FloatSumBufferAggregator(getFloatColumnSelector(metricFactory, 0.0f));
   }
 
   @Override
@@ -80,30 +80,10 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
     return new FloatSumAggregatorFactory(name, name, null, macroTable);
   }
 
-
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.asList(new FloatSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
+    return Collections.singletonList(new FloatSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override

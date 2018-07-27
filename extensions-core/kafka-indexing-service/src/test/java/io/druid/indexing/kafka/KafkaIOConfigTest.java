@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -50,6 +50,7 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
                      + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":15, \"1\":200}},\n"
@@ -71,8 +72,7 @@ public class KafkaIOConfigTest
     Assert.assertEquals("mytopic", config.getEndPartitions().getTopic());
     Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndPartitions().getPartitionOffsetMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
-    Assert.assertEquals(true, config.isUseTransaction());
-    Assert.assertEquals(false, config.isPauseAfterRead());
+    Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
     Assert.assertFalse("maximumMessageTime", config.getMaximumMessageTime().isPresent());
     Assert.assertFalse("skipOffsetGaps", config.isSkipOffsetGaps());
@@ -83,12 +83,12 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
                      + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":15, \"1\":200}},\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": true,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\",\n"
                      + "  \"skipOffsetGaps\": true\n"
@@ -109,8 +109,7 @@ public class KafkaIOConfigTest
     Assert.assertEquals("mytopic", config.getEndPartitions().getTopic());
     Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndPartitions().getPartitionOffsetMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
-    Assert.assertEquals(false, config.isUseTransaction());
-    Assert.assertEquals(true, config.isPauseAfterRead());
+    Assert.assertFalse(config.isUseTransaction());
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
     Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
     Assert.assertTrue("skipOffsetGaps", config.isSkipOffsetGaps());
@@ -121,11 +120,11 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
                      + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":15, \"1\":200}},\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": true,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
@@ -141,11 +140,11 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":15, \"1\":200}},\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": true,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
@@ -161,11 +160,11 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": true,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
@@ -181,11 +180,11 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
                      + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":15, \"1\":200}},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": true,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
@@ -201,12 +200,12 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
                      + "  \"endPartitions\": {\"topic\":\"other\", \"partitionOffsetMap\" : {\"0\":15, \"1\":200}},\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": true,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
@@ -222,12 +221,12 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
                      + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":15}},\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": true,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
@@ -243,12 +242,12 @@ public class KafkaIOConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":1, \"1\":10}},\n"
                      + "  \"endPartitions\": {\"topic\":\"mytopic\", \"partitionOffsetMap\" : {\"0\":15, \"1\":2}},\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": true,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";

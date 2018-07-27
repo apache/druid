@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,7 +21,7 @@ package io.druid.query.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Range;
+import com.google.common.collect.Maps;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import io.druid.timeline.partition.ShardSpec;
@@ -36,7 +36,6 @@ import java.util.Set;
  */
 public class DimFilterUtils
 {
-  static final byte NOOP_CACHE_ID = -0x4;
   static final byte SELECTOR_CACHE_ID = 0x0;
   static final byte AND_CACHE_ID = 0x1;
   static final byte OR_CACHE_ID = 0x2;
@@ -52,6 +51,7 @@ public class DimFilterUtils
   static final byte LIKE_CACHE_ID = 0xC;
   static final byte COLUMN_COMPARISON_CACHE_ID = 0xD;
   static final byte EXPRESSION_CACHE_ID = 0xE;
+  static final byte TRUE_CACHE_ID = 0xF;
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
 
   static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)
@@ -122,15 +122,18 @@ public class DimFilterUtils
       boolean include = true;
 
       if (dimFilter != null && shard != null) {
-        Map<String, RangeSet<String>> domain = shard.getDomain();
-        for (Map.Entry<String, RangeSet<String>> entry : domain.entrySet()) {
-          String dimension = entry.getKey();
+        Map<String, RangeSet<String>> filterDomain = Maps.newHashMap();
+        List<String> dimensions = shard.getDomainDimensions();
+        for (String dimension : dimensions) {
           Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
               .computeIfAbsent(dimension, d -> Optional.fromNullable(dimFilter.getDimensionRangeSet(d)));
 
-          if (optFilterRangeSet.isPresent() && hasEmptyIntersection(optFilterRangeSet.get(), entry.getValue())) {
-            include = false;
+          if (optFilterRangeSet.isPresent()) {
+            filterDomain.put(dimension, optFilterRangeSet.get());
           }
+        }
+        if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
+          include = false;
         }
       }
 
@@ -139,16 +142,5 @@ public class DimFilterUtils
       }
     }
     return retSet;
-  }
-
-  private static boolean hasEmptyIntersection(RangeSet<String> r1, RangeSet<String> r2)
-  {
-    for (Range<String> range : r2.asRanges()) {
-      if (!r1.subRangeSet(range).isEmpty()) {
-        return false;
-      }
-    }
-
-    return true;
   }
 }

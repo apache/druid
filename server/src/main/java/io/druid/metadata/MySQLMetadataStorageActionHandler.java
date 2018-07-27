@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -46,17 +46,20 @@ public class MySQLMetadataStorageActionHandler<EntryType, StatusType, LogType, L
 
   @Override
   protected Query<Map<String, Object>> createInactiveStatusesSinceQuery(
-      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses
+      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
   )
   {
     String sql = StringUtils.format(
         "SELECT "
         + "  id, "
-        + "  status_payload "
+        + "  status_payload, "
+        + "  created_date, "
+        + "  datasource, "
+        + "  payload "
         + "FROM "
         + "  %s "
         + "WHERE "
-        + "  active = FALSE AND created_date >= :start "
+        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
         + "ORDER BY created_date DESC",
         getEntryTable()
     );
@@ -64,12 +67,22 @@ public class MySQLMetadataStorageActionHandler<EntryType, StatusType, LogType, L
     if (maxNumStatuses != null) {
       sql += " LIMIT :n";
     }
-
     Query<Map<String, Object>> query = handle.createQuery(sql).bind("start", timestamp.toString());
 
     if (maxNumStatuses != null) {
       query = query.bind("n", maxNumStatuses);
     }
+    if (dataSource != null) {
+      query = query.bind("ds", dataSource);
+    }
     return query;
+  }
+  private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
+  {
+    String sql = StringUtils.format("active = FALSE AND created_date >= :start ");
+    if (datasource != null) {
+      sql += " AND datasource = :ds ";
+    }
+    return sql;
   }
 }

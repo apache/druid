@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,11 +21,9 @@ package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
@@ -33,6 +31,8 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.TestDerbyConnector;
@@ -45,9 +45,11 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -260,6 +262,48 @@ public class TaskLockboxTest
   }
 
   @Test
+  public void testRevokedLockSyncFromStorage() throws EntryExistsException
+  {
+    final TaskLockbox originalBox = new TaskLockbox(taskStorage);
+
+    final Task task1 = NoopTask.create("task1", 10);
+    taskStorage.insert(task1, TaskStatus.running(task1.getId()));
+    originalBox.add(task1);
+    Assert.assertTrue(originalBox.tryLock(TaskLockType.EXCLUSIVE, task1, Intervals.of("2017/2018")).isOk());
+
+    // task2 revokes task1
+    final Task task2 = NoopTask.create("task2", 100);
+    taskStorage.insert(task2, TaskStatus.running(task2.getId()));
+    originalBox.add(task2);
+    Assert.assertTrue(originalBox.tryLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2017/2018")).isOk());
+
+    final Map<String, List<TaskLock>> beforeLocksInStorage = taskStorage
+        .getActiveTasks()
+        .stream()
+        .collect(Collectors.toMap(Task::getId, task -> taskStorage.getLocks(task.getId())));
+
+    final List<TaskLock> task1Locks = beforeLocksInStorage.get("task1");
+    Assert.assertEquals(1, task1Locks.size());
+    Assert.assertTrue(task1Locks.get(0).isRevoked());
+
+    final List<TaskLock> task2Locks = beforeLocksInStorage.get("task1");
+    Assert.assertEquals(1, task2Locks.size());
+    Assert.assertTrue(task2Locks.get(0).isRevoked());
+
+    final TaskLockbox newBox = new TaskLockbox(taskStorage);
+    newBox.syncFromStorage();
+
+    final Set<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                          .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                                                          .collect(Collectors.toSet());
+
+    Assert.assertEquals(
+        beforeLocksInStorage.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()),
+        afterLocksInStorage
+    );
+  }
+
+  @Test
   public void testDoInCriticalSectionWithSharedLock() throws Exception
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
@@ -364,7 +408,7 @@ public class TaskLockboxTest
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testAcquireLockAfterRevoked() throws EntryExistsException, InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");

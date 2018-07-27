@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,12 +22,16 @@ package io.druid.server.shard;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -109,9 +113,53 @@ public class SingleDimensionShardSpecTest
     }
   }
 
+  @Test
+  public void testPossibleInDomain()
+  {
+    Map<String, RangeSet<String>> domain1 = ImmutableMap.of("dim1", rangeSet(ImmutableList.of(Range.lessThan("abc"))));
+    Map<String, RangeSet<String>> domain2 = ImmutableMap.of("dim1", rangeSet(ImmutableList.of(Range.singleton("e"))),
+                                                            "dim2", rangeSet(ImmutableList.of(Range.singleton("na")))
+    );
+    ShardSpec shard1 = makeSpec("dim1", null, "abc");
+    ShardSpec shard2 = makeSpec("dim1", "abc", "def");
+    ShardSpec shard3 = makeSpec("dim1", "def", null);
+    ShardSpec shard4 = makeSpec("dim2", null, "hello");
+    ShardSpec shard5 = makeSpec("dim2", "hello", "jk");
+    ShardSpec shard6 = makeSpec("dim2", "jk", "na");
+    ShardSpec shard7 = makeSpec("dim2", "na", null);
+    Assert.assertTrue(shard1.possibleInDomain(domain1));
+    Assert.assertFalse(shard2.possibleInDomain(domain1));
+    Assert.assertFalse(shard3.possibleInDomain(domain1));
+    Assert.assertTrue(shard4.possibleInDomain(domain1));
+    Assert.assertTrue(shard5.possibleInDomain(domain1));
+    Assert.assertTrue(shard6.possibleInDomain(domain1));
+    Assert.assertTrue(shard7.possibleInDomain(domain1));
+    Assert.assertFalse(shard1.possibleInDomain(domain2));
+    Assert.assertFalse(shard2.possibleInDomain(domain2));
+    Assert.assertTrue(shard3.possibleInDomain(domain2));
+    Assert.assertFalse(shard4.possibleInDomain(domain2));
+    Assert.assertFalse(shard5.possibleInDomain(domain2));
+    Assert.assertTrue(shard6.possibleInDomain(domain2));
+    Assert.assertTrue(shard7.possibleInDomain(domain2));
+  }
+
+  private static RangeSet<String> rangeSet(List<Range<String>> ranges)
+  {
+    ImmutableRangeSet.Builder<String> builder = ImmutableRangeSet.builder();
+    for (Range<String> range : ranges) {
+      builder.add(range);
+    }
+    return builder.build();
+  }
+
   private SingleDimensionShardSpec makeSpec(String start, String end)
   {
-    return new SingleDimensionShardSpec("billy", start, end, 0);
+    return makeSpec("billy", start, end);
+  }
+
+  private SingleDimensionShardSpec makeSpec(String dimension, String start, String end)
+  {
+    return new SingleDimensionShardSpec(dimension, start, end, 0);
   }
 
   private Map<String, String> makeMap(String value)

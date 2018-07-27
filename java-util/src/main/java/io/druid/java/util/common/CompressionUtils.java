@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -29,6 +29,7 @@ import com.google.common.io.Files;
 import io.druid.java.util.common.io.NativeIO;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 
 import java.io.BufferedInputStream;
@@ -56,6 +57,7 @@ public class CompressionUtils
   private static final String GZ_SUFFIX = ".gz";
   private static final String XZ_SUFFIX = ".xz";
   private static final String ZIP_SUFFIX = ".zip";
+  private static final String SNAPPY_SUFFIX = ".sz";
 
   /**
    * Zip the contents of directory into the file indicated by outputZipFile. Sub directories are skipped
@@ -232,6 +234,9 @@ public class CompressionUtils
       while (enumeration.hasMoreElements()) {
         final ZipEntry entry = enumeration.nextElement();
         final File outFile = new File(outDir, entry.getName());
+
+        validateZipOutputFile(pulledFile.getCanonicalPath(), outFile, outDir);
+
         result.addFiles(
             FileUtils.retryCopy(
                 new ByteSource()
@@ -250,6 +255,25 @@ public class CompressionUtils
       }
     }
     return result;
+  }
+
+  public static void validateZipOutputFile(
+      String sourceFilename,
+      final File outFile,
+      final File outDir
+  ) throws IOException
+  {
+    // check for evil zip exploit that allows writing output to arbitrary directories
+    final File canonicalOutFile = outFile.getCanonicalFile();
+    final String canonicalOutDir = outDir.getCanonicalPath();
+    if (!canonicalOutFile.toPath().startsWith(canonicalOutDir)) {
+      throw new ISE(
+          "Unzipped output path[%s] of sourceFile[%s] does not start with outDir[%s].",
+          canonicalOutFile,
+          sourceFilename,
+          canonicalOutDir
+      );
+    }
   }
 
   /**
@@ -271,6 +295,8 @@ public class CompressionUtils
       ZipEntry entry;
       while ((entry = zipIn.getNextEntry()) != null) {
         final File file = new File(outDir, entry.getName());
+
+        validateZipOutputFile("", file, outDir);
 
         NativeIO.chunkedCopy(zipIn, file);
 
@@ -536,6 +562,8 @@ public class CompressionUtils
       return new BZip2CompressorInputStream(in, true);
     } else if (fileName.endsWith(XZ_SUFFIX)) {
       return new XZCompressorInputStream(in, true);
+    } else if (fileName.endsWith(SNAPPY_SUFFIX)) {
+      return new FramedSnappyCompressorInputStream(in);
     } else if (fileName.endsWith(ZIP_SUFFIX)) {
       // This reads the first file in the archive.
       final ZipInputStream zipIn = new ZipInputStream(in, StandardCharsets.UTF_8);
@@ -561,5 +589,17 @@ public class CompressionUtils
     } else {
       return in;
     }
+  }
+
+  // Helper method for unit tests (for checking that we fixed https://snyk.io/research/zip-slip-vulnerability)
+  public static void makeEvilZip(File outputFile) throws IOException
+  {
+    ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(outputFile));
+    ZipEntry zipEntry = new ZipEntry("../../../../../../../../../../../../../../../tmp/evil.txt");
+    zipOutputStream.putNextEntry(zipEntry);
+    byte[] output = StringUtils.toUtf8("evil text");
+    zipOutputStream.write(output);
+    zipOutputStream.closeEntry();
+    zipOutputStream.close();
   }
 }
