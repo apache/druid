@@ -1,22 +1,41 @@
-package io.druid.server.log;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
-import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.Intervals;
-import io.druid.query.BaseQuery;
-import io.druid.query.DataSource;
-import io.druid.query.LegacyDataSource;
-import io.druid.query.Query;
-import io.druid.query.QueryRunner;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.Filter;
-import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.server.QueryStats;
-import io.druid.server.RequestLogLine;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.LegacyDataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.server.QueryStats;
+import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -25,6 +44,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class NetflixHttpPostRequestLoggerTest
 {
@@ -40,7 +60,7 @@ public class NetflixHttpPostRequestLoggerTest
   private static final Map<String, Object> QUERY_CONTEXT = ImmutableMap.of(
       "foo",
       "bar",
-      BaseQuery.QUERYID,
+      BaseQuery.QUERY_ID,
       QUERY_ID
   );
 
@@ -73,10 +93,10 @@ public class NetflixHttpPostRequestLoggerTest
         NetflixHttpPostRequestLogger.QueryStatsKey.SUCCESS.toString(),
         true
     ));
-    final RequestLogLine logLine = new RequestLogLine(
+    final RequestLogLine logLine = RequestLogLine.forNative(
+        successfulQuery,
         timestamp,
         REMOTE_ADDRESS,
-        successfulQuery,
         successfulQueryStats
     );
     NetflixHttpPostRequestLogger.KeyStoneGatewayRequest request = new NetflixHttpPostRequestLogger.KeyStoneGatewayRequest(
@@ -132,12 +152,7 @@ public class NetflixHttpPostRequestLoggerTest
         NetflixHttpPostRequestLogger.QueryStatsKey.SUCCESS.toString(),
         false
     ));
-    final RequestLogLine logLine = new RequestLogLine(
-        timestamp,
-        REMOTE_ADDRESS,
-        failedQuery,
-        failedQueryStats
-    );
+    final RequestLogLine logLine = RequestLogLine.forNative(failedQuery, timestamp, REMOTE_ADDRESS, failedQueryStats);
     NetflixHttpPostRequestLogger.KeyStoneGatewayRequest request = new NetflixHttpPostRequestLogger.KeyStoneGatewayRequest(
         "druid",
         "localhost",
@@ -194,10 +209,10 @@ public class NetflixHttpPostRequestLoggerTest
         false
 
     ));
-    final RequestLogLine logLine = new RequestLogLine(
+    final RequestLogLine logLine = RequestLogLine.forNative(
+        interruptedQuery,
         timestamp,
         REMOTE_ADDRESS,
-        interruptedQuery,
         interruptedQueryStats
     );
     NetflixHttpPostRequestLogger.KeyStoneGatewayRequest request = new NetflixHttpPostRequestLogger.KeyStoneGatewayRequest(
@@ -255,6 +270,12 @@ public class NetflixHttpPostRequestLoggerTest
 
         @Override
         public RangeSet<String> getDimensionRangeSet(String dimension)
+        {
+          return null;
+        }
+
+        @Override
+        public Set<String> getRequiredColumns()
         {
           return null;
         }

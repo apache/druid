@@ -1,26 +1,45 @@
-package io.druid.server.log;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.lifecycle.LifecycleStart;
-import io.druid.java.util.common.lifecycle.LifecycleStop;
-import io.druid.java.util.common.logger.Logger;
-import io.druid.query.Query;
-import io.druid.server.RequestLogLine;
 import io.netty.handler.codec.http.HttpHeaders;
-import org.asynchttpclient.AsyncCompletionHandler;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.Query;
+import org.apache.druid.server.RequestLogLine;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.RequestBuilder;
-import org.asynchttpclient.Response;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Http post request logger that sends druid's request log lines to keystone
+ * gateway for eventual persistence to the hive table default.druid_logs
+ */
 public class NetflixHttpPostRequestLogger implements RequestLogger
 {
   private AsyncHttpClient client;
@@ -39,20 +58,25 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
 
   private static final Logger log = new Logger(NetflixHttpPostRequestLogger.class);
 
-  @LifecycleStart
+  @Override
   public void start()
   {
     client = new DefaultAsyncHttpClient();
   }
 
-  @LifecycleStop
-  public void shutdown() throws IOException
+  @Override
+  public void stop()
   {
-    client.close();
+    try {
+      client.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
-  public void log(RequestLogLine requestLogLine)
+  public void logNativeQuery(RequestLogLine requestLogLine)
   {
     try {
       ObjectMapper mapper = new DefaultObjectMapper();
@@ -66,26 +90,17 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
       request.setUrl(URL);
       request.setHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json");
       request.setBody(body);
-      System.out.println("HTTP post request body: " + body);
-//      client.executeRequest(request, new AsyncCompletionHandler<Response>()
-//      {
-//        @Override
-//        public Response onCompleted(Response response)
-//        {
-//          return response;
-//        }
-//
-//        @Override
-//        public void onThrowable(Throwable t)
-//        {
-//          log.error(t, "Error while making the post request");
-//        }
-//      });
     }
     catch (Throwable e) {
       // Swallow the error and log it so the caller doesn't fail.
       log.error(e, "Error while building and executing the post request");
     }
+  }
+
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+  {
+    // no-op
   }
 
   @JsonTypeName("event")
