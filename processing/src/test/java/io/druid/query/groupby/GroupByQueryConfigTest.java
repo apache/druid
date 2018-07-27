@@ -90,7 +90,7 @@ public class GroupByQueryConfigTest
                     .setInterval(Intervals.of("2000/P1D"))
                     .setGranularity(Granularities.ALL)
                     .setContext(
-                        ImmutableMap.<String, Object>of(
+                        ImmutableMap.of(
                             "groupByStrategy", "v1",
                             "maxOnDiskStorage", 0,
                             "maxResults", 2,

@@ -45,14 +45,14 @@ public class MergeIntIteratorTest
   @Test(expected = NoSuchElementException.class)
   public void testNoIterators()
   {
-    IntIterator it = mergeAscending(Collections.<IntIterator>emptyList());
+    IntIterator it = mergeAscending(Collections.emptyList());
     assertEmpty(it);
   }
 
   @Test(expected = NoSuchElementException.class)
   public void testMergeEmptyIterators()
   {
-    IntIterator it = mergeAscending(Arrays.<IntIterator>asList(EMPTY_ITERATOR, EMPTY_ITERATOR));
+    IntIterator it = mergeAscending(Arrays.asList(EMPTY_ITERATOR, EMPTY_ITERATOR));
     assertEmpty(it);
   }
 

@@ -124,7 +124,7 @@ public class BasicAuthUtils
       return null;
     }
 
-    if (!authHeader.substring(0, 6).equals("Basic ")) {
+    if (!"Basic ".equals(authHeader.substring(0, 6))) {
       return null;
     }
 

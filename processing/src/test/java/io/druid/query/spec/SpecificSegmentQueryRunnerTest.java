@@ -38,7 +38,6 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -102,7 +101,7 @@ public class SpecificSegmentQueryRunnerTest
                                   .granularity(Granularities.ALL)
                                   .intervals(ImmutableList.of(Intervals.of("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
+                                      ImmutableList.of(
                                           new CountAggregatorFactory("rows")
                                       )
                                   )
@@ -179,7 +178,7 @@ public class SpecificSegmentQueryRunnerTest
                                   .granularity(Granularities.ALL)
                                   .intervals(ImmutableList.of(Intervals.of("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
+                                      ImmutableList.of(
                                           new CountAggregatorFactory("rows")
                                       )
                                   )

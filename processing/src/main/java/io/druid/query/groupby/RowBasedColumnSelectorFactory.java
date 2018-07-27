@@ -58,7 +58,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
   )
   {
     this.row = row;
-    this.rowSignature = rowSignature != null ? rowSignature : ImmutableMap.<String, ValueType>of();
+    this.rowSignature = rowSignature != null ? rowSignature : ImmutableMap.of();
   }
 
   public static RowBasedColumnSelectorFactory create(

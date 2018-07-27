@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -42,7 +43,7 @@ public class CombiningIterableTest
         new Result<Object>(DateTimes.of("2011-01-01"), 2L)
     );
 
-    Iterable<Result<Object>> expectedResults = Arrays.<Result<Object>>asList(
+    Iterable<Result<Object>> expectedResults = Collections.singletonList(
         new Result<Object>(DateTimes.of("2011-01-01"), 3L)
     );
 

@@ -34,7 +34,7 @@ import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.segment.realtime.firehose.SqlFirehoseFactory;
 import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -49,7 +49,7 @@ public class FirehoseModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
+    return Collections.<Module>singletonList(
         new SimpleModule("FirehoseModule")
             .registerSubtypes(
                 new NamedType(ClippedFirehoseFactory.class, "clipped"),

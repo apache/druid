@@ -237,8 +237,8 @@ public class Sink implements Iterable<FireHydrant>
         schema.getDataSource(),
         interval,
         version,
-        ImmutableMap.<String, Object>of(),
-        Lists.<String>newArrayList(),
+        ImmutableMap.of(),
+        Lists.newArrayList(),
         Lists.transform(
             Arrays.asList(schema.getAggregators()), new Function<AggregatorFactory, String>()
             {

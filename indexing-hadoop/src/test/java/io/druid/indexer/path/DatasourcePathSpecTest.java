@@ -104,7 +104,7 @@ public class DatasourcePathSpecTest
                 ingestionSpec1.getDataSource(),
                 Intervals.of("2000/3000"),
                 "ver",
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "local",
                     "path", "/tmp/index.zip"
                 ),
@@ -120,7 +120,7 @@ public class DatasourcePathSpecTest
                 ingestionSpec1.getDataSource(),
                 Intervals.of("2050/3000"),
                 "ver",
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "hdfs",
                     "path", "/tmp/index.zip"
                 ),
@@ -139,7 +139,7 @@ public class DatasourcePathSpecTest
                 ingestionSpec2.getDataSource(),
                 Intervals.of("2000/3000"),
                 "ver",
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "local",
                     "path", "/tmp2/index.zip"
                 ),
@@ -348,7 +348,7 @@ public class DatasourcePathSpecTest
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "paths",
                     "/tmp/dummy",
                     "type",

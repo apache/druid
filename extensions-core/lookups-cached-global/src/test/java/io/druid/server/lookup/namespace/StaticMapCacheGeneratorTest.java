@@ -21,8 +21,6 @@ package io.druid.server.lookup.namespace;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.query.lookup.namespace.CacheGenerator;
-import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
@@ -50,7 +48,7 @@ public class StaticMapCacheGeneratorTest
     NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
     scheduler = new CacheScheduler(
         noopServiceEmitter,
-        Collections.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>emptyMap(),
+        Collections.emptyMap(),
         new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
     );
   }

@@ -145,7 +145,7 @@ public class FinalizingFieldAccessPostAggregatorTest
     computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val4")));
 
     Collections.sort(computedValues, postAgg.getComparator());
-    Assert.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[]{}));
+    Assert.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[0]));
     EasyMock.verify();
   }
 
@@ -171,7 +171,7 @@ public class FinalizingFieldAccessPostAggregatorTest
     computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val4")));
     Collections.sort(computedValues, postAgg.getComparator());
 
-    Assert.assertArrayEquals(new Object[]{null, "test_val1", "test_val2", "test_val4"}, computedValues.toArray(new Object[]{}));
+    Assert.assertArrayEquals(new Object[]{null, "test_val1", "test_val2", "test_val4"}, computedValues.toArray(new Object[0]));
 
     EasyMock.verify();
   }

@@ -33,10 +33,10 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
@@ -161,9 +161,9 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_REALTIME_TASK_PRIORITY);
+    return Tasks.DEFAULT_REALTIME_TASK_PRIORITY;
   }
 
   @Override

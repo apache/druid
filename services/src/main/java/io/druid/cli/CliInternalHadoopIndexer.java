@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
@@ -77,28 +76,23 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/internal-hadoop-indexer");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+    return ImmutableList.of(
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/internal-hadoop-indexer");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
-            // bind metadata storage config based on HadoopIOConfig
-            MetadataStorageUpdaterJobSpec metadataSpec = getHadoopDruidIndexerConfig().getSchema()
-                                                                                      .getIOConfig()
-                                                                                      .getMetadataUpdateSpec();
+          // bind metadata storage config based on HadoopIOConfig
+          MetadataStorageUpdaterJobSpec metadataSpec = getHadoopDruidIndexerConfig().getSchema()
+                                                                                    .getIOConfig()
+                                                                                    .getMetadataUpdateSpec();
 
-            binder.bind(new TypeLiteral<Supplier<MetadataStorageConnectorConfig>>() {})
-                  .toInstance(metadataSpec);
-            binder.bind(MetadataStorageTablesConfig.class).toInstance(metadataSpec.getMetadataStorageTablesConfig());
-            binder.bind(IndexerMetadataStorageCoordinator.class).to(IndexerSQLMetadataStorageCoordinator.class).in(
-                LazySingleton.class
-            );
-          }
+          binder.bind(new TypeLiteral<Supplier<MetadataStorageConnectorConfig>>() {})
+                .toInstance(metadataSpec);
+          binder.bind(MetadataStorageTablesConfig.class).toInstance(metadataSpec.getMetadataStorageTablesConfig());
+          binder.bind(IndexerMetadataStorageCoordinator.class).to(IndexerSQLMetadataStorageCoordinator.class).in(
+              LazySingleton.class
+          );
         }
     );
   }
@@ -150,7 +144,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
             final URI argumentSpecUri = new URI(argumentSpec);
             final String argumentSpecScheme = argumentSpecUri.getScheme();
 
-            if (argumentSpecScheme == null || argumentSpecScheme.equals("file")) {
+            if (argumentSpecScheme == null || "file".equals(argumentSpecScheme)) {
               // File URI.
               localConfigFile = new File(argumentSpecUri.getPath());
             }

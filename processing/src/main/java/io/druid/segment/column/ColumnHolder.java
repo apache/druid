@@ -34,7 +34,7 @@ public interface ColumnHolder
   static boolean storeDoubleAsFloat()
   {
     String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
-    return !StringUtils.toLowerCase(value).equals("double");
+    return !"double".equals(StringUtils.toLowerCase(value));
   }
 
   ColumnCapabilities getCapabilities();

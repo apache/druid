@@ -73,7 +73,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
       testDatasource,
       Intervals.of("2000/3000"),
       "ver",
-      ImmutableMap.<String, Object>of(
+      ImmutableMap.of(
           "type", "local",
           "path", "/tmp/index1.zip"
       ),
@@ -88,7 +88,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
       testDatasource2,
       Intervals.of("2000/3000"),
       "ver2",
-      ImmutableMap.<String, Object>of(
+      ImmutableMap.of(
           "type", "local",
           "path", "/tmp/index2.zip"
       ),
@@ -137,7 +137,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             testDatasource,
             testDatasourceInterval,
             null,
-            ImmutableList.<DataSegment>of(SEGMENT),
+            ImmutableList.of(SEGMENT),
             null,
             null,
             null,
@@ -167,7 +167,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             testDatasource,
             testDatasourceInterval,
             null,
-            ImmutableList.<DataSegment>of(SEGMENT.withVersion("v2")),
+            ImmutableList.of(SEGMENT.withVersion("v2")),
             null,
             null,
             null,

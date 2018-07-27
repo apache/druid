@@ -221,7 +221,7 @@ public class VirtualColumns implements Cacheable
   public VirtualColumn[] getVirtualColumns()
   {
     // VirtualColumn[] instead of List<VirtualColumn> to aid Jackson serialization.
-    return virtualColumns.toArray(new VirtualColumn[]{});
+    return virtualColumns.toArray(new VirtualColumn[0]);
   }
 
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)

@@ -112,9 +112,9 @@ public class CachingCostBalancerStrategyBenchmark
         "dataSource",
         new Interval(referenceTime.plusHours(shift), referenceTime.plusHours(shift).plusHours(1)),
         "version",
-        Collections.<String, Object>emptyMap(),
-        Collections.<String>emptyList(),
-        Collections.<String>emptyList(),
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        Collections.emptyList(),
         null,
         0,
         100

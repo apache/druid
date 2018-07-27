@@ -54,7 +54,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -231,7 +230,7 @@ public class RealtimeManagerTest
     ));
 
     realtimeManager = new RealtimeManager(
-        Arrays.<FireDepartment>asList(
+        Collections.singletonList(
             new FireDepartment(
                 schema,
                 ioConfig,
@@ -253,7 +252,7 @@ public class RealtimeManagerTest
     ));
 
     realtimeManager2 = new RealtimeManager(
-        Arrays.<FireDepartment>asList(
+        Collections.singletonList(
             new FireDepartment(
                 schema2,
                 ioConfig2,
@@ -488,7 +487,7 @@ public class RealtimeManagerTest
           .builder()
           .setDataSource(QueryRunnerTestHelper.dataSource)
           .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+          .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
           .setAggregatorSpecs(
               Arrays.asList(
                   QueryRunnerTestHelper.rowsCount,
@@ -566,7 +565,7 @@ public class RealtimeManagerTest
           .builder()
           .setDataSource(QueryRunnerTestHelper.dataSource)
           .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+          .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
           .setAggregatorSpecs(
               Arrays.asList(
                   QueryRunnerTestHelper.rowsCount,
@@ -582,7 +581,7 @@ public class RealtimeManagerTest
           factory,
           realtimeManager3.getQueryRunnerForSegments(
               query,
-              ImmutableList.<SegmentDescriptor>of(
+              ImmutableList.of(
                   new SegmentDescriptor(
                       Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"),
                       "ver",
@@ -597,7 +596,7 @@ public class RealtimeManagerTest
           factory,
           realtimeManager3.getQueryRunnerForSegments(
               query,
-              ImmutableList.<SegmentDescriptor>of(
+              ImmutableList.of(
                   new SegmentDescriptor(
                       Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"),
                       "ver",
@@ -672,13 +671,13 @@ public class RealtimeManagerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(
             new MultipleSpecificSegmentSpec(
-                ImmutableList.<SegmentDescriptor>of(
+                ImmutableList.of(
                     descriptor_26_28_0,
                     descriptor_28_29_0,
                     descriptor_26_28_1,
                     descriptor_28_29_1
                 )))
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -688,7 +687,7 @@ public class RealtimeManagerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final Map<Interval, QueryRunner> runnerMap = ImmutableMap.<Interval, QueryRunner>of(
+    final Map<Interval, QueryRunner> runnerMap = ImmutableMap.of(
         interval_26_28,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
@@ -716,7 +715,7 @@ public class RealtimeManagerTest
         factory,
         realtimeManager3.getQueryRunnerForSegments(
             query,
-            ImmutableList.<SegmentDescriptor>of(
+            ImmutableList.of(
                 descriptor_26_28_0)
         ),
         query
@@ -727,7 +726,7 @@ public class RealtimeManagerTest
         factory,
         realtimeManager3.getQueryRunnerForSegments(
             query,
-            ImmutableList.<SegmentDescriptor>of(
+            ImmutableList.of(
                 descriptor_28_29_0)
         ),
         query
@@ -738,7 +737,7 @@ public class RealtimeManagerTest
         factory,
         realtimeManager3.getQueryRunnerForSegments(
             query,
-            ImmutableList.<SegmentDescriptor>of(
+            ImmutableList.of(
                 descriptor_26_28_1)
         ),
         query
@@ -749,7 +748,7 @@ public class RealtimeManagerTest
         factory,
         realtimeManager3.getQueryRunnerForSegments(
             query,
-            ImmutableList.<SegmentDescriptor>of(
+            ImmutableList.of(
                 descriptor_28_29_1)
         ),
         query
@@ -797,7 +796,7 @@ public class RealtimeManagerTest
         @Override
         public List<String> getDimensions()
         {
-          return Arrays.asList("testDim");
+          return Collections.singletonList("testDim");
         }
 
         @Override

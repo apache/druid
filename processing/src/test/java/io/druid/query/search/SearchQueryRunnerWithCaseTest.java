@@ -41,6 +41,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -193,7 +194,7 @@ public class SearchQueryRunnerWithCaseTest
   {
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
-        .dimensions(Arrays.asList(qualityDimension))
+        .dimensions(Collections.singletonList(qualityDimension))
         .intervals("2011-01-12T00:00:00.000Z/2011-01-13T00:00:00.000Z");
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
 
@@ -207,12 +208,12 @@ public class SearchQueryRunnerWithCaseTest
   {
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
-        .dimensions(Arrays.asList(qualityDimension))
+        .dimensions(Collections.singletonList(qualityDimension))
         .intervals("2011-01-10T00:00:00.000Z/2011-01-11T00:00:00.000Z");
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("business").build();
-    expectedResults.put(qualityDimension, Sets.<String>newHashSet());
+    expectedResults.put(qualityDimension, Sets.newHashSet());
     checkSearchQuery(searchQuery, expectedResults);
   }
 

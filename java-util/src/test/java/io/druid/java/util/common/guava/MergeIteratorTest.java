@@ -34,7 +34,7 @@ public class MergeIteratorTest
   public void testSanity()
   {
     MergeIterator<Integer> iter = new MergeIterator<>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         Lists.newArrayList(
             Arrays.asList(1, 3, 5, 7, 9).iterator(),
             Arrays.asList(2, 8).iterator(),
@@ -49,7 +49,7 @@ public class MergeIteratorTest
   public void testScrewsUpOnOutOfOrder()
   {
     MergeIterator<Integer> iter = new MergeIterator<>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         Lists.newArrayList(
             Arrays.asList(1, 3, 5, 4, 7, 9).iterator(),
             Arrays.asList(2, 8).iterator(),

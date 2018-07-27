@@ -41,10 +41,10 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ColumnDescriptor;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -74,6 +74,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +101,7 @@ public class IndexMergerV9 implements IndexMerger
 
   private File makeIndexFiles(
       final List<IndexableAdapter> adapters,
-      final AggregatorFactory[] metricAggs,
+      final @Nullable AggregatorFactory[] metricAggs,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
@@ -116,7 +117,7 @@ public class IndexMergerV9 implements IndexMerger
 
     List<Metadata> metadataList = Lists.transform(adapters, IndexableAdapter::getMetadata);
 
-    Metadata segmentMetadata;
+    final Metadata segmentMetadata;
     if (metricAggs != null) {
       AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
       for (int i = 0; i < metricAggs.length; i++) {
@@ -776,7 +777,7 @@ public class IndexMergerV9 implements IndexMerger
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
-        Arrays.<IndexableAdapter>asList(
+        Collections.singletonList(
             new IncrementalIndexAdapter(
                 dataInterval,
                 index,

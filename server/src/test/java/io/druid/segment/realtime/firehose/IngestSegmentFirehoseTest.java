@@ -130,7 +130,7 @@ public class IngestSegmentFirehoseTest
             .setIndexSchema(
                 new IncrementalIndexSchema.Builder()
                     .withDimensionsSpec(DIMENSIONS_SPEC_REINDEX)
-                    .withMetrics(AGGREGATORS_REINDEX.toArray(new AggregatorFactory[]{}))
+                    .withMetrics(AGGREGATORS_REINDEX.toArray(new AggregatorFactory[0]))
                     .build()
             )
         .setMaxRowCount(5000)
@@ -220,7 +220,7 @@ public class IngestSegmentFirehoseTest
             .setIndexSchema(
                 new IncrementalIndexSchema.Builder()
                     .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
-                    .withMetrics(AGGREGATORS.toArray(new AggregatorFactory[]{}))
+                    .withMetrics(AGGREGATORS.toArray(new AggregatorFactory[0]))
                     .build()
             )
         .setMaxRowCount(5000)

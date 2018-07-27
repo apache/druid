@@ -80,7 +80,7 @@ public class HashBasedNumberedShardSpecTest
   @Test
   public void testPartitionChunks()
   {
-    final List<ShardSpec> specs = ImmutableList.<ShardSpec>of(
+    final List<ShardSpec> specs = ImmutableList.of(
         new HashBasedNumberedShardSpec(0, 3, null, ServerTestHelper.MAPPER),
         new HashBasedNumberedShardSpec(1, 3, null, ServerTestHelper.MAPPER),
         new HashBasedNumberedShardSpec(2, 3, null, ServerTestHelper.MAPPER)
@@ -153,7 +153,7 @@ public class HashBasedNumberedShardSpecTest
     final InputRow inputRow = new MapBasedInputRow(
         time,
         ImmutableList.of("visitor_id", "cnt"),
-        ImmutableMap.<String, Object>of("visitor_id", "v1", "cnt", 10)
+        ImmutableMap.of("visitor_id", "v1", "cnt", 10)
     );
     Assert.assertEquals(ImmutableList.of(Lists.newArrayList("v1")), shardSpec1.getGroupKey(time.getMillis(), inputRow));
 

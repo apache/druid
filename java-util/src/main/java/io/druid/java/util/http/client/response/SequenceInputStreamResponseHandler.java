@@ -66,7 +66,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
       throw Throwables.propagate(e);
     }
     byteCount.addAndGet(response.getContent().readableBytes());
-    return ClientResponse.<InputStream>finished(
+    return ClientResponse.finished(
         new SequenceInputStream(
             new Enumeration<InputStream>()
             {
@@ -147,7 +147,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
         done.set(true);
       }
     }
-    return ClientResponse.<InputStream>finished(clientResponse.getObj());
+    return ClientResponse.finished(clientResponse.getObj());
   }
 
   @Override

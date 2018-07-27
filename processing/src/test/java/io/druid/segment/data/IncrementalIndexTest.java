@@ -77,6 +77,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -250,7 +251,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
+            ImmutableMap.of("dim1", "1", "dim2", "2")
         )
     );
 
@@ -258,7 +259,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2"),
-            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
+            ImmutableMap.of("dim1", "3", "dim2", "4")
         )
     );
   }
@@ -310,13 +311,13 @@ public class IncrementalIndexTest
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("2"), row.getDimension("dim2"));
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("4"), row.getDimension("dim2"));
   }
 
   @Test
@@ -349,7 +350,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2", "dim3"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "dim3", Lists.newArrayList("b", "a"), "met1", 10)
+            ImmutableMap.of("dim1", "1", "dim2", "2", "dim3", Lists.newArrayList("b", "a"), "met1", 10)
         )
     );
 
@@ -357,7 +358,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2", "dim3"),
-            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4", "dim3", Lists.newArrayList("c", "d"), "met1", 11)
+            ImmutableMap.of("dim1", "3", "dim2", "4", "dim3", Lists.newArrayList("c", "d"), "met1", 11)
         )
     );
 
@@ -377,8 +378,8 @@ public class IncrementalIndexTest
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("2"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("a", "b"), row.getDimension("dim3"));
     Assert.assertEquals(1L, row.getMetric("count"));
     Assert.assertEquals(1L, row.getMetric("count_selector_filtered"));
@@ -388,8 +389,8 @@ public class IncrementalIndexTest
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("4"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("c", "d"), row.getDimension("dim3"));
     Assert.assertEquals(1L, row.getMetric("count"));
     Assert.assertEquals(0L, row.getMetric("count_selector_filtered"));
@@ -422,7 +423,7 @@ public class IncrementalIndexTest
     final IncrementalIndex index = closer.closeLater(
         indexCreator.createIndex(
             ingestAggregatorFactories.toArray(
-                new AggregatorFactory[ingestAggregatorFactories.size()]
+                new AggregatorFactory[0]
             )
         )
     );
@@ -535,7 +536,7 @@ public class IncrementalIndexTest
 
 
     final IncrementalIndex index = closer.closeLater(
-        indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[dimensionCount]))
+        indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[0]))
     );
     final int concurrentThreads = 2;
     final int elementsPerThread = 10_000;
@@ -649,7 +650,7 @@ public class IncrementalIndexTest
                             }
                             queriesAccumualted.incrementAndGet();
                             return Lists.asList(in.getValue().getDoubleMetric("doubleSumResult0"), accumulated)
-                                        .toArray(new Double[accumulated.length + 1]);
+                                        .toArray(new Double[0]);
                           }
                         }
                     );
@@ -794,21 +795,21 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             1481871600000L,
             Arrays.asList("name", "host"),
-            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+            ImmutableMap.of("name", "name1", "host", "host")
         )
     );
     index.add(
         new MapBasedInputRow(
             1481871670000L,
             Arrays.asList("name", "table"),
-            ImmutableMap.<String, Object>of("name", "name2", "table", "table")
+            ImmutableMap.of("name", "name2", "table", "table")
         )
     );
     index.add(
         new MapBasedInputRow(
             1481871600000L,
             Arrays.asList("name", "host"),
-            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+            ImmutableMap.of("name", "name1", "host", "host")
         )
     );
 

@@ -40,7 +40,6 @@ import io.druid.query.TableDataSource;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -141,7 +140,7 @@ public class ScanQueryRunnerTest
   {
     return ScanQuery.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .columns(Arrays.<String>asList())
+                    .columns(Collections.emptyList())
                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                     .limit(3)
                     .legacy(legacy);
@@ -421,7 +420,7 @@ public class ScanQueryRunnerTest
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
     Iterable<ScanResultValue> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap())
+        .run(QueryPlus.wrap(query), Maps.newHashMap())
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -469,7 +468,7 @@ public class ScanQueryRunnerTest
         .intervals(I_0112_0114)
         .filters(
             new AndDimFilter(
-                Arrays.<DimFilter>asList(
+                Arrays.asList(
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null),
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo", null)
                 )

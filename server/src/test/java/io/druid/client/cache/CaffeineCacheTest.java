@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
@@ -72,7 +71,7 @@ public class CaffeineCacheTest
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig();
     Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -100,7 +99,7 @@ public class CaffeineCacheTest
     final String uuid = UUID.randomUUID().toString();
     System.setProperty(uuid + ".type", "caffeine");
     final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -170,7 +169,7 @@ public class CaffeineCacheTest
     result = cache.getBulk(Lists.newArrayList(missingKey));
     Assert.assertEquals(result.size(), 0);
 
-    result = cache.getBulk(Lists.<Cache.NamedKey>newArrayList());
+    result = cache.getBulk(Lists.newArrayList());
     Assert.assertEquals(result.size(), 0);
   }
 
@@ -385,7 +384,7 @@ public class CaffeineCacheTest
     properties.put(keyPrefix + ".cacheExecutorFactory", "single_thread");
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
+        ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -416,7 +415,7 @@ public class CaffeineCacheTest
     properties.put(keyPrefix + ".cacheExecutorFactory", "CoMmON_FjP");
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
+        ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -444,7 +443,7 @@ public class CaffeineCacheTest
     final Properties properties = new Properties();
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
+        ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);

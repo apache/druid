@@ -62,6 +62,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -258,7 +259,7 @@ public class SegmentMetadataQueryTest
   {
     List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery), Maps.newHashMap()).toList();
 
-    Assert.assertEquals(Arrays.asList(expectedSegmentAnalysis1), results);
+    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
   }
 
   @Test
@@ -304,7 +305,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -372,7 +373,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -440,7 +441,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -557,7 +558,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -609,7 +610,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -622,7 +623,7 @@ public class SegmentMetadataQueryTest
         .newSegmentMetadataQueryBuilder()
         .dataSource("testing")
         .intervals("2013/2014")
-        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
         .analysisTypes()
         .merge(true)
         .build();
@@ -671,7 +672,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -684,7 +685,7 @@ public class SegmentMetadataQueryTest
         .newSegmentMetadataQueryBuilder()
         .dataSource("testing")
         .intervals("2013/2014")
-        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
         .analysisTypes(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
         .merge(true)
         .build();
@@ -729,7 +730,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -742,7 +743,7 @@ public class SegmentMetadataQueryTest
         .newSegmentMetadataQueryBuilder()
         .dataSource("testing")
         .intervals("2013/2014")
-        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
         .analysisTypes(SegmentMetadataQuery.AnalysisType.TIMESTAMPSPEC)
         .merge(true)
         .build();
@@ -787,7 +788,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -800,7 +801,7 @@ public class SegmentMetadataQueryTest
         .newSegmentMetadataQueryBuilder()
         .dataSource("testing")
         .intervals("2013/2014")
-        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+        .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
         .analysisTypes(SegmentMetadataQuery.AnalysisType.QUERYGRANULARITY)
         .merge(true)
         .build();
@@ -818,7 +819,7 @@ public class SegmentMetadataQueryTest
     Result<BySegmentResultValue> bySegmentResult = new Result<BySegmentResultValue>(
         expectedSegmentAnalysis1.getIntervals().get(0).getStart(),
         new BySegmentResultValueClass(
-            Arrays.asList(
+            Collections.singletonList(
                 expectedSegmentAnalysis1
             ), expectedSegmentAnalysis1.getId(), testQuery.getIntervals().get(0)
         )
@@ -835,7 +836,7 @@ public class SegmentMetadataQueryTest
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
                 //https://github.com/druid-io/druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+                Lists.newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
             )
         ),
         toolChest
@@ -844,7 +845,7 @@ public class SegmentMetadataQueryTest
     TestHelper.assertExpectedObjects(
         ImmutableList.of(bySegmentResult, bySegmentResult),
         myRunner.run(
-            QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.<String, Object>of("bySegment", true))),
+            QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.of("bySegment", true))),
             Maps.newHashMap()
         ),
         "failed SegmentMetadata bySegment query"
@@ -905,7 +906,7 @@ public class SegmentMetadataQueryTest
   {
     SegmentMetadataQuery testQuery = Druids.newSegmentMetadataQueryBuilder()
                                            .dataSource("testing")
-                                           .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                                           .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
                                            .merge(true)
                                            .build();
     /* No interval specified, should use default interval */
@@ -1075,7 +1076,7 @@ public class SegmentMetadataQueryTest
   {
     SegmentMetadataQuery oneColumnQuery = Druids.newSegmentMetadataQueryBuilder()
                                                 .dataSource("testing")
-                                                .toInclude(new ListColumnIncluderator(Arrays.asList("foo")))
+                                                .toInclude(new ListColumnIncluderator(Collections.singletonList("foo")))
                                                 .build();
 
     SegmentMetadataQuery twoColumnQuery = Druids.newSegmentMetadataQueryBuilder()
@@ -1102,12 +1103,12 @@ public class SegmentMetadataQueryTest
 
     SegmentMetadataQuery query1 = Druids.newSegmentMetadataQueryBuilder()
                                         .dataSource("testing")
-                                        .toInclude(new ListColumnIncluderator(Arrays.asList("foo")))
+                                        .toInclude(new ListColumnIncluderator(Collections.singletonList("foo")))
                                         .build();
 
     SegmentMetadataQuery query2 = Druids.newSegmentMetadataQueryBuilder()
                                         .dataSource("testing")
-                                        .toInclude(new ListColumnIncluderator(Arrays.asList("foo")))
+                                        .toInclude(new ListColumnIncluderator(Collections.singletonList("foo")))
                                         .analysisTypes(SegmentMetadataQuery.AnalysisType.MINMAX)
                                         .build();
 

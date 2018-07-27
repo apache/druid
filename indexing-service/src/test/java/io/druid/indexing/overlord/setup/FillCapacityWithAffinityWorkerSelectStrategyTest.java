@@ -45,15 +45,15 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
             "lhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "lhost", "lhost", 1, "v1"), 0,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             )
         ),
@@ -82,15 +82,15 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
             "lhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "lhost", "lhost", 1, "v1"), 0,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             )
         ),
@@ -112,8 +112,8 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             )
         ),

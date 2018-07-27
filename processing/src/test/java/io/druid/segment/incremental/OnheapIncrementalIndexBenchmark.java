@@ -256,7 +256,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
   @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
   {
-    return ImmutableList.<Object[]>of(
+    return ImmutableList.of(
         new Object[]{OnheapIncrementalIndex.class},
         new Object[]{MapIncrementalIndex.class}
     );

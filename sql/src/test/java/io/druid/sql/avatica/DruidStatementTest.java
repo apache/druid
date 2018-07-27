@@ -137,7 +137,7 @@ public class DruidStatementTest extends CalciteTestBase
         Meta.Frame.create(
             0,
             true,
-            Lists.<Object>newArrayList(
+            Lists.newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
                 new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f},
                 new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
@@ -164,7 +164,7 @@ public class DruidStatementTest extends CalciteTestBase
         Meta.Frame.create(
             0,
             false,
-            Lists.<Object>newArrayList(
+            Lists.newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
                 new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f}
             )
@@ -179,7 +179,7 @@ public class DruidStatementTest extends CalciteTestBase
         Meta.Frame.create(
             2,
             true,
-            Lists.<Object>newArrayList(
+            Lists.newArrayList(
                 new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
                 new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
                 new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},

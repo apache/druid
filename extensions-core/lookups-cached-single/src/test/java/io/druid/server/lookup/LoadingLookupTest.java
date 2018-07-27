@@ -68,7 +68,7 @@ public class LoadingLookupTest
             .andReturn(Lists.newArrayList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(ImmutableMap.of("value", Lists.newArrayList("key")), loadingLookup.unapplyAll(ImmutableSet.<String>of("value")));
+    Assert.assertEquals(ImmutableMap.of("value", Lists.newArrayList("key")), loadingLookup.unapplyAll(ImmutableSet.of("value")));
     EasyMock.verify(reverseLookupCache);
   }
 

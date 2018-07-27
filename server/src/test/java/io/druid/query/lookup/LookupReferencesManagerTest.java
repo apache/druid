@@ -75,7 +75,7 @@ public class LookupReferencesManagerTest
     config = createMock(LookupListeningAnnouncerConfig.class);
 
     lookupExtractorFactory = new MapLookupExtractorFactory(
-        ImmutableMap.<String, String>of(
+        ImmutableMap.of(
             "key",
             "value"
         ), true

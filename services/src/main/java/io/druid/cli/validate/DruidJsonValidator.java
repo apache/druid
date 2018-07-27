@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
@@ -95,22 +94,17 @@ public class DruidJsonValidator extends GuiceRunnable
   @Override
   protected List<? extends com.google.inject.Module> getModules()
   {
-    return ImmutableList.<com.google.inject.Module>of(
+    return ImmutableList.of(
         // It's unknown if those modules are required in DruidJsonValidator.
         // Maybe some of those modules could be removed.
         // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new com.google.inject.Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/validator");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-          }
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/validator");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
         }
     );
   }
@@ -161,13 +155,13 @@ public class DruidJsonValidator extends GuiceRunnable
     }
 
     try {
-      if (type.equalsIgnoreCase("query")) {
+      if ("query".equalsIgnoreCase(type)) {
         jsonMapper.readValue(file, Query.class);
-      } else if (type.equalsIgnoreCase("hadoopConfig")) {
+      } else if ("hadoopConfig".equalsIgnoreCase(type)) {
         jsonMapper.readValue(file, HadoopDruidIndexerConfig.class);
-      } else if (type.equalsIgnoreCase("task")) {
+      } else if ("task".equalsIgnoreCase(type)) {
         jsonMapper.readValue(file, Task.class);
-      } else if (type.equalsIgnoreCase("parse")) {
+      } else if ("parse".equalsIgnoreCase(type)) {
         final StringInputRowParser parser;
         if (file.isFile()) {
           logWriter.write("loading parse spec from file '" + file + "'");
@@ -184,7 +178,7 @@ public class DruidJsonValidator extends GuiceRunnable
           final CharSource source;
           if (new File(resource).isFile()) {
             logWriter.write("loading data from file '" + resource + "'");
-            source = Resources.asByteSource(new File(resource).toURL()).asCharSource(
+            source = Resources.asByteSource(new File(resource).toURI().toURL()).asCharSource(
                 Charset.forName(
                     parser.getEncoding()
                 )

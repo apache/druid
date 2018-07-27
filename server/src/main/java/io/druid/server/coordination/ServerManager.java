@@ -63,7 +63,6 @@ import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
@@ -242,7 +241,8 @@ public class ServerManager implements QuerySegmentWalker
                 );
 
                 if (entry == null) {
-                  return Arrays.<QueryRunner<T>>asList(new ReportTimelineMissingSegmentQueryRunner<T>(input));
+                  return Collections.singletonList(
+                      new ReportTimelineMissingSegmentQueryRunner<T>(input));
                 }
 
                 final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(input.getPartitionNumber());

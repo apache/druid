@@ -85,7 +85,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
     synchronized (started) {
       log.info("Starting Ambari Metrics Emitter.");
       if (!started.get()) {
-        if (config.getProtocol().equals("https")) {
+        if ("https".equals(config.getProtocol())) {
           loadTruststore(config.getTrustStorePath(), config.getTrustStoreType(), config.getTrustStorePassword());
         }
         exec.scheduleAtFixedRate(

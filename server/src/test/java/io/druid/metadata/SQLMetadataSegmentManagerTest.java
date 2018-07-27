@@ -54,7 +54,7 @@ public class SQLMetadataSegmentManagerTest
       "wikipedia",
       Intervals.of("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000"),
       "2012-03-16T00:36:30.848Z",
-      ImmutableMap.<String, Object>of(
+      ImmutableMap.of(
           "type", "s3_zip",
           "bucket", "test",
           "key", "wikipedia/index/y=2012/m=03/d=15/2012-03-16T00:36:30.848Z/0/index.zip"
@@ -70,7 +70,7 @@ public class SQLMetadataSegmentManagerTest
       "wikipedia",
       Intervals.of("2012-01-05T00:00:00.000/2012-01-06T00:00:00.000"),
       "2012-01-06T22:19:12.565Z",
-      ImmutableMap.<String, Object>of(
+      ImmutableMap.of(
           "type", "s3_zip",
           "bucket", "test",
           "key", "wikipedia/index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip"
@@ -118,6 +118,7 @@ public class SQLMetadataSegmentManagerTest
   {
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
         manager.getAllDatasourceNames()
@@ -149,6 +150,7 @@ public class SQLMetadataSegmentManagerTest
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
 
     Assert.assertEquals(
         "wikipedia", Iterables.getOnlyElement(manager.getInventory()).getName()
@@ -160,6 +162,7 @@ public class SQLMetadataSegmentManagerTest
   {
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
     Assert.assertTrue(manager.removeDatasource("wikipedia"));
 
     Assert.assertEquals(
@@ -178,6 +181,7 @@ public class SQLMetadataSegmentManagerTest
   {
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
 
     final String newDataSource = "wikipedia2";
     final DataSegment newSegment = new DataSegment(
@@ -207,6 +211,7 @@ public class SQLMetadataSegmentManagerTest
   {
     manager.start();
     manager.poll();
+    Assert.assertTrue(manager.isStarted());
 
     final String newDataSource = "wikipedia2";
     final DataSegment newSegment = new DataSegment(
