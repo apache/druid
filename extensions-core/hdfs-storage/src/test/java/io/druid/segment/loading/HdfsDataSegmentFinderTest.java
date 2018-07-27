@@ -63,7 +63,7 @@ public class HdfsDataSegmentFinderTest
       .interval(Intervals.of("2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"))
       .version("2015-10-21T22:07:57.074Z")
       .loadSpec(
-          ImmutableMap.<String, Object>of(
+          ImmutableMap.of(
               "type",
               "hdfs",
               "path",
@@ -103,7 +103,7 @@ public class HdfsDataSegmentFinderTest
       .interval(Intervals.of("2013-09-03T00:00:00.000Z/2013-09-04T00:00:00.000Z"))
       .version("2015-10-21T22:07:57.074Z")
       .loadSpec(
-          ImmutableMap.<String, Object>of(
+          ImmutableMap.of(
               "type",
               "hdfs",
               "path",

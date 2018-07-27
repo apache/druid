@@ -179,7 +179,7 @@ public class InputRowSerdeTest
         aggregatorFactories
     );
     Assert.assertEquals(
-        Arrays.asList("Unable to parse value[m3v] for field[m3]"),
+        Collections.singletonList("Unable to parse value[m3v] for field[m3]"),
         result.getParseExceptionMessages()
     );
   }
@@ -198,7 +198,7 @@ public class InputRowSerdeTest
     };
 
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
+        Collections.singletonList(
             new LongDimensionSchema("d1")
         ),
         null,
@@ -206,12 +206,12 @@ public class InputRowSerdeTest
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
-        Arrays.asList("could not convert value [d1v] to long"),
+        Collections.singletonList("could not convert value [d1v] to long"),
         result.getParseExceptionMessages()
     );
 
     dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
+        Collections.singletonList(
             new FloatDimensionSchema("d1")
         ),
         null,
@@ -219,12 +219,12 @@ public class InputRowSerdeTest
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
-        Arrays.asList("could not convert value [d1v] to float"),
+        Collections.singletonList("could not convert value [d1v] to float"),
         result.getParseExceptionMessages()
     );
 
     dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
+        Collections.singletonList(
             new DoubleDimensionSchema("d1")
         ),
         null,
@@ -232,7 +232,7 @@ public class InputRowSerdeTest
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
-        Arrays.asList("could not convert value [d1v] to double"),
+        Collections.singletonList("could not convert value [d1v] to double"),
         result.getParseExceptionMessages()
     );
   }

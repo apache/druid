@@ -138,7 +138,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   @Override
   public Map<String, Object> makeLoadSpec(URI uri)
   {
-    return ImmutableMap.<String, Object>of(
+    return ImmutableMap.of(
         "type",
         CloudFilesStorageDruidModule.SCHEME,
         "region",

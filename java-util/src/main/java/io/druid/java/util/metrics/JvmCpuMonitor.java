@@ -43,7 +43,7 @@ public class JvmCpuMonitor extends FeedDefiningMonitor
 
   public JvmCpuMonitor()
   {
-    this(ImmutableMap.<String, String[]>of());
+    this(ImmutableMap.of());
   }
 
   public JvmCpuMonitor(Map<String, String[]> dimensions)

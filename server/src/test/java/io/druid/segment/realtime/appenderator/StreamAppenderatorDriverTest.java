@@ -73,21 +73,21 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private static final long PUBLISH_TIMEOUT = 10000;
   private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
 
-  private static final List<InputRow> ROWS = Arrays.<InputRow>asList(
+  private static final List<InputRow> ROWS = Arrays.asList(
       new MapBasedInputRow(
           DateTimes.of("2000"),
           ImmutableList.of("dim1"),
-          ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
+          ImmutableMap.of("dim1", "foo", "met1", "1")
       ),
       new MapBasedInputRow(
           DateTimes.of("2000T01"),
           ImmutableList.of("dim1"),
-          ImmutableMap.<String, Object>of("dim1", "foo", "met1", 2.0)
+          ImmutableMap.of("dim1", "foo", "met1", 2.0)
       ),
       new MapBasedInputRow(
           DateTimes.of("2000T01"),
           ImmutableList.of("dim2"),
-          ImmutableMap.<String, Object>of("dim2", "bar", "met1", 2.0)
+          ImmutableMap.of("dim2", "bar", "met1", 2.0)
       )
   );
 

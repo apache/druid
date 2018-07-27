@@ -26,6 +26,7 @@ import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -61,7 +62,7 @@ public class RegexParserTest
 
     final Parser<String, Object> parser = new RegexParser(
         pattern,
-        Optional.<String>absent(),
+        Optional.absent(),
         fieldNames
     );
     String data = "79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be mybucket [06/Feb/2014:00:00:38 +0000] 192.0.2.3 79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be 3E57427F3EXAMPLE REST.GET.VERSIONING - \"GET /mybucket?versioning HTTP/1.1\" 200 - 113 - 7 - \"-\" \"S3Console/0.4\" -";
@@ -122,7 +123,7 @@ public class RegexParserTest
 
     final Parser<String, Object> parser = new RegexParser(
         pattern,
-        Optional.<String>absent(),
+        Optional.absent(),
         fieldNames
     );
     String data = "79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be mybucket [06/Feb/2014:00:01:00 +0000] 192.0.2.3 79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be 7B4A0FABBEXAMPLE REST.GET.VERSIONING - \"GET /mybucket?versioning HTTP/1.1\" 200 - 139 139 27 26 \"-\" \"() { foo;};echo; /bin/bash -c \"expr 299663299665 / 3; echo 333:; uname -a; echo 333:; id;\"\" -";
@@ -215,7 +216,7 @@ public class RegexParserTest
   {
     final String pattern = "AAAAA";
 
-    final List<String> fieldNames = Arrays.asList(
+    final List<String> fieldNames = Collections.singletonList(
         "dummy"
     );
 

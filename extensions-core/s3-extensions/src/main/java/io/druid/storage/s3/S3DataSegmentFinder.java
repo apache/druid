@@ -78,7 +78,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
       while (objectSummaryIterator.hasNext()) {
         final S3ObjectSummary objectSummary = objectSummaryIterator.next();
 
-        if (S3Utils.toFilename(objectSummary.getKey()).equals("descriptor.json")) {
+        if ("descriptor.json".equals(S3Utils.toFilename(objectSummary.getKey()))) {
           final String descriptorJson = objectSummary.getKey();
           String indexZip = S3Utils.indexZipForSegmentPath(descriptorJson);
 

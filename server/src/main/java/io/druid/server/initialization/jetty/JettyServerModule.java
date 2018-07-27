@@ -242,21 +242,19 @@ public class JettyServerModule extends JerseyServletModule
                                                 null : tlsServerConfig.getKeyManagerPasswordProvider().getPassword());
         if (tlsServerConfig.getIncludeCipherSuites() != null) {
           sslContextFactory.setIncludeCipherSuites(
-              tlsServerConfig.getIncludeCipherSuites()
-                             .toArray(new String[tlsServerConfig.getIncludeCipherSuites().size()]));
+              tlsServerConfig.getIncludeCipherSuites().toArray(new String[0]));
         }
         if (tlsServerConfig.getExcludeCipherSuites() != null) {
           sslContextFactory.setExcludeCipherSuites(
-              tlsServerConfig.getExcludeCipherSuites()
-                             .toArray(new String[tlsServerConfig.getExcludeCipherSuites().size()]));
+              tlsServerConfig.getExcludeCipherSuites().toArray(new String[0]));
         }
         if (tlsServerConfig.getIncludeProtocols() != null) {
           sslContextFactory.setIncludeProtocols(
-              tlsServerConfig.getIncludeProtocols().toArray(new String[tlsServerConfig.getIncludeProtocols().size()]));
+              tlsServerConfig.getIncludeProtocols().toArray(new String[0]));
         }
         if (tlsServerConfig.getExcludeProtocols() != null) {
           sslContextFactory.setExcludeProtocols(
-              tlsServerConfig.getExcludeProtocols().toArray(new String[tlsServerConfig.getExcludeProtocols().size()]));
+              tlsServerConfig.getExcludeProtocols().toArray(new String[0]));
         }
       } else {
         sslContextFactory = sslContextFactoryBinding.getProvider().get();

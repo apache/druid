@@ -192,7 +192,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final Sequence<Row> subqueryResult = mergeGroupByResults(
           groupByStrategy,
           subquery.withOverriddenContext(
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
                   //in the end when returning results to user. (note this is only respected by groupBy v1)
                   GroupByQueryHelper.CTX_KEY_SORT_RESULTS,

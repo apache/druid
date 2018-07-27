@@ -144,8 +144,8 @@ public class GraphiteEmitterConfig
   {
     this.waitForEventTime = waitForEventTime == null ? DEFAULT_GET_TIMEOUT : waitForEventTime;
     this.emitWaitTime = emitWaitTime == null ? 0 : emitWaitTime;
-    this.alertEmitters = alertEmitters == null ? Collections.<String>emptyList() : alertEmitters;
-    this.requestLogEmitters = requestLogEmitters == null ? Collections.<String>emptyList() : requestLogEmitters;
+    this.alertEmitters = alertEmitters == null ? Collections.emptyList() : alertEmitters;
+    this.requestLogEmitters = requestLogEmitters == null ? Collections.emptyList() : requestLogEmitters;
     this.druidToGraphiteEventConverter = Preconditions.checkNotNull(
         druidToGraphiteEventConverter,
         "Event converter can not ne null dude"

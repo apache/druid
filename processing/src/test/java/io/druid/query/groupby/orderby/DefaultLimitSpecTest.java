@@ -30,14 +30,11 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.TestHelper;
@@ -154,14 +151,14 @@ public class DefaultLimitSpecTest
   public void testBuildSimple()
   {
     DefaultLimitSpec limitSpec = new DefaultLimitSpec(
-        ImmutableList.<OrderByColumnSpec>of(),
+        ImmutableList.of(),
         2
     );
 
     Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
-        ImmutableList.<DimensionSpec>of(),
-        ImmutableList.<AggregatorFactory>of(),
-        ImmutableList.<PostAggregator>of(),
+        ImmutableList.of(),
+        ImmutableList.of(),
+        ImmutableList.of(),
         Granularities.NONE,
         false
     );
@@ -225,9 +222,9 @@ public class DefaultLimitSpecTest
     );
 
     Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
-        ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec("k1", "k1")),
-        ImmutableList.<AggregatorFactory>of(),
-        ImmutableList.<PostAggregator>of(),
+        ImmutableList.of(new DefaultDimensionSpec("k1", "k1")),
+        ImmutableList.of(),
+        ImmutableList.of(),
         Granularities.NONE,
         false
     );
@@ -251,13 +248,13 @@ public class DefaultLimitSpecTest
     );
 
     Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
-        ImmutableList.<DimensionSpec>of(
+        ImmutableList.of(
             new DefaultDimensionSpec("k1", "k1")
         ),
-        ImmutableList.<AggregatorFactory>of(
+        ImmutableList.of(
             new LongSumAggregatorFactory("k2", "k2")
         ),
-        ImmutableList.<PostAggregator>of(
+        ImmutableList.of(
             new ConstantPostAggregator("k3", 1L)
         ),
         Granularities.NONE,
@@ -270,13 +267,13 @@ public class DefaultLimitSpecTest
 
     // if there is an aggregator with same name then that is used to build ordering
     limitFn = limitSpec.build(
-        ImmutableList.<DimensionSpec>of(
+        ImmutableList.of(
             new DefaultDimensionSpec("k1", "k1")
         ),
-        ImmutableList.<AggregatorFactory>of(
+        ImmutableList.of(
             new LongSumAggregatorFactory("k1", "k1")
         ),
-        ImmutableList.<PostAggregator>of(
+        ImmutableList.of(
             new ConstantPostAggregator("k3", 1L)
         ),
         Granularities.NONE,
@@ -289,17 +286,17 @@ public class DefaultLimitSpecTest
 
     // if there is a post-aggregator with same name then that is used to build ordering
     limitFn = limitSpec.build(
-        ImmutableList.<DimensionSpec>of(
+        ImmutableList.of(
             new DefaultDimensionSpec("k1", "k1")
         ),
-        ImmutableList.<AggregatorFactory>of(
+        ImmutableList.of(
             new LongSumAggregatorFactory("k2", "k2")
         ),
-        ImmutableList.<PostAggregator>of(
+        ImmutableList.of(
             new ArithmeticPostAggregator(
                 "k1",
                 "+",
-                ImmutableList.<PostAggregator>of(
+                ImmutableList.of(
                     new ConstantPostAggregator("x", 1),
                     new ConstantPostAggregator("y", 1))
             )
@@ -314,9 +311,9 @@ public class DefaultLimitSpecTest
 
     // makes same result
     limitFn = limitSpec.build(
-        ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec("k1", "k1")),
-        ImmutableList.<AggregatorFactory>of(new LongSumAggregatorFactory("k2", "k2")),
-        ImmutableList.<PostAggregator>of(new ExpressionPostAggregator("k1", "1 + 1", null, TestExprMacroTable.INSTANCE)),
+        ImmutableList.of(new DefaultDimensionSpec("k1", "k1")),
+        ImmutableList.of(new LongSumAggregatorFactory("k2", "k2")),
+        ImmutableList.of(new ExpressionPostAggregator("k1", "1 + 1", null, TestExprMacroTable.INSTANCE)),
         Granularities.NONE,
         false
     );

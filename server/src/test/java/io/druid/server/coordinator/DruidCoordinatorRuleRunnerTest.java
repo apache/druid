@@ -38,7 +38,6 @@ import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.IntervalDropRule;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
-import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -49,7 +48,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -87,9 +85,9 @@ public class DruidCoordinatorRuleRunnerTest
               "test",
               new Interval(start, start.plusHours(1)),
               DateTimes.nowUtc().toString(),
-              Maps.<String, Object>newHashMap(),
-              Lists.<String>newArrayList(),
-              Lists.<String>newArrayList(),
+              Maps.newHashMap(),
+              Lists.newArrayList(),
+              Lists.newArrayList(),
               NoneShardSpec.instance(),
               IndexIO.CURRENT_VERSION_ID,
               1
@@ -120,23 +118,23 @@ public class DruidCoordinatorRuleRunnerTest
   public void testRunThreeTiersOneReplicant()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("hot", 1)
+                ImmutableMap.of("hot", 1)
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("normal", 1)
+                ImmutableMap.of("normal", 1)
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("cold", 1)
+                ImmutableMap.of("cold", 1)
             )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -232,19 +230,19 @@ public class DruidCoordinatorRuleRunnerTest
   public void testRunTwoTiersTwoReplicants()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("hot", 2)
+                ImmutableMap.of("hot", 2)
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("cold", 1)
+                ImmutableMap.of("cold", 1)
             )
         )
     ).atLeastOnce();
@@ -336,19 +334,19 @@ public class DruidCoordinatorRuleRunnerTest
   public void testRunTwoTiersWithExistingSegments()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("hot", 1)
+                ImmutableMap.of("hot", 1)
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("normal", 1)
+                ImmutableMap.of("normal", 1)
             )
         )
     ).atLeastOnce();
@@ -428,7 +426,7 @@ public class DruidCoordinatorRuleRunnerTest
   public void testRunTwoTiersTierDoesNotExist()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
@@ -436,15 +434,15 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.expectLastCall().times(12);
     EasyMock.replay(emitter);
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("hot", 1)
+                ImmutableMap.of("hot", 1)
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("normal", 1)
+                ImmutableMap.of("normal", 1)
             )
         )
     ).atLeastOnce();
@@ -502,11 +500,11 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.expectLastCall().times(1);
     EasyMock.replay(emitter);
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-02T00:00:00.000Z/2012-01-03T00:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("normal", 1)
+                ImmutableMap.of("normal", 1)
             )
         )
     ).atLeastOnce();
@@ -552,22 +550,22 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testDropRemove()
   {
-    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
         createCoordinatorDynamicConfig()
     ).anyTimes();
-    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    coordinator.removeSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(coordinator);
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("normal", 1)
+                ImmutableMap.of("normal", 1)
             ),
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
@@ -630,15 +628,15 @@ public class DruidCoordinatorRuleRunnerTest
   public void testDropTooManyInSameTier()
   {
     mockCoordinator();
-    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("normal", 1)
+                ImmutableMap.of("normal", 1)
             ),
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
@@ -717,17 +715,17 @@ public class DruidCoordinatorRuleRunnerTest
   public void testDropTooManyInDifferentTiers()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("hot", 1)
+                ImmutableMap.of("hot", 1)
             ),
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
@@ -808,15 +806,15 @@ public class DruidCoordinatorRuleRunnerTest
   public void testDontDropInDifferentTiers()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("hot", 1)
+                ImmutableMap.of("hot", 1)
             ),
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
@@ -895,11 +893,11 @@ public class DruidCoordinatorRuleRunnerTest
   public void testDropServerActuallyServesSegment()
   {
     mockCoordinator();
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T01:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("normal", 0)
+                ImmutableMap.of("normal", 0)
             )
         )
     ).atLeastOnce();
@@ -937,7 +935,7 @@ public class DruidCoordinatorRuleRunnerTest
     server3.addDataSegment(availableSegments.get(1));
     server3.addDataSegment(availableSegments.get(2));
 
-    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
@@ -1005,15 +1003,15 @@ public class DruidCoordinatorRuleRunnerTest
   public void testReplicantThrottle()
   {
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("hot", 2)
+                ImmutableMap.of("hot", 2)
             )
         )
     ).atLeastOnce();
@@ -1078,9 +1076,9 @@ public class DruidCoordinatorRuleRunnerTest
         "test",
         Intervals.of("2012-02-01/2012-02-02"),
         DateTimes.nowUtc().toString(),
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         1,
         0
@@ -1090,7 +1088,7 @@ public class DruidCoordinatorRuleRunnerTest
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withEmitter(emitter)
-            .withAvailableSegments(Arrays.asList(overFlowSegment))
+            .withAvailableSegments(Collections.singletonList(overFlowSegment))
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
@@ -1125,18 +1123,18 @@ public class DruidCoordinatorRuleRunnerTest
                                 .build()
 
     ).atLeastOnce();
-    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    coordinator.removeSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
-    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"),
-                ImmutableMap.<String, Integer>of(
+                ImmutableMap.of(
                     "hot", 1,
                     DruidServer.DEFAULT_TIER, 1
                 )
@@ -1213,15 +1211,15 @@ public class DruidCoordinatorRuleRunnerTest
   public void testDropReplicantThrottle()
   {
     mockCoordinator();
-    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"),
-                ImmutableMap.<String, Integer>of("normal", 1)
+                ImmutableMap.of("normal", 1)
             )
         )
     ).atLeastOnce();
@@ -1231,9 +1229,9 @@ public class DruidCoordinatorRuleRunnerTest
         "test",
         Intervals.of("2012-02-01/2012-02-02"),
         DateTimes.nowUtc().toString(),
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         1,
         0
@@ -1317,9 +1315,9 @@ public class DruidCoordinatorRuleRunnerTest
         "test",
         Intervals.of("2012-01-01/2012-01-02"),
         "1",
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         IndexIO.CURRENT_VERSION_ID,
         1
@@ -1328,9 +1326,9 @@ public class DruidCoordinatorRuleRunnerTest
         "test",
         Intervals.of("2012-01-01/2012-01-02"),
         "2",
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         IndexIO.CURRENT_VERSION_ID,
         1
@@ -1339,12 +1337,12 @@ public class DruidCoordinatorRuleRunnerTest
     availableSegments.add(v2);
 
     mockCoordinator();
-    mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.<LoadPeonCallback>anyObject());
+    mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
     mockEmptyPeon();
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
-        Lists.<Rule>newArrayList(
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
+        Lists.newArrayList(
             new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1))
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -1405,7 +1403,7 @@ public class DruidCoordinatorRuleRunnerTest
   private void mockCoordinator()
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    coordinator.removeSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
   }

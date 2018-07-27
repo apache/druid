@@ -376,7 +376,7 @@ public class GroupByQueryEngine
       final RowUpdater rowUpdater = new RowUpdater(metricsBuffer, aggregators, positionMaintainer);
       if (unprocessedKeys != null) {
         for (ByteBuffer key : unprocessedKeys) {
-          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.<DimensionSelector>of());
+          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.of());
           if (unprocUnproc != null) {
             throw new ISE("Not enough memory to process the request.");
           }

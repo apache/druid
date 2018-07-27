@@ -29,10 +29,8 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNQueryConfig;
@@ -115,7 +113,7 @@ public class ApproximateHistogramTopNQueryTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     QueryRunnerTestHelper.commonDoubleAggregators,
                     Lists.newArrayList(
@@ -127,7 +125,7 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 QueryRunnerTestHelper.addRowsIndexConstant,
                 QueryRunnerTestHelper.dependentPostAgg,
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)

@@ -54,6 +54,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -184,7 +185,7 @@ public class MultiSegmentScanQueryTest
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                     .intervals(SelectQueryRunnerTest.I_0112_0114)
                     .batchSize(batchSize)
-                    .columns(Arrays.<String>asList())
+                    .columns(Collections.emptyList())
                     .legacy(false)
                     .limit(limit);
   }

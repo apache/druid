@@ -35,7 +35,6 @@ import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -476,7 +475,7 @@ public class AppenderatorTest
                                            .dataSource(AppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2001")))
                                            .aggregators(
-                                               Arrays.<AggregatorFactory>asList(
+                                               Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
@@ -491,7 +490,7 @@ public class AppenderatorTest
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2000"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 3L, "met", 7L))
               )
           ),
           results1
@@ -502,7 +501,7 @@ public class AppenderatorTest
                                            .dataSource(AppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2002")))
                                            .aggregators(
-                                               Arrays.<AggregatorFactory>asList(
+                                               Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
@@ -517,11 +516,11 @@ public class AppenderatorTest
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2000"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 3L, "met", 7L))
               ),
               new Result<>(
                   DateTimes.of("2001"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 4L, "met", 120L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 4L, "met", 120L))
               )
           ),
           results2
@@ -532,7 +531,7 @@ public class AppenderatorTest
                                            .dataSource(AppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2001T01")))
                                            .aggregators(
-                                               Arrays.<AggregatorFactory>asList(
+                                               Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
@@ -546,11 +545,11 @@ public class AppenderatorTest
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2000"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 3L, "met", 7L))
               ),
               new Result<>(
                   DateTimes.of("2001"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 1L, "met", 8L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 8L))
               )
           ),
           results3
@@ -566,7 +565,7 @@ public class AppenderatorTest
                                                )
                                            )
                                            .aggregators(
-                                               Arrays.<AggregatorFactory>asList(
+                                               Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
@@ -580,11 +579,11 @@ public class AppenderatorTest
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2000"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 3L, "met", 7L))
               ),
               new Result<>(
                   DateTimes.of("2001"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 2L, "met", 72L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 2L, "met", 72L))
               )
           ),
           results4
@@ -611,7 +610,7 @@ public class AppenderatorTest
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                            .dataSource(AppenderatorTester.DATASOURCE)
                                            .aggregators(
-                                               Arrays.<AggregatorFactory>asList(
+                                               Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
@@ -637,7 +636,7 @@ public class AppenderatorTest
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2001"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 4L, "met", 120L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 4L, "met", 120L))
               )
           ),
           results1
@@ -647,7 +646,7 @@ public class AppenderatorTest
       final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
                                            .dataSource(AppenderatorTester.DATASOURCE)
                                            .aggregators(
-                                               Arrays.<AggregatorFactory>asList(
+                                               Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
@@ -673,7 +672,7 @@ public class AppenderatorTest
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2001"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 1L, "met", 8L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 8L))
               )
           ),
           results2
@@ -683,7 +682,7 @@ public class AppenderatorTest
       final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
                                            .dataSource(AppenderatorTester.DATASOURCE)
                                            .aggregators(
-                                               Arrays.<AggregatorFactory>asList(
+                                               Arrays.asList(
                                                    new LongSumAggregatorFactory("count", "count"),
                                                    new LongSumAggregatorFactory("met", "met")
                                                )
@@ -714,7 +713,7 @@ public class AppenderatorTest
           ImmutableList.of(
               new Result<>(
                   DateTimes.of("2001"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 2L, "met", 72L))
+                  new TimeseriesResultValue(ImmutableMap.of("count", 2L, "met", 72L))
               )
           ),
           results3
@@ -737,7 +736,7 @@ public class AppenderatorTest
     return new MapBasedInputRow(
         DateTimes.of(ts).getMillis(),
         ImmutableList.of("dim"),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "dim",
             dim,
             "met",

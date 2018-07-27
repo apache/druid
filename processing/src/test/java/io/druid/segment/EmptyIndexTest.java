@@ -83,7 +83,7 @@ public class EmptyIndexTest
           new ConciseBitmapFactory()
       );
       TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory).merge(
-          Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
+          Lists.newArrayList(emptyIndexAdapter),
           true,
           new AggregatorFactory[0],
           tmpDir,

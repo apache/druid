@@ -141,19 +141,19 @@ public class OverlordTest
     taskLockbox = EasyMock.createStrictMock(TaskLockbox.class);
     taskLockbox.syncFromStorage();
     EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.add(EasyMock.<Task>anyObject());
+    taskLockbox.add(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.remove(EasyMock.<Task>anyObject());
+    taskLockbox.remove(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
 
     // for second Noop Task directly added to deep storage.
-    taskLockbox.add(EasyMock.<Task>anyObject());
+    taskLockbox.add(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.remove(EasyMock.<Task>anyObject());
+    taskLockbox.remove(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
 
     taskActionClientFactory = EasyMock.createStrictMock(TaskActionClientFactory.class);
-    EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject()))
+    EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject()))
             .andReturn(null).anyTimes();
     EasyMock.replay(taskLockbox, taskActionClientFactory, req);
 

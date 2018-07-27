@@ -20,7 +20,6 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -62,15 +61,10 @@ public class CliRealtime extends ServerRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new RealtimeModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/realtime");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8084);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8284);
-          }
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/realtime");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8084);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8284);
         },
         new ChatHandlerServerModule(properties),
         new LookupModule()

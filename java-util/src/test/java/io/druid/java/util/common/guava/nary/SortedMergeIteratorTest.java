@@ -36,7 +36,7 @@ public class SortedMergeIteratorTest
     SortedMergeIterator<Integer, Integer> iter = SortedMergeIterator.create(
         Arrays.asList(1, 4, 5, 7, 9).iterator(),
         Arrays.asList(1, 2, 3, 6, 7, 8, 9, 10, 11).iterator(),
-        Comparators.<Integer>comparable(),
+        Comparators.comparable(),
         new BinaryFn<Integer, Integer, Integer>()
         {
           @Override

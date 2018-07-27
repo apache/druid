@@ -29,6 +29,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,7 +43,7 @@ public class ConcatSequenceTest
   public void testAccumulationSingle() throws Exception
   {
     testAll(
-        Arrays.asList(
+        Collections.singletonList(
             Arrays.asList(1, 2, 3, 4, 5)
         )
     );
@@ -66,7 +67,7 @@ public class ConcatSequenceTest
     testAll(
         Arrays.asList(
             Arrays.asList(1, 2, 3, 4, 5),
-            Arrays.<Integer>asList(),
+            Collections.emptyList(),
             Arrays.asList(6, 7, 8),
             Arrays.asList(9, 10, 11, 12)
         )
@@ -79,10 +80,10 @@ public class ConcatSequenceTest
     testAll(
         Arrays.asList(
             Arrays.asList(1, 2, 3, 4, 5),
-            Arrays.<Integer>asList(),
+            Collections.emptyList(),
             Arrays.asList(6, 7, 8),
             Arrays.asList(9, 10, 11, 12),
-            Arrays.<Integer>asList()
+            Collections.emptyList()
         )
     );
   }
@@ -92,9 +93,9 @@ public class ConcatSequenceTest
   {
     testAll(
         Arrays.asList(
-            Arrays.<Integer>asList(),
+            Collections.emptyList(),
             Arrays.asList(1, 2, 3, 4, 5),
-            Arrays.<Integer>asList(),
+            Collections.emptyList(),
             Arrays.asList(6, 7, 8),
             Arrays.asList(9, 10, 11, 12)
         )

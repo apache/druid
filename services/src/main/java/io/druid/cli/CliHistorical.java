@@ -20,7 +20,6 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -79,43 +78,38 @@ public class CliHistorical extends ServerRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8283);
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8283);
 
-            // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
-            LifecycleModule.register(binder, Server.class);
-            binder.bind(ServerManager.class).in(LazySingleton.class);
-            binder.bind(SegmentManager.class).in(LazySingleton.class);
-            binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
-            binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
+          // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
+          LifecycleModule.register(binder, Server.class);
+          binder.bind(ServerManager.class).in(LazySingleton.class);
+          binder.bind(SegmentManager.class).in(LazySingleton.class);
+          binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+          binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
 
-            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.HISTORICAL));
-            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
-            binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
-            Jerseys.addResource(binder, QueryResource.class);
-            Jerseys.addResource(binder, HistoricalResource.class);
-            Jerseys.addResource(binder, SegmentListerResource.class);
-            LifecycleModule.register(binder, QueryResource.class);
-            LifecycleModule.register(binder, ZkCoordinator.class);
+          binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(ServerType.HISTORICAL));
+          binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+          binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
+          Jerseys.addResource(binder, QueryResource.class);
+          Jerseys.addResource(binder, HistoricalResource.class);
+          Jerseys.addResource(binder, SegmentListerResource.class);
+          LifecycleModule.register(binder, QueryResource.class);
+          LifecycleModule.register(binder, ZkCoordinator.class);
 
-            JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
-            binder.install(new CacheModule());
-            MetricsModule.register(binder, CacheMonitor.class);
+          JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
+          binder.install(new CacheModule());
+          MetricsModule.register(binder, CacheMonitor.class);
 
-            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
-                new DiscoverySideEffectsProvider(
-                    DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
-                    ImmutableList.of(DataNodeService.class, LookupNodeService.class)
-                )
-            ).in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
-          }
+          binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+              new DiscoverySideEffectsProvider(
+                  DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
+                  ImmutableList.of(DataNodeService.class, LookupNodeService.class)
+              )
+          ).in(LazySingleton.class);
+          LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
         },
         new LookupModule()
     );

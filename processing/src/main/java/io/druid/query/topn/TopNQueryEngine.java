@@ -98,7 +98,7 @@ public class TopNQueryEngine
               }
             }
         ),
-        Predicates.<Result<TopNResultValue>>notNull()
+        Predicates.notNull()
     );
   }
 

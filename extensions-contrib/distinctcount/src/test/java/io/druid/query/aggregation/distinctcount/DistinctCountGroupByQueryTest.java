@@ -27,7 +27,6 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -43,6 +42,7 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class DistinctCountGroupByQueryTest
@@ -73,21 +73,21 @@ public class DistinctCountGroupByQueryTest
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "0", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "0", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp + 1,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "1", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "1", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp + 2,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "2", client_type, "android")
+            ImmutableMap.of(visitor_id, "2", client_type, "android")
         )
     );
 
@@ -95,7 +95,7 @@ public class DistinctCountGroupByQueryTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(
-            Arrays.<DimensionSpec>asList(
+            Collections.singletonList(
                 new DefaultDimensionSpec(
                     client_type,
                     client_type

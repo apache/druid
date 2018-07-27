@@ -30,7 +30,6 @@ import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -148,7 +147,9 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new TimestampAggregatorFactory(fieldName, fieldName, timeFormat, comparator, initValue));
+    return Collections.singletonList(
+        new TimestampAggregatorFactory(fieldName, fieldName, timeFormat, comparator, initValue)
+    );
   }
 
   @Override

@@ -57,7 +57,7 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -98,9 +98,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 return null;
               }
 
-              final List<Rule> defaultRules = Arrays.<Rule>asList(
+              final List<Rule> defaultRules = Collections.singletonList(
                   new ForeverLoadRule(
-                      ImmutableMap.<String, Integer>of(
+                      ImmutableMap.of(
                           DruidServer.DEFAULT_TIER,
                           DruidServer.DEFAULT_NUM_REPLICANTS
                       )
@@ -243,6 +243,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public void poll()
   {
     try {
+    
       ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(
           dbi.withHandle(
               new HandleCallback<Map<String, List<Rule>>>()
@@ -269,7 +270,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                           try {
                             return Pair.of(
                                 r.getString("dataSource"),
-                                jsonMapper.<List<Rule>>readValue(
+                                jsonMapper.readValue(
                                     r.getBytes("payload"), new TypeReference<List<Rule>>()
                                     {
                                     }
@@ -283,7 +284,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                       }
                   )
                                .fold(
-                                   Maps.<String, List<Rule>>newHashMap(),
+                                   Maps.newHashMap(),
                                    new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
                                    {
                                      @Override
@@ -340,7 +341,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public List<Rule> getRules(final String dataSource)
   {
     List<Rule> retVal = rules.get().get(dataSource);
-    return retVal == null ? Lists.<Rule>newArrayList() : retVal;
+    return retVal == null ? Lists.newArrayList() : retVal;
   }
 
   @Override

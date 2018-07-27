@@ -66,7 +66,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new LinearShardSpec(0),
@@ -78,7 +78,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new LinearShardSpec(1),
@@ -90,7 +90,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
       "version",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       NoneShardSpec.instance(),
@@ -103,7 +103,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new LinearShardSpec(0),
@@ -115,7 +115,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(0, 0),
@@ -127,7 +127,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(1, 0),
@@ -139,7 +139,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(2, 0),
@@ -151,7 +151,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(2, 1),
@@ -163,7 +163,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(3, 1),
@@ -428,7 +428,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result1);
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result1);
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
@@ -449,7 +449,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result2);
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -470,7 +470,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result2);
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());

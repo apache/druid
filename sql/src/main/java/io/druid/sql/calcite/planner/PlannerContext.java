@@ -154,7 +154,7 @@ public class PlannerContext
   {
     class DruidDataContext implements DataContext
     {
-      private final Map<String, Object> context = ImmutableMap.<String, Object>of(
+      private final Map<String, Object> context = ImmutableMap.of(
           DataContext.Variable.UTC_TIMESTAMP.camelName, localNow.getMillis(),
           DataContext.Variable.CURRENT_TIMESTAMP.camelName, localNow.getMillis(),
           DataContext.Variable.LOCAL_TIMESTAMP.camelName, new Interval(

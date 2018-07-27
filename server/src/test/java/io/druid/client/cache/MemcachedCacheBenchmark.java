@@ -24,7 +24,6 @@ import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
-import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.StringUtils;
 import net.spy.memcached.AddrUtil;
@@ -83,7 +82,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
 
 
     cache = new MemcachedCache(
-        Suppliers.<ResourceHolder<MemcachedClientIF>>ofInstance(
+        Suppliers.ofInstance(
             StupidResourceHolder.create(client)
         ),
         new MemcachedCacheConfig()

@@ -90,7 +90,6 @@ import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -169,13 +168,13 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of(
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of(
       "finalize", false,
 
       // GroupBy v2 won't cache on the broker, so test with v1.
       "groupByStrategy", GroupByStrategySelector.STRATEGY_V1
   );
-  public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
+  public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.of());
   public static final String DATA_SOURCE = "test";
   static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
 
@@ -194,11 +193,11 @@ public class CachingClusteredClientTest
       new LongSumAggregatorFactory("imps", "imps"),
       new LongSumAggregatorFactory("impers", "imps")
   );
-  private static final List<PostAggregator> POST_AGGS = Arrays.<PostAggregator>asList(
+  private static final List<PostAggregator> POST_AGGS = Arrays.asList(
       new ArithmeticPostAggregator(
           "avg_imps_per_row",
           "/",
-          Arrays.<PostAggregator>asList(
+          Arrays.asList(
               new FieldAccessPostAggregator("imps", "imps"),
               new FieldAccessPostAggregator("rows", "rows")
           )
@@ -206,7 +205,7 @@ public class CachingClusteredClientTest
       new ArithmeticPostAggregator(
           "avg_imps_per_row_double",
           "*",
-          Arrays.<PostAggregator>asList(
+          Arrays.asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
               new ConstantPostAggregator("constant", 2)
           )
@@ -214,7 +213,7 @@ public class CachingClusteredClientTest
       new ArithmeticPostAggregator(
           "avg_imps_per_row_half",
           "/",
-          Arrays.<PostAggregator>asList(
+          Arrays.asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
               new ConstantPostAggregator("constant", 2)
           )
@@ -225,11 +224,11 @@ public class CachingClusteredClientTest
       new LongSumAggregatorFactory("imps", "imps"),
       new LongSumAggregatorFactory("impers2", "imps")
   );
-  private static final List<PostAggregator> DIFF_ORDER_POST_AGGS = Arrays.<PostAggregator>asList(
+  private static final List<PostAggregator> DIFF_ORDER_POST_AGGS = Arrays.asList(
       new ArithmeticPostAggregator(
           "avg_imps_per_row",
           "/",
-          Arrays.<PostAggregator>asList(
+          Arrays.asList(
               new FieldAccessPostAggregator("imps", "imps"),
               new FieldAccessPostAggregator("rows", "rows")
           )
@@ -237,7 +236,7 @@ public class CachingClusteredClientTest
       new ArithmeticPostAggregator(
           "avg_imps_per_row_half",
           "/",
-          Arrays.<PostAggregator>asList(
+          Arrays.asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
               new ConstantPostAggregator("constant", 2)
           )
@@ -245,7 +244,7 @@ public class CachingClusteredClientTest
       new ArithmeticPostAggregator(
           "avg_imps_per_row_double",
           "*",
-          Arrays.<PostAggregator>asList(
+          Arrays.asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
               new ConstantPostAggregator("constant", 2)
           )
@@ -328,7 +327,7 @@ public class CachingClusteredClientTest
   @Before
   public void setUp()
   {
-    timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
+    timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
     client = makeClient(MoreExecutors.sameThreadExecutor());
@@ -372,7 +371,7 @@ public class CachingClusteredClientTest
       {
         if (wait) {
           SettableFuture<T> future = SettableFuture.create();
-          taskQueue.addFirst(Pair.<SettableFuture, Object>of(future, task));
+          taskQueue.addFirst(Pair.of(future, task));
           return future;
         } else {
           List<Pair<SettableFuture, Object>> tasks = Lists.newArrayList(taskQueue.iterator());
@@ -577,7 +576,7 @@ public class CachingClusteredClientTest
     final Cache cache = EasyMock.createStrictMock(Cache.class);
     final Capture<Iterable<Cache.NamedKey>> cacheKeyCapture = EasyMock.newCapture();
     EasyMock.expect(cache.getBulk(EasyMock.capture(cacheKeyCapture)))
-            .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
+            .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
     client = makeClient(MoreExecutors.sameThreadExecutor(), cache, limit);
@@ -602,7 +601,7 @@ public class CachingClusteredClientTest
     EasyMock.reset(cache);
     cacheKeyCapture.reset();
     EasyMock.expect(cache.getBulk(EasyMock.capture(cacheKeyCapture)))
-            .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
+            .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
     client = makeClient(MoreExecutors.sameThreadExecutor(), cache, 0);
@@ -742,7 +741,7 @@ public class CachingClusteredClientTest
         1,
         true,
         builder.context(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "useCache", "false",
                 "populateCache", "true"
             )
@@ -761,7 +760,7 @@ public class CachingClusteredClientTest
         1,
         false,
         builder.context(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "useCache", "false",
                 "populateCache", "false"
             )
@@ -778,7 +777,7 @@ public class CachingClusteredClientTest
         1,
         false,
         builder.context(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "useCache", "true",
                 "populateCache", "false"
             )
@@ -960,7 +959,7 @@ public class CachingClusteredClientTest
                 .dimension("a")
                 .metric("b")
                 .threshold(3)
-                .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("b")))
+                .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("b")))
                 .build(),
             sequences
         )
@@ -1129,7 +1128,7 @@ public class CachingClusteredClientTest
                                                     .granularity(GRANULARITY)
                                                     .limit(1000)
                                                     .intervals(SEG_SPEC)
-                                                    .dimensions(Arrays.asList(TOP_DIM))
+                                                    .dimensions(Collections.singletonList(TOP_DIM))
                                                     .query("how")
                                                     .context(CONTEXT);
 
@@ -1199,7 +1198,7 @@ public class CachingClusteredClientTest
         .granularity(GRANULARITY)
         .limit(1000)
         .intervals(SEG_SPEC)
-        .dimensions(Arrays.asList(TOP_DIM))
+        .dimensions(Collections.singletonList(TOP_DIM))
         .query("how")
         .context(CONTEXT);
 
@@ -1285,16 +1284,16 @@ public class CachingClusteredClientTest
   @Test
   public void testSelectCaching()
   {
-    final Set<String> dimensions = Sets.<String>newHashSet("a");
-    final Set<String> metrics = Sets.<String>newHashSet("rows");
+    final Set<String> dimensions = Sets.newHashSet("a");
+    final Set<String> metrics = Sets.newHashSet("rows");
 
     Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
                                               .dataSource(DATA_SOURCE)
                                               .intervals(SEG_SPEC)
                                               .filters(DIM_FILTER)
                                               .granularity(GRANULARITY)
-                                              .dimensions(Arrays.asList("a"))
-                                              .metrics(Arrays.asList("rows"))
+                                              .dimensions(Collections.singletonList("a"))
+                                              .metrics(Collections.singletonList("rows"))
                                               .pagingSpec(new PagingSpec(null, 3))
                                               .context(CONTEXT);
 
@@ -1354,16 +1353,16 @@ public class CachingClusteredClientTest
   @Test
   public void testSelectCachingRenamedOutputName()
   {
-    final Set<String> dimensions = Sets.<String>newHashSet("a");
-    final Set<String> metrics = Sets.<String>newHashSet("rows");
+    final Set<String> dimensions = Sets.newHashSet("a");
+    final Set<String> metrics = Sets.newHashSet("rows");
 
     Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
         .dataSource(DATA_SOURCE)
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
         .granularity(GRANULARITY)
-        .dimensions(Arrays.asList("a"))
-        .metrics(Arrays.asList("rows"))
+        .dimensions(Collections.singletonList("a"))
+        .metrics(Collections.singletonList("rows"))
         .pagingSpec(new PagingSpec(null, 3))
         .context(CONTEXT);
 
@@ -1464,7 +1463,7 @@ public class CachingClusteredClientTest
         .setQuerySegmentSpec(SEG_SPEC)
         .setDimFilter(DIM_FILTER)
         .setGranularity(GRANULARITY)
-        .setDimensions(Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("a", "a")))
+        .setDimensions(Collections.singletonList(new DefaultDimensionSpec("a", "a")))
         .setAggregatorSpecs(aggsWithUniques)
         .setPostAggregatorSpecs(POST_AGGS)
         .setContext(CONTEXT);
@@ -2976,7 +2975,7 @@ public class CachingClusteredClientTest
         .setQuerySegmentSpec(SEG_SPEC)
         .setDimFilter(DIM_FILTER)
         .setGranularity(GRANULARITY)
-        .setDimensions(Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("a", "output")))
+        .setDimensions(Collections.singletonList(new DefaultDimensionSpec("a", "output")))
         .setAggregatorSpecs(AGGS)
         .setContext(CONTEXT);
 
@@ -3067,7 +3066,7 @@ public class CachingClusteredClientTest
         "dataSource",
         interval,
         "ver",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type", "hdfs",
             "path", "/tmp"
         ),
@@ -3087,7 +3086,7 @@ public class CachingClusteredClientTest
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
                                     .dataSource(DATA_SOURCE)
                                     .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(interval)))
-                                    .context(ImmutableMap.<String, Object>of("If-None-Match", "aVJV29CJY93rszVW/QBy0arWZo0="))
+                                    .context(ImmutableMap.of("If-None-Match", "aVJV29CJY93rszVW/QBy0arWZo0="))
                                     .build();
 
 

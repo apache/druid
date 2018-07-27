@@ -22,7 +22,6 @@ package io.druid.server.lookup.namespace;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.CacheGenerator;
@@ -63,10 +62,10 @@ public class NamespacedExtractorModuleTest
   public void setUp() throws Exception
   {
     final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> factoryMap =
-        ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+        ImmutableMap.of(
             UriExtractionNamespace.class,
             new UriCacheGenerator(
-                ImmutableMap.<String, SearchableVersionedDataFinder>of(
+                ImmutableMap.of(
                     "file",
                     new LocalFileTimestampVersionFinder()
                 )
@@ -94,10 +93,10 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriCacheGenerator factory = new UriCacheGenerator(
-        ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
+        ImmutableMap.of("file", new LocalFileTimestampVersionFinder())
     );
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -120,7 +119,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -141,7 +140,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -162,7 +161,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),

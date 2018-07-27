@@ -627,7 +627,7 @@ public class CompactionTaskTest
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
-          if (columnName.equals(MIXED_TYPE_COLUMN)) {
+          if (MIXED_TYPE_COLUMN.equals(columnName)) {
             columnMap.put(columnName, createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval())));
           } else if (DIMENSIONS.containsKey(columnName)) {
             columnMap.put(columnName, createColumn(DIMENSIONS.get(columnName)));

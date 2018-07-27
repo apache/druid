@@ -40,7 +40,7 @@ public class JSONPathSpec
   )
   {
     this.useFieldDiscovery = useFieldDiscovery == null ? true : useFieldDiscovery;
-    this.fields = fields == null ? ImmutableList.<JSONPathFieldSpec>of() : fields;
+    this.fields = fields == null ? ImmutableList.of() : fields;
   }
 
   @JsonProperty

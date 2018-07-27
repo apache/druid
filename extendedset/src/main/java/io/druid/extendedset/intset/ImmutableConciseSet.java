@@ -147,7 +147,7 @@ public class ImmutableConciseSet
     ImmutableConciseSet partialResults = doUnion(Iterators.limit(sets, CHUNK_SIZE));
     while (sets.hasNext()) {
       final UnmodifiableIterator<ImmutableConciseSet> partialIter = Iterators.singletonIterator(partialResults);
-      partialResults = doUnion(Iterators.<ImmutableConciseSet>concat(partialIter, Iterators.limit(sets, CHUNK_SIZE)));
+      partialResults = doUnion(Iterators.concat(partialIter, Iterators.limit(sets, CHUNK_SIZE)));
     }
     return partialResults;
   }
@@ -168,7 +168,7 @@ public class ImmutableConciseSet
     while (sets.hasNext()) {
       final UnmodifiableIterator<ImmutableConciseSet> partialIter = Iterators.singletonIterator(partialResults);
       partialResults = doIntersection(
-          Iterators.<ImmutableConciseSet>concat(Iterators.limit(sets, CHUNK_SIZE), partialIter)
+          Iterators.concat(Iterators.limit(sets, CHUNK_SIZE), partialIter)
       );
     }
     return partialResults;

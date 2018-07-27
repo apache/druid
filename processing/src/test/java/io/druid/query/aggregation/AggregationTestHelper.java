@@ -568,7 +568,7 @@ public class AggregationTestHelper
       public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.<String, Object>newHashMap());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.newHashMap());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()

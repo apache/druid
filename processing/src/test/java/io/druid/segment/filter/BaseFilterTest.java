@@ -54,7 +54,6 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
@@ -82,7 +81,7 @@ import java.util.Map;
 public abstract class BaseFilterTest
 {
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
-      ImmutableList.<VirtualColumn>of(
+      ImmutableList.of(
           new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
       )
   );
@@ -168,7 +167,7 @@ public abstract class BaseFilterTest
   {
     final List<Object[]> constructors = Lists.newArrayList();
 
-    final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.<String, BitmapSerdeFactory>of(
+    final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.of(
         "concise", new ConciseBitmapSerdeFactory(),
         "roaring", new RoaringBitmapSerdeFactory(true)
     );
@@ -185,7 +184,7 @@ public abstract class BaseFilterTest
           public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
           {
             final IncrementalIndex index = input.buildIncrementalIndex();
-            return Pair.<StorageAdapter, Closeable>of(
+            return Pair.of(
                 new IncrementalIndexStorageAdapter(index),
                 new Closeable()
                 {
@@ -204,7 +203,7 @@ public abstract class BaseFilterTest
           public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
           {
             final QueryableIndex index = input.buildMMappedIndex();
-            return Pair.<StorageAdapter, Closeable>of(
+            return Pair.of(
                 new QueryableIndexStorageAdapter(index),
                 new Closeable()
                 {
@@ -223,7 +222,7 @@ public abstract class BaseFilterTest
           public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
           {
             final QueryableIndex index = input.buildMMappedMergedIndex();
-            return Pair.<StorageAdapter, Closeable>of(
+            return Pair.of(
                 new QueryableIndexStorageAdapter(index),
                 new Closeable()
                 {

@@ -37,29 +37,29 @@ public class EqualDistributionWorkerSelectStrategyTest
           "localhost0",
           new ImmutableWorkerInfo(
               new Worker("http", "localhost0", "localhost0", 2, "v1"), 0,
-              Sets.<String>newHashSet(),
-              Sets.<String>newHashSet(),
+              Sets.newHashSet(),
+              Sets.newHashSet(),
               DateTimes.nowUtc()
           ),
           "localhost1",
           new ImmutableWorkerInfo(
               new Worker("http", "localhost1", "localhost1", 2, "v1"), 0,
-              Sets.<String>newHashSet(),
-              Sets.<String>newHashSet(),
+              Sets.newHashSet(),
+              Sets.newHashSet(),
               DateTimes.nowUtc()
           ),
           "localhost2",
           new ImmutableWorkerInfo(
               new Worker("http", "localhost2", "localhost2", 2, "v1"), 1,
-              Sets.<String>newHashSet(),
-              Sets.<String>newHashSet(),
+              Sets.newHashSet(),
+              Sets.newHashSet(),
               DateTimes.nowUtc()
           ),
           "localhost3",
           new ImmutableWorkerInfo(
               new Worker("http", "localhost3", "localhost3", 2, "v1"), 1,
-              Sets.<String>newHashSet(),
-              Sets.<String>newHashSet(),
+              Sets.newHashSet(),
+              Sets.newHashSet(),
               DateTimes.nowUtc()
           )
       );
@@ -75,15 +75,15 @@ public class EqualDistributionWorkerSelectStrategyTest
             "lhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "lhost", "lhost", 1, "v1"), 0,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 1,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             )
         ),
@@ -110,15 +110,15 @@ public class EqualDistributionWorkerSelectStrategyTest
             "lhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "lhost", "lhost", 5, "v1"), 5,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 10, "v1"), 5,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             )
         ),
@@ -146,15 +146,15 @@ public class EqualDistributionWorkerSelectStrategyTest
             "lhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "disableHost", "disableHost", 10, DISABLED_VERSION), 2,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "enableHost", "enableHost", 10, "v1"), 5,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             )
         ),
@@ -182,15 +182,15 @@ public class EqualDistributionWorkerSelectStrategyTest
             "lhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "disableHost", "disableHost", 10, DISABLED_VERSION), 5,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "enableHost", "enableHost", 10, "v1"), 5,
-                Sets.<String>newHashSet(),
-                Sets.<String>newHashSet(),
+                Sets.newHashSet(),
+                Sets.newHashSet(),
                 DateTimes.nowUtc()
             )
         ),
