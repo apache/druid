@@ -7149,11 +7149,11 @@ public class CalciteQueryTest extends CalciteTestBase
         ),
         ImmutableList.of(
             new Object[]{"ax1.09999"},
-            new Object[]{"10.1x2.0999910.1"},
+            new Object[]{NullHandling.sqlCompatible() ? null : "10.1x2.0999910.1"}, // dim2 is null
             new Object[]{"2x3.099992"},
             new Object[]{"1ax4.099991"},
             new Object[]{"defabcx5.09999def"},
-            new Object[]{"abcx6.09999abc"}
+            new Object[]{NullHandling.sqlCompatible() ? null : "abcx6.09999abc"} // dim2 is null
         )
     );
   }
