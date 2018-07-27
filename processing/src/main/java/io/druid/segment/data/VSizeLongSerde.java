@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import io.druid.java.util.common.IAE;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -182,9 +181,10 @@ public class VSizeLongSerde
     }
   }
 
-  public interface LongSerializer extends Closeable
+  public interface LongSerializer
   {
     void write(long value) throws IOException;
+    void flush() throws IOException;
   }
 
   private static final class Size1Ser implements LongSerializer
@@ -223,7 +223,7 @@ public class VSizeLongSerde
     }
 
     @Override
-    public void close() throws IOException
+    public void flush() throws IOException
     {
       if (output != null) {
         if (closed) {
@@ -282,7 +282,7 @@ public class VSizeLongSerde
     }
 
     @Override
-    public void close() throws IOException
+    public void flush() throws IOException
     {
       if (output != null) {
         if (closed) {
@@ -351,7 +351,7 @@ public class VSizeLongSerde
     }
 
     @Override
-    public void close() throws IOException
+    public void flush() throws IOException
     {
 
       if (output != null) {
@@ -408,7 +408,7 @@ public class VSizeLongSerde
     }
 
     @Override
-    public void close() throws IOException
+    public void flush() throws IOException
     {
       if (output != null) {
         if (closed) {

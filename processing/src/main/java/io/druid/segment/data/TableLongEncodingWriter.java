@@ -67,7 +67,7 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
   public void flush() throws IOException
   {
     if (serializer != null) {
-      serializer.close();
+      serializer.flush();
     }
   }
 
