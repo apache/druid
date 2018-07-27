@@ -63,7 +63,7 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
    * become a subject for modification during subsequent fold() calls.
    *
    * Since the state of AggregateCombiner is undefined before {@link #reset} is ever called on it, the effects of
-   * calling fold() are also undefined in this case.
+   * calling fold() are also undefined in this case. The {@link #reset} is called first before {@link #fold}
    *
    * @see AggregatorFactory#combine
    */
