@@ -187,7 +187,8 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "type" : "stringFirst",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
-  "maxStringBytes" : <integer> # (optional, defaults to 1024)
+  "maxStringBytes" : <integer> # (optional, defaults to 1024),
+  "filterNullValues" : <boolean> # (optional, defaults to false)
 }
 ```
 
@@ -202,7 +203,8 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "type" : "stringLast",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
-  "maxStringBytes" : <integer> # (optional, defaults to 1024)
+  "maxStringBytes" : <integer> # (optional, defaults to 1024),
+  "filterNullValues" : <boolean> # (optional, defaults to false)
 }
 ```
 
