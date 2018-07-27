@@ -216,7 +216,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     StringFirstAggregatorFactory that = (StringFirstAggregatorFactory) o;
 
     return fieldName.equals(that.fieldName) && name.equals(that.name) &&
-           maxStringBytes == that.maxStringBytes && filterNullValues ==  that.filterNullValues;
+           maxStringBytes == that.maxStringBytes && filterNullValues == that.filterNullValues;
   }
 
   @Override
