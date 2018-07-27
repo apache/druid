@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
@@ -35,6 +34,7 @@ import com.google.common.primitives.Floats;
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
@@ -45,7 +45,6 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -112,40 +111,21 @@ public class InDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    final byte[][] valuesBytes = new byte[values.size()][];
-    int valuesBytesSize = 0;
-    int index = 0;
     boolean hasNull = false;
     for (String value : values) {
       if (value == null) {
         hasNull = true;
+        break;
       }
-      //CHECKSTYLE.OFF: Regexp
-      // Strings.nullToEmpty is safe to use here as we have encoded nullability in hasNull flag.
-      valuesBytes[index] = StringUtils.toUtf8(Strings.nullToEmpty(value));
-      //CHECKSTYLE.ON: Regexp
-      valuesBytesSize += valuesBytes[index].length + 1;
-      ++index;
     }
-    byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
-
-    ByteBuffer filterCacheKey = ByteBuffer.allocate(5
-                                                    + dimensionBytes.length
-                                                    + valuesBytesSize
-                                                    + extractionFnBytes.length)
-                                          .put(DimFilterUtils.IN_CACHE_ID)
-                                          .put(dimensionBytes)
-                                          .put(DimFilterUtils.STRING_SEPARATOR)
-                                          .put(extractionFnBytes)
-                                          .put(DimFilterUtils.STRING_SEPARATOR)
-                                          .put(hasNull ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
-                                          .put(DimFilterUtils.STRING_SEPARATOR);
-    for (byte[] bytes : valuesBytes) {
-      filterCacheKey.put(bytes)
-                    .put((byte) 0xFF);
-    }
-    return filterCacheKey.array();
+    return new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
+        .appendString(dimension)
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendByte(hasNull ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendStrings(values).build();
   }
 
   @Override

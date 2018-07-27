@@ -286,7 +286,8 @@ public class DefaultLimitSpec implements LimitSpec
     );
   }
 
-  private static String getDimensionValue(Row row, String column){
+  private static String getDimensionValue(Row row, String column)
+  {
     List<String> values = row.getDimension(column);
     return values.isEmpty() ? null : values.get(0);
   }

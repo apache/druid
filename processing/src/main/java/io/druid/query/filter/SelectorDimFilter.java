@@ -33,13 +33,12 @@ import com.google.common.primitives.Floats;
 import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
@@ -77,20 +76,15 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    byte[] valueBytes = (value == null) ? new byte[]{} : StringUtils.toUtf8(value);
-    byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
-
-    return ByteBuffer.allocate(5 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
-                     .put(DimFilterUtils.SELECTOR_CACHE_ID)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(dimensionBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(value == null ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
-                     .put(valueBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(extractionFnBytes)
-                     .array();
+    return new CacheKeyBuilder(DimFilterUtils.SELECTOR_CACHE_ID)
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendString(dimension)
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendByte(value == null ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
+        .appendString(value)
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
+        .build();
   }
 
   @Override

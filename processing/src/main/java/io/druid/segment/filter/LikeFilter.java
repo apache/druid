@@ -90,10 +90,12 @@ public class LikeFilter implements Filter
   {
     if (isSimpleEquals()) {
       // Verify that dimension equals prefix.
-      return ImmutableList.of(selector.getBitmapIndex(
-          dimension,
-          NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
-      ));
+      return ImmutableList.of(
+          selector.getBitmapIndex(
+              dimension,
+              NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
+          )
+      );
     } else if (isSimplePrefix()) {
       // Verify that dimension startsWith prefix, and is accepted by likeMatcher.matchesSuffixOnly.
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);

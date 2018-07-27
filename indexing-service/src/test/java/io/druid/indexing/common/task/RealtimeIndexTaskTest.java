@@ -134,6 +134,7 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -1088,6 +1089,7 @@ public class RealtimeIndexTaskTest
     return toolboxFactory.build(task);
   }
 
+  @Nullable
   public Long sumMetric(final Task task, final DimFilter filter, final String metric)
   {
     // Do a query.

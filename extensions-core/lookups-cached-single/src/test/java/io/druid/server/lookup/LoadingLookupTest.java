@@ -41,13 +41,19 @@ public class LoadingLookupTest
   LoadingLookup loadingLookup = new LoadingLookup(dataFetcher, lookupCache, reverseLookupCache);
 
   @Test
-  public void testApplyEmptyOrNull()
+  public void testApplyEmptyOrNull() throws ExecutionException
   {
-    Assert.assertEquals(null, loadingLookup.apply(null));
-    if (NullHandling.sqlCompatible()) {
-      // empty string should also have same behavior
-      Assert.assertEquals(null, loadingLookup.apply(""));
+    EasyMock.expect(lookupCache.get(EasyMock.eq(""), EasyMock.anyObject(Callable.class)))
+            .andReturn("empty").atLeastOnce();
+    EasyMock.replay(lookupCache);
+    Assert.assertEquals("empty", loadingLookup.apply(""));
+    if (!NullHandling.sqlCompatible()) {
+      // Nulls and empty strings should have same behavior
+      Assert.assertEquals("empty", loadingLookup.apply(null));
+    } else {
+      Assert.assertNull(loadingLookup.apply(null));
     }
+    EasyMock.verify(lookupCache);
   }
 
   @Test
@@ -56,7 +62,7 @@ public class LoadingLookupTest
     if (NullHandling.sqlCompatible()) {
       Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply(null));
     } else {
-      Assert.assertEquals(null, loadingLookup.unapply(null));
+      Assert.assertNull(loadingLookup.unapply(null));
     }
   }
 
@@ -78,7 +84,7 @@ public class LoadingLookupTest
     EasyMock.replay(reverseLookupCache);
     Assert.assertEquals(
         ImmutableMap.of("value", Lists.newArrayList("key")),
-        loadingLookup.unapplyAll(ImmutableSet.<String>of("value"))
+        loadingLookup.unapplyAll(ImmutableSet.of("value"))
     );
     EasyMock.verify(reverseLookupCache);
   }

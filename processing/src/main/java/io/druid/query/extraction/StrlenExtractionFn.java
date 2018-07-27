@@ -39,6 +39,7 @@ public class StrlenExtractionFn extends DimExtractionFn
   }
 
   @Override
+  @Nullable
   public String apply(@Nullable String value)
   {
     if (NullHandling.sqlCompatible() && value == null) {

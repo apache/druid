@@ -1714,6 +1714,8 @@ public class RowBasedGrouperHelper
     }
 
     // This class is only used when SQL compatible null handling is enabled.
+    // When serializing the key, it will add a byte to store the nullability of the serialized object before
+    // serializing the key using delegate RowBasedKeySerdeHelper.
     private class NullableRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       private final RowBasedKeySerdeHelper delegate;
