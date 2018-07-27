@@ -648,7 +648,7 @@ public class OverlordResource
                 task.getDataSource(),
                 null,
                 null,
-                DateTimes.EPOCH,
+                task.getCreatedTime(),
                 DateTimes.EPOCH,
                 TaskLocation.unknown()
             ));
