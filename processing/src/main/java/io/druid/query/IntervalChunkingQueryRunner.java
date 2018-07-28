@@ -126,7 +126,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
   private static Iterable<Interval> splitInterval(Interval interval, Period period)
   {
     if (interval.getEndMillis() == interval.getStartMillis()) {
-      return Lists.newArrayList(interval);
+      return Collections.singletonList(interval);
     }
 
     List<Interval> intervals = Lists.newArrayList();

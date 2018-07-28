@@ -21,7 +21,6 @@ package io.druid.indexer.hadoop;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import io.druid.java.util.common.Intervals;
@@ -32,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.DataInput;
+import java.util.Collections;
 
 /**
  */
@@ -42,7 +42,7 @@ public class DatasourceInputSplitTest
   {
     Interval interval = Intervals.of("2000/3000");
     DatasourceInputSplit expected = new DatasourceInputSplit(
-        Lists.newArrayList(
+        Collections.singletonList(
             new WindowedDataSegment(
                 new DataSegment(
                     "test",

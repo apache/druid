@@ -150,32 +150,17 @@ public class ApproximateHistogramGroupByQueryTest
 
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    "marketalias"
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            "marketalias"
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "marketalias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 1
+                Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
+                1
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount,
-                aggFactory
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, aggFactory)
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)
@@ -224,32 +209,17 @@ public class ApproximateHistogramGroupByQueryTest
 
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    "marketalias"
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            "marketalias"
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "marketalias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 1
+                Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
+                1
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount,
-                aggFactory
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, aggFactory)
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new QuantilePostAggregator("quantile", "quantile", 0.5f)

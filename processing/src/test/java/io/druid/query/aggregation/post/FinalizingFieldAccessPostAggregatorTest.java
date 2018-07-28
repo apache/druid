@@ -180,7 +180,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   public void testIngestAndQueryWithArithmeticPostAggregator() throws Exception
   {
     AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Lists.newArrayList(new AggregatorsModule()),
+        Collections.singletonList(new AggregatorsModule()),
         GroupByQueryRunnerTest.testConfigs().get(0),
         tempFoler
     );

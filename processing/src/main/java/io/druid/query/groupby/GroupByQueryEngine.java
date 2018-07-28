@@ -222,7 +222,7 @@ public class GroupByQueryEngine
 
           position = positionMaintainer.getNext();
           if (position == null) {
-            return Lists.newArrayList(keyCopy);
+            return Collections.singletonList(keyCopy);
           }
 
           positions.put(keyCopy, position);

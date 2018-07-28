@@ -23,13 +23,14 @@ import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Collections;
 
 public class EC2AutoScalerSerdeTest
 {
@@ -99,7 +100,7 @@ public class EC2AutoScalerSerdeTest
     Assert.assertEquals(1, autoScaler.getEnvConfig().getNodeData().getMaxInstances());
     Assert.assertEquals(1, autoScaler.getEnvConfig().getNodeData().getMinInstances());
     Assert.assertEquals(
-        Lists.newArrayList("kingsguard"),
+        Collections.singletonList("kingsguard"),
         autoScaler.getEnvConfig().getNodeData().getSecurityGroupIds()
     );
     Assert.assertEquals("redkeep", autoScaler.getEnvConfig().getNodeData().getSubnetId());

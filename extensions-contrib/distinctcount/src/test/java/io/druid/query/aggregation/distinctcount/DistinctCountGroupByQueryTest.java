@@ -94,31 +94,18 @@ public class DistinctCountGroupByQueryTest
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    client_type,
-                    client_type
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec(
+            client_type,
+            client_type
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        client_type,
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 10
+                Collections.singletonList(new OrderByColumnSpec(client_type, OrderByColumnSpec.Direction.DESCENDING)),
+                10
             )
         )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount,
-                new DistinctCountAggregatorFactory("UV", visitor_id, null)
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new DistinctCountAggregatorFactory("UV", visitor_id, null))
         .build();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
 

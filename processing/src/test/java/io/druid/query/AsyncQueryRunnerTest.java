@@ -20,7 +20,6 @@
 package io.druid.query;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -50,7 +49,7 @@ public class AsyncQueryRunnerTest
     query = Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .intervals("2014/2015")
-              .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
               .build();
   }
   
@@ -65,7 +64,7 @@ public class AsyncQueryRunnerTest
       {
         try {
           latch.await();
-          return Sequences.simple(Lists.newArrayList(1));
+          return Sequences.simple(Collections.singletonList(1));
         }
         catch (InterruptedException ex) {
           throw new RuntimeException(ex);
@@ -81,7 +80,7 @@ public class AsyncQueryRunnerTest
 
     Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
     latch.countDown();
-    Assert.assertEquals(Lists.newArrayList(1), lazy.toList());
+    Assert.assertEquals(Collections.singletonList(1), lazy.toList());
   }
   
   @Test(timeout = TEST_TIMEOUT)

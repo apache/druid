@@ -20,7 +20,6 @@
 package io.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
@@ -31,6 +30,7 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +74,7 @@ public class Tasks
           toBeAccumulated.add(interval);
         } else {
           compactIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
-          toBeAccumulated = Lists.newArrayList(interval);
+          toBeAccumulated = Collections.singletonList(interval);
         }
       }
     }

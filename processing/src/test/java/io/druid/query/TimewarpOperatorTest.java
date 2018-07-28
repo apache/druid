@@ -177,7 +177,7 @@ public class TimewarpOperatorTest
               .build();
 
     Assert.assertEquals(
-        Lists.newArrayList(
+        Collections.singletonList(
             new Result<>(
                 DateTimes.of("2014-08-02"),
                 new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", DateTimes.of("2014-08-02")))

@@ -21,7 +21,6 @@ package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -83,9 +82,9 @@ public class LookupSnapshotTakerTest
             new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true)
         )
     );
-    List<LookupBean> lookupBeanList1 = Lists.newArrayList(lookupBean1);
+    List<LookupBean> lookupBeanList1 = Collections.singletonList(lookupBean1);
     lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList1);
-    List<LookupBean> lookupBeanList2 = Lists.newArrayList(lookupBean2);
+    List<LookupBean> lookupBeanList2 = Collections.singletonList(lookupBean2);
     lookupSnapshotTaker.takeSnapshot(TIER2, lookupBeanList2);
     Assert.assertEquals(lookupBeanList1, lookupSnapshotTaker.pullExistingSnapshot(TIER1));
     Assert.assertEquals(lookupBeanList2, lookupSnapshotTaker.pullExistingSnapshot(TIER2));
@@ -114,7 +113,7 @@ public class LookupSnapshotTakerTest
             )
         )
     );
-    List<LookupBean> lookupBeanList = Lists.newArrayList(lookupBean);
+    List<LookupBean> lookupBeanList = Collections.singletonList(lookupBean);
 
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Exception during serialization of lookups");

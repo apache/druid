@@ -21,7 +21,6 @@ package io.druid.query.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.Intervals;
 import io.druid.query.Druids;
@@ -42,6 +41,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -96,7 +96,7 @@ public class SegmentMetadataUnionQueryTest
   {
     SegmentAnalysis expected = new SegmentAnalysis(
         QueryRunnerTestHelper.segmentId,
-        Lists.newArrayList(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
+        Collections.singletonList(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
@@ -119,7 +119,7 @@ public class SegmentMetadataUnionQueryTest
     SegmentMetadataQuery query = new Druids.SegmentMetadataQueryBuilder()
         .dataSource(QueryRunnerTestHelper.unionDataSource)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .toInclude(new ListColumnIncluderator(Lists.newArrayList("placement")))
+        .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
         .analysisTypes(
             SegmentMetadataQuery.AnalysisType.CARDINALITY,
             SegmentMetadataQuery.AnalysisType.SIZE,
