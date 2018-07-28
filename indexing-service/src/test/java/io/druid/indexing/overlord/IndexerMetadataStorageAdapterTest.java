@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.NoopTask;
+import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import org.easymock.EasyMock;
@@ -33,6 +34,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.util.List;
 
 public class IndexerMetadataStorageAdapterTest
 {
@@ -57,25 +60,23 @@ public class IndexerMetadataStorageAdapterTest
   @Test
   public void testDeletePendingSegments()
   {
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource"))
-            .andReturn(
-                ImmutableList.of(
-                    new TaskInfo<>(
-                        "id1",
-                        DateTimes.of("2017-12-01"),
-                        TaskStatus.running("id1"),
-                        "dataSource",
-                        NoopTask.create("id1", 0)
-                    ),
-                    new TaskInfo<>(
-                        "id1",
-                        DateTimes.of("2017-12-02"),
-                        TaskStatus.running("id2"),
-                        "dataSource",
-                        NoopTask.create("id2", 0)
-                    )
-                )
-            );
+    final List<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
+        new TaskInfo<>(
+            "id1",
+            DateTimes.of("2017-12-01"),
+            TaskStatus.running("id1"),
+            "dataSource",
+            NoopTask.create("id1", 0)
+        ),
+        new TaskInfo<>(
+            "id1",
+            DateTimes.of("2017-12-02"),
+            TaskStatus.running("id2"),
+            "dataSource",
+            NoopTask.create("id2", 0)
+        )
+    );
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource")).andReturn(taskInfos);
 
     final Interval deleteInterval = Intervals.of("2017-01-01/2017-12-01");
     EasyMock
@@ -91,25 +92,24 @@ public class IndexerMetadataStorageAdapterTest
   @Test
   public void testDeletePendingSegmentsOfRunningTasks()
   {
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource"))
-            .andReturn(
-                ImmutableList.of(
-                    new TaskInfo<>(
-                        "id1",
-                        DateTimes.of("2017-11-01"),
-                        TaskStatus.running("id1"),
-                        "dataSource",
-                        NoopTask.create("id1", 0)
-                    ),
-                    new TaskInfo<>(
-                        "id1",
-                        DateTimes.of("2017-12-02"),
-                        TaskStatus.running("id2"),
-                        "dataSource",
-                        NoopTask.create("id2", 0)
-                    )
-                )
-            );
+    final ImmutableList<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
+        new TaskInfo<>(
+            "id1",
+            DateTimes.of("2017-11-01"),
+            TaskStatus.running("id1"),
+            "dataSource",
+            NoopTask.create("id1", 0)
+        ),
+        new TaskInfo<>(
+            "id1",
+            DateTimes.of("2017-12-02"),
+            TaskStatus.running("id2"),
+            "dataSource",
+            NoopTask.create("id2", 0)
+        )
+    );
+
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("dataSource")).andReturn(taskInfos);
 
     final Interval deleteInterval = Intervals.of("2017-01-01/2017-12-01");
     EasyMock
