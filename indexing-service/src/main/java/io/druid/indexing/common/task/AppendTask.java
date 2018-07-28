@@ -122,7 +122,7 @@ public class AppendTask extends MergeTaskBase
     IndexMerger indexMerger = toolbox.getIndexMergerV9();
     return indexMerger.append(
         adapters,
-        aggregators == null ? null : aggregators.toArray(new AggregatorFactory[aggregators.size()]),
+        aggregators == null ? null : aggregators.toArray(new AggregatorFactory[0]),
         outDir,
         indexSpec,
         getSegmentWriteOutMediumFactory()

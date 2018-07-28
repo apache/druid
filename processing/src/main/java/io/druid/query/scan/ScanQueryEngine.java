@@ -149,7 +149,7 @@ public class ScanQueryEngine
                         for (String column : allColumns) {
                           final BaseObjectColumnValueSelector selector;
 
-                          if (legacy && column.equals(LEGACY_TIMESTAMP_KEY)) {
+                          if (legacy && LEGACY_TIMESTAMP_KEY.equals(column)) {
                             selector = cursor.getColumnSelectorFactory()
                                              .makeColumnValueSelector(Column.TIME_COLUMN_NAME);
                           } else {

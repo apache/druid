@@ -40,32 +40,32 @@ public class DruidCoordinatorSegmentKillerTest
   public void testFindIntervalForKillTask()
   {
     testFindIntervalForKillTask(null, null);
-    testFindIntervalForKillTask(ImmutableList.<Interval>of(), null);
+    testFindIntervalForKillTask(ImmutableList.of(), null);
 
-    testFindIntervalForKillTask(ImmutableList.<Interval>of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
+    testFindIntervalForKillTask(ImmutableList.of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
 
     testFindIntervalForKillTask(
-        ImmutableList.<Interval>of(Intervals.of("2014/2015"), Intervals.of("2016/2017")),
+        ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017")),
         Intervals.of("2014/2017")
     );
 
     testFindIntervalForKillTask(
-        ImmutableList.<Interval>of(Intervals.of("2014/2015"), Intervals.of("2015/2016")),
+        ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2015/2016")),
         Intervals.of("2014/2016")
     );
 
     testFindIntervalForKillTask(
-        ImmutableList.<Interval>of(Intervals.of("2015/2016"), Intervals.of("2014/2015")),
+        ImmutableList.of(Intervals.of("2015/2016"), Intervals.of("2014/2015")),
         Intervals.of("2014/2016")
     );
 
     testFindIntervalForKillTask(
-        ImmutableList.<Interval>of(Intervals.of("2015/2017"), Intervals.of("2014/2016")),
+        ImmutableList.of(Intervals.of("2015/2017"), Intervals.of("2014/2016")),
         Intervals.of("2014/2017")
     );
 
     testFindIntervalForKillTask(
-        ImmutableList.<Interval>of(
+        ImmutableList.of(
             Intervals.of("2015/2019"),
             Intervals.of("2014/2016"),
             Intervals.of("2018/2020")
@@ -74,7 +74,7 @@ public class DruidCoordinatorSegmentKillerTest
     );
 
     testFindIntervalForKillTask(
-        ImmutableList.<Interval>of(
+        ImmutableList.of(
             Intervals.of("2015/2019"),
             Intervals.of("2014/2016"),
             Intervals.of("2018/2020"),

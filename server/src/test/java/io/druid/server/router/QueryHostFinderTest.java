@@ -27,13 +27,12 @@ import io.druid.query.TableDataSource;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 
 /**
  */
@@ -97,7 +96,7 @@ public class QueryHostFinderTest
     Server server = queryRunner.findServer(
         new TimeBoundaryQuery(
             new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(Intervals.of("2011-08-31/2011-09-01"))),
+            new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-08-31/2011-09-01"))),
             null,
             null,
             null

@@ -85,7 +85,7 @@ public class KerberosHttpClient extends AbstractHttpClient
       final URI uri = request.getUrl().toURI();
 
 
-      Map<String, List<String>> cookieMap = cookieManager.get(uri, Collections.<String, List<String>>emptyMap());
+      Map<String, List<String>> cookieMap = cookieManager.get(uri, Collections.emptyMap());
       for (Map.Entry<String, List<String>> entry : cookieMap.entrySet()) {
         request.addHeaderValues(entry.getKey(), entry.getValue());
       }

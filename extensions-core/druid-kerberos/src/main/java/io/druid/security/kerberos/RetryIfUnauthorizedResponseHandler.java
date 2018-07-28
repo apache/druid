@@ -45,7 +45,7 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
     if (httpResponse.getStatus().equals(HttpResponseStatus.UNAUTHORIZED)) {
       // Drain the buffer
       httpResponse.getContent().toString();
-      return ClientResponse.unfinished(RetryResponseHolder.<Intermediate>retry());
+      return ClientResponse.unfinished(RetryResponseHolder.retry());
     } else {
       return wrap(httpResponseHandler.handleResponse(httpResponse));
     }
@@ -69,7 +69,7 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
   public ClientResponse<RetryResponseHolder<Final>> done(ClientResponse<RetryResponseHolder<Intermediate>> clientResponse)
   {
     if (clientResponse.getObj().shouldRetry()) {
-      return ClientResponse.finished(RetryResponseHolder.<Final>retry());
+      return ClientResponse.finished(RetryResponseHolder.retry());
     } else {
       return wrap(httpResponseHandler.done(unwrap(clientResponse)));
     }

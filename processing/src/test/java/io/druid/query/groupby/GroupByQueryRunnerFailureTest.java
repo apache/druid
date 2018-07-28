@@ -41,10 +41,8 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.ResourceLimitExceededException;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -195,14 +193,14 @@ public class GroupByQueryRunnerFailureTest
                             .setDataSource(QueryRunnerTestHelper.dataSource)
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
@@ -224,23 +222,23 @@ public class GroupByQueryRunnerFailureTest
                                             .setDataSource(QueryRunnerTestHelper.dataSource)
                                             .setInterval(QueryRunnerTestHelper.firstToThird)
                                             .setGranularity(Granularities.ALL)
-                                            .setDimensions(Lists.<DimensionSpec>newArrayList(
+                                            .setDimensions(Lists.newArrayList(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
                                             ))
-                                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                                             .build()
                             )
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
@@ -258,14 +256,14 @@ public class GroupByQueryRunnerFailureTest
                             .setDataSource(QueryRunnerTestHelper.dataSource)
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 

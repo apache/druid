@@ -27,7 +27,6 @@ import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.jclouds.io.Payload;
 import org.jclouds.openstack.swift.v1.features.ObjectApi;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 import org.junit.Assert;
@@ -48,7 +47,7 @@ public class CloudFilesDataSegmentPusherTest
   public void testPush() throws Exception
   {
     ObjectApi objectApi = EasyMock.createStrictMock(ObjectApi.class);
-    EasyMock.expect(objectApi.put(EasyMock.anyString(), EasyMock.<Payload>anyObject())).andReturn(null).atLeastOnce();
+    EasyMock.expect(objectApi.put(EasyMock.anyString(), EasyMock.anyObject())).andReturn(null).atLeastOnce();
     EasyMock.replay(objectApi);
 
     CloudFilesApi api = EasyMock.createStrictMock(CloudFilesApi.class);
@@ -76,9 +75,9 @@ public class CloudFilesDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         0,
         size

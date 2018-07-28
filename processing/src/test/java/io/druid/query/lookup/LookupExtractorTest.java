@@ -52,9 +52,9 @@ public class LookupExtractorTest
       "value1",
       Arrays.asList("key1", "key-1"),
       "value2",
-      Arrays.asList("key2"),
+      Collections.singletonList("key2"),
       "emptyString",
-      Arrays.asList("")
+      Collections.singletonList("")
   );
   LookupExtractor lookupExtractor = new MapLookupExtractor(EXPECTED_MAP, false);
 
@@ -80,7 +80,7 @@ public class LookupExtractorTest
   @Test
   public void testApplyAllWithEmptySet()
   {
-    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(Collections.<String>emptySet()));
+    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(Collections.emptySet()));
   }
 
   @Test
@@ -100,7 +100,7 @@ public class LookupExtractorTest
   @Test
   public void testunapplyAllWithEmptySet()
   {
-    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.unapplyAll(Collections.<String>emptySet()));
+    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.unapplyAll(Collections.emptySet()));
   }
 
   @Test

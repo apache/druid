@@ -164,7 +164,7 @@ public class SingleDimensionShardSpecTest
 
   private Map<String, String> makeMap(String value)
   {
-    return value == null ? ImmutableMap.<String, String>of() : ImmutableMap.of("billy", value);
+    return value == null ? ImmutableMap.of() : ImmutableMap.of("billy", value);
   }
 
   private List<Pair<Boolean, Map<String, String>>> makeList(Object... arguments)

@@ -243,7 +243,7 @@ public class DeterminePartitionsJobTest
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "paths",
                     dataFile.getCanonicalPath(),
                     "type",

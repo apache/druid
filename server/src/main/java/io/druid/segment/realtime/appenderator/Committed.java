@@ -29,7 +29,7 @@ import java.util.Objects;
 
 public class Committed
 {
-  private static final Committed NIL = new Committed(ImmutableMap.<String, Integer>of(), null);
+  private static final Committed NIL = new Committed(ImmutableMap.of(), null);
 
   // Map of segment identifierAsString -> number of committed hydrants
   private final ImmutableMap<String, Integer> hydrants;

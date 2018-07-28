@@ -37,10 +37,8 @@ import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -213,7 +211,7 @@ public class GroupByQueryMergeBufferTest
 
   public GroupByQueryMergeBufferTest(QueryRunner<Row> runner)
   {
-    this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
+    this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner));
   }
 
   @Before
@@ -230,7 +228,7 @@ public class GroupByQueryMergeBufferTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
@@ -251,14 +249,14 @@ public class GroupByQueryMergeBufferTest
                             .setDataSource(QueryRunnerTestHelper.dataSource)
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
@@ -281,23 +279,23 @@ public class GroupByQueryMergeBufferTest
                                             .setDataSource(QueryRunnerTestHelper.dataSource)
                                             .setInterval(QueryRunnerTestHelper.firstToThird)
                                             .setGranularity(Granularities.ALL)
-                                            .setDimensions(Lists.<DimensionSpec>newArrayList(
+                                            .setDimensions(Lists.newArrayList(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
                                             ))
-                                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                                             .build()
                             )
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
@@ -323,33 +321,33 @@ public class GroupByQueryMergeBufferTest
                                                             .setDataSource(QueryRunnerTestHelper.dataSource)
                                                             .setInterval(QueryRunnerTestHelper.firstToThird)
                                                             .setGranularity(Granularities.ALL)
-                                                            .setDimensions(Lists.<DimensionSpec>newArrayList(
+                                                            .setDimensions(Lists.newArrayList(
                                                                 new DefaultDimensionSpec("quality", "alias"),
                                                                 new DefaultDimensionSpec("market", null),
                                                                 new DefaultDimensionSpec("placement", null)
                                                             ))
-                                                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                                                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                                                             .build()
                                             )
                                             .setInterval(QueryRunnerTestHelper.firstToThird)
                                             .setGranularity(Granularities.ALL)
-                                            .setDimensions(Lists.<DimensionSpec>newArrayList(
+                                            .setDimensions(Lists.newArrayList(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
                                             ))
-                                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                                             .build()
                             )
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 

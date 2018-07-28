@@ -138,7 +138,7 @@ public class AlertEventTest
 
       Assert.assertEquals(
           contents(new AlertEvent(service, host, desc)),
-          contents(new AlertEvent(service, host, Severity.COMPONENT_FAILURE, desc, ImmutableMap.<String, Object>of()))
+          contents(new AlertEvent(service, host, Severity.COMPONENT_FAILURE, desc, ImmutableMap.of()))
       );
 
       Assert.assertEquals(
@@ -174,7 +174,7 @@ public class AlertEventTest
       @Override
       public boolean apply(String k)
       {
-        return !k.equals("timestamp");
+        return !"timestamp".equals(k);
       }
     });
   }

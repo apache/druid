@@ -232,7 +232,7 @@ public class CompressionUtilsTest
     final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
     final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
     Assert.assertFalse(gzFile.exists());
-    CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.<Throwable>alwaysTrue());
+    CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.alwaysTrue());
     Assert.assertTrue(gzFile.exists());
     try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(gzFile), gzFile.getName())) {
       assertGoodDataStream(inputStream);
@@ -595,7 +595,7 @@ public class CompressionUtilsTest
               }
             };
           }
-        }, Predicates.<Throwable>alwaysTrue()
+        }, Predicates.alwaysTrue()
     );
     Assert.assertTrue(gzFile.exists());
     try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(gzFile), "file.gz")) {
@@ -642,7 +642,7 @@ public class CompressionUtilsTest
     final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
     final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
     Assert.assertFalse(gzFile.exists());
-    CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.<Throwable>alwaysTrue());
+    CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.alwaysTrue());
     Assert.assertTrue(gzFile.exists());
     try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(gzFile), "file.gz")) {
       assertGoodDataStream(inputStream);

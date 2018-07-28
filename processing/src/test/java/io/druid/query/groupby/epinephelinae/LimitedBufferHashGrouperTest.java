@@ -49,7 +49,7 @@ public class LimitedBufferHashGrouperTest
     final LimitedBufferHashGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 20000, 2, limit);
     final int numRows = 1000;
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < numRows; i++) {
       Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase).isOk());
     }
@@ -72,7 +72,7 @@ public class LimitedBufferHashGrouperTest
     // Aggregate slightly different row
     // Since these keys are smaller, they will evict the previous 100 top entries
     // First 100 of these new rows will be the expected results.
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
     for (int i = 0; i < numRows; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
@@ -113,7 +113,7 @@ public class LimitedBufferHashGrouperTest
     final LimitedBufferHashGrouper<Integer> grouper = makeGrouper(columnSelectorFactory, 11716, 2, limit);
     final int numRows = 1000;
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < numRows; i++) {
       Assert.assertTrue(String.valueOf(i + keyBase), grouper.aggregate(i + keyBase).isOk());
     }
@@ -128,7 +128,7 @@ public class LimitedBufferHashGrouperTest
     // Aggregate slightly different row
     // Since these keys are smaller, they will evict the previous 100 top entries
     // First 100 of these new rows will be the expected results.
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
     for (int i = 0; i < numRows; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }

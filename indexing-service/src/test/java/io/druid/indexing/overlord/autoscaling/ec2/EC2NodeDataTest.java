@@ -24,7 +24,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 
 public class EC2NodeDataTest
 {
@@ -41,7 +41,7 @@ public class EC2NodeDataTest
     Assert.assertEquals("k2.9xsmall", nodeData.getInstanceType());
     Assert.assertEquals(2, nodeData.getMaxInstances());
     Assert.assertEquals(1, nodeData.getMinInstances());
-    Assert.assertEquals(Arrays.asList("sg-abc321"), nodeData.getSecurityGroupIds());
+    Assert.assertEquals(Collections.singletonList("sg-abc321"), nodeData.getSecurityGroupIds());
     Assert.assertEquals("opensesame", nodeData.getKeyName());
     Assert.assertEquals("darknet2", nodeData.getSubnetId());
     Assert.assertEquals("john", nodeData.getIamProfile().getName());

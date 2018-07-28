@@ -62,7 +62,7 @@ public class LongCompressionBenchmarkFileGenerator
     }
 
     BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated("", ValueType.LONG, true, 1, 0d,
-                                                                                  ImmutableList.<Object>of(
+                                                                                  ImmutableList.of(
                                                                                       0,
                                                                                       1,
                                                                                       2,

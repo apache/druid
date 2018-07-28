@@ -49,7 +49,7 @@ public class LoadSpecTest
   @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
   {
-    return ImmutableList.<Object[]>of(
+    return ImmutableList.of(
         new Object[]{"{\"path\":\"/\",\"type\":\"local\"}", "local"}
     );
   }

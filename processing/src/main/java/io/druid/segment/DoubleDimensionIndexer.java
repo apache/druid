@@ -36,7 +36,7 @@ import java.util.Objects;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
-  public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.<Double>naturalNullsFirst();
+  public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.naturalNullsFirst();
 
   @Override
   public Double processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)

@@ -70,7 +70,7 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
                          @Override
                          public boolean apply(PathSegment input)
                          {
-                           return input.getPath().equals("supervisor");
+                           return "supervisor".equals(input.getPath());
                          }
                        }
                    ) + 1

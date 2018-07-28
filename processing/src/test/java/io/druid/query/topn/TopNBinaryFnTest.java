@@ -39,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -62,7 +63,7 @@ public class TopNBinaryFnTest
       rowsCount,
       indexLongSum
   );
-  final List<PostAggregator> postAggregators = Arrays.<PostAggregator>asList(
+  final List<PostAggregator> postAggregators = Collections.singletonList(
       addrowsindexconstant
   );
   private final DateTime currTime = DateTimes.nowUtc();
@@ -84,17 +85,17 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", 2L,
                     "testdim", "1"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 4L,
                     "testdim", "2"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 0L,
                     "index", 2L,
                     "testdim", "3"
@@ -106,17 +107,17 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 3L,
                     "testdim", "1"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 0L,
                     "testdim", "2"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 0L,
                     "index", 1L,
                     "testdim", "3"
@@ -129,13 +130,13 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "1",
                     "rows", 3L,
                     "index", 5L
                 ),
 
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "2",
                     "rows", 4L,
                     "index", 4L
@@ -166,17 +167,17 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", 2L,
                     "testdim", "1"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 4L,
                     "testdim", "2"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 0L,
                     "index", 2L,
                     "testdim", "3"
@@ -188,17 +189,17 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 3L,
                     "testdim", "1"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 0L,
                     "testdim", "2"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 0L,
                     "index", 1L,
                     "testdim", "3"
@@ -211,12 +212,12 @@ public class TopNBinaryFnTest
         Granularities.DAY.bucketStart(currTime),
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "1",
                     "rows", 3L,
                     "index", 5L
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "2",
                     "rows", 4L,
                     "index", 4L
@@ -247,17 +248,17 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", 2L,
                     "testdim", "1"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 4L,
                     "testdim", "2"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 0L,
                     "index", 2L,
                     "testdim", "3"
@@ -291,19 +292,19 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", 2L,
                     "testdim", "1",
                     "addrowsindexconstant", 3.0
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 4L,
                     "testdim", "2",
                     "addrowsindexconstant", 7.0
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 0L,
                     "index", 2L,
                     "testdim", "3",
@@ -316,19 +317,19 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 3L,
                     "testdim", "1",
                     "addrowsindexconstant", 6.0
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 0L,
                     "testdim", "2",
                     "addrowsindexconstant", 3.0
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 4L,
                     "index", 5L,
                     "testdim", "other",
@@ -342,19 +343,19 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "other",
                     "rows", 4L,
                     "index", 5L,
                     "addrowsindexconstant", 10.0
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "1",
                     "rows", 3L,
                     "index", 5L,
                     "addrowsindexconstant", 9.0
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "2",
                     "rows", 4L,
                     "index", 4L,
@@ -386,17 +387,17 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", 2L,
                     "testdim", "1"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 4L,
                     "testdim", "2"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 0L,
                     "index", 2L,
                     "testdim", "3"
@@ -408,17 +409,17 @@ public class TopNBinaryFnTest
         currTime.plusHours(2),
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 3L,
                     "testdim", "1"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 0L,
                     "testdim", "2"
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 0L,
                     "index", 1L,
                     "testdim", "3"
@@ -431,12 +432,12 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "1",
                     "rows", 3L,
                     "index", 5L
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "testdim", "2",
                     "rows", 4L,
                     "index", 4L
@@ -467,7 +468,7 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", 2L,
                     "testdim", "1"
@@ -479,7 +480,7 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 3L,
                     "testdim", "1"
@@ -496,7 +497,7 @@ public class TopNBinaryFnTest
     Result<TopNResultValue> expected = new Result<TopNResultValue>(
         currTime,
         new TopNResultValue(
-            ImmutableList.<Map<String, Object>>of(
+            ImmutableList.of(
                 resultMap
             )
         )

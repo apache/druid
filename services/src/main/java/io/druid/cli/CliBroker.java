@@ -20,7 +20,6 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -86,58 +85,53 @@ public class CliBroker extends ServerRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
-                TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
-            );
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
-            binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
+              TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
+          );
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
+          binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
 
-            binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
-            binder.bind(BrokerServerView.class).in(LazySingleton.class);
-            binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
+          binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
+          binder.bind(BrokerServerView.class).in(LazySingleton.class);
+          binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
-            JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
-            binder.install(new CacheModule());
+          JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
+          binder.install(new CacheModule());
 
-            JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
-            JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
-            JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
-            JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
-            JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
+          JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
+          JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
+          JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
+          JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
+          JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
 
-            binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
+          binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 
-            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+          binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
-            binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
-            Jerseys.addResource(binder, BrokerQueryResource.class);
-            binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
-            Jerseys.addResource(binder, BrokerResource.class);
-            Jerseys.addResource(binder, ClientInfoResource.class);
+          binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
+          Jerseys.addResource(binder, BrokerQueryResource.class);
+          binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
+          Jerseys.addResource(binder, BrokerResource.class);
+          Jerseys.addResource(binder, ClientInfoResource.class);
 
-            LifecycleModule.register(binder, BrokerQueryResource.class);
-            LifecycleModule.register(binder, DruidBroker.class);
+          LifecycleModule.register(binder, BrokerQueryResource.class);
+          LifecycleModule.register(binder, DruidBroker.class);
 
-            Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
+          Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
-            MetricsModule.register(binder, CacheMonitor.class);
+          MetricsModule.register(binder, CacheMonitor.class);
 
-            LifecycleModule.register(binder, Server.class);
+          LifecycleModule.register(binder, Server.class);
 
-            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
-                new DiscoverySideEffectsProvider(
-                    DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
-                    ImmutableList.of(LookupNodeService.class)
-                )
-            ).in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
-          }
+          binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+              new DiscoverySideEffectsProvider(
+                  DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+                  ImmutableList.of(LookupNodeService.class)
+              )
+          ).in(LazySingleton.class);
+          LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
         },
         new LookupModule(),
         new SqlModule()

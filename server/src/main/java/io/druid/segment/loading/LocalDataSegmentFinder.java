@@ -69,7 +69,7 @@ public class LocalDataSegmentFinder implements DataSegmentFinder
     for (File file : workingDir.listFiles()) {
       if (file.isDirectory()) {
         recursiveSearchSegments(timestampedSegments, file, updateDescriptor);
-      } else if (file.getName().equals("descriptor.json")) {
+      } else if ("descriptor.json".equals(file.getName())) {
         final File indexZip = new File(file.getParentFile(), "index.zip");
         if (indexZip.exists()) {
           try {

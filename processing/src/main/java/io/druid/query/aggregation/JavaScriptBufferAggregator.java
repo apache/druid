@@ -35,7 +35,7 @@ public class JavaScriptBufferAggregator implements BufferAggregator
       JavaScriptAggregator.ScriptAggregator script
   )
   {
-    this.selectorList = selectorList.toArray(new BaseObjectColumnValueSelector[]{});
+    this.selectorList = selectorList.toArray(new BaseObjectColumnValueSelector[0]);
     this.script = script;
   }
 

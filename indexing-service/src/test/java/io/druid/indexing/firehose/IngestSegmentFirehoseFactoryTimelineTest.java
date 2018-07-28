@@ -201,7 +201,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     return new MapBasedInputRow(
         DateTimes.of(timeString).getMillis(),
         Arrays.asList(DIMENSIONS),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             TIME_COLUMN, DateTimes.of(timeString).toString(),
             DIMENSIONS[0], "bar",
             METRICS[0], metricValue
@@ -238,7 +238,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       throw Throwables.propagate(e);
     }
 
-    return ImmutableMap.<String, Object>of(
+    return ImmutableMap.of(
         "type", "local",
         "path", persistDir.getAbsolutePath()
     );

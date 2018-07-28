@@ -65,7 +65,7 @@ public class WhiteListBasedConverterTest
     EasyMock.expect(event.getHost()).andReturn(hostname).anyTimes();
     EasyMock.expect(event.getService()).andReturn(serviceName).anyTimes();
     EasyMock.expect(event.getCreatedTime()).andReturn(createdTime).anyTimes();
-    EasyMock.expect(event.getUserDims()).andReturn(Maps.<String, Object>newHashMap()).anyTimes();
+    EasyMock.expect(event.getUserDims()).andReturn(Maps.newHashMap()).anyTimes();
     EasyMock.expect(event.getValue()).andReturn(10).anyTimes();
   }
 

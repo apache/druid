@@ -116,14 +116,14 @@ public class IncrementalIndexStorageAdapterTest
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", "hi")
+            ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "bo")
+            ImmutableMap.of("sally", "bo")
         )
     );
 
@@ -160,14 +160,14 @@ public class IncrementalIndexStorageAdapterTest
         new MapBasedInputRow(
             DateTimes.of("2014-09-01T00:00:00"),
             Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", "hi")
+            ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             DateTimes.of("2014-09-01T01:00:00"),
             Lists.newArrayList("billy", "sally"),
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "billy", "hip",
                 "sally", "hop"
             )
@@ -214,7 +214,7 @@ public class IncrementalIndexStorageAdapterTest
   private static GroupByQueryEngine makeGroupByQueryEngine()
   {
     return new GroupByQueryEngine(
-        Suppliers.<GroupByQueryConfig>ofInstance(
+        Suppliers.ofInstance(
             new GroupByQueryConfig()
             {
               @Override
@@ -250,14 +250,14 @@ public class IncrementalIndexStorageAdapterTest
         new MapBasedInputRow(
             t.minus(1).getMillis(),
             Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", "hi")
+            ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
             Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "bo")
+            ImmutableMap.of("sally", "bo")
         )
     );
 
@@ -285,7 +285,7 @@ public class IncrementalIndexStorageAdapterTest
           new MapBasedInputRow(
               t.minus(1).getMillis(),
               Lists.newArrayList("sally"),
-              ImmutableMap.<String, Object>of("sally", "ah")
+              ImmutableMap.of("sally", "ah")
           )
       );
 
@@ -308,7 +308,7 @@ public class IncrementalIndexStorageAdapterTest
         new MapBasedInputRow(
             t.minus(1).getMillis(),
             Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "bo")
+            ImmutableMap.of("sally", "bo")
         )
     );
 
@@ -354,14 +354,14 @@ public class IncrementalIndexStorageAdapterTest
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", "hi")
+            ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "bo")
+            ImmutableMap.of("sally", "bo")
         )
     );
 
@@ -399,7 +399,7 @@ public class IncrementalIndexStorageAdapterTest
           new MapBasedInputRow(
               timestamp,
               Lists.newArrayList("billy"),
-              ImmutableMap.<String, Object>of("billy", "v1" + i)
+              ImmutableMap.of("billy", "v1" + i)
           )
       );
     }
@@ -461,7 +461,7 @@ public class IncrementalIndexStorageAdapterTest
           new MapBasedInputRow(
               timestamp,
               Lists.newArrayList("billy"),
-              ImmutableMap.<String, Object>of("billy", "v0" + i)
+              ImmutableMap.of("billy", "v0" + i)
           )
       );
     }

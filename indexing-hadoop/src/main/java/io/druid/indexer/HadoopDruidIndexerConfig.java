@@ -102,7 +102,7 @@ public class HadoopDruidIndexerConfig
   static {
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
+        ImmutableList.of(
             new Module()
             {
               @Override

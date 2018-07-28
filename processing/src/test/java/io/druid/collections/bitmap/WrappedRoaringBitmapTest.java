@@ -42,12 +42,12 @@ public class WrappedRoaringBitmapTest
   public static List<RoaringBitmapFactory[]> factoryClasses()
   {
     return Arrays.asList(
-        (RoaringBitmapFactory[]) Arrays.asList(
+        new RoaringBitmapFactory[] {
             new RoaringBitmapFactory(false)
-        ).toArray(),
-        (RoaringBitmapFactory[]) Arrays.asList(
-            new RoaringBitmapFactory(true)
-        ).toArray()
+        },
+        new RoaringBitmapFactory[] {
+            new RoaringBitmapFactory(false)
+        }
     );
   }
 

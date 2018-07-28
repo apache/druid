@@ -49,7 +49,7 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
   @Inject
   public RealtimeMetricsMonitor(List<FireDepartment> fireDepartments)
   {
-    this(fireDepartments, ImmutableMap.<String, String[]>of());
+    this(fireDepartments, ImmutableMap.of());
   }
 
   public RealtimeMetricsMonitor(List<FireDepartment> fireDepartments, Map<String, String[]> dimensions)
