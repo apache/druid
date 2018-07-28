@@ -25,7 +25,6 @@ import io.druid.collections.spatial.Node;
 import io.druid.collections.spatial.RTreeUtils;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -78,7 +77,7 @@ public abstract class GutmanSplitStrategy implements SplitStrategy
     Node group1 = new Node(
         Arrays.copyOf(seeds[1].getMinCoordinates(), seeds[1].getMinCoordinates().length),
         Arrays.copyOf(seeds[1].getMaxCoordinates(), seeds[1].getMaxCoordinates().length),
-        Collections.singletonList(seeds[1]),
+        seeds[1],
         node.isLeaf(),
         node.getParent(),
         bf.makeEmptyMutableBitmap()

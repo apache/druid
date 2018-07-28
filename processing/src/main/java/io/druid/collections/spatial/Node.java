@@ -20,11 +20,12 @@
 package io.druid.collections.spatial;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -46,7 +47,7 @@ public class Node
     this(
         minCoordinates,
         maxCoordinates,
-        Lists.newArrayList(),
+        null,
         isLeaf,
         null,
         bitmapFactory.makeEmptyMutableBitmap()
@@ -56,7 +57,7 @@ public class Node
   public Node(
       float[] minCoordinates,
       float[] maxCoordinates,
-      List<Node> children,
+      @Nullable Node child,
       boolean isLeaf,
       Node parent,
       MutableBitmap bitmap
@@ -66,8 +67,9 @@ public class Node
 
     this.minCoordinates = minCoordinates;
     this.maxCoordinates = maxCoordinates;
-    this.children = children;
-    for (Node child : children) {
+    this.children = new ArrayList<>(1);
+    if (child != null) {
+      children.add(child);
       child.setParent(this);
     }
     this.isLeaf = isLeaf;

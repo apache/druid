@@ -30,7 +30,6 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +73,8 @@ public class Tasks
           toBeAccumulated.add(interval);
         } else {
           compactIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
-          toBeAccumulated = Collections.singletonList(interval);
+          toBeAccumulated.clear();
+          toBeAccumulated.add(interval);
         }
       }
     }
