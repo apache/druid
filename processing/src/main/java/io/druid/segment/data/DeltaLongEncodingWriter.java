@@ -87,7 +87,7 @@ public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingW
   public void flush() throws IOException
   {
     if (serializer != null) {
-      serializer.flush();
+      serializer.close();
     }
   }
 }

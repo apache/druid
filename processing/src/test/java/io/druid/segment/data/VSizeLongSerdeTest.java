@@ -109,8 +109,8 @@ public class VSizeLongSerdeTest
       streamSer.write(value);
       bufferSer.write(value);
     }
-    streamSer.flush();
-    bufferSer.flush();
+    streamSer.close();
+    bufferSer.close();
 
     buffer = ByteBuffer.wrap(outStream.toByteArray());
     Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, values.length), buffer.capacity());
@@ -133,8 +133,8 @@ public class VSizeLongSerdeTest
       streamSer.write(i);
       bufferSer.write(i);
     }
-    streamSer.flush();
-    bufferSer.flush();
+    streamSer.close();
+    bufferSer.close();
 
     buffer = ByteBuffer.wrap(outStream.toByteArray());
     Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int) (end - start)), buffer.capacity());
