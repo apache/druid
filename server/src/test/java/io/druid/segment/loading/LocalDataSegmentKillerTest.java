@@ -128,7 +128,7 @@ public class LocalDataSegmentKillerTest
         "dataSource",
         Intervals.of("2000/3000"),
         "ver",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type", "local",
             "path", path
         ),

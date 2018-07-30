@@ -290,9 +290,9 @@ public class AppenderatorPlumber implements Plumber
               identifier.getDataSource(),
               identifier.getInterval(),
               identifier.getVersion(),
-              ImmutableMap.<String, Object>of(),
-              ImmutableList.<String>of(),
-              ImmutableList.<String>of(),
+              ImmutableMap.of(),
+              ImmutableList.of(),
+              ImmutableList.of(),
               identifier.getShardSpec(),
               null,
               0

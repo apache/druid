@@ -63,7 +63,7 @@ public class SupervisorManager
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
-    return supervisor == null ? Optional.<SupervisorSpec>absent() : Optional.fromNullable(supervisor.rhs);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.rhs);
   }
 
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
@@ -165,9 +165,9 @@ public class SupervisorManager
 
   public boolean checkPointDataSourceMetadata(
       String supervisorId,
-      @Nullable String sequenceName,
-      @Nullable DataSourceMetadata previousDataSourceMetadata,
-      @Nullable DataSourceMetadata currentDataSourceMetadata
+      int taskGroupId,
+      DataSourceMetadata previousDataSourceMetadata,
+      DataSourceMetadata currentDataSourceMetadata
   )
   {
     try {
@@ -178,7 +178,7 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      supervisor.lhs.checkpoint(sequenceName, previousDataSourceMetadata, currentDataSourceMetadata);
+      supervisor.lhs.checkpoint(taskGroupId, previousDataSourceMetadata, currentDataSourceMetadata);
       return true;
     }
     catch (Exception e) {

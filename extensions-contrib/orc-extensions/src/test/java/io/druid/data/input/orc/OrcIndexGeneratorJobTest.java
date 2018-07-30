@@ -36,7 +36,6 @@ import io.druid.indexer.HadoopTuningConfig;
 import io.druid.indexer.HadoopyShardSpec;
 import io.druid.indexer.IndexGeneratorJob;
 import io.druid.indexer.JobHelper;
-import io.druid.indexer.Jobby;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
@@ -255,7 +254,7 @@ public class OrcIndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
 
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
@@ -291,8 +290,8 @@ public class OrcIndexGeneratorJobTest
         Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());
 
         Assert.assertEquals(dataSourceName, dataSegment.getDataSource());
-        Assert.assertTrue(dataSegment.getDimensions().size() == 1);
-        String[] dimensions = dataSegment.getDimensions().toArray(new String[dataSegment.getDimensions().size()]);
+        Assert.assertEquals(1, dataSegment.getDimensions().size());
+        String[] dimensions = dataSegment.getDimensions().toArray(new String[0]);
         Arrays.sort(dimensions);
         Assert.assertEquals("host", dimensions[0]);
         Assert.assertEquals("visited_num", dataSegment.getMetrics().get(0));

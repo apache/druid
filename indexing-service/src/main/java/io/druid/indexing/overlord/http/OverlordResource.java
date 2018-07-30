@@ -44,6 +44,7 @@ import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.common.task.Tasks;
 import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
@@ -175,6 +176,11 @@ public class OverlordResource
           public Response apply(TaskQueue taskQueue)
           {
             try {
+              // Set default priority if needed
+              final Integer priority = task.getContextValue(Tasks.PRIORITY_KEY);
+              if (priority == null) {
+                task.addToContext(Tasks.PRIORITY_KEY, task.getDefaultPriority());
+              }
               taskQueue.add(task);
               return Response.ok(ImmutableMap.of("task", task.getId())).build();
             }
@@ -681,10 +687,10 @@ public class OverlordResource
       finalTaskList.addAll(completedTasks);
     }
 
-    List<TaskInfo<Task>> allActiveTaskInfo = Lists.newArrayList();
+    final List<TaskInfo<Task>> allActiveTaskInfo;
     final List<AnyTask> allActiveTasks = Lists.newArrayList();
     if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
-      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
+      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
       for (final TaskInfo<Task> task : allActiveTaskInfo) {
         allActiveTasks.add(
             new AnyTask(
@@ -694,7 +700,7 @@ public class OverlordResource
                 task.getDataSource(),
                 null,
                 null,
-                DateTimes.EPOCH,
+                task.getCreatedTime(),
                 DateTimes.EPOCH,
                 TaskLocation.unknown()
             ));

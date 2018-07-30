@@ -51,7 +51,7 @@ public class LookupExtractorFactoryMapContainerTest
 
     testContainer = new LookupExtractorFactoryMapContainer(
         "v1",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type", "map",
             "map", ImmutableMap.of("k", "v"),
             "isOneToOne", true

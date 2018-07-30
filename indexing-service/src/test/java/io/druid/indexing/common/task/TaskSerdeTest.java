@@ -331,14 +331,14 @@ public class TaskSerdeTest
   @Test
   public void testMergeTaskSerde() throws Exception
   {
-    final List<DataSegment> segments = ImmutableList.<DataSegment>of(
+    final List<DataSegment> segments = ImmutableList.of(
         DataSegment.builder()
                    .dataSource("foo")
                    .interval(Intervals.of("2010-01-01/P1D"))
                    .version("1234")
                    .build()
     );
-    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
+    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
     final MergeTask task = new MergeTask(
         null,
         "foo",
@@ -388,7 +388,7 @@ public class TaskSerdeTest
   @Test
   public void testSameIntervalMergeTaskSerde() throws Exception
   {
-    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
+    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
     final SameIntervalMergeTask task = new SameIntervalMergeTask(
         null,
         "foo",
@@ -619,7 +619,7 @@ public class TaskSerdeTest
         null,
         "foo",
         segments,
-        ImmutableList.<AggregatorFactory>of(
+        ImmutableList.of(
             new CountAggregatorFactory("cnt")
         ),
         indexSpec,
@@ -713,7 +713,7 @@ public class TaskSerdeTest
             "dataSource",
             Intervals.of("1990-01-01/1999-12-31"),
             "version",
-            ImmutableMap.<String, Object>of(),
+            ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("metric1", "metric2"),
             NoneShardSpec.instance(),
@@ -738,7 +738,7 @@ public class TaskSerdeTest
         "dataSource",
         Intervals.of("1990-01-01/1999-12-31"),
         "version",
-        ImmutableMap.<String, Object>of(),
+        ImmutableMap.of(),
         ImmutableList.of("dim1", "dim2"),
         ImmutableList.of("metric1", "metric2"),
         NoneShardSpec.instance(),
@@ -791,7 +791,7 @@ public class TaskSerdeTest
         null,
         "foo",
         Intervals.of("2010-01-01/P1D"),
-        ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"),
+        ImmutableMap.of("bucket", "hey", "baseKey", "what"),
         null,
         null
     );
@@ -826,7 +826,7 @@ public class TaskSerdeTest
             ),
                 null,
                 jsonMapper
-            ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar"), null, null), null
+            ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
         ),
         null,
         null,

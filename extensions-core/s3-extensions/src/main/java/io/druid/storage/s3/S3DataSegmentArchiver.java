@@ -58,7 +58,7 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
 
     final DataSegment archived = move(
         segment,
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "bucket", targetS3Bucket,
             "baseKey", targetS3BaseKey
         )
@@ -77,7 +77,7 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
 
     final DataSegment restored = move(
         segment,
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "bucket", targetS3Bucket,
             "baseKey", targetS3BaseKey
         )

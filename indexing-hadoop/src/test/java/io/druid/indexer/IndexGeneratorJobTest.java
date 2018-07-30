@@ -547,11 +547,11 @@ public class IndexGeneratorJobTest
   private List<ShardSpec> constructShardSpecFromShardInfo(String partitionType, Object[][] shardInfoForEachShard)
   {
     List<ShardSpec> specs = Lists.newArrayList();
-    if (partitionType.equals("hashed")) {
+    if ("hashed".equals(partitionType)) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
         specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], null, HadoopDruidIndexerConfig.JSON_MAPPER));
       }
-    } else if (partitionType.equals("single")) {
+    } else if ("single".equals(partitionType)) {
       int partitionNum = 0;
       for (String[] shardInfo : (String[][]) shardInfoForEachShard) {
         specs.add(new SingleDimensionShardSpec("host", shardInfo[0], shardInfo[1], partitionNum++));
@@ -592,7 +592,7 @@ public class IndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
 
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
@@ -626,16 +626,16 @@ public class IndexGeneratorJobTest
         Assert.assertEquals(indexZip.getCanonicalPath(), dataSegment.getLoadSpec().get("path"));
         Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());
 
-        if (datasourceName.equals("website")) {
+        if ("website".equals(datasourceName)) {
           Assert.assertEquals("website", dataSegment.getDataSource());
           Assert.assertEquals("host", dataSegment.getDimensions().get(0));
           Assert.assertEquals("visited_num", dataSegment.getMetrics().get(0));
           Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(1));
-        } else if (datasourceName.equals("inherit_dims")) {
+        } else if ("inherit_dims".equals(datasourceName)) {
           Assert.assertEquals("inherit_dims", dataSegment.getDataSource());
           Assert.assertEquals(ImmutableList.of("X", "Y", "M", "Q", "B", "F"), dataSegment.getDimensions());
           Assert.assertEquals("count", dataSegment.getMetrics().get(0));
-        } else if (datasourceName.equals("inherit_dims2")) {
+        } else if ("inherit_dims2".equals(datasourceName)) {
           Assert.assertEquals("inherit_dims2", dataSegment.getDataSource());
           Assert.assertEquals(ImmutableList.of("B", "F", "M", "Q", "X", "Y"), dataSegment.getDimensions());
           Assert.assertEquals("count", dataSegment.getMetrics().get(0));
@@ -647,12 +647,12 @@ public class IndexGeneratorJobTest
           NumberedShardSpec spec = (NumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals(partitionNum, spec.getPartitionNum());
           Assert.assertEquals(shardInfo.length, spec.getPartitions());
-        } else if (partitionType.equals("hashed")) {
+        } else if ("hashed".equals(partitionType)) {
           Integer[] hashShardInfo = (Integer[]) shardInfo[partitionNum];
           HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals((int) hashShardInfo[0], spec.getPartitionNum());
           Assert.assertEquals((int) hashShardInfo[1], spec.getPartitions());
-        } else if (partitionType.equals("single")) {
+        } else if ("single".equals(partitionType)) {
           String[] singleDimensionShardInfo = (String[]) shardInfo[partitionNum];
           SingleDimensionShardSpec spec = (SingleDimensionShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals(singleDimensionShardInfo[0], spec.getStart());

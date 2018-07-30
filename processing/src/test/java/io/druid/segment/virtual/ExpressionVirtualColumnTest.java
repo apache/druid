@@ -207,7 +207,7 @@ public class ExpressionVirtualColumnTest
 
     final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
     final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.<String>notNull());
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.notNull());
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(true, nullMatcher.matches());
@@ -282,7 +282,7 @@ public class ExpressionVirtualColumnTest
 
     final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
     final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.<String>notNull());
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.notNull());
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(true, nullMatcher.matches());

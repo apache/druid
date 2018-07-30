@@ -53,7 +53,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.net.URI;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -80,7 +80,7 @@ public class SameIntervalMergeTaskTest
   @Test
   public void testRun() throws Exception
   {
-    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
+    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
     final SameIntervalMergeTask task = new SameIntervalMergeTask(
         null,
         "foo",
@@ -150,7 +150,7 @@ public class SameIntervalMergeTaskTest
               {
                 if (taskAction instanceof LockListAction) {
                   Assert.assertNotNull("taskLock should be acquired before list", taskLock);
-                  return (RetType) Arrays.asList(taskLock);
+                  return (RetType) Collections.singletonList(taskLock);
                 }
                 if (taskAction instanceof SegmentListUsedAction) {
                   List<DataSegment> segments = ImmutableList.of(

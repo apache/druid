@@ -50,7 +50,7 @@ public class OrderedMergeSequenceTest
         TestSequence.create(4, 6, 8)
     );
 
-    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.natural(), testSequences);
 
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9));
 
@@ -63,12 +63,12 @@ public class OrderedMergeSequenceTest
   public void testMergeEmptySequence() throws Exception
   {
     final ArrayList<TestSequence<Integer>> testSequences = Lists.newArrayList(
-        TestSequence.create(ImmutableList.<Integer>of()),
+        TestSequence.create(ImmutableList.of()),
         TestSequence.create(2, 8),
         TestSequence.create(4, 6, 8)
     );
 
-    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.natural(), testSequences);
 
     SequenceTestHelper.testAll(seq, Arrays.asList(2, 4, 6, 8, 8));
 
@@ -83,10 +83,10 @@ public class OrderedMergeSequenceTest
     final ArrayList<TestSequence<Integer>> testSequences = Lists.newArrayList(
         TestSequence.create(2, 8),
         TestSequence.create(4, 6, 8),
-        TestSequence.create(ImmutableList.<Integer>of())
+        TestSequence.create(ImmutableList.of())
     );
 
-    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.natural(), testSequences);
 
     SequenceTestHelper.testAll(seq, Arrays.asList(2, 4, 6, 8, 8));
 
@@ -101,11 +101,11 @@ public class OrderedMergeSequenceTest
   {
     final ArrayList<TestSequence<Integer>> testSequences = Lists.newArrayList(
         TestSequence.create(2, 8),
-        TestSequence.create(ImmutableList.<Integer>of()),
+        TestSequence.create(ImmutableList.of()),
         TestSequence.create(4, 6, 8)
     );
 
-    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.natural(), testSequences);
 
     SequenceTestHelper.testAll(seq, Arrays.asList(2, 4, 6, 8, 8));
 
@@ -123,7 +123,7 @@ public class OrderedMergeSequenceTest
         TestSequence.create(2, 8)
     );
 
-    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.natural(), testSequences);
 
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 3, 4, 2, 5, 6, 7, 8, 8, 9));
 
@@ -141,7 +141,7 @@ public class OrderedMergeSequenceTest
         TestSequence.create(4, 6)
     );
 
-    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.natural(), testSequences);
 
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 4, 6, 7, 8, 9));
 
@@ -155,7 +155,7 @@ public class OrderedMergeSequenceTest
   {
     final ArrayList<Sequence<Integer>> sequences = makeSyncedSequences();
     OrderedMergeSequence<Integer> seq = new OrderedMergeSequence<Integer>(
-        Ordering.<Integer>natural(), Sequences.simple(sequences)
+        Ordering.natural(), Sequences.simple(sequences)
     );
     SequenceTestHelper.testAccumulation("", seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9));
   }
@@ -165,7 +165,7 @@ public class OrderedMergeSequenceTest
   {
     final ArrayList<Sequence<Integer>> sequences = makeSyncedSequences();
     OrderedMergeSequence<Integer> seq = new OrderedMergeSequence<Integer>(
-        Ordering.<Integer>natural(), Sequences.simple(sequences)
+        Ordering.natural(), Sequences.simple(sequences)
     );
     SequenceTestHelper.testYield("", seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9));
   }
@@ -300,21 +300,21 @@ public class OrderedMergeSequenceTest
   public void testHierarchicalMerge() throws Exception
   {
     final Sequence<Integer> seq1 = makeUnorderedMergedSequence(
-        Ordering.<Integer>natural(), Lists.newArrayList(
+        Ordering.natural(), Lists.newArrayList(
         TestSequence.create(1)
     )
     );
 
 
     final Sequence<Integer> seq2 = makeUnorderedMergedSequence(
-        Ordering.<Integer>natural(), Lists.newArrayList(
+        Ordering.natural(), Lists.newArrayList(
         TestSequence.create(1)
     )
     );
     final OrderedMergeSequence<Integer> finalMerged = new OrderedMergeSequence<Integer>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         Sequences.simple(
-            Lists.<Sequence<Integer>>newArrayList(seq1, seq2)
+            Lists.newArrayList(seq1, seq2)
         )
     );
 
@@ -325,15 +325,15 @@ public class OrderedMergeSequenceTest
   public void testMergeMerge() throws Exception
   {
     final Sequence<Integer> seq1 = makeUnorderedMergedSequence(
-        Ordering.<Integer>natural(), Lists.newArrayList(
+        Ordering.natural(), Lists.newArrayList(
             TestSequence.create(1)
         )
     );
 
     final OrderedMergeSequence<Integer> finalMerged = new OrderedMergeSequence<Integer>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         Sequences.simple(
-            Lists.<Sequence<Integer>>newArrayList(seq1)
+            Lists.newArrayList(seq1)
         )
     );
 
@@ -344,7 +344,7 @@ public class OrderedMergeSequenceTest
   public void testOne() throws Exception
   {
     final MergeSequence<Integer> seq1 = makeUnorderedMergedSequence(
-        Ordering.<Integer>natural(), Lists.newArrayList(
+        Ordering.natural(), Lists.newArrayList(
             TestSequence.create(1)
         )
     );

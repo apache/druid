@@ -145,7 +145,7 @@ public abstract class JsonConfigTesterBase<T>
     testProperties.putAll(propertyValues);
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(simpleJsonConfigModule)
+        ImmutableList.of(simpleJsonConfigModule)
     );
     configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
     configProvider = JsonConfigProvider.of(configPrefix, clazz);

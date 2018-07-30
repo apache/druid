@@ -61,7 +61,7 @@ public class FloatCompressionBenchmarkFileGenerator
     }
 
     BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated("", ValueType.FLOAT, true, 1, 0d,
-                                                                                  ImmutableList.<Object>of(
+                                                                                  ImmutableList.of(
                                                                                       0f,
                                                                                       1.1f,
                                                                                       2.2f,

@@ -599,7 +599,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     } else {
       // Worker is still running this task
       final URL url = makeWorkerURL(zkWorker.getWorker(), StringUtils.format("/task/%s/log?offset=%d", taskId, offset));
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override

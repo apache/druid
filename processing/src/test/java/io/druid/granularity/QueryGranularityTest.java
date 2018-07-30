@@ -754,7 +754,7 @@ public class QueryGranularityTest
   public void testMerge()
   {
     Assert.assertNull(Granularity.mergeGranularities(null));
-    Assert.assertNull(Granularity.mergeGranularities(ImmutableList.<Granularity>of()));
+    Assert.assertNull(Granularity.mergeGranularities(ImmutableList.of()));
     Assert.assertNull(Granularity.mergeGranularities(Lists.newArrayList(null, Granularities.DAY)));
     Assert.assertNull(Granularity.mergeGranularities(Lists.newArrayList(Granularities.DAY, null)));
     Assert.assertNull(

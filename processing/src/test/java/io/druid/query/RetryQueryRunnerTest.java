@@ -36,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -152,11 +153,11 @@ public class RetryQueryRunnerTest
               return Sequences.empty();
             } else {
               return Sequences.simple(
-                  Arrays.asList(
+                  Collections.singletonList(
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )
@@ -200,11 +201,11 @@ public class RetryQueryRunnerTest
               return Sequences.empty();
             } else {
               return Sequences.simple(
-                  Arrays.asList(
+                  Collections.singletonList(
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )
@@ -283,11 +284,11 @@ public class RetryQueryRunnerTest
               );
               context.put("count", 1);
               return Sequences.simple(
-                  Arrays.asList(
+                  Collections.singletonList(
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )
@@ -301,11 +302,11 @@ public class RetryQueryRunnerTest
               );
               context.put("count", 2);
               return Sequences.simple(
-                  Arrays.asList(
+                  Collections.singletonList(
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )
@@ -316,11 +317,11 @@ public class RetryQueryRunnerTest
               // assume no more missing at second retry
               context.put("count", 3);
               return Sequences.simple(
-                  Arrays.asList(
+                  Collections.singletonList(
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )

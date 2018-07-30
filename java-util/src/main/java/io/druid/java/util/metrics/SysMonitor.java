@@ -61,7 +61,7 @@ public class SysMonitor extends FeedDefiningMonitor
 
   public SysMonitor()
   {
-    this(ImmutableMap.<String, String[]>of());
+    this(ImmutableMap.of());
   }
 
   public SysMonitor(Map<String, String[]> dimensions)
@@ -485,7 +485,7 @@ public class SysMonitor extends FeedDefiningMonitor
       }
 
       if (uptime != null) {
-        final Map<String, Number> stats = ImmutableMap.<String, Number>of(
+        final Map<String, Number> stats = ImmutableMap.of(
             "sys/uptime", Double.valueOf(uptime.getUptime()).longValue()
         );
         for (Map.Entry<String, Number> entry : stats.entrySet()) {
@@ -494,7 +494,7 @@ public class SysMonitor extends FeedDefiningMonitor
       }
 
       if (la != null) {
-        final Map<String, Number> stats = ImmutableMap.<String, Number>of(
+        final Map<String, Number> stats = ImmutableMap.of(
             "sys/la/1", la[0],
             "sys/la/5", la[1],
             "sys/la/15", la[2]

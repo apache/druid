@@ -20,7 +20,6 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -78,23 +77,20 @@ public class ResetCluster extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         // It's unknown if those modules are required in ResetCluster.
         // Maybe some of those modules could be removed.
         // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
-            );
-            JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
-          }
+        binder -> {
+          JsonConfigProvider.bindInstance(
+              binder,
+              Key.get(DruidNode.class, Self.class),
+              new DruidNode("tools", "localhost", -1, null, true, false)
+          );
+          JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
         },
         new IndexingServiceTaskLogsModule()
     );

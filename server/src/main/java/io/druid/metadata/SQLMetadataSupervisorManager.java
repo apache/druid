@@ -143,7 +143,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       }
                     }
                 ).fold(
-                    Maps.<String, List<VersionedSupervisorSpec>>newHashMap(),
+                    Maps.newHashMap(),
                     new Folder3<Map<String, List<VersionedSupervisorSpec>>, Pair<String, VersionedSupervisorSpec>>()
                     {
                       @Override
@@ -157,7 +157,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                         try {
                           String specId = pair.lhs;
                           if (!retVal.containsKey(specId)) {
-                            retVal.put(specId, Lists.<VersionedSupervisorSpec>newArrayList());
+                            retVal.put(specId, Lists.newArrayList());
                           }
 
                           retVal.get(specId).add(pair.rhs);
@@ -203,7 +203,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                         try {
                           return Pair.of(
                               r.getString("spec_id"),
-                              jsonMapper.<SupervisorSpec>readValue(
+                              jsonMapper.readValue(
                                   r.getBytes("payload"), new TypeReference<SupervisorSpec>()
                                   {
                                   }
@@ -216,7 +216,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       }
                     }
                 ).fold(
-                    Maps.<String, SupervisorSpec>newHashMap(),
+                    Maps.newHashMap(),
                     new Folder3<Map<String, SupervisorSpec>, Pair<String, SupervisorSpec>>()
                     {
                       @Override

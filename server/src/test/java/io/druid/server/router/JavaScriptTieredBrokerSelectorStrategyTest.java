@@ -84,7 +84,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
     final String strategyString = mapper.writeValueAsString(STRATEGY);
 
     expectedException.expect(JsonMappingException.class);
-    expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(IllegalStateException.class));
+    expectedException.expectCause(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");
 
     mapper.readValue(strategyString, JavaScriptTieredBrokerSelectorStrategy.class);

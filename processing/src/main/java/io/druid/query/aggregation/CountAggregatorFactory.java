@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -84,7 +84,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(name));
+    return Collections.singletonList(new CountAggregatorFactory(name));
   }
 
   @Override

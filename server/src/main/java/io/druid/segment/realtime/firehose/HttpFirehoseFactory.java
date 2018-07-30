@@ -63,7 +63,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
     Preconditions.checkArgument(uris.size() > 0, "Empty URIs");
     final URLConnection connection = uris.get(0).toURL().openConnection();
     final String acceptRanges = connection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
-    this.supportContentRange = acceptRanges != null && acceptRanges.equalsIgnoreCase("bytes");
+    this.supportContentRange = acceptRanges != null && "bytes".equalsIgnoreCase(acceptRanges);
   }
 
   @JsonProperty

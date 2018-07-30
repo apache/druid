@@ -79,7 +79,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     EasyMock.expect(druidServer.getCurrSize()).andReturn(3000L).anyTimes();
     EasyMock.expect(druidServer.getMaxSize()).andReturn(100000000L).anyTimes();
 
-    EasyMock.expect(druidServer.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(druidServer.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     Map<String, DataSegment> segments = Maps.newHashMap();
     for (int j = 0; j < maxSegments; j++) {
       DataSegment segment = getSegment(j);
@@ -110,7 +110,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
         dataSource, interval, String.valueOf(index), new ConcurrentHashMap<>(),
-        Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, index * 100L
+        Lists.newArrayList(), Lists.newArrayList(), null, 0, index * 100L
     );
     return segment;
   }

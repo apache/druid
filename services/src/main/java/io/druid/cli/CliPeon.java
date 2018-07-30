@@ -90,7 +90,6 @@ import io.druid.segment.loading.OmniDataSegmentArchiver;
 import io.druid.segment.loading.OmniDataSegmentKiller;
 import io.druid.segment.loading.OmniDataSegmentMover;
 import io.druid.segment.loading.SegmentLoaderConfig;
-import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
@@ -108,7 +107,7 @@ import org.eclipse.jetty.server.Server;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -150,7 +149,7 @@ public class CliPeon extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -254,7 +253,7 @@ public class CliPeon extends GuiceRunnable
             // configuration of other parameters, but I don't think that's actually a problem.
             // Note, if that is actually not a problem, then that probably means we have the wrong abstraction.
             binder.bind(SegmentLoaderConfig.class)
-                  .toInstance(new SegmentLoaderConfig().withLocations(Arrays.<StorageLocationConfig>asList()));
+                  .toInstance(new SegmentLoaderConfig().withLocations(Collections.emptyList()));
             binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
@@ -346,14 +345,9 @@ public class CliPeon extends GuiceRunnable
       try {
         final Lifecycle lifecycle = initLifecycle(injector);
         final Thread hook = new Thread(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                log.info("Running shutdown hook");
-                lifecycle.stop();
-              }
+            () -> {
+              log.info("Running shutdown hook");
+              lifecycle.stop();
             }
         );
         Runtime.getRuntime().addShutdownHook(hook);

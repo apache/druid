@@ -92,11 +92,11 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     }
 
     for (final URI inputURI : this.uris) {
-      Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
+      Preconditions.checkArgument("s3".equals(inputURI.getScheme()), "input uri scheme == s3 (%s)", inputURI);
     }
 
     for (final URI inputURI : this.prefixes) {
-      Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
+      Preconditions.checkArgument("s3".equals(inputURI.getScheme()), "input uri scheme == s3 (%s)", inputURI);
     }
   }
 

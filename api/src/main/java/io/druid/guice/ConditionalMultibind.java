@@ -60,7 +60,7 @@ public class ConditionalMultibind<T>
    */
   public static <T> ConditionalMultibind<T> create(Properties properties, Binder binder, Class<T> type)
   {
-    return new ConditionalMultibind<T>(properties, Multibinder.<T>newSetBinder(binder, type));
+    return new ConditionalMultibind<T>(properties, Multibinder.newSetBinder(binder, type));
   }
 
   /**
@@ -81,7 +81,7 @@ public class ConditionalMultibind<T>
       Class<? extends Annotation> annotationType
   )
   {
-    return new ConditionalMultibind<T>(properties, Multibinder.<T>newSetBinder(binder, type, annotationType));
+    return new ConditionalMultibind<T>(properties, Multibinder.newSetBinder(binder, type, annotationType));
   }
 
   /**
@@ -96,7 +96,7 @@ public class ConditionalMultibind<T>
    */
   public static <T> ConditionalMultibind<T> create(Properties properties, Binder binder, TypeLiteral<T> type)
   {
-    return new ConditionalMultibind<T>(properties, Multibinder.<T>newSetBinder(binder, type));
+    return new ConditionalMultibind<T>(properties, Multibinder.newSetBinder(binder, type));
   }
 
   /**
@@ -117,7 +117,7 @@ public class ConditionalMultibind<T>
       Class<? extends Annotation> annotationType
   )
   {
-    return new ConditionalMultibind<T>(properties, Multibinder.<T>newSetBinder(binder, type, annotationType));
+    return new ConditionalMultibind<T>(properties, Multibinder.newSetBinder(binder, type, annotationType));
   }
 
 

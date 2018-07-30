@@ -328,7 +328,7 @@ public class CardinalityAggregatorTest
 
     rowAggregatorFactory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.<DimensionSpec>newArrayList(
+        Lists.newArrayList(
             dimSpec1,
             dimSpec2
         ),
@@ -338,7 +338,7 @@ public class CardinalityAggregatorTest
     rowAggregatorFactoryRounded = new CardinalityAggregatorFactory(
         "billy",
         null,
-        Lists.<DimensionSpec>newArrayList(
+        Lists.newArrayList(
             dimSpec1,
             dimSpec2
         ),
@@ -348,7 +348,7 @@ public class CardinalityAggregatorTest
 
     valueAggregatorFactory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.<DimensionSpec>newArrayList(
+        Lists.newArrayList(
             dimSpec1,
             dimSpec2
         ),
@@ -437,7 +437,7 @@ public class CardinalityAggregatorTest
   public void testBufferAggregateRows()
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList.toArray(new ColumnSelectorPlus[] {}),
+        dimInfoList.toArray(new ColumnSelectorPlus[0]),
         true
     );
 
@@ -459,7 +459,7 @@ public class CardinalityAggregatorTest
   public void testBufferAggregateValues()
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
-        dimInfoList.toArray(new ColumnSelectorPlus[] {}),
+        dimInfoList.toArray(new ColumnSelectorPlus[0]),
         false
     );
 
@@ -622,7 +622,7 @@ public class CardinalityAggregatorTest
     CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
         "billy",
         null,
-        ImmutableList.<DimensionSpec>of(
+        ImmutableList.of(
             new DefaultDimensionSpec("b", "b"),
             new DefaultDimensionSpec("a", "a"),
             new DefaultDimensionSpec("c", "c")
@@ -650,7 +650,7 @@ public class CardinalityAggregatorTest
 
     CardinalityAggregatorFactory factory2 = new CardinalityAggregatorFactory(
         "billy",
-        ImmutableList.<DimensionSpec>of(
+        ImmutableList.of(
             new ExtractionDimensionSpec("b", "b", new RegexDimExtractionFn(".*", false, null)),
             new RegexFilteredDimensionSpec(new DefaultDimensionSpec("a", "a"), ".*"),
             new DefaultDimensionSpec("c", "c")

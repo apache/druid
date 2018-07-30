@@ -58,11 +58,9 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
     this.caseSensitive = caseSensitive;
     Set<String> set = new TreeSet<>();
     if (values != null) {
-      for (String value : values) {
-        set.add(value);
-      }
+      set.addAll(values);
     }
-    target = set.toArray(new String[set.size()]);
+    target = set.toArray(new String[0]);
   }
 
   @JsonProperty

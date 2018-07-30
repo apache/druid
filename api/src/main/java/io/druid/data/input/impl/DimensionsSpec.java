@@ -75,15 +75,15 @@ public class DimensionsSpec
   )
   {
     this.dimensions = dimensions == null
-                      ? Lists.<DimensionSchema>newArrayList()
+                      ? Lists.newArrayList()
                       : Lists.newArrayList(dimensions);
 
     this.dimensionExclusions = (dimensionExclusions == null)
-                               ? Sets.<String>newHashSet()
+                               ? Sets.newHashSet()
                                : Sets.newHashSet(dimensionExclusions);
 
     List<SpatialDimensionSchema> spatialDims = (spatialDimensions == null)
-                                               ? Lists.<SpatialDimensionSchema>newArrayList()
+                                               ? Lists.newArrayList()
                                                : spatialDimensions;
 
     verify(spatialDims);

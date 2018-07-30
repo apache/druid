@@ -849,7 +849,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     } else {
       // Worker is still running this task
       final URL url = WorkerHolder.makeWorkerURL(worker, StringUtils.format("/druid/worker/v1/task/%s/log?offset=%d", taskId, offset));
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override

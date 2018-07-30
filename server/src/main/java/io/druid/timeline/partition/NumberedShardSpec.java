@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.RangeSet;
 import io.druid.data.input.InputRow;
 
@@ -72,9 +72,15 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
-  public Map<String, RangeSet<String>> getDomain()
+  public List<String> getDomainDimensions()
   {
-    return ImmutableMap.of();
+    return ImmutableList.of();
+  }
+
+  @Override
+  public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
+  {
+    return true;
   }
 
   @JsonProperty("partitions")

@@ -112,7 +112,7 @@ public class VarianceAggregatorCollectorTest
         FloatHandOver valueHandOver = new FloatHandOver();
         for (int i = 0; i < mergeOn; i++) {
           holders1.add(new VarianceAggregatorCollector());
-          holders2.add(Pair.<VarianceBufferAggregator, ByteBuffer>of(
+          holders2.add(Pair.of(
                            new VarianceBufferAggregator.FloatVarianceAggregator(valueHandOver),
                            ByteBuffer.allocate(VarianceAggregatorCollector.getMaxIntermediateSize())
                        ));

@@ -47,7 +47,7 @@ public class CombiningIterableTest
     iterators.add(secondList);
     CombiningIterable<Integer> actualIterable = CombiningIterable.createSplatted(
         iterators,
-        Ordering.<Integer>natural()
+        Ordering.natural()
     );
     Assert.assertEquals(mergedLists.size(), Iterables.size(actualIterable));
     Set actualHashset = Sets.newHashSet(actualIterable);

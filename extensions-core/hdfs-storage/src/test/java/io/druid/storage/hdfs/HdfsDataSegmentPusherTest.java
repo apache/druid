@@ -150,9 +150,9 @@ public class HdfsDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         0,
         size
@@ -195,9 +195,9 @@ public class HdfsDataSegmentPusherTest
           "foo",
           Intervals.of("2015/2016"),
           "0",
-          Maps.<String, Object>newHashMap(),
-          Lists.<String>newArrayList(),
-          Lists.<String>newArrayList(),
+          Maps.newHashMap(),
+          Lists.newArrayList(),
+          Lists.newArrayList(),
           new NumberedShardSpec(i, i),
           0,
           size
@@ -301,9 +301,9 @@ public class HdfsDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         0,
         size
@@ -397,7 +397,7 @@ public class HdfsDataSegmentPusherTest
   {
 
     Interval interval = Intervals.of("2011-10-01/2011-10-02");
-    ImmutableMap<String, Object> loadSpec = ImmutableMap.<String, Object>of("something", "or_other");
+    ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 
     DataSegment segment = new DataSegment(
         "something",

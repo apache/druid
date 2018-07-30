@@ -33,7 +33,6 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.lookup.namespace.CacheGenerator;
-import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.server.lookup.namespace.JdbcCacheGenerator;
 import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
@@ -195,7 +194,7 @@ public class JdbcExtractionNamespaceTest
             NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
             scheduler = new CacheScheduler(
                 noopServiceEmitter,
-                ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+                ImmutableMap.of(
                     JdbcExtractionNamespace.class,
                     new CacheGenerator<JdbcExtractionNamespace>()
                     {
@@ -412,7 +411,7 @@ public class JdbcExtractionNamespaceTest
         String field = val[0];
         String filterVal = val[1];
 
-        if (filterVal.equals("1")) {
+        if ("1".equals(filterVal)) {
           Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
         } else {
           Assert.assertEquals("non-null check", null, Strings.emptyToNull(map.get(key)));

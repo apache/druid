@@ -41,7 +41,6 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -199,7 +198,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
     final GroupByQuery innerQuery = new GroupByQuery.Builder(subquery)
         .setAggregatorSpecs(Lists.newArrayList(aggs))
         .setInterval(subquery.getIntervals())
-        .setPostAggregatorSpecs(Lists.<PostAggregator>newArrayList())
+        .setPostAggregatorSpecs(Lists.newArrayList())
         .build();
 
     final GroupByQuery outerQuery = new GroupByQuery.Builder(query)
@@ -208,7 +207,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
     final IncrementalIndex innerQueryResultIndex = GroupByQueryHelper.makeIncrementalIndex(
         innerQuery.withOverriddenContext(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 GroupByQueryHelper.CTX_KEY_SORT_RESULTS, true
             )
         ),

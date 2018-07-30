@@ -142,7 +142,7 @@ public interface IndexMerger
 
   static <T extends Comparable<? super T>> ArrayList<T> mergeIndexed(List<Iterable<T>> indexedLists)
   {
-    Set<T> retVal = Sets.newTreeSet(Comparators.<T>naturalNullsFirst());
+    Set<T> retVal = Sets.newTreeSet(Comparators.naturalNullsFirst());
 
     for (Iterable<T> indexedList : indexedLists) {
       for (T val : indexedList) {

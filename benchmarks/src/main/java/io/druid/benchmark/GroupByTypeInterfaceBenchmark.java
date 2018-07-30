@@ -55,7 +55,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
@@ -182,7 +181,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null)
           ))
           .setAggregatorSpecs(
@@ -195,7 +194,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("metLongUniform", null),
               new DefaultDimensionSpec("metFloatNormal", null)
           ))
@@ -209,7 +208,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("metLongUniform", null)
           ))
           .setAggregatorSpecs(
@@ -222,7 +221,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("metFloatNormal", null)
           ))
           .setAggregatorSpecs(
@@ -249,7 +248,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null),
               new DefaultDimensionSpec("dimZipf", null)
           ))
@@ -263,7 +262,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource(subqueryA)
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null)
           ))
           .setAggregatorSpecs(

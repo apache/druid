@@ -104,7 +104,7 @@ public class OverlordResourceTestClient
             LOG.info("Submitted task with TaskID[%s]", taskID);
             return taskID;
           },
-          Predicates.<Throwable>alwaysTrue(),
+          Predicates.alwaysTrue(),
           5
       );
     }

@@ -46,7 +46,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
       "test",
       Intervals.of("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.<String, Object>of("bucket", bucket, "path", indexPath),
+      ImmutableMap.of("bucket", bucket, "path", indexPath),
       null,
       null,
       NoneShardSpec.instance(),

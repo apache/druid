@@ -136,7 +136,7 @@ public class Filtration
 
     final Filtration transformed = transform(
         this,
-        ImmutableList.<Function<Filtration, Filtration>>of(
+        ImmutableList.of(
             CombineAndSimplifyBounds.instance(),
             ConvertBoundsToSelectors.create(sourceRowSignature),
             ConvertSelectorsToIns.create(sourceRowSignature)

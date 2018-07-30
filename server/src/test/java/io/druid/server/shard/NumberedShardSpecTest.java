@@ -67,7 +67,7 @@ public class NumberedShardSpecTest
   @Test
   public void testPartitionChunks()
   {
-    final List<ShardSpec> specs = ImmutableList.<ShardSpec>of(
+    final List<ShardSpec> specs = ImmutableList.of(
         new NumberedShardSpec(0, 3),
         new NumberedShardSpec(1, 3),
         new NumberedShardSpec(2, 3)

@@ -65,7 +65,7 @@ public class RulesResourceFilter extends AbstractResourceFilter
                                                    @Override
                                                    public boolean apply(PathSegment input)
                                                    {
-                                                     return input.getPath().equals("rules");
+                                                     return "rules".equals(input.getPath());
                                                    }
                                                  }
                                              ) + 1

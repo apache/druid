@@ -90,7 +90,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
       // use all SPNEGO principals in the keytab if a principal isn't
       // specifically configured
       final String[] spnegoPrincipals;
-      if (principal.equals("*")) {
+      if ("*".equals(principal)) {
         spnegoPrincipals = KerberosUtil.getPrincipalNames(
             keytab, Pattern.compile("HTTP/.*"));
         if (spnegoPrincipals.length == 0) {

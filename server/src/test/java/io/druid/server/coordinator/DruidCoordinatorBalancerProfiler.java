@@ -57,8 +57,8 @@ public class DruidCoordinatorBalancerProfiler
   Map<String, DataSegment> segments = Maps.newHashMap();
   ServiceEmitter emitter;
   MetadataRuleManager manager;
-  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), ImmutableMap.<String, Integer>of("normal", 3));
-  List<Rule> rules = ImmutableList.<Rule>of(loadRule);
+  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), ImmutableMap.of("normal", 3));
+  List<Rule> rules = ImmutableList.of(loadRule);
 
   @Before
   public void setUp()
@@ -76,16 +76,16 @@ public class DruidCoordinatorBalancerProfiler
     Stopwatch watch = Stopwatch.createUnstarted();
     int numSegments = 55000;
     int numServers = 50;
-    EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.<String, List<Rule>>of("test", rules)).anyTimes();
-    EasyMock.expect(manager.getRules(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
-    EasyMock.expect(manager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(rules).anyTimes();
+    EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.of("test", rules)).anyTimes();
+    EasyMock.expect(manager.getRules(EasyMock.anyObject())).andReturn(rules).anyTimes();
+    EasyMock.expect(manager.getRulesWithDefault(EasyMock.anyObject())).andReturn(rules).anyTimes();
     EasyMock.replay(manager);
 
     coordinator.moveSegment(
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<DataSegment>anyObject(),
-        EasyMock.<LoadPeonCallback>anyObject()
+        EasyMock.anyObject(),
+        EasyMock.anyObject(),
+        EasyMock.anyObject(),
+        EasyMock.anyObject()
     );
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
@@ -101,9 +101,9 @@ public class DruidCoordinatorBalancerProfiler
               "datasource" + i,
               new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)),
               (DateTimes.of("2012-03-01")).toString(),
-              Maps.<String, Object>newHashMap(),
-              Lists.<String>newArrayList(),
-              Lists.<String>newArrayList(),
+              Maps.newHashMap(),
+              Lists.newArrayList(),
+              Lists.newArrayList(),
               NoneShardSpec.instance(),
               0,
               4L
@@ -124,7 +124,7 @@ public class DruidCoordinatorBalancerProfiler
       } else {
         EasyMock.expect(server.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
       }
-      EasyMock.expect(server.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+      EasyMock.expect(server.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
       EasyMock.replay(server);
 
       LoadQueuePeon peon = new LoadQueuePeonTester();
@@ -202,7 +202,7 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
-    EasyMock.expect(druidServer1.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(druidServer1.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
     EasyMock.expect(druidServer2.getName()).andReturn("to").atLeastOnce();
@@ -210,14 +210,14 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
-    EasyMock.expect(druidServer2.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
     coordinator.moveSegment(
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<ImmutableDruidServer>anyObject(),
-        EasyMock.<DataSegment>anyObject(),
-        EasyMock.<LoadPeonCallback>anyObject()
+        EasyMock.anyObject(),
+        EasyMock.anyObject(),
+        EasyMock.anyObject(),
+        EasyMock.anyObject()
     );
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
@@ -243,7 +243,7 @@ public class DruidCoordinatorBalancerProfiler
                                     )
                                 )
                                 .withLoadManagementPeons(
-                                    ImmutableMap.<String, LoadQueuePeon>of(
+                                    ImmutableMap.of(
                                         "from",
                                         fromPeon,
                                         "to",

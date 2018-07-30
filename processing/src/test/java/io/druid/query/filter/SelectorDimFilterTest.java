@@ -25,6 +25,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class SelectorDimFilterTest
 {
@@ -66,10 +67,10 @@ public class SelectorDimFilterTest
   {
     SelectorDimFilter selectorDimFilter = new SelectorDimFilter("abc", "d", null);
     DimFilter filter = new AndDimFilter(
-        Arrays.<DimFilter>asList(
+        Collections.singletonList(
             new OrDimFilter(
-                Arrays.<DimFilter>asList(
-                    new AndDimFilter(Arrays.<DimFilter>asList(selectorDimFilter, null))
+                Collections.singletonList(
+                    new AndDimFilter(Arrays.asList(selectorDimFilter, null))
                 )
             )
         )

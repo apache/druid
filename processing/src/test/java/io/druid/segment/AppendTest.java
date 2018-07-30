@@ -38,7 +38,6 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
@@ -65,6 +64,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,7 +104,7 @@ public class AppendTest
   final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum, uniques);
 
   final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+      Collections.singletonList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
   private Segment segment;
@@ -167,7 +167,7 @@ public class AppendTest
   @Test
   public void testTimeBoundary()
   {
-    List<Result<TimeBoundaryResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeBoundaryResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -192,7 +192,7 @@ public class AppendTest
   @Test
   public void testTimeBoundary2()
   {
-    List<Result<TimeBoundaryResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeBoundaryResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -217,18 +217,18 @@ public class AppendTest
   @Test
   public void testTimeSeries()
   {
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 8L)
-                            .put("index", 700.0D)
-                            .put("addRowsIndexConstant", 709.0D)
-                            .put("uniques", 1.0002442201269182D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 8L)
+                    .put("index", 700.0D)
+                    .put("addRowsIndexConstant", 709.0D)
+                    .put("uniques", 1.0002442201269182D)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 0.0D)
+                    .build()
             )
         )
     );
@@ -242,18 +242,18 @@ public class AppendTest
   @Test
   public void testTimeSeries2()
   {
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 7L)
-                            .put("index", 500.0D)
-                            .put("addRowsIndexConstant", 508.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 7L)
+                    .put("index", 500.0D)
+                    .put("addRowsIndexConstant", 508.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 0.0D)
+                    .build()
             )
         )
     );
@@ -267,18 +267,18 @@ public class AppendTest
   @Test
   public void testFilteredTimeSeries()
   {
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 5L)
-                            .put("index", 500.0D)
-                            .put("addRowsIndexConstant", 506.0D)
-                            .put("uniques", 1.0002442201269182D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 5L)
+                    .put("index", 500.0D)
+                    .put("addRowsIndexConstant", 506.0D)
+                    .put("uniques", 1.0002442201269182D)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
@@ -292,18 +292,18 @@ public class AppendTest
   @Test
   public void testFilteredTimeSeries2()
   {
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 4L)
-                            .put("index", 400.0D)
-                            .put("addRowsIndexConstant", 405.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 4L)
+                    .put("index", 400.0D)
+                    .put("addRowsIndexConstant", 405.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
@@ -317,20 +317,20 @@ public class AppendTest
   @Test
   public void testTopNSeries()
   {
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Arrays.asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 3L)
-                                .put("index", 300.0D)
-                                .put("addRowsIndexConstant", 304.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("rows", 3L)
+                        .put("index", 300.0D)
+                        .put("addRowsIndexConstant", 304.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     QueryRunnerTestHelper.orderedMap(
                         "market", null,
                         "rows", 3L,
@@ -341,14 +341,14 @@ public class AppendTest
                         "minIndex", 0.0
                     ),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
-                                .put("rows", 2L)
-                                .put("index", 200.0D)
-                                .put("addRowsIndexConstant", 203.0D)
-                                .put("uniques", 1.0002442201269182D)
-                                .put("maxIndex", 100.0D)
-                                .put("minIndex", 100.0D)
-                                .build()
+                        .put("market", "total_market")
+                        .put("rows", 2L)
+                        .put("index", 200.0D)
+                        .put("addRowsIndexConstant", 203.0D)
+                        .put("uniques", 1.0002442201269182D)
+                        .put("maxIndex", 100.0D)
+                        .put("minIndex", 100.0D)
+                        .build()
                 )
             )
         )
@@ -363,20 +363,20 @@ public class AppendTest
   @Test
   public void testTopNSeries2()
   {
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Arrays.asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
-                                .put("rows", 3L)
-                                .put("index", 300.0D)
-                                .put("addRowsIndexConstant", 304.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0D)
-                                .put("minIndex", 100.0D)
-                                .build(),
+                        .put("market", "total_market")
+                        .put("rows", 3L)
+                        .put("index", 300.0D)
+                        .put("addRowsIndexConstant", 304.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0D)
+                        .put("minIndex", 100.0D)
+                        .build(),
                     QueryRunnerTestHelper.orderedMap(
                         "market", null,
                         "rows", 3L,
@@ -387,14 +387,14 @@ public class AppendTest
                         "minIndex", 0.0
                     ),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
@@ -409,20 +409,20 @@ public class AppendTest
   @Test
   public void testFilteredTopNSeries()
   {
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
@@ -437,7 +437,7 @@ public class AppendTest
   @Test
   public void testFilteredTopNSeries2()
   {
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
@@ -455,11 +455,11 @@ public class AppendTest
   @Test
   public void testSearch()
   {
-    List<Result<SearchResultValue>> expectedResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(qualityDimension, "automotive"),
                     new SearchHit(placementDimension, "mezzanine"),
@@ -478,11 +478,11 @@ public class AppendTest
   @Test
   public void testSearchWithOverlap()
   {
-    List<Result<SearchResultValue>> expectedResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(placementDimension, "mezzanine"),
                     new SearchHit(marketDimension, "total_market")
@@ -500,11 +500,11 @@ public class AppendTest
   @Test
   public void testFilteredSearch()
   {
-    List<Result<SearchResultValue>> expectedResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementDimension, "mezzanine"),
                     new SearchHit(marketDimension, "total_market")
                 )
@@ -521,11 +521,11 @@ public class AppendTest
   @Test
   public void testFilteredSearch2()
   {
-    List<Result<SearchResultValue>> expectedResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(placementDimension, "mezzanine"),
                     new SearchHit(marketDimension, "total_market")
@@ -543,18 +543,18 @@ public class AppendTest
   @Test
   public void testRowFiltering()
   {
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 5L)
-                            .put("index", 500.0D)
-                            .put("addRowsIndexConstant", 506.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 5L)
+                    .put("index", 500.0D)
+                    .put("addRowsIndexConstant", 506.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
@@ -565,7 +565,7 @@ public class AppendTest
                                   .intervals(fullOnInterval)
                                   .filters(marketDimension, "breakstuff")
                                   .aggregators(
-                                      Lists.<AggregatorFactory>newArrayList(
+                                      Lists.newArrayList(
                                           Iterables.concat(
                                               commonAggregators,
                                               Lists.newArrayList(
@@ -589,7 +589,7 @@ public class AppendTest
                  .granularity(allGran)
                  .intervals(fullOnInterval)
                  .aggregators(
-                     Lists.<AggregatorFactory>newArrayList(
+                     Lists.newArrayList(
                          Iterables.concat(
                              commonAggregators,
                              Lists.newArrayList(
@@ -616,7 +616,7 @@ public class AppendTest
                      )
                  )
                  .aggregators(
-                     Lists.<AggregatorFactory>newArrayList(
+                     Lists.newArrayList(
                          Iterables.concat(
                              commonAggregators,
                              Lists.newArrayList(
@@ -640,7 +640,7 @@ public class AppendTest
         .threshold(3)
         .intervals(fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonAggregators,
                     Lists.newArrayList(
@@ -650,7 +650,7 @@ public class AppendTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
   }
 
@@ -670,7 +670,7 @@ public class AppendTest
         )
         .intervals(fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonAggregators,
                     Lists.newArrayList(
@@ -680,7 +680,7 @@ public class AppendTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
   }
 

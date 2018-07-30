@@ -111,12 +111,15 @@ An example of compaction task is
 
 This compaction task reads _all segments_ of the interval `2017-01-01/2018-01-01` and results in new segments.
 Note that intervals of the input segments are merged into a single interval of `2017-01-01/2018-01-01` no matter what the segmentGranularity was.
-To controll the number of result segments, you can set `targetPartitionSize` or `numShards`. See [indexTuningConfig](#tuningconfig) for more details.
+To control the number of result segments, you can set `targetPartitionSize` or `numShards`. See [indexTuningConfig](#tuningconfig) for more details.
 To merge each day's worth of data into separate segments, you can submit multiple `compact` tasks, one for each day. They will run in parallel.
 
 A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
 For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html), and `dimensionsSpec` and `metricsSpec`
 include all dimensions and metrics of the input segments by default.
+
+Compaction tasks will exit with a failure status code, without doing anything, if the interval you specify has no
+data segments loaded in it (or if the interval you specify is empty).
 
 The output segment can have different metadata from the input segments unless all input segments have the same metadata.
 

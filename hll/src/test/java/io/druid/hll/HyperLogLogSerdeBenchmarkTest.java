@@ -58,7 +58,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
   @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
   {
-    return ImmutableList.<Object[]>of(
+    return ImmutableList.of(
         (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 10)).toArray(),
         (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 10)).toArray(),
         (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 10)).toArray(),

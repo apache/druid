@@ -256,6 +256,6 @@ public class CliCoordinator extends ServerRunnable
 
   public static boolean isOverlord(Properties properties)
   {
-    return Boolean.valueOf(properties.getProperty("druid.coordinator.asOverlord.enabled")).booleanValue();
+    return Boolean.parseBoolean(properties.getProperty("druid.coordinator.asOverlord.enabled"));
   }
 }
