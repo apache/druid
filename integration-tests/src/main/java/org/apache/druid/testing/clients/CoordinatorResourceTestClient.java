@@ -70,6 +70,11 @@ public class CoordinatorResourceTestClient
     );
   }
 
+  private String getMetadataSegmentsURL(String dataSource)
+  {
+    return StringUtils.format("%smetadata/datasources/%s/segments", getCoordinatorURL(), dataSource);
+  }
+
   private String getIntervalsURL(String dataSource)
   {
     return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), dataSource);
@@ -78,6 +83,25 @@ public class CoordinatorResourceTestClient
   private String getLoadStatusURL()
   {
     return StringUtils.format("%s%s", getCoordinatorURL(), "loadstatus");
+  }
+
+  // return a list of the segment dates for the specified datasource
+  public List<String> getMetadataSegments(final String dataSource)
+  {
+    ArrayList<String> segments = null;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getMetadataSegmentsURL(dataSource));
+
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<ArrayList<String>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+    return segments;
   }
 
   // return a list of the segment dates for the specified datasource

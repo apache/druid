@@ -27,13 +27,16 @@ import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,6 +50,7 @@ import java.util.Set;
 @Path("/status")
 public class StatusResource
 {
+  private static Logger log = new Logger(StatusResource.class);
 
   private final Properties properties;
 
@@ -73,7 +77,9 @@ public class StatusResource
   @GET
   @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Status doGet()
+  public Status doGet(
+      @Context final HttpServletRequest req
+  )
   {
     return new Status(Initialization.getLoadedImplementations(DruidModule.class));
   }

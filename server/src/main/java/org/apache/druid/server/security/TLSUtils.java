@@ -21,15 +21,20 @@ package org.apache.druid.server.security;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.metadata.PasswordProvider;
+import org.eclipse.jetty.util.ssl.AliasedX509ExtendedKeyManager;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedKeyManager;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 
 public class TLSUtils
@@ -39,28 +44,77 @@ public class TLSUtils
       String trustStoreType,
       String trustStorePath,
       String trustStoreAlgorithm,
-      PasswordProvider trustStorePasswordProvider
+      PasswordProvider trustStorePasswordProvider,
+      String keyStoreType,
+      String keyStorePath,
+      String keyStoreAlgorithm,
+      String certAlias,
+      PasswordProvider keyStorePasswordProvider,
+      PasswordProvider keyManagerFactoryPasswordProvider
   )
   {
     SSLContext sslContext = null;
     try {
       sslContext = SSLContext.getInstance(protocol == null ? "TLSv1.2" : protocol);
-      KeyStore keyStore = KeyStore.getInstance(trustStoreType == null
+      KeyStore trustStore = KeyStore.getInstance(trustStoreType == null
                                                ? KeyStore.getDefaultType()
                                                : trustStoreType);
-      keyStore.load(
+      trustStore.load(
           new FileInputStream(trustStorePath),
           trustStorePasswordProvider.getPassword().toCharArray()
       );
       TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(trustStoreAlgorithm == null
                                                                                 ? TrustManagerFactory.getDefaultAlgorithm()
                                                                                 : trustStoreAlgorithm);
-      trustManagerFactory.init(keyStore);
-      sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
+      trustManagerFactory.init(trustStore);
+
+
+      KeyManager[] keyManagers;
+      if (keyStorePath != null) {
+        KeyStore keyStore = KeyStore.getInstance(keyStoreType == null
+                                                 ? KeyStore.getDefaultType()
+                                                 : keyStoreType);
+        keyStore.load(
+            new FileInputStream(keyStorePath),
+            keyStorePasswordProvider == null ? null : keyStorePasswordProvider.getPassword().toCharArray()
+        );
+
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
+            keyStoreAlgorithm == null ?
+            KeyManagerFactory.getDefaultAlgorithm() : keyStoreAlgorithm
+        );
+        keyManagerFactory.init(
+            keyStore,
+            keyManagerFactoryPasswordProvider == null ? null : keyManagerFactoryPasswordProvider.getPassword().toCharArray()
+        );
+        keyManagers = createAliasedKeyManagers(keyManagerFactory.getKeyManagers(), certAlias);
+      } else {
+        keyManagers = null;
+      }
+
+      sslContext.init(
+          keyManagers,
+          trustManagerFactory.getTrustManagers(),
+          null
+      );
     }
-    catch (CertificateException | KeyManagementException | IOException | KeyStoreException | NoSuchAlgorithmException e) {
+    catch (CertificateException | KeyManagementException | IOException | KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
       Throwables.propagate(e);
     }
     return sslContext;
+  }
+
+  // Use Jetty's aliased KeyManager for consistency between server/client TLS configs
+  private static KeyManager[] createAliasedKeyManagers(KeyManager[] delegates, String certAlias)
+  {
+    KeyManager[] aliasedManagers = new KeyManager[delegates.length];
+    for (int i = 0; i < delegates.length; i++) {
+      if (delegates[i] instanceof X509ExtendedKeyManager) {
+        aliasedManagers[i] = new AliasedX509ExtendedKeyManager((X509ExtendedKeyManager) delegates[i], certAlias);
+      } else {
+        aliasedManagers[i] = delegates[i];
+      }
+    }
+    return aliasedManagers;
   }
 }

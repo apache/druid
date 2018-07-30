@@ -48,7 +48,13 @@ public class SSLContextProvider implements Provider<SSLContext>
         config.getTrustStoreType(),
         config.getTrustStorePath(),
         config.getTrustStoreAlgorithm(),
-        config.getTrustStorePasswordProvider()
+        config.getTrustStorePasswordProvider(),
+        config.getKeyStoreType(),
+        config.getKeyStorePath(),
+        config.getKeyManagerFactoryAlgorithm(),
+        config.getCertAlias(),
+        config.getKeyStorePasswordProvider(),
+        config.getKeyManagerPasswordProvider()
     );
   }
 }

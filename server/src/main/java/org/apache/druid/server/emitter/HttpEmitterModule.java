@@ -131,7 +131,13 @@ public class HttpEmitterModule implements Module
           sslConfig.getTrustStoreType(),
           sslConfig.getTrustStorePath(),
           sslConfig.getTrustStoreAlgorithm(),
-          sslConfig.getTrustStorePasswordProvider()
+          sslConfig.getTrustStorePasswordProvider(),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
       );
     } else {
       effectiveSSLContext = sslContext;
