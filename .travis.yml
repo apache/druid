@@ -13,7 +13,15 @@ jdk:
 cache:
   directories:
     - $HOME/.m2
-
+before_install:
+  - |
+    if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+      TRAVIS_COMMIT_RANGE="FETCH_HEAD...$TRAVIS_BRANCH"
+    fi
+    git diff --name-only $TRAVIS_COMMIT_RANGE | grep -qvE '(\.md$)|(^(docs|examples/(bin|conf|conf-quickstart|quickstart)|publications))/' || {
+      echo "Only docs were updated, stopping build process."
+      exit
+    }
 matrix:
   include:
       # strict compilation
