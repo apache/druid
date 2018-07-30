@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
@@ -86,42 +87,7 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
       @Override
       public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)
       {
-        int comparation;
-
-        // First we check if the objects are null
-        if (o1 == null && o2 == null) {
-          comparation = 0;
-        } else if (o1 == null) {
-          comparation = -1;
-        } else if (o2 == null) {
-          comparation = 1;
-        } else {
-
-          // If the objects are not null, we will try to compare using timestamp
-          comparation = o1.lhs.compareTo(o2.lhs);
-
-          // If both timestamp are the same, we try to compare the Strings
-          if (comparation == 0) {
-
-            // First we check if the strings are null
-            if (o1.rhs == null && o2.rhs == null) {
-              comparation = 0;
-            } else if (o1.rhs == null) {
-              comparation = -1;
-            } else if (o2.rhs == null) {
-              comparation = 1;
-            } else {
-
-              // If the strings are not null, we will compare them
-              // Note: This comparison maybe doesn't make sense to first/last aggregators,
-              // because compare both SerializablePairLongString based on String maybe doesn't matter
-              // to define each is first or last.
-              comparation = o1.rhs.compareTo(o2.rhs);
-            }
-          }
-        }
-
-        return comparation;
+        return StringFirstAggregatorFactory.VALUE_COMPARATOR.compare(o1, o2);
       }
 
       @Override

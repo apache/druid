@@ -50,18 +50,41 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
       ((SerializablePairLongString) o2).lhs
   );
 
-  public static final Comparator VALUE_COMPARATOR = (o1, o2) -> {
-    String s1 = null;
-    String s2 = null;
+  public static final Comparator<SerializablePairLongString> VALUE_COMPARATOR = (o1, o2) -> {
+    int comparation;
 
-    if (o1 != null) {
-      s1 = ((SerializablePairLongString) o1).rhs;
-    }
-    if (o2 != null) {
-      s2 = ((SerializablePairLongString) o2).rhs;
+    // First we check if the objects are null
+    if (o1 == null && o2 == null) {
+      comparation = 0;
+    } else if (o1 == null) {
+      comparation = -1;
+    } else if (o2 == null) {
+      comparation = 1;
+    } else {
+
+      // If the objects are not null, we will try to compare using timestamp
+      comparation = o1.lhs.compareTo(o2.lhs);
+
+      // If both timestamp are the same, we try to compare the Strings
+      if (comparation == 0) {
+
+        // First we check if the strings are null
+        if (o1.rhs == null && o2.rhs == null) {
+          comparation = 0;
+        } else if (o1.rhs == null) {
+          comparation = -1;
+        } else if (o2.rhs == null) {
+          comparation = 1;
+        } else {
+
+          // If the strings are not null, we will compare them
+          // Note: This comparation maybe doesn't make sense to first/last aggregators
+          comparation = o1.rhs.compareTo(o2.rhs);
+        }
+      }
     }
 
-    return Objects.equals(s1, s2) ? 1 : 0;
+    return comparation;
   };
 
   private final String fieldName;
