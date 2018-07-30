@@ -453,6 +453,28 @@ public class CompactionTaskTest
     );
   }
 
+  @Test
+  public void testEmptyInterval() throws Exception
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage(CoreMatchers.containsString("must specify a nonempty interval"));
+
+    final CompactionTask task = new CompactionTask(
+        null,
+        null,
+        "foo",
+        Intervals.of("2000-01-01/2000-01-01"),
+        null,
+        null,
+        null,
+        null,
+        objectMapper,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        null
+    );
+  }
+
   private static DimensionsSpec getExpectedDimensionsSpecForAutoGeneration()
   {
     return new DimensionsSpec(
@@ -627,7 +649,7 @@ public class CompactionTaskTest
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
-          if (columnName.equals(MIXED_TYPE_COLUMN)) {
+          if (MIXED_TYPE_COLUMN.equals(columnName)) {
             columnMap.put(columnName, createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval())));
           } else if (DIMENSIONS.containsKey(columnName)) {
             columnMap.put(columnName, createColumn(DIMENSIONS.get(columnName)));

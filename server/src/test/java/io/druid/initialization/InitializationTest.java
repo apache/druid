@@ -352,7 +352,7 @@ public class InitializationTest
         return rootHadoopDependenciesDir.getAbsolutePath();
       }
     };
-    Initialization.getHadoopDependencyFilesToLoad(ImmutableList.<String>of(), config);
+    Initialization.getHadoopDependencyFilesToLoad(ImmutableList.of(), config);
   }
 
   @Test(expected = ISE.class)
@@ -454,8 +454,8 @@ public class InitializationTest
     final ClassLoader classLoader1 = Initialization.getClassLoaderForExtension(extension1, false);
     final ClassLoader classLoader2 = Initialization.getClassLoaderForExtension(extension2, false);
 
-    Assert.assertArrayEquals(new URL[]{jar1.toURL()}, ((URLClassLoader) classLoader1).getURLs());
-    Assert.assertArrayEquals(new URL[]{jar2.toURL()}, ((URLClassLoader) classLoader2).getURLs());
+    Assert.assertArrayEquals(new URL[]{jar1.toURI().toURL()}, ((URLClassLoader) classLoader1).getURLs());
+    Assert.assertArrayEquals(new URL[]{jar2.toURI().toURL()}, ((URLClassLoader) classLoader2).getURLs());
   }
 
   public static class TestDruidModule implements DruidModule

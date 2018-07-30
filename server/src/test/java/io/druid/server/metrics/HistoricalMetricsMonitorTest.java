@@ -69,9 +69,9 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
         dataSource,
         Intervals.of("2014/2015"),
         "version",
-        ImmutableMap.<String, Object>of(),
-        ImmutableList.<String>of(),
-        ImmutableList.<String>of(),
+        ImmutableMap.of(),
+        ImmutableList.of(),
+        ImmutableList.of(),
         null,
         1,
         size

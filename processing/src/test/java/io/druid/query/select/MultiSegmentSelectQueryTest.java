@@ -62,6 +62,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -254,7 +255,7 @@ public class MultiSegmentSelectQueryTest
       SelectResultValue value = results.get(0).getValue();
       Map<String, Integer> pagingIdentifiers = value.getPagingIdentifiers();
 
-      Map<String, Integer> merged = PagingSpec.merge(Arrays.asList(pagingIdentifiers));
+      Map<String, Integer> merged = PagingSpec.merge(Collections.singletonList(pagingIdentifiers));
 
       for (int i = 0; i < 4; i++) {
         if (query.isDescending() ^ expected[i] >= 0) {
@@ -337,7 +338,7 @@ public class MultiSegmentSelectQueryTest
     List<Result<SelectResultValue>> results = unionQueryRunner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
     Map<String, Integer> pagingIdentifiers = results.get(0).getValue().getPagingIdentifiers();
-    query = query.withPagingSpec(toNextCursor(PagingSpec.merge(Arrays.asList(pagingIdentifiers)), query, 3));
+    query = query.withPagingSpec(toNextCursor(PagingSpec.merge(Collections.singletonList(pagingIdentifiers)), query, 3));
 
     unionQueryRunner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
   }

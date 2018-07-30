@@ -31,6 +31,7 @@ import org.apache.commons.codec.binary.Base64;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -54,7 +55,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
-    this.breaksList = (breaksList == null) ? Lists.<Float>newArrayList() : breaksList;
+    this.breaksList = (breaksList == null) ? Lists.newArrayList() : breaksList;
     this.breaks = new float[this.breaksList.size()];
     for (int i = 0; i < this.breaksList.size(); ++i) {
       this.breaks[i] = this.breaksList.get(i);
@@ -136,7 +137,8 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new HistogramAggregatorFactory(fieldName, fieldName, breaksList));
+    return Collections.singletonList(
+        new HistogramAggregatorFactory(fieldName, fieldName, breaksList));
   }
 
   @Override
@@ -181,7 +183,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(fieldName);
+    return Collections.singletonList(fieldName);
   }
 
   @Override

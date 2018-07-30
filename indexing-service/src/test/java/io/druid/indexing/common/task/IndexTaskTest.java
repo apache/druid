@@ -32,7 +32,6 @@ import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.ParseSpec;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
@@ -536,8 +535,8 @@ public class IndexTaskTest
                 ),
                 new DimensionsSpec(
                     null,
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
+                    Lists.newArrayList(),
+                    Lists.newArrayList()
                 ),
                 null,
                 null,
@@ -558,8 +557,8 @@ public class IndexTaskTest
 
     Assert.assertEquals(1, segments.size());
 
-    Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
-    Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
+    Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
+    Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
@@ -588,8 +587,8 @@ public class IndexTaskTest
                 ),
                 new DimensionsSpec(
                     null,
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
+                    Lists.newArrayList(),
+                    Lists.newArrayList()
                 ),
                 null,
                 Arrays.asList("time", "dim", "val"),
@@ -610,8 +609,8 @@ public class IndexTaskTest
 
     Assert.assertEquals(1, segments.size());
 
-    Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
-    Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
+    Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
+    Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
@@ -797,8 +796,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "dim", "val"),
@@ -822,8 +821,8 @@ public class IndexTaskTest
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
 
-    Assert.assertEquals(Arrays.asList("d"), segments.get(0).getDimensions());
-    Assert.assertEquals(Arrays.asList("val"), segments.get(0).getMetrics());
+    Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
+    Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
@@ -850,8 +849,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "dim", "val"),
@@ -881,7 +880,7 @@ public class IndexTaskTest
         RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
         RowIngestionMeters.BUILD_SEGMENTS,
-        Arrays.asList("Unparseable timestamp found! Event: {time=unparseable, d=a, val=1}")
+        Collections.singletonList("Unparseable timestamp found! Event: {time=unparseable, d=a, val=1}")
     );
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
@@ -941,8 +940,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             null
@@ -1062,8 +1061,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
@@ -1176,8 +1175,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
@@ -1318,7 +1317,7 @@ public class IndexTaskTest
           dimensions.equals(Sets.newHashSet("column_2", "column_3"))
       );
 
-      Assert.assertEquals(Arrays.asList("val"), segment.getMetrics());
+      Assert.assertEquals(Collections.singletonList("val"), segment.getMetrics());
       Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
     }
   }
@@ -1345,8 +1344,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "", ""),
@@ -1379,7 +1378,8 @@ public class IndexTaskTest
         RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
         RowIngestionMeters.BUILD_SEGMENTS,
-        Arrays.asList("Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
+        Collections.singletonList(
+            "Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
     );
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
@@ -1566,7 +1566,7 @@ public class IndexTaskTest
             granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.MINUTE,
-                Arrays.asList(Intervals.of("2014/2015"))
+                Collections.singletonList(Intervals.of("2014/2015"))
             ),
             transformSpec,
             jsonMapper

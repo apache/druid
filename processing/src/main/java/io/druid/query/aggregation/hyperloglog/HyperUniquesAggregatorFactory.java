@@ -41,7 +41,6 @@ import io.druid.segment.NilColumnValueSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -167,7 +166,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory(
+    return Collections.singletonList(new HyperUniquesAggregatorFactory(
         fieldName,
         fieldName,
         isInputHyperUnique,

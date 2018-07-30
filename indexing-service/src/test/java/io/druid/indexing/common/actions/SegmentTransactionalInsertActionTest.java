@@ -54,9 +54,9 @@ public class SegmentTransactionalInsertActionTest
       DATA_SOURCE,
       INTERVAL,
       PARTY_YEAR,
-      ImmutableMap.<String, Object>of(),
-      ImmutableList.<String>of(),
-      ImmutableList.<String>of(),
+      ImmutableMap.of(),
+      ImmutableList.of(),
+      ImmutableList.of(),
       new LinearShardSpec(0),
       9,
       1024
@@ -66,9 +66,9 @@ public class SegmentTransactionalInsertActionTest
       DATA_SOURCE,
       INTERVAL,
       PARTY_YEAR,
-      ImmutableMap.<String, Object>of(),
-      ImmutableList.<String>of(),
-      ImmutableList.<String>of(),
+      ImmutableMap.of(),
+      ImmutableList.of(),
+      ImmutableList.of(),
       new LinearShardSpec(1),
       9,
       1024
@@ -78,9 +78,9 @@ public class SegmentTransactionalInsertActionTest
       DATA_SOURCE,
       INTERVAL,
       THE_DISTANT_FUTURE,
-      ImmutableMap.<String, Object>of(),
-      ImmutableList.<String>of(),
-      ImmutableList.<String>of(),
+      ImmutableMap.of(),
+      ImmutableList.of(),
+      ImmutableList.of(),
       new LinearShardSpec(1),
       9,
       1024
@@ -143,7 +143,7 @@ public class SegmentTransactionalInsertActionTest
         actionTestKit.getTaskActionToolbox()
     );
 
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result);
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result);
   }
 
   @Test

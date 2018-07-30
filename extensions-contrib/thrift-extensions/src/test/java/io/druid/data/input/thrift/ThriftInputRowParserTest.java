@@ -22,7 +22,6 @@ package io.druid.data.input.thrift;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.JavaScriptParseSpec;
@@ -61,7 +60,7 @@ public class ThriftInputRowParserTest
   public void setUp()
   {
     parseSpec = new JSONParseSpec(new TimestampSpec("date", "auto", null),
-                                  new DimensionsSpec(Lists.<DimensionSchema>newArrayList(
+                                  new DimensionsSpec(Lists.newArrayList(
                                       new StringDimensionSchema("title"),
                                       new StringDimensionSchema("lastName")
                                   ), null, null),

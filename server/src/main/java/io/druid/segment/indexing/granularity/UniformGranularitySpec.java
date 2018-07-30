@@ -91,7 +91,7 @@ public class UniformGranularitySpec implements GranularitySpec
   @Override
   public List<Interval> inputIntervals()
   {
-    return inputIntervals == null ? ImmutableList.<Interval>of() : ImmutableList.copyOf(inputIntervals);
+    return inputIntervals == null ? ImmutableList.of() : ImmutableList.copyOf(inputIntervals);
   }
 
   @Override

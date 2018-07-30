@@ -49,7 +49,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -484,24 +483,14 @@ public class DumpSegment extends GuiceRunnable
     final QueryRunnerFactory factory = conglomerate.findFactory(query);
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
     final Sequence results = factory.getToolchest().mergeResults(
-        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner>of(runner))
-    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner))
+    ).run(QueryPlus.wrap(query), Maps.newHashMap());
     return (Sequence<T>) results;
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)
   {
-    sequence.accumulate(
-        null,
-        new Accumulator<Object, T>()
-        {
-          @Override
-          public Object accumulate(Object accumulated, T in)
-          {
-            return null;
-          }
-        }
-    );
+    sequence.accumulate(null, (accumulated, in) -> null);
   }
 
   private static class ListObjectSelector implements ColumnValueSelector

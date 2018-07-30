@@ -66,7 +66,7 @@ public class QueryRunnerHelper
               }
             }
         ),
-        Predicates.<Result<T>>notNull()
+        Predicates.notNull()
     );
   }
 

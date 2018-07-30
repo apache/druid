@@ -70,7 +70,7 @@ public class ForeverLoadRuleTest
   public void testEmptyTieredReplicants() throws Exception
   {
     ForeverLoadRule rule = new ForeverLoadRule(
-        ImmutableMap.<String, Integer>of()
+        ImmutableMap.of()
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();

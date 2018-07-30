@@ -120,7 +120,7 @@ public class InformationSchema extends AbstractSchema
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
-    this.tableMap = ImmutableMap.<String, Table>of(
+    this.tableMap = ImmutableMap.of(
         SCHEMATA_TABLE, new SchemataTable(),
         TABLES_TABLE, new TablesTable(),
         COLUMNS_TABLE, new ColumnsTable()

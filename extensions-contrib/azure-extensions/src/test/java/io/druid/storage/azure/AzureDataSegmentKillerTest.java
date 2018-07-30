@@ -46,7 +46,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       "test",
       Intervals.of("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.<String, Object>of("containerName", containerName, "blobPath", blobPath),
+      ImmutableMap.of("containerName", containerName, "blobPath", blobPath),
       null,
       null,
       NoneShardSpec.instance(),

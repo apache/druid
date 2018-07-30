@@ -106,7 +106,7 @@ public class InputRowParserSerdeTest
         InputRowParser.class
     );
     final InputRow parsed = parser2.parseBatch(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "foo", "x",
             "bar", "y",
             "qux", "z",
@@ -139,7 +139,7 @@ public class InputRowParserSerdeTest
         InputRowParser.class
     );
     final InputRow parsed = parser2.parseBatch(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "timemillis", 1412705931123L,
             "toobig", 123E64,
             "value", 123.456,

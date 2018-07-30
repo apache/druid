@@ -27,7 +27,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
@@ -112,7 +111,7 @@ public class OrcHadoopInputRowParserTest
                 null
             ),
             new DimensionsSpec(
-                ImmutableList.<DimensionSchema>of(new StringDimensionSchema("col1"), new StringDimensionSchema("col2")),
+                ImmutableList.of(new StringDimensionSchema("col1"), new StringDimensionSchema("col2")),
                 null,
                 null
             )
@@ -134,7 +133,7 @@ public class OrcHadoopInputRowParserTest
             null
         ),
         new DimensionsSpec(
-            ImmutableList.<DimensionSchema>of(new StringDimensionSchema("col1"), new StringDimensionSchema("col2")),
+            ImmutableList.of(new StringDimensionSchema("col1"), new StringDimensionSchema("col2")),
             null,
             null
         )

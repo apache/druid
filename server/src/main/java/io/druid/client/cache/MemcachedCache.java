@@ -387,8 +387,8 @@ public class MemcachedCache implements Cache
             }
         );
       } else {
-        clientSupplier = Suppliers.<ResourceHolder<MemcachedClientIF>>ofInstance(
-            StupidResourceHolder.<MemcachedClientIF>create(new MemcachedClient(connectionFactory, hosts))
+        clientSupplier = Suppliers.ofInstance(
+            StupidResourceHolder.create(new MemcachedClient(connectionFactory, hosts))
         );
       }
 

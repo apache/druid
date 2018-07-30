@@ -57,7 +57,7 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -98,9 +98,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 return null;
               }
 
-              final List<Rule> defaultRules = Arrays.<Rule>asList(
+              final List<Rule> defaultRules = Collections.singletonList(
                   new ForeverLoadRule(
-                      ImmutableMap.<String, Integer>of(
+                      ImmutableMap.of(
                           DruidServer.DEFAULT_TIER,
                           DruidServer.DEFAULT_NUM_REPLICANTS
                       )
@@ -148,10 +148,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
    * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
    * the theoretical situation of two tasks scheduled in {@link #start()} calling {@link #poll()} concurrently, if
    * the sequence of {@link #start()} - {@link #stop()} - {@link #start()} actions occurs quickly.
+   *
+   * {@link SQLMetadataSegmentManager} also have a similar issue.
    */
   private long currentStartOrder = -1;
   private ScheduledExecutorService exec = null;
-  private long retryStartTime = 0;
+  private long failStartTimeMs = 0;
 
   @Inject
   public SQLMetadataRuleManager(
@@ -241,6 +243,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public void poll()
   {
     try {
+    
       ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(
           dbi.withHandle(
               new HandleCallback<Map<String, List<Rule>>>()
@@ -267,7 +270,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                           try {
                             return Pair.of(
                                 r.getString("dataSource"),
-                                jsonMapper.<List<Rule>>readValue(
+                                jsonMapper.readValue(
                                     r.getBytes("payload"), new TypeReference<List<Rule>>()
                                     {
                                     }
@@ -281,7 +284,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                       }
                   )
                                .fold(
-                                   Maps.<String, List<Rule>>newHashMap(),
+                                   Maps.newHashMap(),
                                    new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
                                    {
                                      @Override
@@ -311,17 +314,17 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       log.info("Polled and found rules for %,d datasource(s)", newRules.size());
 
       rules.set(newRules);
-      retryStartTime = 0;
+      failStartTimeMs = 0;
     }
     catch (Exception e) {
-      if (retryStartTime == 0) {
-        retryStartTime = System.currentTimeMillis();
+      if (failStartTimeMs == 0) {
+        failStartTimeMs = System.currentTimeMillis();
       }
 
-      if (System.currentTimeMillis() - retryStartTime > config.getAlertThreshold().toStandardDuration().getMillis()) {
+      if (System.currentTimeMillis() - failStartTimeMs > config.getAlertThreshold().toStandardDuration().getMillis()) {
         log.makeAlert(e, "Exception while polling for rules")
            .emit();
-        retryStartTime = 0;
+        failStartTimeMs = 0;
       } else {
         log.error(e, "Exception while polling for rules");
       }
@@ -338,7 +341,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public List<Rule> getRules(final String dataSource)
   {
     List<Rule> retVal = rules.get().get(dataSource);
-    return retVal == null ? Lists.<Rule>newArrayList() : retVal;
+    return retVal == null ? Lists.newArrayList() : retVal;
   }
 
   @Override

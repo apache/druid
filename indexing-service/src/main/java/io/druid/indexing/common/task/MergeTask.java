@@ -92,7 +92,7 @@ public class MergeTask extends MergeTaskBase
             }
         ),
         rollup,
-        aggregators.toArray(new AggregatorFactory[aggregators.size()]),
+        aggregators.toArray(new AggregatorFactory[0]),
         outDir,
         indexSpec,
         getSegmentWriteOutMediumFactory()

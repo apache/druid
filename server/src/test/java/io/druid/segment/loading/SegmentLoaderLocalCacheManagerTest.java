@@ -122,7 +122,7 @@ public class SegmentLoaderLocalCacheManagerTest
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
 
     final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "local",
             "path",
@@ -174,7 +174,7 @@ public class SegmentLoaderLocalCacheManagerTest
     );
     final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");
     final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "local",
             "path",
@@ -227,7 +227,7 @@ public class SegmentLoaderLocalCacheManagerTest
     );
     final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");
     final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "local",
             "path",
@@ -282,7 +282,7 @@ public class SegmentLoaderLocalCacheManagerTest
     );
     final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");
     final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "local",
             "path",
@@ -336,7 +336,7 @@ public class SegmentLoaderLocalCacheManagerTest
     );
     final File segmentSrcFolder = tmpFolder.newFolder("segmentSrcFolder");
     final DataSegment segmentToDownload = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D").withLoadSpec(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "local",
             "path",
@@ -362,7 +362,7 @@ public class SegmentLoaderLocalCacheManagerTest
     Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentLoaded(segmentToDownload));
 
     final DataSegment segmentToDownload2 = dataSegmentWithInterval("2014-11-20T00:00:00Z/P1D").withLoadSpec(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "local",
             "path",
@@ -395,7 +395,7 @@ public class SegmentLoaderLocalCacheManagerTest
                       .dataSource("test_segment_loader")
                       .interval(Intervals.of(intervalStr))
                       .loadSpec(
-                          ImmutableMap.<String, Object>of(
+                          ImmutableMap.of(
                               "type",
                               "local",
                               "path",
@@ -403,8 +403,8 @@ public class SegmentLoaderLocalCacheManagerTest
                           )
                       )
                       .version("2015-05-27T03:38:35.683Z")
-                      .dimensions(ImmutableList.<String>of())
-                      .metrics(ImmutableList.<String>of())
+                      .dimensions(ImmutableList.of())
+                      .metrics(ImmutableList.of())
                       .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
                       .size(10L)

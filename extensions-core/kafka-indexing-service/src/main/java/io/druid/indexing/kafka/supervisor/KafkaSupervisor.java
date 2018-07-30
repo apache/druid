@@ -1305,8 +1305,8 @@ public class KafkaSupervisor implements Supervisor
     // change to a state where it will read any more events
     TaskGroup newTaskGroup = new TaskGroup(
         ImmutableMap.copyOf(startingPartitions),
-        Optional.<DateTime>absent(),
-        Optional.<DateTime>absent()
+        Optional.absent(),
+        Optional.absent()
     );
 
     newTaskGroup.tasks.put(taskId, new TaskData());
@@ -1724,11 +1724,11 @@ public class KafkaSupervisor implements Supervisor
 
         Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
             DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
-        ) : Optional.<DateTime>absent());
+        ) : Optional.absent());
 
         Optional<DateTime> maximumMessageTime = (ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? Optional.of(
             DateTimes.nowUtc().plus(ioConfig.getTaskDuration()).plus(ioConfig.getEarlyMessageRejectionPeriod().get())
-        ) : Optional.<DateTime>absent());
+        ) : Optional.absent());
 
         final TaskGroup taskGroup = new TaskGroup(
             generateStartingOffsetsForPartitionGroup(groupId),

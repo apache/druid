@@ -74,7 +74,7 @@ public class GoogleDataSegmentFinder implements DataSegmentFinder
         List<StorageObject> items = objects.getItems();
         if (items != null) {
           for (StorageObject item : items) {
-            if (GoogleUtils.toFilename(item.getName()).equals("descriptor.json")) {
+            if ("descriptor.json".equals(GoogleUtils.toFilename(item.getName()))) {
               final String descriptorJson = item.getName();
               final String indexZip = GoogleUtils.indexZipForSegmentPath(descriptorJson);
 

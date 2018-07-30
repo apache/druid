@@ -36,7 +36,7 @@ public class IntervalLoadRuleTest
   {
     IntervalLoadRule rule = new IntervalLoadRule(
         Intervals.of("0/3000"),
-        ImmutableMap.<String, Integer>of(DruidServer.DEFAULT_TIER, 2)
+        ImmutableMap.of(DruidServer.DEFAULT_TIER, 2)
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();

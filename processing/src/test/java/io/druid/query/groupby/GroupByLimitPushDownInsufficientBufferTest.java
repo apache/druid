@@ -60,7 +60,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
@@ -467,15 +466,15 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("dimA", null)
         ))
         .setAggregatorSpecs(
-            Arrays.asList(new LongSumAggregatorFactory("metA", "metA"))
+            Collections.singletonList(new LongSumAggregatorFactory("metA", "metA"))
         )
         .setLimitSpec(
             new DefaultLimitSpec(
-                Arrays.asList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.DESCENDING)),
+                Collections.singletonList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.DESCENDING)),
                 3
             )
         )
@@ -557,15 +556,15 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("dimA", null)
         ))
         .setAggregatorSpecs(
-            Arrays.asList(new LongSumAggregatorFactory("metA", "metA"))
+            Collections.singletonList(new LongSumAggregatorFactory("metA", "metA"))
         )
         .setLimitSpec(
             new DefaultLimitSpec(
-                Arrays.asList(
+                Collections.singletonList(
                     new OrderByColumnSpec("metA", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC)
                 ),
                 3
@@ -573,7 +572,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         )
         .setGranularity(Granularities.ALL)
         .setContext(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
               GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
               true
             )

@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.tuple;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.Module;
@@ -71,7 +71,7 @@ public class ArrayOfDoublesSketchModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
+    return Collections.<Module>singletonList(
         new SimpleModule("ArrayOfDoublesSketchModule").registerSubtypes(
             new NamedType(
                 ArrayOfDoublesSketchAggregatorFactory.class,

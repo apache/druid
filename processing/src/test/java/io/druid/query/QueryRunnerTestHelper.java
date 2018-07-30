@@ -50,7 +50,6 @@ import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
@@ -163,7 +162,7 @@ public class QueryRunnerTestHelper
   );
   public static final JavaScriptAggregatorFactory jsCountIfTimeGreaterThan = new JavaScriptAggregatorFactory(
       "ntimestamps",
-      Arrays.asList("__time"),
+      Collections.singletonList("__time"),
       "function aggregate(current, t) { if (t > " +
       DateTimes.of("2011-04-01T12:00:00Z").getMillis() +
       ") { return current + 1; } else { return current; } }",
@@ -191,7 +190,7 @@ public class QueryRunnerTestHelper
   );
   public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
       "cardinality",
-      Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("quality", "quality")),
+      Collections.singletonList(new DefaultDimensionSpec("quality", "quality")),
       false
   );
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
@@ -268,7 +267,7 @@ public class QueryRunnerTestHelper
   static {
     List<String> list = new ArrayList(Arrays.asList(expectedFullOnIndexValues));
     Collections.reverse(list);
-    expectedFullOnIndexValuesDesc = list.toArray(new String[list.size()]);
+    expectedFullOnIndexValuesDesc = list.toArray(new String[0]);
   }
 
   public static final DateTime earliest = DateTimes.of("2011-01-12");
@@ -277,16 +276,16 @@ public class QueryRunnerTestHelper
   public static final DateTime skippedDay = DateTimes.of("2011-01-21T00:00:00.000Z");
 
   public static final QuerySegmentSpec firstToThird = new MultipleIntervalSegmentSpec(
-      Arrays.asList(Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
+      Collections.singletonList(Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
   );
   public static final QuerySegmentSpec secondOnly = new MultipleIntervalSegmentSpec(
-      Arrays.asList(Intervals.of("2011-04-02T00:00:00.000Z/P1D"))
+      Collections.singletonList(Intervals.of("2011-04-02T00:00:00.000Z/P1D"))
   );
   public static final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+      Collections.singletonList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
   public static final QuerySegmentSpec emptyInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(Intervals.of("2020-04-02T00:00:00.000Z/P1D"))
+      Collections.singletonList(Intervals.of("2020-04-02T00:00:00.000Z/P1D"))
   );
 
   public static Iterable<Object[]> transformToConstructionFeeder(Iterable<?> in)

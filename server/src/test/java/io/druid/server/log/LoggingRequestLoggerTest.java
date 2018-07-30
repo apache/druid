@@ -66,7 +66,7 @@ public class LoggingRequestLoggerTest
 
   final DateTime timestamp = DateTimes.of("2016-01-01T00:00:00Z");
   final String remoteAddr = "some.host.tld";
-  final Map<String, Object> queryContext = ImmutableMap.<String, Object>of("foo", "bar");
+  final Map<String, Object> queryContext = ImmutableMap.of("foo", "bar");
   final Query query = new FakeQuery(
       new LegacyDataSource("datasource"),
       new QuerySegmentSpec()
@@ -84,7 +84,7 @@ public class LoggingRequestLoggerTest
         }
       }, false, queryContext
   );
-  final QueryStats queryStats = new QueryStats(ImmutableMap.<String, Object>of());
+  final QueryStats queryStats = new QueryStats(ImmutableMap.of());
   final RequestLogLine logLine = new RequestLogLine(
       timestamp,
       remoteAddr,

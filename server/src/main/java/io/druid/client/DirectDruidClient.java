@@ -242,7 +242,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
           catch (final IOException e) {
             log.error(e, "Error parsing response context from url [%s]", url);
-            return ClientResponse.<InputStream>finished(
+            return ClientResponse.finished(
                 new InputStream()
                 {
                   @Override
@@ -259,7 +259,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             throw Throwables.propagate(e);
           }
           byteCount.addAndGet(response.getContent().readableBytes());
-          return ClientResponse.<InputStream>finished(
+          return ClientResponse.finished(
               new SequenceInputStream(
                   new Enumeration<InputStream>()
                   {
@@ -366,7 +366,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               done.set(true);
             }
           }
-          return ClientResponse.<InputStream>finished(clientResponse.getObj());
+          return ClientResponse.finished(clientResponse.getObj());
         }
 
         @Override

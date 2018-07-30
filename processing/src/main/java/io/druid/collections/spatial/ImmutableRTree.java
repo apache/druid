@@ -128,7 +128,7 @@ public final class ImmutableRTree
       return strategy.search(root, bound);
     } else {
       // If the dimension counts don't match (for example, if this is called on a blank `new ImmutableRTree()`)
-      return ImmutableList.<ImmutableBitmap>of();
+      return ImmutableList.of();
     }
   }
 

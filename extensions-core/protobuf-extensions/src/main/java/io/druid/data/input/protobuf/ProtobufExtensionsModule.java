@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ProtobufExtensionsModule implements DruidModule
@@ -34,7 +34,7 @@ public class ProtobufExtensionsModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.asList(
+    return Collections.singletonList(
         new SimpleModule("ProtobufInputRowParserModule")
             .registerSubtypes(
                 new NamedType(ProtobufInputRowParser.class, "protobuf")

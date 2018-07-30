@@ -52,7 +52,7 @@ public class HyperUniqueFinalizingPostAggregatorTest
       collector.add(hashedVal);
     }
 
-    double cardinality = (Double) postAggregator.compute(ImmutableMap.<String, Object>of("uniques", collector));
+    double cardinality = (Double) postAggregator.compute(ImmutableMap.of("uniques", collector));
 
     Assert.assertTrue(cardinality == 99.37233005831612);
   }
@@ -82,7 +82,7 @@ public class HyperUniqueFinalizingPostAggregatorTest
       collector.add(hashedVal);
     }
 
-    Object cardinality = postAggregator.compute(ImmutableMap.<String, Object>of("uniques", collector));
+    Object cardinality = postAggregator.compute(ImmutableMap.of("uniques", collector));
 
     Assert.assertThat(cardinality, CoreMatchers.instanceOf(Long.class));
     Assert.assertEquals(99L, cardinality);

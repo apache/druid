@@ -164,7 +164,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
             // load spec in segment points specifically zip file itself
             statusList.add(path.getFileSystem(job).getFileStatus(path));
           }
-          return statusList.toArray(new FileStatus[statusList.size()]);
+          return statusList.toArray(new FileStatus[0]);
         }
       };
     }

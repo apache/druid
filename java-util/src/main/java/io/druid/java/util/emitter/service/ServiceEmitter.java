@@ -35,7 +35,7 @@ public class ServiceEmitter implements Emitter
 
   public ServiceEmitter(String service, String host, Emitter emitter)
   {
-    this(service, host, emitter, ImmutableMap.<String, String>of());
+    this(service, host, emitter, ImmutableMap.of());
   }
 
   public ServiceEmitter(

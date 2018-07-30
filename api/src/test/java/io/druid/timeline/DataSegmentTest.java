@@ -82,9 +82,15 @@ public class DataSegmentTest
       }
 
       @Override
-      public Map<String, RangeSet<String>> getDomain()
+      public List<String> getDomainDimensions()
       {
-        return ImmutableMap.of();
+        return ImmutableList.of();
+      }
+
+      @Override
+      public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
+      {
+        return true;
       }
     };
   }
@@ -102,7 +108,7 @@ public class DataSegmentTest
   {
 
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
-    final ImmutableMap<String, Object> loadSpec = ImmutableMap.<String, Object>of("something", "or_other");
+    final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 
     DataSegment segment = new DataSegment(
         "something",

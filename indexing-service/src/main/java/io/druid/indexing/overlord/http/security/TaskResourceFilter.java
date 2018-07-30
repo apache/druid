@@ -76,7 +76,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
                          @Override
                          public boolean apply(PathSegment input)
                          {
-                           return input.getPath().equals("task");
+                           return "task".equals(input.getPath());
                          }
                        }
                    ) + 1

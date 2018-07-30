@@ -241,7 +241,7 @@ public class CloserRuleTest
     final AtomicLong counter = new AtomicLong(0L);
     final CloserRule closer = new CloserRule(true);
     final String ioExceptionMsg = "You can't triple stamp a double stamp!";
-    final List<IOException> ioExceptions = Arrays.<IOException>asList(
+    final List<IOException> ioExceptions = Arrays.asList(
         new IOException(ioExceptionMsg),
         null,
         new IOException(ioExceptionMsg),

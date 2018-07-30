@@ -94,12 +94,12 @@ public class JsonConfiguratorTest
   public void testTest()
   {
     Assert.assertEquals(
-        new MappableObject("p1", ImmutableList.<String>of("p2"), "p2"),
-        new MappableObject("p1", ImmutableList.<String>of("p2"), "p2")
+        new MappableObject("p1", ImmutableList.of("p2"), "p2"),
+        new MappableObject("p1", ImmutableList.of("p2"), "p2")
     );
     Assert.assertEquals(
         new MappableObject("p1", null, null),
-        new MappableObject("p1", ImmutableList.<String>of(), null)
+        new MappableObject("p1", ImmutableList.of(), null)
     );
   }
 
@@ -175,7 +175,7 @@ class MappableObject
   )
   {
     this.prop1 = prop1;
-    this.prop1List = prop1List == null ? ImmutableList.<String>of() : prop1List;
+    this.prop1List = prop1List == null ? ImmutableList.of() : prop1List;
     this.prop2 = prop2;
   }
 
