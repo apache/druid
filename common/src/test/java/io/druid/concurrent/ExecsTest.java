@@ -21,13 +21,12 @@ package io.druid.concurrent;
 
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
-
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.IllegalFormatException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,6 +52,20 @@ public class ExecsTest
   public void testBlockingExecutorServiceThreeCapacity() throws Exception
   {
     runTest(3);
+  }
+
+  @Test
+  public void testNameFormatGood() throws Exception
+  {
+    Execs.checkThreadNameFormat("good-%s");
+    Execs.checkThreadNameFormat("good-%d");
+    Execs.checkThreadNameFormat("whoops");
+  }
+
+  @Test(expected = IllegalFormatException.class)
+  public void testNameForamtBad() throws Exception
+  {
+    Execs.checkThreadNameFormat("%");
   }
 
   private static void runTest(final int capacity) throws Exception

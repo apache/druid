@@ -19,7 +19,6 @@
 
 package io.druid.guice;
 
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 
@@ -35,7 +34,7 @@ public class ForkJoinPoolProvider implements Provider<LifecycleForkJoinPool>
   public ForkJoinPoolProvider(String nameFormat)
   {
     // Fail fast on bad name format
-    StringUtils.format(nameFormat, 3);
+    Execs.checkThreadNameFormat(nameFormat);
     this.nameFormat = nameFormat;
   }
 

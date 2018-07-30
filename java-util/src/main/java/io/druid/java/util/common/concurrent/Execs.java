@@ -165,4 +165,18 @@ public class Execs
     t.setName(StringUtils.nonStrictFormat(name, fjpWorkerThreadCount.longValue()));
     return t;
   }
+
+  private static final int dummyThradNumber = 17;
+
+  /**
+   * Fail fast if the format can't take a single argument integer for a thread counter.
+   *
+   * Note that LACK of any argument in the format string still renders a valid name
+   *
+   * @param format The name format to check
+   */
+  public static void checkThreadNameFormat(String format)
+  {
+    StringUtils.format(format, dummyThradNumber);
+  }
 }
