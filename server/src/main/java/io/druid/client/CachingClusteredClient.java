@@ -375,29 +375,43 @@ public class CachingClusteredClient implements QuerySegmentWalker
           .stream();
     }
 
-    private Stream<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
+    /**
+     * Create a stream of the partition chunks which are useful in this query
+     *
+     * @param holder The holder of the shard to server component of the timeline
+     *
+     * @return Chunks and the segment descriptors corresponding to the chunk
+     */
+    private Stream<ServerToSegment> extractServerAndSegment(TimelineObjectHolder<String, ServerSelector> holder)
     {
-      return toolChest.filterSegments(
-          query,
-          query.getIntervals().stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
-      ).stream().flatMap(
-          holder -> DimFilterUtils.filterShards(
+      return DimFilterUtils
+          .filterShards(
               query.getFilter(),
               holder.getObject(),
               partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
               Maps.newHashMap()
-          ).stream().map(
-              chunk -> {
-                ServerSelector server = chunk.getObject();
-                final SegmentDescriptor segment = new SegmentDescriptor(
-                    holder.getInterval(),
-                    holder.getVersion(),
-                    chunk.getChunkNumber()
-                );
-                return new ServerToSegment(server, segment);
-              }
           )
-      ).distinct();
+          .stream()
+          .map(chunk -> new ServerToSegment(
+              chunk.getObject(),
+              new SegmentDescriptor(
+                  holder.getInterval(),
+                  holder.getVersion(),
+                  chunk.getChunkNumber()
+              )
+          ));
+    }
+
+    private Stream<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
+    {
+      return toolChest
+          .filterSegments(
+              query,
+              query.getIntervals().stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
+          )
+          .stream()
+          .flatMap(this::extractServerAndSegment)
+          .distinct();
     }
 
     private void computeUncoveredIntervals(TimelineLookup<String, ServerSelector> timeline)
@@ -477,6 +491,27 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
+    private SerializablePair<ServerToSegment, Optional<byte[]>> lookupInCache(
+        SerializablePair<ServerToSegment, Cache.NamedKey> key,
+        Map<Cache.NamedKey, Optional<byte[]>> cache
+    )
+    {
+      final ServerToSegment segment = key.getLhs();
+      final Cache.NamedKey segmentCacheKey = key.getRhs();
+      final Interval segmentQueryInterval = segment.getSegmentDescriptor().getInterval();
+      final Optional<byte[]> cachedValue = Optional
+          .ofNullable(cache.get(segmentCacheKey))
+          // Shouldn't happen in practice, but can screw up unit tests where cache state is mutated in crazy
+          // ways when the cache returns null instead of an optional.
+          .orElse(Optional.empty());
+      if (!cachedValue.isPresent()) {
+        // if populating cache, add segment to list of segments to cache if it is not cached
+        final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
+        addCachePopulator(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
+      }
+      return new SerializablePair<>(segment, cachedValue);
+    }
+
     /**
      * This materializes the input segment stream in order to let the BulkGet stuff in the cache system work
      *
@@ -506,24 +541,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       // A limitation of the cache system is that the cached values are returned without passing through the original
       // objects. This hash join is a way to get the ServerToSegment and Optional<byte[]> matched up again
-      return materializedKeyList.stream().map(
-          serializedPairSegmentAndKey -> {
-            final ServerToSegment segment = serializedPairSegmentAndKey.getLhs();
-            final Cache.NamedKey segmentCacheKey = serializedPairSegmentAndKey.getRhs();
-            final Interval segmentQueryInterval = segment.getSegmentDescriptor().getInterval();
-            final Optional<byte[]> cachedValue = Optional
-                .ofNullable(cachedValues.get(segmentCacheKey))
-                // Shouldn't happen in practice, but can screw up unit tests where cache state is mutated in crazy
-                // ways
-                .orElse(Optional.empty());
-            if (!cachedValue.isPresent()) {
-              // if populating cache, add segment to list of segments to cache if it is not cached
-              final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
-              addCachePopulator(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
-            }
-            return new SerializablePair<>(segment, cachedValue);
-          }
-      );
+      return materializedKeyList
+          .stream()
+          .map(serializedPairSegmentAndKey -> lookupInCache(serializedPairSegmentAndKey, cachedValues));
     }
 
     private Stream<SerializablePair<ServerToSegment, Cache.NamedKey>> computePerSegmentCacheKeys(
@@ -599,18 +619,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
         // With zero results actually being found (no segments no caches) this should essentially return a no-op
         // merge sequence
         return new MergeSequence<>(query.getResultOrdering(), Sequences.fromStream(
-            segmentOrResult.stream(
-            ).map(
-                ServerMaybeSegmentMaybeCache::getCachedValue
-            ).filter(
-                Optional::isPresent
-            ).map(
-                Optional::get
-            ).map(
-                Collections::singletonList
-            ).map(
-                Sequences::simple
-            )
+            segmentOrResult
+                .stream()
+                .map(ServerMaybeSegmentMaybeCache::getCachedValue)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(Collections::singletonList)
+                .map(Sequences::simple)
         ));
       }
 
@@ -759,6 +774,34 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return serverRunner.run(queryPlus.withQuerySegmentSpec(segmentsOfServerSpec), responseContext);
     }
 
+    private Sequence<T> bySegmentWithCachePopulator(
+        Result<BySegmentResultValueClass<T>> result,
+        Function<T, Object> cachePrep
+    )
+    {
+      final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
+      final CachePopulator cachePopulator = getCachePopulator(
+          resultsOfSegment.getSegmentId(),
+          resultsOfSegment.getInterval()
+      );
+      Sequence<T> res = Sequences
+          .simple(resultsOfSegment.getResults())
+          .map(r -> {
+            if (cachePopulator != null) {
+              // only compute cache data if populating cache
+              cachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cachePrep.apply(r)));
+            }
+            return r;
+          })
+          .map(
+              toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
+          );
+      if (cachePopulator != null) {
+        res = res.withEffect(cachePopulator::populate, MoreExecutors.sameThreadExecutor());
+      }
+      return res;
+    }
+
     private Sequence<T> getAndCacheServerResults(
         final QueryRunner serverRunner,
         final MultipleSpecificSegmentSpec segmentsOfServerSpec
@@ -773,27 +816,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
       final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache()::apply;
       return resultsBySegments
-          .map(result -> {
-            final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
-            final CachePopulator cachePopulator =
-                getCachePopulator(resultsOfSegment.getSegmentId(), resultsOfSegment.getInterval());
-            Sequence<T> res = Sequences
-                .simple(resultsOfSegment.getResults())
-                .map(r -> {
-                  if (cachePopulator != null) {
-                    // only compute cache data if populating cache
-                    cachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cacheFn.apply(r)));
-                  }
-                  return r;
-                })
-                .map(
-                    toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
-                );
-            if (cachePopulator != null) {
-              res = res.withEffect(cachePopulator::populate, MoreExecutors.sameThreadExecutor());
-            }
-            return res;
-          })
+          .map(result -> bySegmentWithCachePopulator(result, cacheFn))
           .flatMerge(Function.identity(), query.getResultOrdering());
     }
   }
