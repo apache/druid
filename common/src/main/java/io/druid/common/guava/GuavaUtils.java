@@ -67,6 +67,14 @@ public class GuavaUtils
     return null;
   }
 
+  /**
+   * Materialze the stream of futures into a single listenable future that will return the list of results.
+   *
+   * @param futures The futures to collect into a single Listenable future
+   * @param <V>     The return value for the futures
+   *
+   * @return A single ListenableFuture whose return value is a list of the completed values of the input stream.
+   */
   public static <V> ListenableFuture<List<V>> allFuturesAsList(Stream<ListenableFuture<? extends V>> futures)
   {
     return Futures.allAsList(futures::iterator);
