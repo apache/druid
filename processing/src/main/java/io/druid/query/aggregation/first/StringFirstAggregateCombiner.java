@@ -37,7 +37,9 @@ public class StringFirstAggregateCombiner extends ObjectAggregateCombiner<String
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    // Nothing to do. It needs to keep the first string value.
+    if (firstString != null) {
+      firstString = (String) selector.getObject();
+    }
   }
 
   @Nullable
