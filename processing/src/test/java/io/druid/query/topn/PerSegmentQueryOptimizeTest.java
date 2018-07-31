@@ -73,6 +73,35 @@ public class PerSegmentQueryOptimizeTest
     Assert.assertEquals(expectedPartialFilteredAgg, partialAgg);
   }
 
+  @Test
+  public void testFilteredAggregatorDontOptimizeOnNonTimeColumn()
+  {
+    // Filter is not on __time, so no optimizations should be made.
+    LongSumAggregatorFactory longSumAggregatorFactory = new LongSumAggregatorFactory("test", "test");
+
+    FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
+        longSumAggregatorFactory,
+        new IntervalDimFilter(
+            "not_time",
+            Collections.singletonList(Intervals.utc(1000, 2000)),
+            null
+        )
+    );
+
+    Interval exclude = Intervals.utc(2000, 3000);
+    Interval include = Intervals.utc(1500, 1600);
+    Interval partial = Intervals.utc(1500, 2500);
+
+    AggregatorFactory excludedAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(exclude));
+    Assert.assertEquals(aggregatorFactory, excludedAgg);
+
+    AggregatorFactory includedAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(include));
+    Assert.assertEquals(aggregatorFactory, includedAgg);
+
+    AggregatorFactory partialAgg = aggregatorFactory.optimizeForSegment(getOptimizationContext(partial));
+    Assert.assertEquals(aggregatorFactory, partialAgg);
+  }
+
   private PerSegmentQueryOptimizationContext getOptimizationContext(Interval segmentInterval)
   {
     return new PerSegmentQueryOptimizationContext(
