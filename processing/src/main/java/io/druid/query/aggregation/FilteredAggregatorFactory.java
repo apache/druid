@@ -26,6 +26,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.IntervalDimFilter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.column.Column;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -151,6 +152,11 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       IntervalDimFilter intervalDimFilter = ((IntervalDimFilter) filter);
       if (intervalDimFilter.getExtractionFn() != null) {
         // no support for extraction functions right now
+        return this;
+      }
+
+      if (!intervalDimFilter.getDimension().equals(Column.TIME_COLUMN_NAME)) {
+        // segment time boundary optimization only applies when we filter on __time
         return this;
       }
 
