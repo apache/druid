@@ -34,19 +34,16 @@ public class StringFirstBufferAggregator implements BufferAggregator
   private final BaseLongColumnValueSelector timeSelector;
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
-  private final boolean filterNullValues;
 
   public StringFirstBufferAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes,
-      boolean filterNullValues
+      int maxStringBytes
   )
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
-    this.filterNullValues = filterNullValues;
   }
 
   @Override
@@ -97,7 +94,7 @@ public class StringFirstBufferAggregator implements BufferAggregator
 
         mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
         mutationBuffer.put(valueBytes);
-      } else if (!filterNullValues) {
+      } else {
         mutationBuffer.putLong(position, time);
         mutationBuffer.putInt(position + Long.BYTES, 0);
       }

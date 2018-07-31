@@ -31,7 +31,6 @@ public class StringLastAggregator implements Aggregator
   private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
   private final int maxStringBytes;
-  private final boolean filterNullValues;
 
   protected long lastTime;
   protected String lastValue;
@@ -39,14 +38,12 @@ public class StringLastAggregator implements Aggregator
   public StringLastAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes,
-      boolean filterNullValues
+      int maxStringBytes
   )
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
-    this.filterNullValues = filterNullValues;
 
     lastTime = Long.MIN_VALUE;
     lastValue = null;
@@ -75,7 +72,7 @@ public class StringLastAggregator implements Aggregator
         if (lastValue != null && lastValue.length() > maxStringBytes) {
           lastValue = lastValue.substring(0, maxStringBytes);
         }
-      } else if (!filterNullValues) {
+      } else {
         lastValue = null;
       }
     }

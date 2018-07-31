@@ -31,7 +31,6 @@ public class StringFirstAggregator implements Aggregator
   private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
   private final int maxStringBytes;
-  private final boolean filterNullValues;
 
   protected long firstTime;
   protected String firstValue;
@@ -39,14 +38,12 @@ public class StringFirstAggregator implements Aggregator
   public StringFirstAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      int maxStringBytes,
-      boolean filterNullValues
+      int maxStringBytes
   )
   {
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
-    this.filterNullValues = filterNullValues;
 
     firstTime = Long.MAX_VALUE;
     firstValue = null;
@@ -75,7 +72,7 @@ public class StringFirstAggregator implements Aggregator
         if (firstValue != null && firstValue.length() > maxStringBytes) {
           firstValue = firstValue.substring(0, maxStringBytes);
         }
-      } else if (!filterNullValues) {
+      } else {
         firstValue = null;
       }
     }

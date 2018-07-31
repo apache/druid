@@ -55,7 +55,7 @@ public class StringLastAggregationTest
   @Before
   public void setup()
   {
-    stringLastAggFactory = new StringLastAggregatorFactory("billy", "nilly", MAX_STRING_SIZE, false);
+    stringLastAggFactory = new StringLastAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
     combiningAggFactory = (StringLastAggregatorFactory) stringLastAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     valueSelector = new TestObjectColumnSelector<>(strings);

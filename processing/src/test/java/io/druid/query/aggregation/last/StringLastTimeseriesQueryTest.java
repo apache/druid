@@ -59,7 +59,7 @@ public class StringLastTimeseriesQueryTest
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
                 .withMetrics(new StringLastAggregatorFactory(
-                    "last_client_type", "client_type", 1024, false)
+                    "last_client_type", "client_type", 1024)
                 )
                 .build()
         )
@@ -101,7 +101,7 @@ public class StringLastTimeseriesQueryTest
                                   .aggregators(
                                       Lists.newArrayList(
                                           new StringLastAggregatorFactory(
-                                              "last_client_type", client_type, 1024, false
+                                              "last_client_type", client_type, 1024
                                           )
                                       )
                                   )

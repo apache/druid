@@ -37,18 +37,17 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
   public StringLastFoldingAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("maxStringBytes") Integer maxStringBytes,
-      @JsonProperty("filterNullValues") Boolean filterNullValues
+      @JsonProperty("maxStringBytes") Integer maxStringBytes
   )
   {
-    super(name, fieldName, maxStringBytes, filterNullValues);
+    super(name, fieldName, maxStringBytes);
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(getName());
-    return new StringLastAggregator(null, null, maxStringBytes, filterNullValues)
+    return new StringLastAggregator(null, null, maxStringBytes)
     {
       @Override
       public void aggregate()
@@ -66,7 +65,7 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(getName());
-    return new StringLastBufferAggregator(null, null, maxStringBytes, filterNullValues)
+    return new StringLastBufferAggregator(null, null, maxStringBytes)
     {
       @Override
       public void aggregate(ByteBuffer buf, int position)
@@ -86,7 +85,7 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
               mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
               mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
               mutationBuffer.put(valueBytes);
-            } else if (!filterNullValues) {
+            } else {
               mutationBuffer.putInt(position + Long.BYTES, 0);
             }
           }
