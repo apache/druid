@@ -82,7 +82,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableAggregatorFact
   }
 
   @Override
-  public int getMaxIntermediateSize2()
+  public int getMaxIntermediateSize()
   {
     return Long.BYTES;
   }

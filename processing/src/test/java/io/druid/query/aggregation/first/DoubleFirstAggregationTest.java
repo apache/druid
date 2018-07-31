@@ -94,7 +94,7 @@ public class DoubleFirstAggregationTest
     BufferAggregator agg = doubleFirstAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -143,7 +143,7 @@ public class DoubleFirstAggregationTest
     BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);

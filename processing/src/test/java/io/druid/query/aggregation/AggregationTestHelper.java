@@ -635,7 +635,7 @@ public class AggregationTestHelper
     agg.aggregate(myBuf, 0);
     results[0] = (T) agg.get(myBuf, 0);
 
-    byte[] theBytes = new byte[factory.getMaxIntermediateSize()];
+    byte[] theBytes = new byte[factory.getMaxIntermediateSizeWithNulls()];
     myBuf.get(theBytes);
 
     ByteBuffer newBuf = ByteBuffer.allocate(941209);

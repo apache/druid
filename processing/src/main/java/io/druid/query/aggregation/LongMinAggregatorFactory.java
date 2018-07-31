@@ -87,7 +87,7 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner2()
+  public AggregateCombiner makeAggregateCombiner()
   {
     return new LongMinAggregateCombiner();
   }

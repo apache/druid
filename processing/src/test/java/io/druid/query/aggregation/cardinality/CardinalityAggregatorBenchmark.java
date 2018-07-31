@@ -107,7 +107,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
         byRow
     );
 
-    int maxSize = factory.getMaxIntermediateSize();
+    int maxSize = factory.getMaxIntermediateSizeWithNulls();
     buf = ByteBuffer.allocate(maxSize + 64);
     pos = 10;
     buf.limit(pos + maxSize);

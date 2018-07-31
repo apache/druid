@@ -79,6 +79,20 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
+   * Creates an {@link AggregateCombiner} which supports nullability.
+   * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
+   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
+   *
+   * @see AggregateCombiner
+   * @see NullableAggregatorFactory
+   */
+  public AggregateCombiner makeNullableAggregateCombiner()
+  {
+    return makeAggregateCombiner();
+  }
+
+  /**
    * Returns an AggregatorFactory that can be used to combine the output of aggregators from this factory.  This
    * generally amounts to simply creating a new factory that is the same as the current except with its input
    * column renamed to the same as the output column.
@@ -144,6 +158,19 @@ public abstract class AggregatorFactory implements Cacheable
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
    */
   public abstract int getMaxIntermediateSize();
+
+  /**
+   * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
+   * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
+   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
+   *
+   * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
+   */
+  public int getMaxIntermediateSizeWithNulls()
+  {
+    return getMaxIntermediateSize();
+  }
 
   /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and

@@ -90,7 +90,7 @@ public class DoubleMinAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner2()
+  public AggregateCombiner makeAggregateCombiner()
   {
     return new DoubleMinAggregateCombiner();
   }

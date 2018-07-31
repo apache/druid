@@ -74,7 +74,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    return new SketchBufferAggregator(selector, size, getMaxIntermediateSize());
+    return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
   }
 
   @Override

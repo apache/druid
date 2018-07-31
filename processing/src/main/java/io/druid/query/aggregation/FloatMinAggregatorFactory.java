@@ -90,7 +90,7 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner2()
+  public AggregateCombiner makeAggregateCombiner()
   {
     return new DoubleMinAggregateCombiner();
   }

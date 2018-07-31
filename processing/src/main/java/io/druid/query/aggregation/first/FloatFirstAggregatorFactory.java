@@ -119,7 +119,7 @@ public class FloatFirstAggregatorFactory extends NullableAggregatorFactory<Colum
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner2()
+  public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("FloatFirstAggregatorFactory is not supported during ingestion for rollup");
   }
@@ -229,7 +229,7 @@ public class FloatFirstAggregatorFactory extends NullableAggregatorFactory<Colum
   }
 
   @Override
-  public int getMaxIntermediateSize2()
+  public int getMaxIntermediateSize()
   {
     return Long.BYTES + Float.BYTES;
   }

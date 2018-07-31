@@ -121,7 +121,7 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner2()
+  public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("DoubleFirstAggregatorFactory is not supported during ingestion for rollup");
   }
@@ -234,7 +234,7 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
   }
 
   @Override
-  public int getMaxIntermediateSize2()
+  public int getMaxIntermediateSize()
   {
     return Long.BYTES + Double.BYTES;
   }

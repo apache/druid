@@ -442,7 +442,7 @@ public class CardinalityAggregatorTest
         true
     );
 
-    int maxSize = rowAggregatorFactory.getMaxIntermediateSize();
+    int maxSize = rowAggregatorFactory.getMaxIntermediateSizeWithNulls();
     ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
     int pos = 10;
     buf.limit(pos + maxSize);
@@ -464,7 +464,7 @@ public class CardinalityAggregatorTest
         false
     );
 
-    int maxSize = valueAggregatorFactory.getMaxIntermediateSize();
+    int maxSize = valueAggregatorFactory.getMaxIntermediateSizeWithNulls();
     ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
     int pos = 10;
     buf.limit(pos + maxSize);
