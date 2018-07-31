@@ -35,6 +35,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -111,7 +112,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.asList(new StringLastAggregatorFactory(fieldName, fieldName, maxStringBytes));
+    return Collections.singletonList(new StringLastAggregatorFactory(fieldName, fieldName, maxStringBytes));
   }
 
   @Override
