@@ -63,7 +63,8 @@
             }
         },
         "tuningConfig": {
-            "type": "index"
+            "type": "index",
+            "targetPartitionSize": 3
         }
     }
 }

@@ -92,6 +92,7 @@ public class IndexingServiceClient
 
   public String compactSegments(
       List<DataSegment> segments,
+      boolean keepSegmentGranularity,
       int compactionTaskPriority,
       @Nullable ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
@@ -108,7 +109,7 @@ public class IndexingServiceClient
     context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
-    return runQuery(new ClientCompactQuery(dataSource, segments, tuningConfig, context));
+    return runQuery(new ClientCompactQuery(dataSource, segments, keepSegmentGranularity, tuningConfig, context));
   }
 
   private String runQuery(Object queryObject)
