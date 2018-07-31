@@ -91,7 +91,6 @@ public class DruidSchema extends AbstractSchema
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
 
   private final QueryLifecycleFactory queryLifecycleFactory;
-  private final TimelineServerView serverView;
   private final PlannerConfig config;
   private final ViewManager viewManager;
   private final ExecutorService cacheExec;
@@ -134,7 +133,7 @@ public class DruidSchema extends AbstractSchema
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
-    this.serverView = Preconditions.checkNotNull(serverView, "serverView");
+    Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");

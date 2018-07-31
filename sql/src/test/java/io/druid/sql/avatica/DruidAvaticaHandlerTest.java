@@ -34,6 +34,8 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import io.druid.client.TimelineServerView;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 import io.druid.java.util.common.DateTimes;
@@ -54,10 +56,12 @@ import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import io.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
+import org.easymock.EasyMock;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -130,8 +134,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
 
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -154,12 +160,15 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     druidMeta = new DruidMeta(
         new PlannerFactory(
             druidSchema,
+            serverView,
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
             plannerConfig,
             CalciteTests.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            druidLeaderClient,
+            druidLeaderClient
         ),
         AVATICA_CONFIG,
         injector
@@ -729,18 +738,23 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         new PlannerFactory(
             druidSchema,
+            serverView,
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            druidLeaderClient,
+            druidLeaderClient
         ),
         smallFrameConfig,
         injector

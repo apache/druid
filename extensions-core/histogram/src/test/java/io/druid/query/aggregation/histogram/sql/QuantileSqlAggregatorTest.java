@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.druid.client.TimelineServerView;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
 import io.druid.query.QueryDataSource;
@@ -60,8 +62,10 @@ import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import io.druid.sql.calcite.util.TestServerInventoryView;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -125,6 +129,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(new QuantileSqlAggregator()),
         ImmutableSet.of()
@@ -132,12 +138,15 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
     plannerFactory = new PlannerFactory(
         druidSchema,
+        serverView,
         CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        CalciteTests.getJsonMapper(),
+        druidLeaderClient,
+        druidLeaderClient
     );
   }
 

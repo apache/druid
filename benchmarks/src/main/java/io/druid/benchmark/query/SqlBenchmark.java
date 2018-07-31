@@ -25,6 +25,7 @@ import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.datagen.SegmentGenerator;
 import io.druid.data.input.Row;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
@@ -43,9 +44,11 @@ import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import io.druid.sql.calcite.util.TestServerInventoryView;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.commons.io.FileUtils;
+import org.easymock.EasyMock;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -108,16 +111,20 @@ public class SqlBenchmark
     final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
     final QueryRunnerFactoryConglomerate conglomerate = CalciteTests.queryRunnerFactoryConglomerate();
     final PlannerConfig plannerConfig = new PlannerConfig();
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
 
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
     plannerFactory = new PlannerFactory(
         CalciteTests.createMockSchema(walker, plannerConfig),
+        new TestServerInventoryView(walker.getSegments()),
         CalciteTests.createMockQueryLifecycleFactory(walker),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        CalciteTests.getJsonMapper(),
+        druidLeaderClient,
+        druidLeaderClient
     );
     groupByQuery = GroupByQuery
         .builder()

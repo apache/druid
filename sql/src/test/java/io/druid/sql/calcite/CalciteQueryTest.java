@@ -23,6 +23,8 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import io.druid.client.TimelineServerView;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.hll.HLLCV1;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -100,8 +102,10 @@ import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import io.druid.sql.calcite.util.TestServerInventoryView;
 import io.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -6983,17 +6987,22 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig, viewManager);
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
+        serverView,
         CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         macroTable,
         plannerConfig,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        CalciteTests.getJsonMapper(),
+        druidLeaderClient,
+        druidLeaderClient
     );
 
     viewManager.createView(

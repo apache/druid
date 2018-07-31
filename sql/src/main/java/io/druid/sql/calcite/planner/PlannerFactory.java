@@ -21,6 +21,10 @@ package io.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.druid.client.TimelineServerView;
+import io.druid.client.coordinator.Coordinator;
+import io.druid.client.indexing.IndexingService;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.QueryLifecycleFactory;
@@ -57,36 +61,52 @@ public class PlannerFactory
       .build();
 
   private final DruidSchema druidSchema;
+  private final TimelineServerView serverView;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
+  private final DruidLeaderClient coordinatorDruidLeaderClient;
+  private final DruidLeaderClient overlordDruidLeaderClient;
 
   @Inject
   public PlannerFactory(
       final DruidSchema druidSchema,
+      final TimelineServerView serverView,
       final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper,
-      final @Json ObjectMapper jsonMapper
+      final @Json ObjectMapper jsonMapper,
+      final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
+      final @IndexingService DruidLeaderClient overlordDruidLeaderClient
   )
   {
     this.druidSchema = druidSchema;
+    this.serverView = serverView;
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = plannerConfig;
     this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
+    this.coordinatorDruidLeaderClient = coordinatorDruidLeaderClient;
+    this.overlordDruidLeaderClient = overlordDruidLeaderClient;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
-    final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema, authorizerMapper);
+    final SchemaPlus rootSchema = Calcites.createRootSchema(
+        serverView,
+        druidSchema,
+        authorizerMapper,
+        coordinatorDruidLeaderClient,
+        overlordDruidLeaderClient,
+        jsonMapper
+    );
     final PlannerContext plannerContext = PlannerContext.create(
         operatorTable,
         macroTable,

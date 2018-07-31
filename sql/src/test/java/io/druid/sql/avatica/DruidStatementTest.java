@@ -21,6 +21,8 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import io.druid.client.TimelineServerView;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.security.AllowAllAuthenticator;
@@ -33,8 +35,10 @@ import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import io.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -64,16 +68,21 @@ public class DruidStatementTest extends CalciteTestBase
         walker,
         plannerConfig
     );
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
     plannerFactory = new PlannerFactory(
         druidSchema,
+        serverView,
         CalciteTests.createMockQueryLifecycleFactory(walker),
         operatorTable,
         macroTable,
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        CalciteTests.getJsonMapper(),
+        druidLeaderClient,
+        druidLeaderClient
     );
   }
 

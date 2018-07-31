@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.client.TimelineServerView;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -41,6 +43,7 @@ import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import io.druid.sql.calcite.util.TestServerInventoryView;
 import io.druid.sql.http.SqlQuery;
 import io.druid.sql.http.SqlResource;
 import org.apache.calcite.tools.ValidationException;
@@ -83,8 +86,10 @@ public class SqlResourceTest extends CalciteTestBase
 
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
+    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
@@ -104,12 +109,15 @@ public class SqlResourceTest extends CalciteTestBase
         JSON_MAPPER,
         new PlannerFactory(
             druidSchema,
+            serverView,
             CalciteTests.createMockQueryLifecycleFactory(walker),
             operatorTable,
             macroTable,
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            druidLeaderClient,
+            druidLeaderClient
         )
     );
   }

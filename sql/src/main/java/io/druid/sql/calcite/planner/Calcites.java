@@ -19,8 +19,12 @@
 
 package io.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.client.BrokerServerView;
+import io.druid.client.TimelineServerView;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -31,6 +35,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
+import io.druid.sql.calcite.schema.SystemSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -97,11 +102,30 @@ public class Calcites
     return DEFAULT_CHARSET;
   }
 
-  public static SchemaPlus createRootSchema(final Schema druidSchema, final AuthorizerMapper authorizerMapper)
+  public static SchemaPlus createRootSchema(
+      final TimelineServerView serverView,
+      final Schema druidSchema,
+      final AuthorizerMapper authorizerMapper,
+      final DruidLeaderClient coordinatorDruidLeaderClient,
+      final DruidLeaderClient overlordDruidLeaderClient,
+      final ObjectMapper jsonMapper
+  )
   {
     final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     rootSchema.add(DruidSchema.NAME, druidSchema);
     rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema, authorizerMapper));
+    if (serverView instanceof BrokerServerView) {
+      rootSchema.add(
+          SystemSchema.NAME,
+          new SystemSchema(
+              (BrokerServerView) serverView,
+              authorizerMapper,
+              coordinatorDruidLeaderClient,
+              overlordDruidLeaderClient,
+              jsonMapper
+          )
+      );
+    }
     return rootSchema;
   }
 

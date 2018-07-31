@@ -322,4 +322,10 @@ public class BrokerServerView implements TimelineServerView
       );
     }
   }
+
+  @Override
+  public Map<String, QueryableDruidServer> getClients()
+  {
+    return clients;
+  }
 }
