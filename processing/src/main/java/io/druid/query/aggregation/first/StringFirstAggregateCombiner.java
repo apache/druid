@@ -27,18 +27,21 @@ import javax.annotation.Nullable;
 public class StringFirstAggregateCombiner extends ObjectAggregateCombiner<String>
 {
   private String firstString;
+  private boolean isReset = false;
 
   @Override
   public void reset(ColumnValueSelector selector)
   {
     firstString = (String) selector.getObject();
+    isReset = true;
   }
 
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    if (firstString == null) {
+    if (!isReset) {
       firstString = (String) selector.getObject();
+      isReset = true;
     }
   }
 
