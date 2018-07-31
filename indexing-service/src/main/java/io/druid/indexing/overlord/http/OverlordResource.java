@@ -658,7 +658,7 @@ public class OverlordResource
         null
     );
 
-    Function<TaskInfo<Task>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
+    Function<TaskInfo<Task, TaskStatus>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
         taskInfo.getId(),
         taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
         taskInfo.getCreatedTime(),
@@ -680,18 +680,18 @@ public class OverlordResource
         final Interval theInterval = Intervals.of(interval.replace("_", "/"));
         duration = theInterval.toDuration();
       }
-      final List<TaskInfo<Task>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
+      final List<TaskInfo<Task, TaskStatus>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
           maxCompletedTasks, duration, dataSource
       );
       final List<TaskStatusPlus> completedTasks = Lists.transform(taskInfoList, completeTaskTransformFunc);
       finalTaskList.addAll(completedTasks);
     }
 
-    final List<TaskInfo<Task>> allActiveTaskInfo;
+    final List<TaskInfo<Task, TaskStatus>> allActiveTaskInfo;
     final List<AnyTask> allActiveTasks = Lists.newArrayList();
     if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
       allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
-      for (final TaskInfo<Task> task : allActiveTaskInfo) {
+      for (final TaskInfo<Task, TaskStatus> task : allActiveTaskInfo) {
         allActiveTasks.add(
             new AnyTask(
                 task.getId(),
