@@ -35,6 +35,12 @@ public class FileUtilsTest
   public TemporaryFolder folder = new TemporaryFolder();
 
   @Test
+  public void brokenTest()
+  {
+    Assert.assertEquals(1, 0);
+  }
+
+  @Test
   public void testMap() throws IOException
   {
     File dataFile = folder.newFile("data");
