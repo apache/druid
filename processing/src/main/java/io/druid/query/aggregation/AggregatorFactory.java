@@ -144,9 +144,6 @@ public abstract class AggregatorFactory implements Cacheable
 
   /**
    * Return a potentially optimized form of this AggregatorFactory for per-segment queries.
-   *
-   * @param optimizationContext
-   * @return
    */
   public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {

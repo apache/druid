@@ -150,7 +150,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     if (filter instanceof IntervalDimFilter) {
       IntervalDimFilter intervalDimFilter = ((IntervalDimFilter) filter);
       if (intervalDimFilter.getExtractionFn() != null) {
-        // no support for exfn right now
+        // no support for extraction functions right now
         return this;
       }
 
