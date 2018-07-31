@@ -32,8 +32,9 @@ import java.nio.ByteBuffer;
  * aggregator. Note that the delegate aggregator is not required to perform check for
  * {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values will be passed to the
  * delegate aggregator. This class is only used when SQL compatible null handling is enabled.
- * When writing aggregated result to buffer, it will first write a byte to store the nullability of the
+ * When writing aggregated result to buffer, it will write an additional byte to store the nullability of the
  * aggregated result.
+ * Buffer Layout - 1 byte for storing nullability + delegate storage bytes.
  */
 @PublicApi
 public final class NullableBufferAggregator implements BufferAggregator
