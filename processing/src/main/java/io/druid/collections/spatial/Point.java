@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -37,7 +36,7 @@ public class Point extends Node
   {
     super(
         coords,
-        Arrays.copyOf(coords, coords.length),
+        coords.clone(),
         null,
         true,
         null,
@@ -51,7 +50,7 @@ public class Point extends Node
 
   public Point(float[] coords, MutableBitmap entry)
   {
-    super(coords, Arrays.copyOf(coords, coords.length), null, true, null, entry);
+    super(coords, coords.clone(), null, true, null, entry);
 
     this.coords = coords;
     this.bitmap = entry;

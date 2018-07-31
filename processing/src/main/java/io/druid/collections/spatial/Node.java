@@ -54,6 +54,19 @@ public class Node
     );
   }
 
+  /**
+   * This constructor accepts a single nullable child Node (null value means no child) instead of a collection of
+   * children Nodes, because Nodes with no more than one child are created in the codebase yet, while passing a
+   * collection of Nodes would necessitate making a defensive copy of this collection in the constructor and extra
+   * overhead.
+   *
+   * (One could note that the principle of making a defensive copy is happily violated just in this
+   * constructor, other parameters: minCoordinates, maxCoordinates and bitmap. These are recognized flaws that are not
+   * tackled yet.)
+   *
+   * If cases when a Node should be created with multiple children arise, this constructor should be changed to accept
+   * a collection of children Nodes.
+   */
   public Node(
       float[] minCoordinates,
       float[] maxCoordinates,
