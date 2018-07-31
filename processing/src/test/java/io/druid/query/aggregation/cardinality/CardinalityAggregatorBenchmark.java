@@ -103,11 +103,11 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
     CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("dim1", "dim1")),
+        Lists.newArrayList(new DefaultDimensionSpec("dim1", "dim1")),
         byRow
     );
 
-    int maxSize = factory.getMaxIntermediateSize();
+    int maxSize = factory.getMaxIntermediateSizeWithNulls();
     buf = ByteBuffer.allocate(maxSize + 64);
     pos = 10;
     buf.limit(pos + maxSize);

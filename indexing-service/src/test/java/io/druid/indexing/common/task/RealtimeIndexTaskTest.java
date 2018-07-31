@@ -86,7 +86,6 @@ import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
@@ -482,7 +481,7 @@ public class RealtimeIndexTaskTest
 
     // Wait for the task to finish.
     expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(ParseException.class));
+    expectedException.expectCause(CoreMatchers.instanceOf(ParseException.class));
     expectedException.expectCause(
         ThrowableMessageMatcher.hasMessage(
             CoreMatchers.containsString("[Unable to parse value[foo] for field[met1]")
@@ -1000,7 +999,7 @@ public class RealtimeIndexTaskTest
       }
     };
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
+        ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
@@ -1097,7 +1096,7 @@ public class RealtimeIndexTaskTest
                                   .dataSource("test_ds")
                                   .filters(filter)
                                   .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
+                                      ImmutableList.of(
                                           new LongSumAggregatorFactory(metric, metric)
                                       )
                                   ).granularity(Granularities.ALL)

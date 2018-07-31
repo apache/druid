@@ -125,7 +125,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
           selector,
           nominalEntries,
           numberOfValues,
-          getMaxIntermediateSize()
+          getMaxIntermediateSizeWithNulls()
       );
     }
     // input is raw data (key and array of values), use build aggregator
@@ -143,7 +143,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
         keySelector,
         valueSelectors,
         nominalEntries,
-        getMaxIntermediateSize()
+        getMaxIntermediateSizeWithNulls()
     );
   }
 
@@ -233,7 +233,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(
+    return Collections.singletonList(
       new ArrayOfDoublesSketchAggregatorFactory(
           fieldName,
           fieldName,

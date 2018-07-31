@@ -101,7 +101,7 @@ public class ConditionalMultibindTest
     }));
 
     Assert.assertEquals(2, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.<Animal>of(new Cat(), new Dog()));
+    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog()));
   }
 
   @Test
@@ -128,7 +128,7 @@ public class ConditionalMultibindTest
     }));
 
     Assert.assertEquals(2, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.<Animal>of(new Cat(), new Dog()));
+    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog()));
   }
 
   @Test
@@ -164,7 +164,7 @@ public class ConditionalMultibindTest
     }));
 
     Assert.assertEquals(3, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.<Animal>of(new Cat(), new Dog(), new Fish()));
+    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog(), new Fish()));
   }
 
   @Test
@@ -202,7 +202,7 @@ public class ConditionalMultibindTest
     {
     }, SanDiego.class));
     Assert.assertEquals(4, animalSet_1.size());
-    Assert.assertEquals(animalSet_1, ImmutableSet.<Animal>of(new Bird(), new Cat(), new Dog(), new Tiger()));
+    Assert.assertEquals(animalSet_1, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Tiger()));
 
     Set<Animal> animalSet_2 = injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>()
     {
@@ -244,7 +244,7 @@ public class ConditionalMultibindTest
     injector.injectMembers(shop);
 
     Assert.assertEquals(4, shop.animals.size());
-    Assert.assertEquals(shop.animals, ImmutableSet.<Animal>of(new Bird(), new Cat(), new Dog(), new Fish()));
+    Assert.assertEquals(shop.animals, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Fish()));
   }
 
   @Test
@@ -252,9 +252,9 @@ public class ConditionalMultibindTest
   {
     props.setProperty("animal.type", "pets");
 
-    final Set<Animal> set1 = ImmutableSet.<Animal>of(new Dog(), new Tiger());
-    final Set<Animal> set2 = ImmutableSet.<Animal>of(new Cat(), new Fish());
-    final Set<Animal> set3 = ImmutableSet.<Animal>of(new Cat());
+    final Set<Animal> set1 = ImmutableSet.of(new Dog(), new Tiger());
+    final Set<Animal> set2 = ImmutableSet.of(new Cat(), new Fish());
+    final Set<Animal> set3 = ImmutableSet.of(new Cat());
     final Set<Animal> union = new HashSet<>();
     union.addAll(set1);
     union.addAll(set2);

@@ -51,7 +51,7 @@ public class VarianceAggregatorCollector
 {
   public static boolean isVariancePop(String estimator)
   {
-    return estimator != null && estimator.equalsIgnoreCase("population");
+    return estimator != null && "population".equalsIgnoreCase(estimator);
   }
 
   public static VarianceAggregatorCollector from(ByteBuffer buffer)

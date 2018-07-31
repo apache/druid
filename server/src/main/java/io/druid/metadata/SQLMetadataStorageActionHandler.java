@@ -22,13 +22,11 @@ package io.druid.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.indexer.TaskInfo;
-import io.druid.indexer.TaskStatus;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -128,51 +126,40 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   ) throws EntryExistsException
   {
     try {
-      connector.retryWithHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  StringUtils.format(
-                      "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
-                      entryTable
-                  )
-              )
-                    .bind("id", id)
-                    .bind("created_date", timestamp.toString())
-                    .bind("datasource", dataSource)
-                    .bind("payload", jsonMapper.writeValueAsBytes(entry))
-                    .bind("active", active)
-                    .bind("status_payload", jsonMapper.writeValueAsBytes(status))
-                    .execute();
-              return null;
-            }
+      getConnector().retryWithHandle(
+          (HandleCallback<Void>) handle -> {
+            final String sql = StringUtils.format(
+                "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) "
+                + "VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
+                getEntryTable()
+            );
+            handle.createStatement(sql)
+                  .bind("id", id)
+                  .bind("created_date", timestamp.toString())
+                  .bind("datasource", dataSource)
+                  .bind("payload", jsonMapper.writeValueAsBytes(entry))
+                  .bind("active", active)
+                  .bind("status_payload", jsonMapper.writeValueAsBytes(status))
+                  .execute();
+            return null;
           },
-          new Predicate<Throwable>()
-          {
-            @Override
-            public boolean apply(Throwable e)
-            {
-              final boolean isStatementException = e instanceof StatementException ||
-                                                   (e instanceof CallbackFailedException
-                                                    && e.getCause() instanceof StatementException);
-              return connector.isTransientException(e) && !(isStatementException && getEntry(id).isPresent());
-            }
-          }
+          e -> getConnector().isTransientException(e) && !(isStatementException(e) && getEntry(id).isPresent())
       );
     }
     catch (Exception e) {
-      final boolean isStatementException = e instanceof StatementException ||
-                                           (e instanceof CallbackFailedException
-                                            && e.getCause() instanceof StatementException);
-      if (isStatementException && getEntry(id).isPresent()) {
+      if (isStatementException(e) && getEntry(id).isPresent()) {
         throw new EntryExistsException(id, e);
       } else {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
+  }
+
+  @VisibleForTesting
+  protected static boolean isStatementException(Throwable e)
+  {
+    return e instanceof StatementException ||
+           (e instanceof CallbackFailedException && e.getCause() instanceof StatementException);
   }
 
   @Override
@@ -216,7 +203,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                                .first();
 
             return Optional.fromNullable(
-                res == null ? null : jsonMapper.<EntryType>readValue(res, entryType)
+                res == null ? null : jsonMapper.readValue(res, entryType)
             );
           }
         }
@@ -241,7 +228,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                                .first();
 
             return Optional.fromNullable(
-                res == null ? null : jsonMapper.<StatusType>readValue(res, statusType)
+                res == null ? null : jsonMapper.readValue(res, statusType)
             );
           }
         }
@@ -249,88 +236,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus()
-  {
-    return connector.retryWithHandle(
-        new HandleCallback<List<Pair<EntryType, StatusType>>>()
-        {
-          @Override
-          public List<Pair<EntryType, StatusType>> withHandle(Handle handle)
-          {
-            return handle
-                .createQuery(
-                    StringUtils.format(
-                        "SELECT id, payload, status_payload FROM %s WHERE active = TRUE ORDER BY created_date",
-                        entryTable
-                    )
-                )
-                .map(
-                    new ResultSetMapper<Pair<EntryType, StatusType>>()
-                    {
-                      @Override
-                      public Pair<EntryType, StatusType> map(int index, ResultSet r, StatementContext ctx)
-                          throws SQLException
-                      {
-                        try {
-                          return Pair.of(
-                              jsonMapper.<EntryType>readValue(
-                                  r.getBytes("payload"),
-                                  entryType
-                              ),
-                              jsonMapper.<StatusType>readValue(
-                                  r.getBytes("status_payload"),
-                                  statusType
-                              )
-                          );
-                        }
-                        catch (IOException e) {
-                          log.makeAlert(e, "Failed to parse entry payload").addData("entry", r.getString("id")).emit();
-                          throw new SQLException(e);
-                        }
-                      }
-                    }
-                ).list();
-          }
-        }
-    );
-
-  }
-
-  @Override
-  public List<StatusType> getInactiveStatusesSince(DateTime timestamp, @Nullable Integer maxNumStatuses)
-  {
-    return getConnector().retryWithHandle(
-        handle -> {
-          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(
-              handle,
-              timestamp,
-              maxNumStatuses,
-              null
-          );
-
-          return query
-              .map(
-                  (ResultSetMapper<StatusType>) (index, r, ctx) -> {
-                    try {
-                      return getJsonMapper().readValue(
-                          r.getBytes("status_payload"),
-                          getStatusType()
-                      );
-                    }
-                    catch (IOException e) {
-                      log.makeAlert(e, "Failed to parse status payload")
-                         .addData("entry", r.getString("id"))
-                         .emit();
-                      throw new SQLException(e);
-                    }
-                  }
-              ).list();
-        }
-    );
-  }
-
-  @Override
-  public List<TaskInfo<EntryType>> getCompletedTaskInfo(
+  public List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
       @Nullable String dataSource
@@ -338,7 +244,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     return getConnector().retryWithHandle(
         handle -> {
-          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(
+          final Query<Map<String, Object>> query = createCompletedTaskInfoQuery(
               handle,
               timestamp,
               maxNumStatuses,
@@ -350,11 +256,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<EntryType>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource)
   {
     return getConnector().retryWithHandle(
         handle -> {
-          final Query<Map<String, Object>> query = createActiveStatusesQuery(
+          final Query<Map<String, Object>> query = createActiveTaskInfoQuery(
               handle,
               dataSource
           );
@@ -363,7 +269,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
-  private Query<Map<String, Object>> createActiveStatusesQuery(Handle handle, @Nullable String dataSource)
+  private Query<Map<String, Object>> createActiveTaskInfoQuery(Handle handle, @Nullable String dataSource)
   {
     String sql = StringUtils.format(
         "SELECT "
@@ -396,14 +302,14 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return sql;
   }
 
-  class TaskInfoMapper implements ResultSetMapper<TaskInfo<EntryType>>
+  class TaskInfoMapper implements ResultSetMapper<TaskInfo<EntryType, StatusType>>
   {
     @Override
-    public TaskInfo<EntryType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
+    public TaskInfo<EntryType, StatusType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
     {
-      final TaskInfo<EntryType> taskInfo;
+      final TaskInfo<EntryType, StatusType> taskInfo;
       EntryType task;
-      TaskStatus status;
+      StatusType status;
       try {
         task = getJsonMapper().readValue(resultSet.getBytes("payload"), getEntryType());
       }
@@ -429,34 +335,12 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     }
   }
 
-  protected abstract Query<Map<String, Object>> createInactiveStatusesSinceQuery(
+  protected abstract Query<Map<String, Object>> createCompletedTaskInfoQuery(
       Handle handle,
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
       @Nullable String dataSource
   );
-
-  @Override
-  @Nullable
-  public Pair<DateTime, String> getCreatedDateAndDataSource(String entryId)
-  {
-    return connector.retryWithHandle(
-        handle -> handle
-        .createQuery(
-            StringUtils.format(
-                "SELECT created_date, datasource FROM %s WHERE id = :entryId",
-                entryTable
-            )
-        )
-        .bind("entryId", entryId)
-        .map(
-            (index, resultSet, ctx) -> Pair.of(
-                DateTimes.of(resultSet.getString("created_date")), resultSet.getString("datasource")
-            )
-        )
-        .first()
-    );
-  }
 
   @Override
   public boolean addLock(final String entryId, final LockType lock)
@@ -573,7 +457,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 .bind("entryId", entryId)
                 .map(ByteArrayMapper.FIRST)
                 .fold(
-                    Lists.<LogType>newLinkedList(),
+                    Lists.newLinkedList(),
                     new Folder3<List<LogType>, byte[]>()
                     {
                       @Override
@@ -583,7 +467,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                       {
                         try {
                           list.add(
-                              jsonMapper.<LogType>readValue(
+                              jsonMapper.readValue(
                                   bytes, logType
                               )
                           );
@@ -630,7 +514,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                                  try {
                                    return Pair.of(
                                        r.getLong("id"),
-                                       jsonMapper.<LockType>readValue(
+                                       jsonMapper.readValue(
                                            r.getBytes("lock_payload"),
                                            lockType
                                        )
@@ -649,7 +533,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                              }
                          )
                          .fold(
-                             Maps.<Long, LockType>newLinkedHashMap(),
+                             Maps.newLinkedHashMap(),
                              new Folder3<Map<Long, LockType>, Pair<Long, LockType>>()
                              {
                                @Override

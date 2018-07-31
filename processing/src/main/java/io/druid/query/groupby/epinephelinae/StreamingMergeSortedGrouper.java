@@ -121,7 +121,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
   {
     int recordSize = keySerde.keySize();
     for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
-      recordSize += aggregatorFactory.getMaxIntermediateSize();
+      recordSize += aggregatorFactory.getMaxIntermediateSizeWithNulls();
     }
     return recordSize * 3;
   }
@@ -144,7 +144,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
     for (int i = 0; i < aggregatorFactories.length; i++) {
       aggregators[i] = aggregatorFactories[i].factorizeBuffered(columnSelectorFactory);
       aggregatorOffsets[i] = offset;
-      offset += aggregatorFactories[i].getMaxIntermediateSize();
+      offset += aggregatorFactories[i].getMaxIntermediateSizeWithNulls();
     }
     this.recordSize = offset;
 

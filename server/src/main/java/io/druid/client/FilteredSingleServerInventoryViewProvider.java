@@ -23,10 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 
-import io.druid.java.util.common.Pair;
-import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
-import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
 import javax.validation.constraints.NotNull;
@@ -48,6 +45,6 @@ public class FilteredSingleServerInventoryViewProvider implements FilteredServer
   @Override
   public SingleServerInventoryView get()
   {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysFalse());
+    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.alwaysFalse());
   }
 }

@@ -73,7 +73,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   {
     SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1);
     SupervisorSpec spec2 = new TestSupervisorSpec("id1", supervisor2);
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
         "id3", new TestSupervisorSpec("id3", supervisor3)
     );
 
@@ -135,7 +135,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testCreateOrUpdateAndStartSupervisorNullSpec()
   {
-    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.<String, SupervisorSpec>of());
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
 
     exception.expect(NullPointerException.class);
@@ -148,7 +148,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testCreateOrUpdateAndStartSupervisorNullSpecId()
   {
-    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.<String, SupervisorSpec>of());
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
 
     exception.expect(NullPointerException.class);
@@ -168,7 +168,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testStopAndRemoveSupervisorNullSpecId()
   {
-    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.<String, SupervisorSpec>of());
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
 
     exception.expect(NullPointerException.class);
@@ -197,7 +197,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   {
     SupervisorReport<Void> report = new SupervisorReport<>("id1", DateTimes.nowUtc(), null);
 
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
         "id1", new TestSupervisorSpec("id1", supervisor1)
     );
 
@@ -217,7 +217,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testStartAlreadyStarted()
   {
-    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.<String, SupervisorSpec>of());
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
 
     exception.expect(IllegalStateException.class);
@@ -229,7 +229,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testStopThrowsException()
   {
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
         "id1", new TestSupervisorSpec("id1", supervisor1)
     );
 
@@ -247,7 +247,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testResetSupervisor()
   {
-    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
         "id1", new TestSupervisorSpec("id1", supervisor1)
     );
 

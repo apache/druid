@@ -50,7 +50,7 @@ public class DatasourceRecordReaderTest
     DataSegment segment = HadoopDruidIndexerConfig.JSON_MAPPER
         .readValue(segmentDesciptor, DataSegment.class)
         .withLoadSpec(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "type",
                 "local",
                 "path",
@@ -100,19 +100,19 @@ public class DatasourceRecordReaderTest
   private void verifyRows(List<InputRow> actualRows)
   {
     List<ImmutableMap<String, Object>> expectedRows = ImmutableList.of(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T00:00:00.000Z"),
             "host", ImmutableList.of("a.example.com"),
             "visited_sum", 100L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T01:00:00.000Z"),
             "host", ImmutableList.of("b.example.com"),
             "visited_sum", 150L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T02:00:00.000Z"),
             "host", ImmutableList.of("c.example.com"),
             "visited_sum", 200L,

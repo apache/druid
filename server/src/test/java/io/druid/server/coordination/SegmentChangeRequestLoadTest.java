@@ -44,7 +44,7 @@ public class SegmentChangeRequestLoadTest
     ObjectMapper mapper = new DefaultObjectMapper();
 
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
-    final ImmutableMap<String, Object> loadSpec = ImmutableMap.<String, Object>of("something", "or_other");
+    final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 
     DataSegment segment = new DataSegment(
         "something",

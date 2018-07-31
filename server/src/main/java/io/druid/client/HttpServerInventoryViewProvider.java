@@ -26,9 +26,6 @@ import io.druid.java.util.http.client.HttpClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Smile;
-import io.druid.java.util.common.Pair;
-import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.timeline.DataSegment;
 
 import javax.validation.constraints.NotNull;
 
@@ -61,7 +58,7 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
         smileMapper,
         httpClient,
         druidNodeDiscoveryProvider,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue(),
+        Predicates.alwaysTrue(),
         config
     );
   }

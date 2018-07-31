@@ -121,7 +121,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     };
 
     final List<DataSegment> segmentToDrop = Lists.transform(
-        ImmutableList.<String>of(
+        ImmutableList.of(
             "2014-10-26T00:00:00Z/P1D",
             "2014-10-25T00:00:00Z/P1D",
             "2014-10-24T00:00:00Z/P1D",
@@ -138,7 +138,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     );
 
     final List<DataSegment> segmentToLoad = Lists.transform(
-        ImmutableList.<String>of(
+        ImmutableList.of(
             "2014-10-27T00:00:00Z/P1D",
             "2014-10-29T00:00:00Z/P1M",
             "2014-10-31T00:00:00Z/P1D",
@@ -156,7 +156,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     // segment with latest interval should be loaded first
     final List<DataSegment> expectedLoadOrder = Lists.transform(
-        ImmutableList.<String>of(
+        ImmutableList.of(
             "2014-10-29T00:00:00Z/P1M",
             "2014-10-31T00:00:00Z/P1D",
             "2014-10-30T00:00:00Z/P1D",
@@ -351,10 +351,10 @@ public class LoadQueuePeonTest extends CuratorTestBase
     return DataSegment.builder()
                       .dataSource("test_load_queue_peon")
                       .interval(Intervals.of(intervalStr))
-                      .loadSpec(ImmutableMap.<String, Object>of())
+                      .loadSpec(ImmutableMap.of())
                       .version("2015-05-27T03:38:35.683Z")
-                      .dimensions(ImmutableList.<String>of())
-                      .metrics(ImmutableList.<String>of())
+                      .dimensions(ImmutableList.of())
+                      .metrics(ImmutableList.of())
                       .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
                       .size(1200)

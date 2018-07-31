@@ -20,11 +20,9 @@
 package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
-
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 
@@ -115,19 +113,34 @@ public class SingleDimensionShardSpec implements ShardSpec
   }
 
   @Override
-  public Map<String, RangeSet<String>> getDomain()
+  public List<String> getDomainDimensions()
   {
-    RangeSet<String> rangeSet = TreeRangeSet.create();
+    return ImmutableList.of(dimension);
+  }
+
+  private Range<String> getRange()
+  {
+    Range<String> range;
     if (start == null && end == null) {
-      rangeSet.add(Range.all());
+      range = Range.all();
     } else if (start == null) {
-      rangeSet.add(Range.atMost(end));
+      range = Range.atMost(end);
     } else if (end == null) {
-      rangeSet.add(Range.atLeast(start));
+      range = Range.atLeast(start);
     } else {
-      rangeSet.add(Range.closed(start, end));
+      range = Range.closed(start, end);
     }
-    return ImmutableMap.of(dimension, rangeSet);
+    return range;
+  }
+
+  @Override
+  public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
+  {
+    RangeSet<String> rangeSet = domain.get(dimension);
+    if (rangeSet == null) {
+      return true;
+    }
+    return !rangeSet.subRangeSet(getRange()).isEmpty();
   }
 
   public void setPartitionNum(int partitionNum)

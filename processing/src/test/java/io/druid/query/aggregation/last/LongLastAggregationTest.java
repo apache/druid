@@ -93,7 +93,7 @@ public class LongLastAggregationTest
     BufferAggregator agg = longLastAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[longLastAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[longLastAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -142,7 +142,7 @@ public class LongLastAggregationTest
     BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[longLastAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[longLastAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);

@@ -133,9 +133,9 @@ public class S3DataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         0,
         size

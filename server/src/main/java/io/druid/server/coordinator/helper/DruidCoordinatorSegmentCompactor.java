@@ -129,7 +129,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
           // the tasks of the unknown taskType as the compactionTask. This is because it's important to not run
           // compactionTasks more than the configured limit at any time which might impact to the ingestion
           // performance.
-          return taskType == null || taskType.equals(COMPACT_TASK_TYPE);
+          return taskType == null || COMPACT_TASK_TYPE.equals(taskType);
         })
         .collect(Collectors.toList())
         .size();

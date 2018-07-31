@@ -35,8 +35,8 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +49,7 @@ public class Request
   private final HttpMethod method;
   private final URL url;
   private final Multimap<String, String> headers = Multimaps.newListMultimap(
-      Maps.<String, Collection<String>>newHashMap(),
+      Maps.newHashMap(),
       new Supplier<List<String>>()
       {
         @Override
@@ -106,7 +106,7 @@ public class Request
 
   public Request setHeader(String header, String value)
   {
-    headers.replaceValues(header, Arrays.asList(value));
+    headers.replaceValues(header, Collections.singletonList(value));
     return this;
   }
 

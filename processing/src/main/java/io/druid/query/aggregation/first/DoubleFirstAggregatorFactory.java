@@ -41,6 +41,7 @@ import io.druid.segment.column.Column;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -120,7 +121,7 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner2()
+  public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("DoubleFirstAggregatorFactory is not supported during ingestion for rollup");
   }
@@ -176,7 +177,7 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new DoubleFirstAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new DoubleFirstAggregatorFactory(fieldName, fieldName));
   }
 
   @Override
@@ -233,7 +234,7 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
   }
 
   @Override
-  public int getMaxIntermediateSize2()
+  public int getMaxIntermediateSize()
   {
     return Long.BYTES + Double.BYTES;
   }

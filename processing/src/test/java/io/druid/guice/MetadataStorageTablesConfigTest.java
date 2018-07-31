@@ -30,7 +30,7 @@ import io.druid.metadata.MetadataStorageTablesConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Properties;
 
 public class MetadataStorageTablesConfigTest
@@ -44,7 +44,7 @@ public class MetadataStorageTablesConfigTest
           @Override
           public void configure(Binder binder)
           {
-            binder.install(new PropertiesModule(Arrays.asList("test.runtime.properties")));
+            binder.install(new PropertiesModule(Collections.singletonList("test.runtime.properties")));
             binder.install(new ConfigModule());
             binder.install(new DruidGuiceExtensions());
             JsonConfigProvider.bind(binder, "druid.metadata.storage.tables", MetadataStorageTablesConfig.class);

@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class InDimFilterSerDesrTest
 {
@@ -64,12 +65,12 @@ public class InDimFilterSerDesrTest
   public void testGetCacheKey()
   {
     final InDimFilter inDimFilter_1 = new InDimFilter("dimTest", Arrays.asList("good", "bad"), null);
-    final InDimFilter inDimFilter_2 = new InDimFilter("dimTest", Arrays.asList("good,bad"), null);
+    final InDimFilter inDimFilter_2 = new InDimFilter("dimTest", Collections.singletonList("good,bad"), null);
     Assert.assertNotEquals(inDimFilter_1.getCacheKey(), inDimFilter_2.getCacheKey());
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     final InDimFilter inDimFilter_3 = new InDimFilter("dimTest", Arrays.asList("good", "bad"), regexFn);
-    final InDimFilter inDimFilter_4 = new InDimFilter("dimTest", Arrays.asList("good,bad"), regexFn);
+    final InDimFilter inDimFilter_4 = new InDimFilter("dimTest", Collections.singletonList("good,bad"), regexFn);
     Assert.assertNotEquals(inDimFilter_3.getCacheKey(), inDimFilter_4.getCacheKey());
   }
 

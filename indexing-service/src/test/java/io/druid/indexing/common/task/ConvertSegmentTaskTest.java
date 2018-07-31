@@ -60,9 +60,9 @@ public class ConvertSegmentTaskTest
         dataSource,
         interval,
         DateTimes.nowUtc().toString(),
-        ImmutableMap.<String, Object>of(),
-        ImmutableList.<String>of(),
-        ImmutableList.<String>of(),
+        ImmutableMap.of(),
+        ImmutableList.of(),
+        ImmutableList.of(),
         NoneShardSpec.instance(),
         9,
         102937

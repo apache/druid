@@ -50,11 +50,11 @@ public class StaticMapExtractionNamespaceTest
     Assert.assertEquals(extractionNamespace, MAPPER.readValue(str, StaticMapExtractionNamespace.class));
     Assert.assertNotEquals(
         extractionNamespace,
-        new StaticMapExtractionNamespace(ImmutableMap.<String, String>of("foo", "not_bar"))
+        new StaticMapExtractionNamespace(ImmutableMap.of("foo", "not_bar"))
     );
     Assert.assertNotEquals(
         extractionNamespace,
-        new StaticMapExtractionNamespace(ImmutableMap.<String, String>of("not_foo", "bar"))
+        new StaticMapExtractionNamespace(ImmutableMap.of("not_foo", "bar"))
     );
   }
 }

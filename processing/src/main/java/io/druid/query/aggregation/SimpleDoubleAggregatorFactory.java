@@ -92,7 +92,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
   }
 
   @Override
-  public int getMaxIntermediateSize2()
+  public int getMaxIntermediateSize()
   {
     return Double.BYTES;
   }

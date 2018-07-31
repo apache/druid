@@ -66,6 +66,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -143,7 +144,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-01").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-01").toString(),
                 "dim", "foo",
                 "lat", 0.0f,
@@ -156,7 +157,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-02").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-02").toString(),
                 "dim", "foo",
                 "lat", 1.0f,
@@ -169,7 +170,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-03").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-03").toString(),
                 "dim", "foo",
                 "lat", 4.0f,
@@ -182,7 +183,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-04").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-04").toString(),
                 "dim", "foo",
                 "lat", 7.0f,
@@ -195,7 +196,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "lat", 8.0f,
@@ -208,7 +209,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "lat", "_mmx.unknown",
@@ -221,7 +222,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "_mmx.unknown",
@@ -233,7 +234,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "lat2", 0.0f,
                 "long2", 0.0f,
@@ -249,7 +250,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-01").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "boo",
                   "lat", (float) (rand.nextFloat() * 10 + 10.0),
@@ -363,7 +364,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-01").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "foo",
                   "lat", 0.0f,
@@ -376,7 +377,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-02").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-02").toString(),
                   "dim", "foo",
                   "lat", 1.0f,
@@ -389,7 +390,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-03").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-03").toString(),
                   "dim", "foo",
                   "lat", 4.0f,
@@ -402,7 +403,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "lat", "_mmx.unknown",
@@ -415,7 +416,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "_mmx.unknown",
@@ -427,7 +428,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-04").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-04").toString(),
                   "dim", "foo",
                   "lat", 7.0f,
@@ -440,7 +441,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "lat", 8.0f,
@@ -453,7 +454,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "lat2", 0.0f,
                   "long2", 0.0f,
@@ -469,7 +470,7 @@ public class SpatialFilterTest
             new MapBasedInputRow(
                 DateTimes.of("2013-01-01").getMillis(),
                 DIMS,
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "timestamp", DateTimes.of("2013-01-01").toString(),
                     "dim", "boo",
                     "lat", (float) (rand.nextFloat() * 10 + 10.0),
@@ -533,7 +534,7 @@ public class SpatialFilterTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -541,21 +542,21 @@ public class SpatialFilterTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           new CountAggregatorFactory("rows"),
                                           new LongSumAggregatorFactory("val", "val")
                                       )
                                   )
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 3L)
-                            .put("val", 59L)
-                            .build()
+                    .put("rows", 3L)
+                    .put("val", 59L)
+                    .build()
             )
         )
     );
@@ -586,7 +587,7 @@ public class SpatialFilterTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "spatialIsRad",
@@ -594,21 +595,21 @@ public class SpatialFilterTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           new CountAggregatorFactory("rows"),
                                           new LongSumAggregatorFactory("val", "val")
                                       )
                                   )
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("val", 13L)
-                            .build()
+                    .put("rows", 1L)
+                    .put("val", 13L)
+                    .build()
             )
         )
     );
@@ -638,7 +639,7 @@ public class SpatialFilterTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -646,7 +647,7 @@ public class SpatialFilterTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           new CountAggregatorFactory("rows"),
                                           new LongSumAggregatorFactory("val", "val")
                                       )

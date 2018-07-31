@@ -203,13 +203,13 @@ public class CacheKeyBuilderTest
     keys.add(
         new CacheKeyBuilder((byte) 10)
             .appendStrings(ImmutableList.of("testtest"))
-            .appendStrings(ImmutableList.<String>of())
+            .appendStrings(ImmutableList.of())
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendStrings(ImmutableList.<String>of())
+            .appendStrings(ImmutableList.of())
             .appendStrings(ImmutableList.of("testtest"))
             .build()
     );
@@ -267,13 +267,13 @@ public class CacheKeyBuilderTest
     keys.add(
         new CacheKeyBuilder((byte) 10)
             .appendCacheables(Lists.newArrayList(testtest))
-            .appendCacheables(Lists.<Cacheable>newArrayList())
+            .appendCacheables(Lists.newArrayList())
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheables(Lists.<Cacheable>newArrayList())
+            .appendCacheables(Lists.newArrayList())
             .appendCacheables(Lists.newArrayList(testtest))
             .build()
     );
@@ -318,7 +318,7 @@ public class CacheKeyBuilderTest
   public void testEmptyOrNullCacheables()
   {
     final byte[] key1 = new CacheKeyBuilder((byte) 10)
-        .appendCacheables(Lists.<Cacheable>newArrayList())
+        .appendCacheables(Lists.newArrayList())
         .build();
 
     final byte[] key2 = new CacheKeyBuilder((byte) 10)

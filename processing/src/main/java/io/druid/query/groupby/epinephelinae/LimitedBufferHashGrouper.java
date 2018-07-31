@@ -90,7 +90,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     for (int i = 0; i < aggregatorFactories.length; i++) {
       aggregators[i] = aggregatorFactories[i].factorizeBuffered(columnSelectorFactory);
       aggregatorOffsets[i] = offset;
-      offset += aggregatorFactories[i].getMaxIntermediateSize();
+      offset += aggregatorFactories[i].getMaxIntermediateSizeWithNulls();
     }
 
     // For each bucket, store an extra field indicating the bucket's current index within the heap when
@@ -204,7 +204,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubqueryWithLimitPushDown()
       // in GroupByQueryRunnerTest)
-      return CloseableIterators.withEmptyBaggage(Collections.<Entry<KeyType>>emptyIterator());
+      return CloseableIterators.withEmptyBaggage(Collections.emptyIterator());
     }
 
     if (sortHasNonGroupingFields) {

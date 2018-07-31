@@ -28,10 +28,8 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.QueryMetrics;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -51,7 +49,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
+import java.util.Collections;
 
 import static io.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
 import static io.druid.query.QueryRunnerTestHelper.allGran;
@@ -77,7 +75,7 @@ public class TopNMetricSpecOptimizationsTest
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonDoubleAggregators,
                     Lists.newArrayList(
@@ -87,7 +85,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
 
     StorageAdapter adapter =
@@ -121,7 +119,7 @@ public class TopNMetricSpecOptimizationsTest
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-30T01:00:00Z")
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonDoubleAggregators,
                     Lists.newArrayList(
@@ -131,7 +129,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
 
     StorageAdapter adapter =
@@ -166,7 +164,7 @@ public class TopNMetricSpecOptimizationsTest
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-30T01:00:00Z")
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonDoubleAggregators,
                     Lists.newArrayList(
@@ -176,7 +174,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
 
     StorageAdapter adapter =
@@ -212,7 +210,7 @@ public class TopNMetricSpecOptimizationsTest
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonDoubleAggregators,
                     Lists.newArrayList(
@@ -222,7 +220,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
 
     StorageAdapter adapter =
@@ -256,7 +254,7 @@ public class TopNMetricSpecOptimizationsTest
         .threshold(threshold)
         .intervals("2018-05-30T00:00:00Z/2018-05-31T00:00:00Z")
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonDoubleAggregators,
                     Lists.newArrayList(
@@ -266,7 +264,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
 
 

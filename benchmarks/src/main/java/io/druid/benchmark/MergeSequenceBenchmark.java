@@ -89,13 +89,13 @@ public class MergeSequenceBenchmark
     while (iterator.hasNext()) {
       toMerge.add(iterator.next());
       if (toMerge.size() == mergeAtOnce) {
-        partialMerged.add(new MergeSequence<Integer>(Ordering.<Integer>natural(), Sequences.simple(toMerge)));
+        partialMerged.add(new MergeSequence<Integer>(Ordering.natural(), Sequences.simple(toMerge)));
         toMerge = new ArrayList<Sequence<Integer>>();
       }
     }
 
     if (!toMerge.isEmpty()) {
-      partialMerged.add(new MergeSequence<Integer>(Ordering.<Integer>natural(), Sequences.simple(toMerge)));
+      partialMerged.add(new MergeSequence<Integer>(Ordering.natural(), Sequences.simple(toMerge)));
     }
     MergeSequence<Integer> mergeSequence = new MergeSequence(
         Ordering.<Integer>natural(),

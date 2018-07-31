@@ -90,7 +90,7 @@ public class LongMaxAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  public AggregateCombiner makeAggregateCombiner2()
+  public AggregateCombiner makeAggregateCombiner()
   {
     return new LongMaxAggregateCombiner();
   }

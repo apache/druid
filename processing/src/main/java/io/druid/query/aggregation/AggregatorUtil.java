@@ -167,6 +167,8 @@ public class AggregatorUtil
         @Override
         public float getFloat()
         {
+          // Although baseSelector.getObject is nullable
+          // exprEval returned from Expression selectors is never null.
           final ExprEval exprEval = baseSelector.getObject();
           return exprEval.isNumericNull() ? nullValue : (float) exprEval.asDouble();
         }

@@ -183,27 +183,27 @@ public class CalciteQueryTest extends CalciteTestBase
 
   private static final String LOS_ANGELES = "America/Los_Angeles";
 
-  private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.<String, Object>of(
+  private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
 
-  private static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.<String, Object>of(
+  private static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       "skipEmptyBuckets", false,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
 
-  private static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.<String, Object>of(
+  private static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false",
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
 
-  private static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = ImmutableMap.<String, Object>of(
+  private static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = ImmutableMap.of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
@@ -211,7 +211,7 @@ public class CalciteQueryTest extends CalciteTestBase
   );
 
   // Matches QUERY_CONTEXT_DEFAULT
-  public static final Map<String, Object> TIMESERIES_CONTEXT_DEFAULT = ImmutableMap.<String, Object>of(
+  public static final Map<String, Object> TIMESERIES_CONTEXT_DEFAULT = ImmutableMap.of(
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z",
       "skipEmptyBuckets", true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
@@ -558,7 +558,7 @@ public class CalciteQueryTest extends CalciteTestBase
     String nullValue = NullHandling.replaceWithDefault() ? "" : null;
     testQuery(
         "SELECT * FROM druid.foo",
-        ImmutableList.<Query>of(
+        ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(QSS(Filtration.eternity()))
@@ -590,7 +590,7 @@ public class CalciteQueryTest extends CalciteTestBase
         PLANNER_CONFIG_DEFAULT,
         "SELECT * FROM druid.forbiddenDatasource",
         CalciteTests.SUPER_USER_AUTH_RESULT,
-        ImmutableList.<Query>of(
+        ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
                 .intervals(QSS(Filtration.eternity()))
@@ -1988,7 +1988,7 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         "SELECT * FROM druid.foo WHERE dim1 > 'd' OR dim2 = 'a'",
-        ImmutableList.<Query>of(
+        ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(QSS(Filtration.eternity()))
@@ -5731,7 +5731,7 @@ public class CalciteQueryTest extends CalciteTestBase
                       new CardinalityAggregatorFactory(
                           "a0",
                           null,
-                          ImmutableList.<DimensionSpec>of(new ExtractionDimensionSpec("dim1", null, extractionFn)),
+                          ImmutableList.of(new ExtractionDimensionSpec("dim1", null, extractionFn)),
                           false,
                           true
                       )

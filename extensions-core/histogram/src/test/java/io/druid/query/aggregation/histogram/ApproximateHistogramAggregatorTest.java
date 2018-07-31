@@ -48,7 +48,7 @@ public class ApproximateHistogramAggregatorTest
     );
     ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution);
 
-    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSizeWithNulls());
     int position = 0;
 
     agg.init(buf, position);

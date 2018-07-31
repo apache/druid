@@ -98,7 +98,7 @@ public class TopNQueryEngine
               }
             }
         ),
-        Predicates.<Result<TopNResultValue>>notNull()
+        Predicates.notNull()
     );
   }
 
@@ -116,7 +116,7 @@ public class TopNQueryEngine
 
     int numBytesPerRecord = 0;
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-      numBytesPerRecord += aggregatorFactory.getMaxIntermediateSize();
+      numBytesPerRecord += aggregatorFactory.getMaxIntermediateSizeWithNulls();
     }
 
     final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(cardinality, numBytesPerRecord);

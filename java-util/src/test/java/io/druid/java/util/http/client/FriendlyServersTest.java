@@ -133,7 +133,7 @@ public class FriendlyServersTest
                 // Read headers
                 String header;
                 while (!(header = in.readLine()).equals("")) {
-                  if (header.equals("Accept-Encoding: identity")) {
+                  if ("Accept-Encoding: identity".equals(header)) {
                     foundAcceptEncoding.set(true);
                   }
                 }

@@ -144,7 +144,7 @@ public class S3DataSegmentPuller implements URIDataPuller
   {
     if (uri.getScheme().equalsIgnoreCase(scheme)) {
       uri = URI.create("s3" + uri.toString().substring(scheme.length()));
-    } else if (!uri.getScheme().equalsIgnoreCase("s3")) {
+    } else if (!"s3".equalsIgnoreCase(uri.getScheme())) {
       throw new IAE("Don't know how to load scheme for URI [%s]", uri.toString());
     }
     return uri;

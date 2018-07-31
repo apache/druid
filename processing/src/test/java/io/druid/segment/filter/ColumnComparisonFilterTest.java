@@ -32,7 +32,6 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.ColumnComparisonDimFilter;
@@ -66,16 +65,16 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("1", "2"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("3"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "1", "dim2", ImmutableList.of("4", "5"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "5", "dim2", ImmutableList.of("4", "5"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "6", "dim1", "1")).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "7", "dim1", "a")).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "8", "dim1", 8L)).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "9", "dim1", 1.234f, "dim2", 1.234f)).get(0)
+      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("1", "2"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("3"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "1", "dim2", ImmutableList.of("4", "5"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "5", "dim2", ImmutableList.of("4", "5"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "6", "dim1", "1")).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "7", "dim1", "a")).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "8", "dim1", 8L)).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "9", "dim1", 1.234f, "dim2", 1.234f)).get(0)
   );
 
   public ColumnComparisonFilterTest(
@@ -98,54 +97,63 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
   @Test
   public void testColumnsWithoutNulls()
   {
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
+    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim1")
-    )), ImmutableList.<String>of("2", "5", "8"));
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
+    )), ImmutableList.of("2", "5", "8"));
+    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim2")
-    )), ImmutableList.<String>of("3", "4", "5"));
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
+    )), ImmutableList.of("3", "4", "5"));
+    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("dim1"),
         DefaultDimensionSpec.of("dim2")
-    )), ImmutableList.<String>of("5", "9"));
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
+    )), ImmutableList.of("5", "9"));
+    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("dim0"),
         DefaultDimensionSpec.of("dim1"),
         DefaultDimensionSpec.of("dim2")
-    )), ImmutableList.<String>of("5"));
+    )), ImmutableList.of("5"));
   }
 
   @Test
   public void testMissingColumnNotSpecifiedInDimensionList()
   {
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
-        DefaultDimensionSpec.of("dim6"),
-        DefaultDimensionSpec.of("dim7")
-    )), ImmutableList.<String>of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    assertFilterMatches(
+        new ColumnComparisonDimFilter(
+            ImmutableList.of(DefaultDimensionSpec.of("dim6"), DefaultDimensionSpec.of("dim7"))
+        ),
+        ImmutableList.<String>of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+    );
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
-          DefaultDimensionSpec.of("dim1"),
-          DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.<String>of("0"));
+      assertFilterMatches(
+          new ColumnComparisonDimFilter(
+              ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
+          ),
+          ImmutableList.<String>of("0")
+      );
 
-      assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
-          DefaultDimensionSpec.of("dim2"),
-          DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.<String>of("1", "2", "6", "7", "8"));
+      assertFilterMatches(
+          new ColumnComparisonDimFilter(
+              ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
+          ),
+          ImmutableList.<String>of("1", "2", "6", "7", "8")
+      );
     } else {
-      assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
-          DefaultDimensionSpec.of("dim1"),
-          DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.<String>of());
+      assertFilterMatches(
+          new ColumnComparisonDimFilter(
+              ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
+          ),
+          ImmutableList.<String>of()
+      );
 
-      assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
-          DefaultDimensionSpec.of("dim2"),
-          DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.<String>of("1", "6", "7", "8"));
+      assertFilterMatches(
+          new ColumnComparisonDimFilter(
+              ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
+          ),
+          ImmutableList.<String>of("1", "6", "7", "8")
+      );
     }
-
   }
 
   @Test
@@ -157,9 +165,9 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
     LookupExtractor mapExtractor = new MapLookupExtractor(stringMap, false);
     LookupExtractionFn lookupFn = new LookupExtractionFn(mapExtractor, true, null, false, true);
 
-    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec>of(
+    assertFilterMatches(new ColumnComparisonDimFilter(ImmutableList.of(
         new ExtractionDimensionSpec("dim0", "dim0", lookupFn),
         new ExtractionDimensionSpec("dim1", "dim1", lookupFn)
-    )), ImmutableList.<String>of("2", "5", "7", "8"));
+    )), ImmutableList.of("2", "5", "7", "8"));
   }
 }

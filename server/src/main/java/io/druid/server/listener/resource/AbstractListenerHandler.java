@@ -63,7 +63,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
   public final Response handlePOST(final InputStream inputStream, final ObjectMapper mapper, final String id)
   {
     try {
-      final Object o = post(ImmutableMap.of(id, mapper.<ObjType>readValue(inputStream, inObjTypeRef)));
+      final Object o = post(ImmutableMap.of(id, mapper.readValue(inputStream, inObjTypeRef)));
       return Response.status(Response.Status.ACCEPTED).entity(o).build();
     }
     catch (JsonParseException | JsonMappingException e) {

@@ -21,7 +21,6 @@ package io.druid.guice;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -37,21 +36,16 @@ public class GuiceInjectors
 {
   public static Collection<Module> makeDefaultStartupModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         new DruidGuiceExtensions(),
         new JacksonModule(),
         new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
         new ConfigModule(),
         new NullHandlingModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bind(DruidSecondaryModule.class);
-            JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
-            JsonConfigProvider.bind(binder, "druid.modules", ModulesConfig.class);
-          }
+        binder -> {
+          binder.bind(DruidSecondaryModule.class);
+          JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
+          JsonConfigProvider.bind(binder, "druid.modules", ModulesConfig.class);
         }
     );
   }

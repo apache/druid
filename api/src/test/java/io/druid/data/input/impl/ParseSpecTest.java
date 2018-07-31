@@ -45,8 +45,8 @@ public class ParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b", "a")),
-            Lists.<String>newArrayList(),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList(),
+            Lists.newArrayList()
         ),
         ",",
         " ",
@@ -69,7 +69,7 @@ public class ParseSpecTest
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "B")),
             Lists.newArrayList("B"),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList()
         ),
         ",",
         null,
@@ -92,7 +92,7 @@ public class ParseSpecTest
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Collections.singletonList("a")),
             Lists.newArrayList("B", "B"),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList()
         ),
         ",",
         null,
@@ -113,7 +113,7 @@ public class ParseSpecTest
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Collections.singletonList("a")),
             Lists.newArrayList("B", "B"),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList()
         ),
         ",",
         null,

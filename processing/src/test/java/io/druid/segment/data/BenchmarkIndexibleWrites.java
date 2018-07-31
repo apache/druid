@@ -58,7 +58,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
   @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
   {
-    return ImmutableList.<Object[]>of(
+    return ImmutableList.of(
         new Object[]{new ConcurrentStandardMap<Integer>()},
         new Object[]{new ConcurrentExpandable<Integer>()}
     );

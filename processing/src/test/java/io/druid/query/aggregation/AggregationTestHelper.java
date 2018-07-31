@@ -568,7 +568,7 @@ public class AggregationTestHelper
       public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.<String, Object>newHashMap());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.newHashMap());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()
@@ -635,7 +635,7 @@ public class AggregationTestHelper
     agg.aggregate(myBuf, 0);
     results[0] = (T) agg.get(myBuf, 0);
 
-    byte[] theBytes = new byte[factory.getMaxIntermediateSize()];
+    byte[] theBytes = new byte[factory.getMaxIntermediateSizeWithNulls()];
     myBuf.get(theBytes);
 
     ByteBuffer newBuf = ByteBuffer.allocate(941209);

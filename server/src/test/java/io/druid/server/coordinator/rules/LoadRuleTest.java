@@ -181,7 +181,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Arrays.asList(segment)).build(),
+                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
         segment
     );
 
@@ -252,7 +252,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Arrays.asList(segment)).build(),
+                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
         segment
     );
 
@@ -302,7 +302,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Arrays.asList(segment)).build(),
+                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
         segment
     );
 
@@ -481,7 +481,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Arrays.asList(segment)).build(),
+                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
         segment
     );
 
@@ -540,7 +540,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Arrays.asList(segment)).build(),
+                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
         segment
     );
 
@@ -613,7 +613,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Arrays.asList(segment)).build(),
+                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
         segment
     );
 

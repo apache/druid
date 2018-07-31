@@ -48,7 +48,7 @@ public class DatasourceInputSplitTest
                     "test",
                     Intervals.of("2000/3000"),
                     "ver",
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         "type", "local",
                         "path", "/tmp/index.zip"
                     ),

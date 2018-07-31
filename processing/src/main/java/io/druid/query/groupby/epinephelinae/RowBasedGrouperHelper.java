@@ -1354,7 +1354,7 @@ public class RowBasedGrouperHelper
         helpers.add(helper);
       }
 
-      return helpers.toArray(new RowBasedKeySerdeHelper[helpers.size()]);
+      return helpers.toArray(new RowBasedKeySerdeHelper[0]);
     }
 
     private RowBasedKeySerdeHelper makeSerdeHelper(

@@ -51,16 +51,16 @@ public abstract class NullableAggregatorFactory<T extends BaseNullableColumnValu
   }
 
   @Override
-  public final AggregateCombiner makeAggregateCombiner()
+  public final AggregateCombiner makeNullableAggregateCombiner()
   {
-    AggregateCombiner combiner = makeAggregateCombiner2();
+    AggregateCombiner combiner = makeAggregateCombiner();
     return NullHandling.replaceWithDefault() ? combiner : new NullableAggregateCombiner(combiner);
   }
 
   @Override
-  public final int getMaxIntermediateSize()
+  public final int getMaxIntermediateSizeWithNulls()
   {
-    return getMaxIntermediateSize2() + (NullHandling.replaceWithDefault() ? 0 : Byte.BYTES);
+    return getMaxIntermediateSize() + (NullHandling.replaceWithDefault() ? 0 : Byte.BYTES);
   }
 
   // ---- ABSTRACT METHODS BELOW ------
@@ -92,23 +92,4 @@ public abstract class NullableAggregatorFactory<T extends BaseNullableColumnValu
       ColumnSelectorFactory metricFactory,
       T selector
   );
-
-  /**
-   * Creates an {@link AggregateCombiner} to fold rollup aggregation results from serveral "rows" of different indexes
-   * during index merging. AggregateCombiner implements the same logic as {@link #combine}, with the difference that it
-   * uses {@link ColumnValueSelector} and it's subinterfaces to get inputs and implements {@code ColumnValueSelector}
-   * to provide output.
-   *
-   * @see AggregateCombiner
-   * @see io.druid.segment.IndexMerger
-   */
-  protected abstract AggregateCombiner makeAggregateCombiner2();
-
-  /**
-   * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
-   *
-   * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
-   */
-  protected abstract int getMaxIntermediateSize2();
-
 }

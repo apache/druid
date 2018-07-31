@@ -330,7 +330,7 @@ public class SegmentLoadDropHandlerTest
         dataSource,
         interval,
         version,
-        ImmutableMap.<String, Object>of("version", version, "interval", interval, "cacheDir", infoDir),
+        ImmutableMap.of("version", version, "interval", interval, "cacheDir", infoDir),
         Arrays.asList("dim1", "dim2", "dim3"),
         Arrays.asList("metric1", "metric2"),
         NoneShardSpec.instance(),

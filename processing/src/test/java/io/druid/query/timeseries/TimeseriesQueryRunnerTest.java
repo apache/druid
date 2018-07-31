@@ -344,7 +344,7 @@ public class TimeseriesQueryRunnerTest
                                   .filters(QueryRunnerTestHelper.marketDimension, "upfront")
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           QueryRunnerTestHelper.qualityUniques
                                       )
@@ -396,7 +396,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
@@ -412,13 +412,13 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -581,7 +581,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory("idx", "expr"),
                                           QueryRunnerTestHelper.qualityUniques
@@ -602,13 +602,13 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -625,7 +625,7 @@ public class TimeseriesQueryRunnerTest
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .intervals("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
@@ -647,13 +647,13 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             new DateTime("2011-03-31", DateTimes.inferTzfromString("America/Los_Angeles")),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L)
+                ImmutableMap.of("rows", 13L, "idx", 6619L)
             )
         ),
         new Result<>(
             new DateTime("2011-04-01T", DateTimes.inferTzfromString("America/Los_Angeles")),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
+                ImmutableMap.of("rows", 13L, "idx", 5827L)
             )
         )
     );
@@ -675,7 +675,7 @@ public class TimeseriesQueryRunnerTest
                                        )
                                    )
                                    .aggregators(
-                                       Arrays.<AggregatorFactory>asList(
+                                       Arrays.asList(
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
@@ -691,7 +691,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -708,7 +708,7 @@ public class TimeseriesQueryRunnerTest
                                        )
                                    )
                                    .aggregators(
-                                       Arrays.<AggregatorFactory>asList(
+                                       Arrays.asList(
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
@@ -723,7 +723,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -751,7 +751,7 @@ public class TimeseriesQueryRunnerTest
                                        )
                                    )
                                    .aggregators(
-                                       Arrays.<AggregatorFactory>asList(
+                                       Arrays.asList(
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
@@ -766,13 +766,13 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             new DateTime("2011-01-06T00:00:00.000-08:00", DateTimes.inferTzfromString("America/Los_Angeles")),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 6071L)
+                ImmutableMap.of("rows", 13L, "idx", 6071L)
             )
         ),
         new Result<>(
             new DateTime("2011-01-13T00:00:00.000-08:00", DateTimes.inferTzfromString("America/Los_Angeles")),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 91L, "idx", 33382L)
+                ImmutableMap.of("rows", 91L, "idx", 33382L)
             )
         )
     );
@@ -794,7 +794,7 @@ public class TimeseriesQueryRunnerTest
                                        )
                                    )
                                    .aggregators(
-                                       Arrays.<AggregatorFactory>asList(
+                                       Arrays.asList(
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
@@ -827,7 +827,7 @@ public class TimeseriesQueryRunnerTest
                 new Result<>(
                     DateTimes.of("2011-04-14T00"),
                     new TimeseriesResultValue(
-                        ImmutableMap.<String, Object>of("rows", 13L, "idx", 4907L)
+                        ImmutableMap.of("rows", 13L, "idx", 4907L)
                     )
                 )
             ),
@@ -836,7 +836,7 @@ public class TimeseriesQueryRunnerTest
                 new Result<>(
                     DateTimes.of("2011-04-15T00"),
                     new TimeseriesResultValue(
-                        ImmutableMap.<String, Object>of("rows", 13L, "idx", 4717L)
+                        ImmutableMap.of("rows", 13L, "idx", 4717L)
                     )
                 )
             )
@@ -862,7 +862,7 @@ public class TimeseriesQueryRunnerTest
                                    )
                                    .intervals(Collections.singletonList(Intervals.of("2011-04-15T00:00:00.000Z/2012")))
                                    .aggregators(
-                                       Arrays.<AggregatorFactory>asList(
+                                       Arrays.asList(
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
@@ -877,7 +877,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-14T23:01Z"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 4717L)
+                ImmutableMap.of("rows", 13L, "idx", 4717L)
             )
         )
     );
@@ -899,7 +899,7 @@ public class TimeseriesQueryRunnerTest
                                        )
                                    )
                                    .aggregators(
-                                       Arrays.<AggregatorFactory>asList(
+                                       Arrays.asList(
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
@@ -915,7 +915,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -932,7 +932,7 @@ public class TimeseriesQueryRunnerTest
                                        )
                                    )
                                    .aggregators(
-                                       Arrays.<AggregatorFactory>asList(
+                                       Arrays.asList(
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
@@ -947,7 +947,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -968,7 +968,7 @@ public class TimeseriesQueryRunnerTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
@@ -1006,7 +1006,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 6619L,
                     "addRowsIndexConstant", 6633.0,
@@ -1017,7 +1017,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 5827L,
                     "addRowsIndexConstant", 5841.0,
@@ -1052,7 +1052,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 11L,
                     "index", 3783L,
                     "addRowsIndexConstant", 3795.0,
@@ -1063,7 +1063,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 11L,
                     "index", 3313L,
                     "addRowsIndexConstant", 3325.0,
@@ -1098,7 +1098,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 9L,
                     "index", 1102L,
                     "addRowsIndexConstant", 1112.0,
@@ -1109,7 +1109,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 9L,
                     "index", 1120L,
                     "addRowsIndexConstant", 1130.0,
@@ -1144,7 +1144,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 2681L,
                     "addRowsIndexConstant", 2684.0,
@@ -1155,7 +1155,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 2193L,
                     "addRowsIndexConstant", 2196.0,
@@ -1190,7 +1190,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 2836L,
                     "addRowsIndexConstant", 2839.0,
@@ -1201,7 +1201,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 2514L,
                     "addRowsIndexConstant", 2517.0,
@@ -1236,7 +1236,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 254.4554443359375D,
                     "addRowsIndexConstant", 257.4554443359375D,
@@ -1247,7 +1247,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 260.4129638671875D,
                     "addRowsIndexConstant", 263.4129638671875D,
@@ -1282,7 +1282,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", new Float(135.885094).doubleValue(),
                     "addRowsIndexConstant", new Float(137.885094).doubleValue(),
@@ -1293,7 +1293,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", new Float(147.425935).doubleValue(),
                     "addRowsIndexConstant", new Float(149.425935).doubleValue(),
@@ -1328,7 +1328,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", new Float(118.570340).doubleValue(),
                     "addRowsIndexConstant", new Float(120.570340).doubleValue(),
@@ -1339,7 +1339,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 1L,
                     "index", new Float(112.987027).doubleValue(),
                     "addRowsIndexConstant", new Float(114.987027).doubleValue(),
@@ -1380,7 +1380,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 6619L,
                     "addRowsIndexConstant", 6633.0,
@@ -1391,7 +1391,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 5827L,
                     "addRowsIndexConstant", 5841.0,
@@ -1438,7 +1438,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 6619L,
                     "addRowsIndexConstant", 6633.0,
@@ -1449,7 +1449,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 5827L,
                     "addRowsIndexConstant", 5841.0,
@@ -1484,7 +1484,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 254.4554443359375D,
                     "addRowsIndexConstant", 257.4554443359375D,
@@ -1495,7 +1495,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 2L,
                     "index", 260.4129638671875D,
                     "addRowsIndexConstant", 263.4129638671875D,
@@ -1557,7 +1557,7 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
-                                  .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", "true"))
+                                  .context(ImmutableMap.of("skipEmptyBuckets", "true"))
                                   .descending(descending)
                                   .build();
 
@@ -1584,7 +1584,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 6626.151596069336,
                     "addRowsIndexConstant", 6640.151596069336,
@@ -1595,7 +1595,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 5833.2095947265625,
                     "addRowsIndexConstant", 5847.2095947265625,
@@ -1626,7 +1626,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 6626.151596069336,
                     "addRowsIndexConstant", 6640.151596069336,
@@ -1637,7 +1637,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 13L,
                     "index", 5833.2095947265625,
                     "addRowsIndexConstant", 5847.2095947265625,
@@ -1750,7 +1750,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             QueryRunnerTestHelper.firstToThird.getIntervals().get(0).getStart(),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "index", 12459.361190795898d,
                     "nindex", 283.31103515625d,
                     "pishcount", 52d
@@ -1785,7 +1785,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             QueryRunnerTestHelper.firstToThird.getIntervals().get(0).getStart(),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "index", 283.31103515625d,
                     "nindex", 283.31103515625d,
                     "pishcount", 4d
@@ -1821,7 +1821,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-01-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "first", new Float(100.000000).doubleValue(),
                     "last", new Float(943.497198).doubleValue()
                 )
@@ -1830,7 +1830,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-02-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "first", new Float(132.123776).doubleValue(),
                     "last", new Float(1101.918270).doubleValue()
                 )
@@ -1839,7 +1839,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-03-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "first", new Float(153.059937).doubleValue(),
                     "last", new Float(1063.201156).doubleValue()
                 )
@@ -1848,7 +1848,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "first", new Float(135.885094).doubleValue(),
                     "last", new Float(780.271977).doubleValue()
                 )
@@ -1860,7 +1860,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "first", new Float(1234.247546).doubleValue(),
                     "last", new Float(106.793700).doubleValue()
                 )
@@ -1869,7 +1869,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-03-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "first", new Float(1004.940887).doubleValue(),
                     "last", new Float(151.752485).doubleValue()
                 )
@@ -1878,7 +1878,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-02-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "first", new Float(913.561076).doubleValue(),
                     "last", new Float(122.258195).doubleValue()
                 )
@@ -1887,7 +1887,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-01-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "first", new Float(800.000000).doubleValue(),
                     "last", new Float(133.740047).doubleValue()
                 )
@@ -2066,7 +2066,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "filteredAgg", 18L,
                     "addRowsIndexConstant", 12486.361190795898d,
                     "index", 12459.361190795898d,
@@ -2111,7 +2111,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "filteredAgg", 0L,
                     "addRowsIndexConstant", 12486.361190795898d,
                     "index", 12459.361190795898d,
@@ -2156,7 +2156,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "filteredAgg", 26L,
                     "addRowsIndexConstant", 12486.361190795898d,
                     "index", 12459.361190795898d,
@@ -2202,7 +2202,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "filteredAgg", 26L,
                     "addRowsIndexConstant", 12486.361190795898d,
                     "index", 12459.361190795898d,
@@ -2246,7 +2246,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "filteredAgg", 26L,
                     "addRowsIndexConstant", 12486.361190795898d,
                     "index", 12459.361190795898d,
@@ -2281,7 +2281,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows",
                     26L,
                     "ntimestamps",
@@ -2353,7 +2353,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 9L,
                     "index", 1102L,
                     "addRowsIndexConstant", 1112.0,
@@ -2364,7 +2364,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 9L,
                     "index", 1120L,
                     "addRowsIndexConstant", 1130.0,
@@ -2405,7 +2405,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 11L,
                     "index", 3783L,
                     "addRowsIndexConstant", 3795.0,
@@ -2416,7 +2416,7 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "rows", 11L,
                     "index", 3313L,
                     "addRowsIndexConstant", 3325.0,
@@ -2449,7 +2449,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           QueryRunnerTestHelper.qualityUniques
                                       )

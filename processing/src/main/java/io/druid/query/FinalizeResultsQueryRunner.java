@@ -58,7 +58,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
     final MetricManipulationFn metricManipulationFn;
 
     if (shouldFinalize) {
-      queryToRun = query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false));
+      queryToRun = query.withOverriddenContext(ImmutableMap.of("finalize", false));
       metricManipulationFn = MetricManipulatorFns.finalizing();
 
     } else {

@@ -83,7 +83,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     for (int i = 0; i < aggregatorFactories.length; i++) {
       aggregators[i] = aggregatorFactories[i].factorizeBuffered(columnSelectorFactory);
       aggregatorOffsets[i] = offset;
-      offset += aggregatorFactories[i].getMaxIntermediateSize();
+      offset += aggregatorFactories[i].getMaxIntermediateSizeWithNulls();
     }
 
     this.bucketSize = offset;
@@ -169,7 +169,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubquery() in GroupByQueryRunnerTest)
-      return CloseableIterators.withEmptyBaggage(Collections.<Entry<KeyType>>emptyIterator());
+      return CloseableIterators.withEmptyBaggage(Collections.emptyIterator());
     }
 
     if (sorted) {

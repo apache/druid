@@ -36,7 +36,6 @@ import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
@@ -50,7 +49,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -73,7 +71,7 @@ public class CachingClusteredClientFunctionalityTest
   @Before
   public void setUp()
   {
-    timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
+    timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
     client = makeClient(MoreExecutors.sameThreadExecutor());
@@ -90,9 +88,10 @@ public class CachingClusteredClientFunctionalityTest
                                                         .dataSource("test")
                                                         .intervals("2015-01-02/2015-01-03")
                                                         .granularity("day")
-                                                        .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(
-                                                            "rows")))
-                                                        .context(ImmutableMap.<String, Object>of(
+                                                        .aggregators(Collections.singletonList(
+                                                            new CountAggregatorFactory(
+                                                                "rows")))
+                                                        .context(ImmutableMap.of(
                                                             "uncoveredIntervalsLimit",
                                                             3
                                                         ));

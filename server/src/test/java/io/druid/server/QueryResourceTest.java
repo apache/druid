@@ -37,7 +37,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
-import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
@@ -78,7 +77,7 @@ import java.util.concurrent.Executors;
  */
 public class QueryResourceTest
 {
-  private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of());
+  private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.of());
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
 

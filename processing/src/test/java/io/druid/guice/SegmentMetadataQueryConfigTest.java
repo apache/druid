@@ -31,7 +31,7 @@ import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Properties;
@@ -47,7 +47,7 @@ public class SegmentMetadataQueryConfigTest
           @Override
           public void configure(Binder binder)
           {
-            binder.install(new PropertiesModule(Arrays.asList("test.runtime.properties")));
+            binder.install(new PropertiesModule(Collections.singletonList("test.runtime.properties")));
             binder.install(new ConfigModule());
             binder.install(new DruidGuiceExtensions());
             JsonConfigProvider.bind(binder, "druid.query.segmentMetadata", SegmentMetadataQueryConfig.class);
