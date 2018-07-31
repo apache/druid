@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import io.druid.query.PerSegmentQueryOptimizationContext;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -143,11 +144,9 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] delegateCacheKey = delegate.getCacheKey();
-    return ByteBuffer.allocate(1 + delegateCacheKey.length)
-                     .put(AggregatorUtil.SUPPRESSED_AGG_CACHE_TYPE_ID)
-                     .put(delegateCacheKey)
-                     .array();
+    CacheKeyBuilder cacheKeyBuilder = new CacheKeyBuilder(AggregatorUtil.SUPPRESSED_AGG_CACHE_TYPE_ID);
+    cacheKeyBuilder.appendCacheable(delegate);
+    return cacheKeyBuilder.build();
   }
 
   @Override

@@ -23,7 +23,7 @@ package io.druid.query;
  * Holds information about a single segment that Query objects can use to optimize themselves
  * when they are run on that single segment.
  *
- * See PerSegmentOptimizingQueryRunner.
+ * @see PerSegmentOptimizingQueryRunner
  */
 public class PerSegmentQueryOptimizationContext
 {
