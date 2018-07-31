@@ -30,7 +30,7 @@ matrix:
         - NAME="strict compilation"
       install: true
       # Strict compilation requires more than 2 GB
-      script: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B
+      script: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B --fail-at-end
 
       # processing module test
     - sudo: false
