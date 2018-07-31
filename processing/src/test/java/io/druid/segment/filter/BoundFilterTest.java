@@ -60,14 +60,14 @@ public class BoundFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.<String>of())).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc")).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "6", "dim1", "-1000", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "7", "dim1", "-10.012", "dim2", ImmutableList.of("d"))).get(0)
+      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.<String>of())).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "6", "dim1", "-1000", "dim2", ImmutableList.of("a"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "7", "dim1", "-10.012", "dim2", ImmutableList.of("d"))).get(0)
   );
 
   public BoundFilterTest(
@@ -128,7 +128,7 @@ public class BoundFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new BoundDimFilter("dim0", "", "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "", "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
@@ -179,16 +179,20 @@ public class BoundFilterTest extends BaseFilterTest
     }
     assertFilterMatches(
         new BoundDimFilter("dim3", "", "", true, false, false, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim3", "", "", false, true, false, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
 
     assertFilterMatches(
         new BoundDimFilter("dim3", null, "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+    );
+    assertFilterMatches(
+        new BoundDimFilter("dim3", null, "", false, true, false, null, StringComparators.LEXICOGRAPHIC),
+        ImmutableList.of()
     );
   }
 
@@ -198,15 +202,15 @@ public class BoundFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new BoundDimFilter("dim1", "abc", "abc", true, false, false, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "abc", "abc", true, true, false, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "abc", "abc", false, true, false, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
   }
 
@@ -268,7 +272,7 @@ public class BoundFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new BoundDimFilter("dim0", "", "", false, false, true, null, StringComparators.ALPHANUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "", "", false, false, true, null, StringComparators.ALPHANUMERIC),
@@ -300,15 +304,15 @@ public class BoundFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new BoundDimFilter("dim1", "2", "2", true, false, true, null, StringComparators.ALPHANUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "2", "2", true, true, true, null, StringComparators.ALPHANUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "2", "2", false, true, true, null, StringComparators.ALPHANUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
   }
 
@@ -363,7 +367,7 @@ public class BoundFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new BoundDimFilter("dim1", "-2000", "3", true, true, true, null, StringComparators.ALPHANUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
 
     assertFilterMatches(
@@ -377,7 +381,7 @@ public class BoundFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new BoundDimFilter("dim0", "", "", false, false, false, null, StringComparators.NUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "", "", false, false, false, null, StringComparators.NUMERIC),
@@ -410,15 +414,15 @@ public class BoundFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new BoundDimFilter("dim1", "2", "2", true, false, false, null, StringComparators.NUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "2", "2", true, true, false, null, StringComparators.NUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
     assertFilterMatches(
         new BoundDimFilter("dim1", "2", "2", false, true, false, null, StringComparators.NUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
   }
 
@@ -432,7 +436,7 @@ public class BoundFilterTest extends BaseFilterTest
 
     assertFilterMatches(
         new BoundDimFilter("expr", "2", "3", false, false, false, null, StringComparators.NUMERIC),
-        ImmutableList.<String>of()
+        ImmutableList.of()
     );
   }
 

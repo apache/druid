@@ -78,7 +78,7 @@ public class FileTaskLogs implements TaskLogs
   {
     final File file = fileForTask(taskid, "log");
     if (file.exists()) {
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override
@@ -98,7 +98,7 @@ public class FileTaskLogs implements TaskLogs
   {
     final File file = fileForTask(taskid, "report.json");
     if (file.exists()) {
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override

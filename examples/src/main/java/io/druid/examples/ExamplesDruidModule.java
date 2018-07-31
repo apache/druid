@@ -26,7 +26,7 @@ import com.google.inject.Binder;
 import io.druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 import io.druid.initialization.DruidModule;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -36,7 +36,7 @@ public class ExamplesDruidModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
+    return Collections.<Module>singletonList(
         new SimpleModule("ExamplesModule")
             .registerSubtypes(
                 new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer")

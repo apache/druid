@@ -2176,7 +2176,7 @@ public class IndexMergerTestBase
     toPersist.add(new MapBasedInputRow(
         timestamp,
         Arrays.asList("", "dim2"),
-        ImmutableMap.<String, Object>of("", "1", "dim2", "2")
+        ImmutableMap.of("", "1", "dim2", "2")
     ));
 
     final File tempDir = temporaryFolder.newFolder();

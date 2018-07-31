@@ -68,7 +68,7 @@ public class ScanQuerySpecTest
         0,
         3,
         null,
-        Arrays.<String>asList("market", "quality", "index"),
+        Arrays.asList("market", "quality", "index"),
         null,
         null
     );

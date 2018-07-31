@@ -20,6 +20,7 @@
 package io.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
@@ -31,6 +32,7 @@ import java.util.Map;
 public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
+  @VisibleForTesting
   DerbyMetadataStorageActionHandler(
       SQLMetadataConnector connector,
       ObjectMapper jsonMapper,
@@ -45,7 +47,7 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
   }
 
   @Override
-  protected Query<Map<String, Object>> createInactiveStatusesSinceQuery(
+  protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
       Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
   )
   {

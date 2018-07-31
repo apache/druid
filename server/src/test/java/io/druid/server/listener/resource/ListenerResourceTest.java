@@ -75,8 +75,8 @@ public class ListenerResourceTest
   {
     final ListenerHandler handler = EasyMock.createStrictMock(ListenerHandler.class);
     EasyMock.expect(handler.handlePOST(
-        EasyMock.<InputStream>anyObject(),
-        EasyMock.<ObjectMapper>anyObject(),
+        EasyMock.anyObject(),
+        EasyMock.anyObject(),
         EasyMock.anyString()
     )).andThrow(new RuntimeException("test"));
     final ListenerResource resource = new ListenerResource(
@@ -98,7 +98,7 @@ public class ListenerResourceTest
   public void testServiceAnnouncementPOSTAllExceptionInHandler()
   {
     final ListenerHandler handler = EasyMock.createStrictMock(ListenerHandler.class);
-    EasyMock.expect(handler.handlePOSTAll(EasyMock.<InputStream>anyObject(), EasyMock.<ObjectMapper>anyObject()))
+    EasyMock.expect(handler.handlePOSTAll(EasyMock.anyObject(), EasyMock.anyObject()))
             .andThrow(new RuntimeException("test"));
     final ListenerResource resource = new ListenerResource(
         mapper,

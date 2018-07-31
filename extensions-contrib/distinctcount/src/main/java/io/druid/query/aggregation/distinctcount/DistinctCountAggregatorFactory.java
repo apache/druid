@@ -36,7 +36,6 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -137,7 +136,9 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new DistinctCountAggregatorFactory(fieldName, fieldName, bitMapFactory));
+    return Collections.singletonList(
+        new DistinctCountAggregatorFactory(fieldName, fieldName, bitMapFactory)
+    );
   }
 
   @Override

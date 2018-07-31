@@ -43,7 +43,7 @@ public class JavaScriptAggregator implements Aggregator
 
   public JavaScriptAggregator(List<BaseObjectColumnValueSelector> selectorList, ScriptAggregator script)
   {
-    this.selectorList = selectorList.toArray(new BaseObjectColumnValueSelector[]{});
+    this.selectorList = selectorList.toArray(new BaseObjectColumnValueSelector[0]);
     this.script = script;
 
     this.current = script.reset();

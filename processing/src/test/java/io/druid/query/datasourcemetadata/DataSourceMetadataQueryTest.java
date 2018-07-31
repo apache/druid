@@ -77,7 +77,7 @@ public class DataSourceMetadataQueryTest
                                                 .dataSource("foo")
                                                 .intervals("2013/2014")
                                                 .context(
-                                                    ImmutableMap.<String, Object>of(
+                                                    ImmutableMap.of(
                                                         "priority",
                                                         1,
                                                         "useCache",
@@ -130,7 +130,7 @@ public class DataSourceMetadataQueryTest
         new MapBasedInputRow(
             timestamp.getMillis(),
             ImmutableList.of("dim1"),
-            ImmutableMap.<String, Object>of("dim1", "x")
+            ImmutableMap.of("dim1", "x")
         )
     );
     DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
@@ -241,7 +241,7 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testResultDeserialization()
   {
-    final Map<String, Object> resultValueMap = ImmutableMap.<String, Object>of(
+    final Map<String, Object> resultValueMap = ImmutableMap.of(
         "maxIngestedEventTime",
         "2000-01-01T00:00:00.000Z"
     );

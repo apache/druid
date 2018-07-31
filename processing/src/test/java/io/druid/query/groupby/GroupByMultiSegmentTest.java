@@ -57,7 +57,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.having.GreaterThanHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -322,15 +321,15 @@ public class GroupByMultiSegmentTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("dimA", null)
         ))
         .setAggregatorSpecs(
-            Arrays.asList(new LongSumAggregatorFactory("metA", "metA"))
+            Collections.singletonList(new LongSumAggregatorFactory("metA", "metA"))
         )
         .setLimitSpec(
             new DefaultLimitSpec(
-                Arrays.asList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.ASCENDING)),
+                Collections.singletonList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.ASCENDING)),
                 1
             )
         )

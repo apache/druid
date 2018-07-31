@@ -29,7 +29,6 @@ import io.druid.query.DefaultQueryMetricsTest;
 import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.SelectorDimFilter;
@@ -62,7 +61,7 @@ public class DefaultGroupByQueryMetricsTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(
-            Lists.<DimensionSpec>newArrayList(
+            Lists.newArrayList(
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
@@ -87,7 +86,7 @@ public class DefaultGroupByQueryMetricsTest
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.<String, Object>of("bySegment", true));
+        .setContext(ImmutableMap.of("bySegment", true));
     GroupByQuery query = builder.build();
     queryMetrics.query(query);
 

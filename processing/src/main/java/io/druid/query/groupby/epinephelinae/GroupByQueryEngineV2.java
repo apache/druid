@@ -219,16 +219,14 @@ public class GroupByQueryEngineV2
         && cardinality > 0) {
       final AggregatorFactory[] aggregatorFactories = query
           .getAggregatorSpecs()
-          .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]);
+          .toArray(new AggregatorFactory[0]);
       final long requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
           cardinality,
           aggregatorFactories
       );
 
       // Check that all keys and aggregated values can be contained the buffer
-      if (requiredBufferCapacity <= buffer.capacity()) {
-        return true;
-      }
+      return requiredBufferCapacity <= buffer.capacity();
     }
 
     return false;
@@ -447,7 +445,7 @@ public class GroupByQueryEngineV2
           keySerde,
           cursor.getColumnSelectorFactory(),
           query.getAggregatorSpecs()
-               .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]),
+               .toArray(new AggregatorFactory[0]),
           querySpecificConfig.getBufferGrouperMaxSize(),
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets(),
@@ -602,7 +600,7 @@ public class GroupByQueryEngineV2
           Suppliers.ofInstance(buffer),
           cursor.getColumnSelectorFactory(),
           query.getAggregatorSpecs()
-               .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]),
+               .toArray(new AggregatorFactory[0]),
           cardinality
       );
     }

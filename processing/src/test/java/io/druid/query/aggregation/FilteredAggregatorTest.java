@@ -28,7 +28,6 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.NotDimFilter;
@@ -94,7 +93,7 @@ public class FilteredAggregatorTest
       {
         final String dimensionName = dimensionSpec.getDimension();
 
-        if (dimensionName.equals("dim")) {
+        if ("dim".equals(dimensionName)) {
           return dimensionSpec.decorate(
               new DimensionSelector()
               {
@@ -196,7 +195,7 @@ public class FilteredAggregatorTest
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
       {
-        if (columnName.equals("value")) {
+        if ("value".equals(columnName)) {
           return selector;
         } else {
           throw new UnsupportedOperationException();
@@ -207,7 +206,7 @@ public class FilteredAggregatorTest
       public ColumnCapabilities getColumnCapabilities(String columnName)
       {
         ColumnCapabilitiesImpl caps;
-        if (columnName.equals("value")) {
+        if ("value".equals(columnName)) {
           caps = new ColumnCapabilitiesImpl();
           caps.setType(ValueType.FLOAT);
           caps.setDictionaryEncoded(false);
@@ -258,7 +257,7 @@ public class FilteredAggregatorTest
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new OrDimFilter(Lists.<DimFilter>newArrayList(new SelectorDimFilter("dim", "a", null), new SelectorDimFilter("dim", "b", null)))
+        new OrDimFilter(Lists.newArrayList(new SelectorDimFilter("dim", "a", null), new SelectorDimFilter("dim", "b", null)))
     );
 
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
@@ -279,7 +278,7 @@ public class FilteredAggregatorTest
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new AndDimFilter(Lists.<DimFilter>newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b", null)), new SelectorDimFilter("dim", "a", null))));
+        new AndDimFilter(Lists.newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b", null)), new SelectorDimFilter("dim", "a", null))));
 
     validateFilteredAggs(factory, values, selector);
   }

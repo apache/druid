@@ -190,7 +190,7 @@ public class OldApiSketchAggregationTest
             "name",
             "INTERSECT",
             null,
-            Lists.<PostAggregator>newArrayList(
+            Lists.newArrayList(
                 new FieldAccessPostAggregator("name1", "fieldName1"),
                 new FieldAccessPostAggregator("name2", "fieldName2")
             )
@@ -206,7 +206,7 @@ public class OldApiSketchAggregationTest
     UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
     updateSketch.update(1);
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("sketch", sketchHolder)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("sketch", sketchHolder)));
     SketchHolder[] holders = helper.runRelocateVerificationTest(
         new OldSketchMergeAggregatorFactory("sketch", "sketch", 16, false),
         columnSelectorFactory,

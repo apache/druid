@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexer.TaskInfo;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
@@ -39,6 +40,7 @@ import org.junit.rules.ExpectedException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class SQLMetadataStorageActionHandlerTest
 {
@@ -133,19 +135,23 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(Pair.of(entry, status1)),
-        handler.getActiveEntriesWithStatus()
+        handler.getActiveTaskInfo(null).stream()
+               .map(taskInfo -> Pair.of(taskInfo.getTask(), taskInfo.getStatus()))
+               .collect(Collectors.toList())
     );
 
     Assert.assertTrue(handler.setStatus(entryId, true, status2));
 
     Assert.assertEquals(
         ImmutableList.of(Pair.of(entry, status2)),
-        handler.getActiveEntriesWithStatus()
+        handler.getActiveTaskInfo(null).stream()
+               .map(taskInfo -> Pair.of(taskInfo.getTask(), taskInfo.getStatus()))
+               .collect(Collectors.toList())
     );
 
     Assert.assertEquals(
         ImmutableList.of(),
-        handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"))
+        handler.getCompletedTaskInfo(DateTimes.of("2014-01-01"), null, null)
     );
 
     Assert.assertTrue(handler.setStatus(entryId, false, status1));
@@ -170,12 +176,15 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertEquals(
         ImmutableList.of(),
-        handler.getInactiveStatusesSince(DateTimes.of("2014-01-03"))
+        handler.getCompletedTaskInfo(DateTimes.of("2014-01-03"), null, null)
     );
 
     Assert.assertEquals(
         ImmutableList.of(status1),
-        handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"))
+        handler.getCompletedTaskInfo(DateTimes.of("2014-01-01"), null, null)
+               .stream()
+               .map(TaskInfo::getStatus)
+               .collect(Collectors.toList())
     );
   }
 
@@ -190,11 +199,15 @@ public class SQLMetadataStorageActionHandlerTest
       handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status);
     }
 
-    final List<Map<String, Integer>> statuses = handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"), 7);
+    final List<TaskInfo<Map<String, Integer>, Map<String, Integer>>> statuses = handler.getCompletedTaskInfo(
+        DateTimes.of("2014-01-01"),
+        7,
+        null
+    );
     Assert.assertEquals(7, statuses.size());
     int i = 10;
-    for (Map<String, Integer> status : statuses) {
-      Assert.assertEquals(ImmutableMap.of("count", i-- * 10), status);
+    for (TaskInfo<Map<String, Integer>, Map<String, Integer>> status : statuses) {
+      Assert.assertEquals(ImmutableMap.of("count", i-- * 10), status.getStatus());
     }
   }
 
@@ -209,11 +222,15 @@ public class SQLMetadataStorageActionHandlerTest
       handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status);
     }
 
-    final List<Map<String, Integer>> statuses = handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"), 10);
+    final List<TaskInfo<Map<String, Integer>, Map<String, Integer>>> statuses = handler.getCompletedTaskInfo(
+        DateTimes.of("2014-01-01"),
+        10,
+        null
+    );
     Assert.assertEquals(5, statuses.size());
     int i = 5;
-    for (Map<String, Integer> status : statuses) {
-      Assert.assertEquals(ImmutableMap.of("count", i-- * 10), status);
+    for (TaskInfo<Map<String, Integer>, Map<String, Integer>> status : statuses) {
+      Assert.assertEquals(ImmutableMap.of("count", i-- * 10), status.getStatus());
     }
   }
 

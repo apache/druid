@@ -53,9 +53,9 @@ public class JSONFlatDataParserTest
   private static final String OTHERVAL2 = null;
   private static final String CANBEEMPTY1 = "";
   private static final String CANBEEMPTY2 = "notEmpty";
-  private static final List<Map<String, Object>> MAPPINGS = ImmutableList.<Map<String, Object>>of(
-      ImmutableMap.<String, Object>of("key", "foo1", "val", "bar", "otherVal", 3, "canBeEmpty", ""),
-      ImmutableMap.<String, Object>of("key", "foo2", "val", "baz", "canBeEmpty", "notEmpty")
+  private static final List<Map<String, Object>> MAPPINGS = ImmutableList.of(
+      ImmutableMap.of("key", "foo1", "val", "bar", "otherVal", 3, "canBeEmpty", ""),
+      ImmutableMap.of("key", "foo2", "val", "baz", "canBeEmpty", "notEmpty")
   );
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();

@@ -399,7 +399,7 @@ public class SearchQueryRunnerTest
               .granularity(QueryRunnerTestHelper.allGran)
               .filters(
                   new AndDimFilter(
-                      Arrays.<DimFilter>asList(
+                      Arrays.asList(
                           new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
                           new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null)
                       )))
@@ -722,14 +722,14 @@ public class SearchQueryRunnerTest
         new MapBasedInputRow(
             1481871600000L,
             Arrays.asList("name", "host"),
-            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+            ImmutableMap.of("name", "name1", "host", "host")
         )
     );
     index.add(
         new MapBasedInputRow(
             1481871670000L,
             Arrays.asList("name", "table"),
-            ImmutableMap.<String, Object>of("name", "name2", "table", "table")
+            ImmutableMap.of("name", "name2", "table", "table")
         )
     );
 
@@ -741,7 +741,7 @@ public class SearchQueryRunnerTest
                                     .granularity(QueryRunnerTestHelper.allGran)
                                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                                     // simulate when cardinality is big enough to fallback to cursorOnly strategy
-                                    .context(ImmutableMap.<String, Object>of("searchStrategy", "cursorOnly"))
+                                    .context(ImmutableMap.of("searchStrategy", "cursorOnly"))
                                     .build();
 
     QueryRunnerFactory factory = new SearchQueryRunnerFactory(

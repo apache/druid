@@ -85,7 +85,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -161,8 +160,8 @@ public class SelectBenchmark
       Druids.SelectQueryBuilder queryBuilderA =
           Druids.newSelectQueryBuilder()
                 .dataSource(new TableDataSource("blah"))
-                .dimensionSpecs(DefaultDimensionSpec.toSpec(Arrays.<String>asList()))
-                .metrics(Arrays.<String>asList())
+                .dimensionSpecs(DefaultDimensionSpec.toSpec(Collections.emptyList()))
+                .metrics(Collections.emptyList())
                 .intervals(intervalSpec)
                 .granularity(Granularities.ALL)
                 .descending(false);
@@ -268,7 +267,7 @@ public class SelectBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     return queryResult.toList();
   }
 

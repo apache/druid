@@ -8,8 +8,7 @@ You can build Druid directly from source. Please note that these instructions ar
 For building the latest code in master, follow the instructions [here](https://github.com/druid-io/druid/blob/master/docs/content/development/build.md).
 
 Building Druid requires the following:
-- [JDK 7](http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html)
-  or [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+- [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
 To do so, run these commands:

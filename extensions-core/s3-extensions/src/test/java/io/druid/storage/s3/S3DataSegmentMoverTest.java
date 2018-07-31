@@ -56,7 +56,7 @@ public class S3DataSegmentMoverTest
       "test",
       Intervals.of("2013-01-01/2013-01-02"),
       "1",
-      ImmutableMap.<String, Object>of(
+      ImmutableMap.of(
           "key",
           "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
           "bucket",
@@ -86,7 +86,7 @@ public class S3DataSegmentMoverTest
 
     DataSegment movedSegment = mover.move(
         sourceSegment,
-        ImmutableMap.<String, Object>of("baseKey", "targetBaseKey", "bucket", "archive")
+        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
@@ -112,7 +112,7 @@ public class S3DataSegmentMoverTest
 
     DataSegment movedSegment = mover.move(
         sourceSegment,
-        ImmutableMap.<String, Object>of("baseKey", "targetBaseKey", "bucket", "archive")
+        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
@@ -130,7 +130,7 @@ public class S3DataSegmentMoverTest
 
     mover.move(
         sourceSegment,
-        ImmutableMap.<String, Object>of("baseKey", "targetBaseKey", "bucket", "archive")
+        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
   }
   
@@ -143,7 +143,7 @@ public class S3DataSegmentMoverTest
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
         "1",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "key",
             "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
             "bucket",
@@ -154,7 +154,7 @@ public class S3DataSegmentMoverTest
         NoneShardSpec.instance(),
         0,
         1
-    ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
+    ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
   }
 
   @Test(expected = SegmentLoadingException.class)
@@ -166,7 +166,7 @@ public class S3DataSegmentMoverTest
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
         "1",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "key",
             "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
             "bucket",
@@ -177,7 +177,7 @@ public class S3DataSegmentMoverTest
         NoneShardSpec.instance(),
         0,
         1
-    ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
+    ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
   }
 
   private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3

@@ -75,7 +75,7 @@ public class CardinalityAggregator implements Aggregator
       boolean byRow
   )
   {
-    this(name, selectorPlusList.toArray(new ColumnSelectorPlus[] {}), byRow);
+    this(name, selectorPlusList.toArray(new ColumnSelectorPlus[0]), byRow);
   }
 
   CardinalityAggregator(

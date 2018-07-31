@@ -22,14 +22,12 @@ package io.druid.query.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
-import com.google.common.collect.TreeRangeSet;
 import io.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -63,30 +61,19 @@ public class DimFilterUtilsTest
             .andReturn(null)
             .anyTimes();
 
-    DimFilter filter2 = EasyMock.createMock(DimFilter.class);
-    EasyMock.expect(filter2.getDimensionRangeSet("dim1"))
-            .andReturn(rangeSet(ImmutableList.of(Range.singleton("e"))))
-            .anyTimes();
-    EasyMock.expect(filter2.getDimensionRangeSet("dim2"))
-            .andReturn(rangeSet(ImmutableList.of(Range.singleton("na"))))
-            .anyTimes();
-
-    ShardSpec shard1 = shardSpec("dim1", Range.atMost("abc"));
-    ShardSpec shard2 = shardSpec("dim1", Range.closed("abc", "def"));
-    ShardSpec shard3 = shardSpec("dim1", Range.atLeast("def"));
-    ShardSpec shard4 = shardSpec("dim2", Range.atMost("hello"));
-    ShardSpec shard5 = shardSpec("dim2", Range.closed("hello", "jk"));
-    ShardSpec shard6 = shardSpec("dim2", Range.closed("jk", "na"));
-    ShardSpec shard7 = shardSpec("dim2", Range.atLeast("na"));
+    ShardSpec shard1 = shardSpec("dim1", true);
+    ShardSpec shard2 = shardSpec("dim1", false);
+    ShardSpec shard3 = shardSpec("dim1", false);
+    ShardSpec shard4 = shardSpec("dim2", false);
+    ShardSpec shard5 = shardSpec("dim2", false);
+    ShardSpec shard6 = shardSpec("dim2", false);
+    ShardSpec shard7 = shardSpec("dim2", false);
 
     List<ShardSpec> shards = ImmutableList.of(shard1, shard2, shard3, shard4, shard5, shard6, shard7);
-    EasyMock.replay(filter1, filter2, shard1, shard2, shard3, shard4, shard5, shard6, shard7);
+    EasyMock.replay(filter1, shard1, shard2, shard3, shard4, shard5, shard6, shard7);
 
     Set<ShardSpec> expected1 = ImmutableSet.of(shard1, shard4, shard5, shard6, shard7);
     assertFilterResult(filter1, shards, expected1);
-
-    Set<ShardSpec> expected2 = ImmutableSet.of(shard3, shard6, shard7);
-    assertFilterResult(filter2, shards, expected2);
   }
 
   private void assertFilterResult(DimFilter filter, Iterable<ShardSpec> input, Set<ShardSpec> expected)
@@ -111,13 +98,14 @@ public class DimFilterUtilsTest
     return builder.build();
   }
 
-  private static ShardSpec shardSpec(String dimension, Range<String> range)
+  private static ShardSpec shardSpec(String dimension, boolean contained)
   {
     ShardSpec shard = EasyMock.createMock(ShardSpec.class);
-    RangeSet<String> rangeSet = TreeRangeSet.create();
-    rangeSet.add(range);
-    EasyMock.expect(shard.getDomain())
-            .andReturn(ImmutableMap.of(dimension, rangeSet))
+    EasyMock.expect(shard.getDomainDimensions())
+            .andReturn(ImmutableList.of(dimension))
+            .anyTimes();
+    EasyMock.expect(shard.possibleInDomain(EasyMock.anyObject()))
+            .andReturn(contained)
             .anyTimes();
     return shard;
   }

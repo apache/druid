@@ -125,7 +125,7 @@ public class ArithmeticPostAggregatorTest
     ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
         null,
         "quotient",
-        ImmutableList.<PostAggregator>of(
+        ImmutableList.of(
             new FieldAccessPostAggregator("numerator", "value"),
             new ConstantPostAggregator("zero", 0)
         ),
@@ -133,10 +133,10 @@ public class ArithmeticPostAggregatorTest
     );
 
 
-    Assert.assertEquals(Double.NaN, agg.compute(ImmutableMap.<String, Object>of("value", 0)));
-    Assert.assertEquals(Double.NaN, agg.compute(ImmutableMap.<String, Object>of("value", Double.NaN)));
-    Assert.assertEquals(Double.POSITIVE_INFINITY, agg.compute(ImmutableMap.<String, Object>of("value", 1)));
-    Assert.assertEquals(Double.NEGATIVE_INFINITY, agg.compute(ImmutableMap.<String, Object>of("value", -1)));
+    Assert.assertEquals(Double.NaN, agg.compute(ImmutableMap.of("value", 0)));
+    Assert.assertEquals(Double.NaN, agg.compute(ImmutableMap.of("value", Double.NaN)));
+    Assert.assertEquals(Double.POSITIVE_INFINITY, agg.compute(ImmutableMap.of("value", 1)));
+    Assert.assertEquals(Double.NEGATIVE_INFINITY, agg.compute(ImmutableMap.of("value", -1)));
   }
 
   @Test
@@ -151,10 +151,10 @@ public class ArithmeticPostAggregatorTest
         )
     );
 
-    Assert.assertEquals(0.0, agg.compute(ImmutableMap.<String, Object>of("value", 0)));
-    Assert.assertEquals(0.0, agg.compute(ImmutableMap.<String, Object>of("value", Double.NaN)));
-    Assert.assertEquals(0.0, agg.compute(ImmutableMap.<String, Object>of("value", 1)));
-    Assert.assertEquals(0.0, agg.compute(ImmutableMap.<String, Object>of("value", -1)));
+    Assert.assertEquals(0.0, agg.compute(ImmutableMap.of("value", 0)));
+    Assert.assertEquals(0.0, agg.compute(ImmutableMap.of("value", Double.NaN)));
+    Assert.assertEquals(0.0, agg.compute(ImmutableMap.of("value", 1)));
+    Assert.assertEquals(0.0, agg.compute(ImmutableMap.of("value", -1)));
   }
 
   @Test
@@ -163,7 +163,7 @@ public class ArithmeticPostAggregatorTest
     ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
         null,
         "quotient",
-        ImmutableList.<PostAggregator>of(
+        ImmutableList.of(
             new ConstantPostAggregator("zero", 0),
             new ConstantPostAggregator("zero", 0)
         ),

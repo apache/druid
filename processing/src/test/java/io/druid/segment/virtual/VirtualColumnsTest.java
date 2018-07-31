@@ -156,7 +156,7 @@ public class VirtualColumnsTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("virtualColumn name[__time] not allowed");
 
-    VirtualColumns.create(ImmutableList.<VirtualColumn>of(expr));
+    VirtualColumns.create(ImmutableList.of(expr));
   }
 
   @Test
@@ -179,7 +179,7 @@ public class VirtualColumnsTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Duplicate virtualColumn name[expr]");
 
-    VirtualColumns.create(ImmutableList.<VirtualColumn>of(expr, expr2));
+    VirtualColumns.create(ImmutableList.of(expr, expr2));
   }
 
   @Test
@@ -202,20 +202,20 @@ public class VirtualColumnsTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Self-referential column[expr]");
 
-    VirtualColumns.create(ImmutableList.<VirtualColumn>of(expr, expr2));
+    VirtualColumns.create(ImmutableList.of(expr, expr2));
   }
 
   @Test
   public void testGetCacheKey()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.<VirtualColumn>of(
+        ImmutableList.of(
             new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
-        ImmutableList.<VirtualColumn>of(
+        ImmutableList.of(
             new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
@@ -228,13 +228,13 @@ public class VirtualColumnsTest
   public void testEqualsAndHashCode()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.<VirtualColumn>of(
+        ImmutableList.of(
             new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
-        ImmutableList.<VirtualColumn>of(
+        ImmutableList.of(
             new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
@@ -253,7 +253,7 @@ public class VirtualColumnsTest
   public void testSerde() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final ImmutableList<VirtualColumn> theColumns = ImmutableList.<VirtualColumn>of(
+    final ImmutableList<VirtualColumn> theColumns = ImmutableList.of(
         new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
         new ExpressionVirtualColumn("expr2", "x + z", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
     );

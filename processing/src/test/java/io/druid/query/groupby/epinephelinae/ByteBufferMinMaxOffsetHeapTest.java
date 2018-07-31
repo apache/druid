@@ -39,7 +39,7 @@ public class ByteBufferMinMaxOffsetHeapTest
   {
     int limit = 15;
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     ArrayList<Integer> values = Lists.newArrayList(
         30, 45, 81, 92, 68, 54, 66, 33, 89, 98,
@@ -91,7 +91,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     ArrayList<Integer> deletedValues = Lists.newArrayList();
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (int i = 0; i < values.size(); i++) {
       int droppedOffset = heap.addOffset(values.get(i));
@@ -148,7 +148,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     ArrayList<Integer> deletedValues = Lists.newArrayList();
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (int i = 0; i < values.size(); i++) {
       int droppedOffset = heap.addOffset(values.get(i));
@@ -202,7 +202,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     });
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (Integer value : values) {
       heap.addOffset(value);
@@ -236,7 +236,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     });
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (Integer value : values) {
       heap.addOffset(value);

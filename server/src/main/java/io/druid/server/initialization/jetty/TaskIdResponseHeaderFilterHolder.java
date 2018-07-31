@@ -28,7 +28,7 @@ public class TaskIdResponseHeaderFilterHolder extends ResponseHeaderFilterHolder
   {
     super(path,
           taskId == null
-          ? ImmutableMap.<String, String>of()
+          ? ImmutableMap.of()
           : ImmutableMap.of(ChatHandlerResource.TASK_ID_HEADER, taskId)
     );
   }

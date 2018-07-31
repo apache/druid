@@ -33,7 +33,6 @@ import io.druid.query.Result;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.UnionQueryRunner;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.TestHelper;
 import org.junit.Test;
@@ -91,7 +90,7 @@ public class TimeSeriesUnionQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
@@ -107,13 +106,13 @@ public class TimeSeriesUnionQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 52L, "idx", 26476L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 52L, "idx", 26476L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 52L, "idx", 23308L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 52L, "idx", 23308L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -138,7 +137,7 @@ public class TimeSeriesUnionQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
@@ -152,25 +151,25 @@ public class TimeSeriesUnionQueryRunnerTest
     final List<Result<TimeseriesResultValue>> ds1 = Lists.newArrayList(
         new Result<>(
             DateTimes.of("2011-04-02"),
-            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 1L, "idx", 2L))
+            new TimeseriesResultValue(ImmutableMap.of("rows", 1L, "idx", 2L))
         ),
         new Result<>(
             DateTimes.of("2011-04-03"),
-            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 3L, "idx", 4L))
+            new TimeseriesResultValue(ImmutableMap.of("rows", 3L, "idx", 4L))
         )
     );
     final List<Result<TimeseriesResultValue>> ds2 = Lists.newArrayList(
         new Result<>(
             DateTimes.of("2011-04-01"),
-            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 5L, "idx", 6L))
+            new TimeseriesResultValue(ImmutableMap.of("rows", 5L, "idx", 6L))
         ),
         new Result<>(
             DateTimes.of("2011-04-02"),
-            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 7L, "idx", 8L))
+            new TimeseriesResultValue(ImmutableMap.of("rows", 7L, "idx", 8L))
         ),
         new Result<>(
             DateTimes.of("2011-04-04"),
-            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 9L, "idx", 10L))
+            new TimeseriesResultValue(ImmutableMap.of("rows", 9L, "idx", 10L))
         )
     );
 
@@ -198,25 +197,25 @@ public class TimeSeriesUnionQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 5L, "idx", 6L)
+                ImmutableMap.of("rows", 5L, "idx", 6L)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 8L, "idx", 10L)
+                ImmutableMap.of("rows", 8L, "idx", 10L)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-03"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 3L, "idx", 4L)
+                ImmutableMap.of("rows", 3L, "idx", 4L)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-04"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 9L, "idx", 10L)
+                ImmutableMap.of("rows", 9L, "idx", 10L)
             )
         )
     );

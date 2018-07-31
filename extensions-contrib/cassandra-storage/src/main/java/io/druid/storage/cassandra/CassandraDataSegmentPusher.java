@@ -107,7 +107,7 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     }
 
     segment = segment.withSize(indexSize)
-                     .withLoadSpec(ImmutableMap.<String, Object>of("type", "c*", "key", key))
+                     .withLoadSpec(ImmutableMap.of("type", "c*", "key", key))
                      .withBinaryVersion(version);
 
     log.info("Deleting zipped index File[%s]", compressedIndexFile);

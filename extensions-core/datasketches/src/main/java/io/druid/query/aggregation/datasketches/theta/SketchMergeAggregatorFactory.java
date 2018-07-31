@@ -53,7 +53,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(
+    return Collections.singletonList(
         new SketchMergeAggregatorFactory(
             fieldName,
             fieldName,

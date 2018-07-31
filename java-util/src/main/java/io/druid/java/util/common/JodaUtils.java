@@ -90,8 +90,8 @@ public class JodaUtils
       endDates.add(interval.getEnd());
     }
 
-    DateTime minStart = minDateTime(startDates.toArray(new DateTime[]{}));
-    DateTime maxEnd = maxDateTime(endDates.toArray(new DateTime[]{}));
+    DateTime minStart = minDateTime(startDates.toArray(new DateTime[0]));
+    DateTime maxEnd = maxDateTime(endDates.toArray(new DateTime[0]));
 
     if (minStart == null || maxEnd == null) {
       throw new IllegalArgumentException("Empty list of intervals");

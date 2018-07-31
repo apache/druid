@@ -292,7 +292,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-10-01/2011-10-02", "1", 1),
             createExpected(
                 "2011-10-02/2011-10-03", "3",
-                Arrays.<PartitionChunk<Integer>>asList(
+                Arrays.asList(
                     IntegerPartitionChunk.make(null, 10, 0, 20),
                     IntegerPartitionChunk.make(10, null, 1, 21)
                 )
@@ -330,7 +330,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-10-05/2011-10-06", "5", 5),
             createExpected(
                 "2011-10-06/2011-10-07", "6",
-                Arrays.<PartitionChunk<Integer>>asList(
+                Arrays.asList(
                     IntegerPartitionChunk.make(null, 10, 0, 60),
                     IntegerPartitionChunk.make(10, 20, 1, 61),
                     IntegerPartitionChunk.make(20, null, 2, 62)
@@ -1378,7 +1378,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-06/2011-04-09", "2", 4);
 
     assertValues(
-        ImmutableSet.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>of(),
+        ImmutableSet.of(),
         timeline.findOvershadowed()
     );
   }
@@ -1393,7 +1393,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-06/2011-04-09", "2", 4);
 
     assertValues(
-        ImmutableSet.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>of(),
+        ImmutableSet.of(),
         timeline.findOvershadowed()
     );
   }
@@ -1408,7 +1408,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-03/2011-04-06", "2", 3);
 
     assertValues(
-        ImmutableSet.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>of(),
+        ImmutableSet.of(),
         timeline.findOvershadowed()
     );
   }
@@ -1511,7 +1511,7 @@ public class VersionedIntervalTimelineTest
     assertValues(
         ImmutableList.of(
             createExpected("2011-04-01/2011-04-02", "1",
-                           Arrays.<PartitionChunk<Integer>>asList(
+                           Arrays.asList(
                                IntegerPartitionChunk.make(null, 1, 0, 77),
                                IntegerPartitionChunk.make(1, null, 1, 88)
                            )
@@ -1525,7 +1525,7 @@ public class VersionedIntervalTimelineTest
     assertValues(
         ImmutableList.of(
             createExpected("2011-04-01/2011-04-02", "1",
-                           Arrays.<PartitionChunk<Integer>>asList(
+                           Arrays.asList(
                                IntegerPartitionChunk.make(null, 1, 0, 77),
                                IntegerPartitionChunk.make(1, null, 1, 88)
                            )
@@ -1536,9 +1536,9 @@ public class VersionedIntervalTimelineTest
     assertValues(
         Sets.newHashSet(
             createExpected("2011-04-01/2011-04-02", "2",
-                           Arrays.<PartitionChunk<Integer>>asList(
-                               IntegerPartitionChunk.make(null, 1, 0, 99)
-                           )
+                Collections.singletonList(
+                    IntegerPartitionChunk.make(null, 1, 0, 99)
+                )
             )
         ),
         timeline.findOvershadowed()
@@ -1549,7 +1549,7 @@ public class VersionedIntervalTimelineTest
     assertValues(
         ImmutableList.of(
             createExpected("2011-04-01/2011-04-02", "1",
-                           Arrays.<PartitionChunk<Integer>>asList(
+                           Arrays.asList(
                                IntegerPartitionChunk.make(null, 1, 0, 77),
                                IntegerPartitionChunk.make(1, null, 1, 88)
                            )
@@ -1718,7 +1718,7 @@ public class VersionedIntervalTimelineTest
     return createExpected(
         intervalString,
         version,
-        Arrays.<PartitionChunk<Integer>>asList(makeSingle(value))
+        Collections.singletonList(makeSingle(value))
     );
   }
 
@@ -1808,7 +1808,7 @@ public class VersionedIntervalTimelineTest
 
   private VersionedIntervalTimeline<String, Integer> makeStringIntegerTimeline()
   {
-    return new VersionedIntervalTimeline<String, Integer>(Ordering.<String>natural());
+    return new VersionedIntervalTimeline<String, Integer>(Ordering.natural());
   }
 
 }

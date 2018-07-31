@@ -38,7 +38,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.segment.CloserRule;
 import io.druid.segment.IncrementalIndexSegment;
@@ -68,7 +67,7 @@ public class GroupByQueryRunnerFactoryTest
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("tags", "tags")))
         .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
         .build();
 

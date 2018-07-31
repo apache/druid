@@ -75,7 +75,7 @@ public class BufferHashGrouperTest
     );
     grouper.init();
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     grouper.aggregate(12);
     grouper.aggregate(6);
     grouper.aggregate(10);
@@ -114,14 +114,14 @@ public class BufferHashGrouperTest
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10000, 2);
     final int expectedMaxSize = NullHandling.replaceWithDefault() ? 219 : 210;
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
     Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     // Aggregate slightly different row
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
     for (int i = 0; i < expectedMaxSize; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
@@ -142,7 +142,7 @@ public class BufferHashGrouperTest
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 2_000_000_000, 2);
     final int expectedMaxSize = NullHandling.replaceWithDefault() ? 40988516 : 39141224;
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
@@ -156,7 +156,7 @@ public class BufferHashGrouperTest
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, Integer.MAX_VALUE, 2);
     final int expectedMaxSize = NullHandling.replaceWithDefault() ? 44938972 : 42955456;
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
@@ -170,14 +170,14 @@ public class BufferHashGrouperTest
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10000, Integer.MAX_VALUE);
     final int expectedMaxSize = NullHandling.replaceWithDefault() ? 267 : 258;
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }
     Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
     // Aggregate slightly different row
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 11L)));
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
     for (int i = 0; i < expectedMaxSize; i++) {
       Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
     }

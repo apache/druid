@@ -33,10 +33,8 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparators;
@@ -62,15 +60,15 @@ public class GroupByQueryTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
         .setAggregatorSpecs(
-            Arrays.<AggregatorFactory>asList(
+            Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(new FieldAccessPostAggregator("x", "idx")))
+        .setPostAggregatorSpecs(ImmutableList.of(new FieldAccessPostAggregator("x", "idx")))
         .setLimitSpec(
             new DefaultLimitSpec(
                 ImmutableList.of(new OrderByColumnSpec(

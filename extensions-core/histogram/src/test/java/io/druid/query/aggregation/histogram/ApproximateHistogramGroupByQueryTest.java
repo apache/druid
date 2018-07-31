@@ -26,7 +26,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -40,7 +39,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -154,7 +152,7 @@ public class ApproximateHistogramGroupByQueryTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(
-            Arrays.<DimensionSpec>asList(
+            Collections.singletonList(
                 new DefaultDimensionSpec(
                     QueryRunnerTestHelper.marketDimension,
                     "marketalias"
@@ -228,7 +226,7 @@ public class ApproximateHistogramGroupByQueryTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(
-            Arrays.<DimensionSpec>asList(
+            Collections.singletonList(
                 new DefaultDimensionSpec(
                     QueryRunnerTestHelper.marketDimension,
                     "marketalias"

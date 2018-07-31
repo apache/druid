@@ -36,7 +36,7 @@ import java.util.Objects;
 
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
 {
-  public static final Comparator<Float> FLOAT_COMPARATOR = Comparators.<Float>naturalNullsFirst();
+  public static final Comparator<Float> FLOAT_COMPARATOR = Comparators.naturalNullsFirst();
 
   @Override
   public Float processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)

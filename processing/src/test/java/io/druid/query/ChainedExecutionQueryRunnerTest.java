@@ -85,8 +85,8 @@ public class ChainedExecutionQueryRunnerTest
     Capture<ListenableFuture> capturedFuture = EasyMock.newCapture();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
     watcher.registerQuery(
-        EasyMock.<Query>anyObject(),
-        EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture))
+        EasyMock.anyObject(),
+        EasyMock.and(EasyMock.anyObject(), EasyMock.capture(capturedFuture))
     );
     EasyMock.expectLastCall()
             .andAnswer(
@@ -114,11 +114,11 @@ public class ChainedExecutionQueryRunnerTest
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
         watcher,
-        Lists.<QueryRunner<Integer>>newArrayList(
+        Lists.newArrayList(
          runners
         )
     );
-    Map<String, Object> context = ImmutableMap.<String, Object>of();
+    Map<String, Object> context = ImmutableMap.of();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
@@ -209,8 +209,8 @@ public class ChainedExecutionQueryRunnerTest
     Capture<ListenableFuture> capturedFuture = new Capture<>();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
     watcher.registerQuery(
-        EasyMock.<Query>anyObject(),
-        EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture))
+        EasyMock.anyObject(),
+        EasyMock.and(EasyMock.anyObject(), EasyMock.capture(capturedFuture))
     );
     EasyMock.expectLastCall()
             .andAnswer(
@@ -239,7 +239,7 @@ public class ChainedExecutionQueryRunnerTest
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
         watcher,
-        Lists.<QueryRunner<Integer>>newArrayList(
+        Lists.newArrayList(
             runners
         )
     );

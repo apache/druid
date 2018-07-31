@@ -95,7 +95,7 @@ public class DefaultLimitSpec implements LimitSpec
       @JsonProperty("limit") Integer limit
   )
   {
-    this.columns = (columns == null) ? ImmutableList.<OrderByColumnSpec>of() : columns;
+    this.columns = (columns == null) ? ImmutableList.of() : columns;
     this.limit = (limit == null) ? Integer.MAX_VALUE : limit;
 
     Preconditions.checkArgument(this.limit > 0, "limit[%s] must be >0", limit);

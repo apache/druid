@@ -181,7 +181,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
 
   private Map<String, Object> makeLoadSpec(String bucket, String path)
   {
-    return ImmutableMap.<String, Object>of(
+    return ImmutableMap.of(
         "type", GoogleStorageDruidModule.SCHEME,
         "bucket", bucket,
         "path", path

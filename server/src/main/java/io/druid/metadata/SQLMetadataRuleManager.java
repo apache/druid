@@ -27,9 +27,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
@@ -60,9 +57,10 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -71,7 +69,6 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycle
 public class SQLMetadataRuleManager implements MetadataRuleManager
 {
-
 
   public static void createDefaultRule(
       final IDBI dbi,
@@ -101,9 +98,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 return null;
               }
 
-              final List<Rule> defaultRules = Arrays.<Rule>asList(
+              final List<Rule> defaultRules = Collections.singletonList(
                   new ForeverLoadRule(
-                      ImmutableMap.<String, Integer>of(
+                      ImmutableMap.of(
                           DruidServer.DEFAULT_TIER,
                           DruidServer.DEFAULT_NUM_REPLICANTS
                       )
@@ -142,13 +139,21 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   private final AuditManager auditManager;
 
   private final Object lock = new Object();
-
-  private volatile boolean started = false;
-
-  private volatile ListeningScheduledExecutorService exec = null;
-  private volatile ListenableFuture<?> future = null;
-
-  private volatile long retryStartTime = 0;
+  /** The number of times this SQLMetadataRuleManager was started. */
+  private long startCount = 0;
+  /**
+   * Equal to the current {@link #startCount} value, if the SQLMetadataRuleManager is currently started; -1 if
+   * currently stopped.
+   *
+   * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
+   * the theoretical situation of two tasks scheduled in {@link #start()} calling {@link #poll()} concurrently, if
+   * the sequence of {@link #start()} - {@link #stop()} - {@link #start()} actions occurs quickly.
+   *
+   * {@link SQLMetadataSegmentManager} also have a similar issue.
+   */
+  private long currentStartOrder = -1;
+  private ScheduledExecutorService exec = null;
+  private long failStartTimeMs = 0;
 
   @Inject
   public SQLMetadataRuleManager(
@@ -169,9 +174,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     Preconditions.checkNotNull(config.getAlertThreshold().toStandardDuration());
     Preconditions.checkNotNull(config.getPollDuration().toStandardDuration());
 
-    this.rules = new AtomicReference<>(
-        ImmutableMap.<String, List<Rule>>of()
-    );
+    this.rules = new AtomicReference<>(ImmutableMap.of());
   }
 
   @Override
@@ -179,21 +182,34 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public void start()
   {
     synchronized (lock) {
-      if (started) {
+      if (currentStartOrder >= 0) {
         return;
       }
 
-      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d"));
+      startCount++;
+      currentStartOrder = startCount;
+      long localStartedOrder = currentStartOrder;
+
+      exec = Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d");
 
       createDefaultRule(dbi, getRulesTable(), config.getDefaultRule(), jsonMapper);
-      future = exec.scheduleWithFixedDelay(
+      exec.scheduleWithFixedDelay(
           new Runnable()
           {
             @Override
             public void run()
             {
               try {
-                poll();
+                // poll() is synchronized together with start() and stop() to ensure that when stop() exists, poll()
+                // won't actually run anymore after that (it could only enter the syncrhonized section and exit
+                // immediately because the localStartedOrder doesn't match the new currentStartOrder). It's needed
+                // to avoid flakiness in SQLMetadataRuleManagerTest.
+                // See https://github.com/apache/incubator-druid/issues/6028
+                synchronized (lock) {
+                  if (localStartedOrder == currentStartOrder) {
+                    poll();
+                  }
+                }
               }
               catch (Exception e) {
                 log.error(e, "uncaught exception in rule manager polling thread");
@@ -204,8 +220,6 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
           config.getPollDuration().toStandardDuration().getMillis(),
           TimeUnit.MILLISECONDS
       );
-
-      started = true;
     }
   }
 
@@ -214,15 +228,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public void stop()
   {
     synchronized (lock) {
-      if (!started) {
+      if (currentStartOrder == -1) {
         return;
       }
-
-      rules.set(ImmutableMap.<String, List<Rule>>of());
-
-      future.cancel(false);
-      future = null;
-      started = false;
+      rules.set(ImmutableMap.of());
+      currentStartOrder = -1;
+      // This call cancels the periodic poll() task, scheduled in start().
       exec.shutdownNow();
       exec = null;
     }
@@ -232,6 +243,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public void poll()
   {
     try {
+    
       ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(
           dbi.withHandle(
               new HandleCallback<Map<String, List<Rule>>>()
@@ -258,7 +270,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                           try {
                             return Pair.of(
                                 r.getString("dataSource"),
-                                jsonMapper.<List<Rule>>readValue(
+                                jsonMapper.readValue(
                                     r.getBytes("payload"), new TypeReference<List<Rule>>()
                                     {
                                     }
@@ -272,7 +284,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                       }
                   )
                                .fold(
-                                   Maps.<String, List<Rule>>newHashMap(),
+                                   Maps.newHashMap(),
                                    new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
                                    {
                                      @Override
@@ -302,17 +314,17 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       log.info("Polled and found rules for %,d datasource(s)", newRules.size());
 
       rules.set(newRules);
-      retryStartTime = 0;
+      failStartTimeMs = 0;
     }
     catch (Exception e) {
-      if (retryStartTime == 0) {
-        retryStartTime = System.currentTimeMillis();
+      if (failStartTimeMs == 0) {
+        failStartTimeMs = System.currentTimeMillis();
       }
 
-      if (System.currentTimeMillis() - retryStartTime > config.getAlertThreshold().toStandardDuration().getMillis()) {
+      if (System.currentTimeMillis() - failStartTimeMs > config.getAlertThreshold().toStandardDuration().getMillis()) {
         log.makeAlert(e, "Exception while polling for rules")
            .emit();
-        retryStartTime = 0;
+        failStartTimeMs = 0;
       } else {
         log.error(e, "Exception while polling for rules");
       }
@@ -329,7 +341,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public List<Rule> getRules(final String dataSource)
   {
     List<Rule> retVal = rules.get().get(dataSource);
-    return retVal == null ? Lists.<Rule>newArrayList() : retVal;
+    return retVal == null ? Lists.newArrayList() : retVal;
   }
 
   @Override

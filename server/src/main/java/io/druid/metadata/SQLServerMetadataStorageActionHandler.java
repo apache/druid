@@ -45,7 +45,7 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
   }
 
   @Override
-  protected Query<Map<String, Object>> createInactiveStatusesSinceQuery(
+  protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
       Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
   )
   {

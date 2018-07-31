@@ -134,7 +134,7 @@ public class PullDependenciesTest
     final String artifactId = artifact.getArtifactId();
     final List<String> jarNames = extensionToJars.get(artifact);
     final File[] expectedJars = new File[jarNames.size()];
-    if (artifactId.equals("hadoop-client")) {
+    if ("hadoop-client".equals(artifactId)) {
       final String version = artifact.getVersion();
       for (int i = 0; i < jarNames.size(); ++i) {
         expectedJars[i] = new File(

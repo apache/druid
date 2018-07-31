@@ -39,12 +39,12 @@ import io.druid.indexer.IngestionState;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskReport;
-import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
@@ -171,9 +171,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
   }
 
   @Override

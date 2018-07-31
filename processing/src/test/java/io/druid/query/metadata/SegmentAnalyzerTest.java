@@ -136,7 +136,7 @@ public class SegmentAnalyzerTest
     for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
       final String dimension = schema.getName();
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
-      if (dimension.equals("null_column")) {
+      if ("null_column".equals(dimension)) {
         Assert.assertNull(columnAnalysis);
       } else {
         final boolean isString = schema.getValueType().name().equals(ValueType.STRING.name());

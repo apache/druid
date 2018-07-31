@@ -39,8 +39,8 @@ public class CSVParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            Lists.<String>newArrayList(),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList(),
+            Lists.newArrayList()
         ),
         ",",
         Collections.singletonList("a"),
@@ -61,8 +61,8 @@ public class CSVParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")),
-            Lists.<String>newArrayList(),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList(),
+            Lists.newArrayList()
         ),
         ",",
         Collections.singletonList("a"),

@@ -52,7 +52,7 @@ public class InputStreamResponseHandler implements HttpResponseHandler<Appendabl
   {
     final AppendableByteArrayInputStream obj = clientResponse.getObj();
     obj.done();
-    return ClientResponse.<InputStream>finished(obj);
+    return ClientResponse.finished(obj);
   }
 
   @Override
