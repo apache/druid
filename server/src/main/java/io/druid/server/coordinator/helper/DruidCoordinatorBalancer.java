@@ -129,9 +129,9 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
     final int maxIterations = 2 * maxSegmentsToMove;
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
-    long unmoved = 0L;
+    int moved = 0, unmoved = 0;
 
-    for (int moved = 0, iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
+    for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
       final BalancerSegmentHolder segmentToMoveHolder = strategy.pickSegmentToMove(toMoveFrom);
 
       if (segmentToMoveHolder != null && params.getAvailableSegments().contains(segmentToMoveHolder.getSegment())) {
@@ -179,14 +179,14 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       log.info("No good moves found in tier [%s]", tier);
     }
     stats.addToTieredStat("unmovedCount", tier, unmoved);
-    stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
+    stats.addToTieredStat("movedCount", tier, moved);
     if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
       strategy.emitStats(tier, stats, toMoveFrom);
     }
     log.info(
         "[%s]: Segments Moved: [%d] Segments Let Alone: [%d]",
         tier,
-        currentlyMovingSegments.get(tier).size(),
+        moved,
         unmoved
     );
   }
