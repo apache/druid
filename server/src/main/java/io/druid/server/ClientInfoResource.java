@@ -121,7 +121,7 @@ public class ClientInfoResource
   public Iterable<String> getDataSources(@Context final HttpServletRequest request)
   {
     Function<String, Iterable<ResourceAction>> raGenerator = datasourceName -> {
-      return Lists.newArrayList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
+      return Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
     };
 
     return AuthorizationUtils.filterAuthorizedResources(

@@ -28,6 +28,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 public class ClientMergeQueryTest
@@ -37,7 +38,7 @@ public class ClientMergeQueryTest
   private static final Interval INTERVAL = new Interval(START, START.plus(1));
   private static final DataSegment DATA_SEGMENT =
       new DataSegment(DATA_SOURCE, INTERVAL, START.toString(), null, null, null, null, 0, 0);
-  private static final List<DataSegment> SEGMENT_LIST = Lists.newArrayList(DATA_SEGMENT);
+  private static final List<DataSegment> SEGMENT_LIST = Collections.singletonList(DATA_SEGMENT);
   private static final List<AggregatorFactory> AGGREGATOR_LIST = Lists.newArrayList();
   private static final ClientMergeQuery CLIENT_MERGE_QUERY =
       new ClientMergeQuery(DATA_SOURCE, SEGMENT_LIST, AGGREGATOR_LIST);

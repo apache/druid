@@ -21,7 +21,6 @@ package io.druid.server.lookup;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import io.druid.server.lookup.cache.loading.LoadingCache;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -65,10 +64,10 @@ public class LoadingLookupTest
   public void testUnapplyAll() throws ExecutionException
   {
     EasyMock.expect(reverseLookupCache.get(EasyMock.eq("value"), EasyMock.anyObject(Callable.class)))
-            .andReturn(Lists.newArrayList("key"))
+            .andReturn(Collections.singletonList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(ImmutableMap.of("value", Lists.newArrayList("key")), loadingLookup.unapplyAll(ImmutableSet.of("value")));
+    Assert.assertEquals(ImmutableMap.of("value", Collections.singletonList("key")), loadingLookup.unapplyAll(ImmutableSet.of("value")));
     EasyMock.verify(reverseLookupCache);
   }
 

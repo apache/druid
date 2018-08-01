@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.query.Query;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.dimension.ExtractionDimensionSpec;
@@ -125,7 +124,7 @@ public class TopNQueryTest
         .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
         .intervals(fullOnInterval.getIntervals())
-        .aggregators(Lists.<AggregatorFactory>newArrayList(rowsCount))
+        .aggregators(Collections.singletonList(rowsCount))
         .build();
     String jsonQuery = "{\n"
                        + "  \"queryType\": \"topN\",\n"

@@ -329,7 +329,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                           .setDataSource(CalciteTests.DATASOURCE1)
                                           .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                                           .setGranularity(Granularities.ALL)
-                                          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dim2", "d0")))
+                                          .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
                                           .setAggregatorSpecs(
                                               ImmutableList.of(
                                                   new DoubleSumAggregatorFactory("a0", "m1")
@@ -341,11 +341,15 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                       )
                       .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                       .setGranularity(Granularities.ALL)
-                      .setAggregatorSpecs(ImmutableList.of(
-                          new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                          new CountAggregatorFactory("_a0:count"),
-                          new ApproximateHistogramAggregatorFactory("_a1:agg", "a0", null, null, null, null)
-                      ))
+                      .setAggregatorSpecs(new DoubleSumAggregatorFactory("_a0:sum", "a0"),
+                                          new CountAggregatorFactory("_a0:count"),
+                                          new ApproximateHistogramAggregatorFactory("_a1:agg",
+                                                                                    "a0",
+                                                                                    null,
+                                                                                    null,
+                                                                                    null,
+                                                                                    null
+                                          ))
                       .setPostAggregatorSpecs(
                           ImmutableList.of(
                               new ArithmeticPostAggregator(

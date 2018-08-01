@@ -49,7 +49,6 @@ import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
@@ -2023,12 +2022,10 @@ public class TimeseriesQueryRunnerTest
             Lists.newArrayList(
                 Iterables.concat(
                     aggregatorFactoryList,
-                    Lists.newArrayList(
-                        new FilteredAggregatorFactory(
+                    Collections.singletonList(new FilteredAggregatorFactory(
                             new CountAggregatorFactory("filteredAgg"),
                             new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null)
-                        )
-                    )
+                        ))
                 )
             )
         )
@@ -2067,7 +2064,7 @@ public class TimeseriesQueryRunnerTest
             Lists.newArrayList(
                 Iterables.concat(
                     aggregatorFactoryList,
-                    Lists.newArrayList(
+                    Collections.singletonList(
                         new FilteredAggregatorFactory(
                             new CountAggregatorFactory("filteredAgg"),
                             new SelectorDimFilter("abraKaDabra", "Lol", null)
@@ -2112,7 +2109,7 @@ public class TimeseriesQueryRunnerTest
             Lists.newArrayList(
                 Iterables.concat(
                     aggregatorFactoryList,
-                    Lists.newArrayList(
+                    Collections.singletonList(
                         new FilteredAggregatorFactory(
                             new CountAggregatorFactory("filteredAgg"),
                             new SelectorDimFilter("abraKaDabra", null, null)
@@ -2157,7 +2154,7 @@ public class TimeseriesQueryRunnerTest
             Lists.newArrayList(
                 Iterables.concat(
                     aggregatorFactoryList,
-                    Lists.newArrayList(
+                    Collections.singletonList(
                         new FilteredAggregatorFactory(
                             new CountAggregatorFactory("filteredAgg"),
                             new NotDimFilter(
@@ -2203,7 +2200,7 @@ public class TimeseriesQueryRunnerTest
             Lists.newArrayList(
                 Iterables.concat(
                     aggregatorFactoryList,
-                    Lists.newArrayList(
+                    Collections.singletonList(
                         new FilteredAggregatorFactory(
                             new CountAggregatorFactory("filteredAgg"),
                             new NotDimFilter(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, null, null))
@@ -2242,11 +2239,9 @@ public class TimeseriesQueryRunnerTest
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
-                                      Arrays.asList(
-                                          QueryRunnerTestHelper.rowsCount,
-                                          QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
-                                          QueryRunnerTestHelper.__timeLongSum
-                                      )
+                                      QueryRunnerTestHelper.rowsCount,
+                                      QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
+                                      QueryRunnerTestHelper.__timeLongSum
                                   )
                                   .granularity(QueryRunnerTestHelper.allGran)
                                   .descending(descending)
@@ -2302,7 +2297,7 @@ public class TimeseriesQueryRunnerTest
                                                   null,
                                                   StringComparators.LEXICOGRAPHIC
                                               ),
-                                              (DimFilter) new BoundDimFilter(
+                                              new BoundDimFilter(
                                                   QueryRunnerTestHelper.marketDimension,
                                                   "SPOT",
                                                   "spot",

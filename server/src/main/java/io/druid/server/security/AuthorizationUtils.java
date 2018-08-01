@@ -27,6 +27,7 @@ import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,7 +60,7 @@ public class AuthorizationUtils
   {
     return authorizeAllResourceActions(
         request,
-        Lists.newArrayList(resourceAction),
+        Collections.singletonList(resourceAction),
         authorizerMapper
     );
   }

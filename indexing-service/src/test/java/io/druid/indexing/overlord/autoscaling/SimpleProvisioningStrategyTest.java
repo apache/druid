@@ -117,7 +117,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Lists.<String>newArrayList());
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.newArrayList("aNode"))
+        new AutoScalingData(Collections.singletonList("aNode"))
     );
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
@@ -155,7 +155,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Lists.<String>newArrayList()).times(2);
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.newArrayList("fake"))
+        new AutoScalingData(Collections.singletonList("fake"))
     );
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
@@ -213,7 +213,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.terminateWithIds(EasyMock.anyObject()))
             .andReturn(null);
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.newArrayList("fake"))
+        new AutoScalingData(Collections.singletonList("fake"))
     );
     EasyMock.replay(autoScaler);
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -304,9 +304,9 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(1).times(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
-            .andReturn(Lists.newArrayList("ip")).times(2);
+            .andReturn(Collections.singletonList("ip")).times(2);
     EasyMock.expect(autoScaler.terminate(EasyMock.anyObject())).andReturn(
-        new AutoScalingData(Lists.newArrayList("ip"))
+        new AutoScalingData(Collections.singletonList("ip"))
     );
     EasyMock.replay(autoScaler);
 
@@ -355,7 +355,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
-            .andReturn(Lists.newArrayList("ip"));
+            .andReturn(Collections.singletonList("ip"));
     EasyMock.replay(autoScaler);
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -386,7 +386,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
-            .andReturn(Lists.newArrayList("ip"));
+            .andReturn(Collections.singletonList("ip"));
     EasyMock.replay(autoScaler);
 
     boolean provisionedSomething = provisioner.doProvision();
@@ -404,7 +404,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
-            .andReturn(Lists.newArrayList("ip"));
+            .andReturn(Collections.singletonList("ip"));
     EasyMock.replay(autoScaler);
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
@@ -430,7 +430,7 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
-            .andReturn(Lists.newArrayList("ip"));
+            .andReturn(Collections.singletonList("ip"));
     EasyMock.replay(autoScaler);
     boolean provisionedSomething = provisioner.doProvision();
     Assert.assertFalse(provisionedSomething);
@@ -441,13 +441,13 @@ public class SimpleProvisioningStrategyTest
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
-            .andReturn(Lists.newArrayList("ip"));
+            .andReturn(Collections.singletonList("ip"));
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.newArrayList("h3"))
+        new AutoScalingData(Collections.singletonList("h3"))
     );
     // Should provision two new workers
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.newArrayList("h4"))
+        new AutoScalingData(Collections.singletonList("h4"))
     );
     EasyMock.replay(autoScaler);
     provisionedSomething = provisioner.doProvision();
