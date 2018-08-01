@@ -21,7 +21,6 @@ package io.druid.server.lookup;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import io.druid.common.config.NullHandling;
 import io.druid.server.lookup.cache.loading.LoadingCache;
 import org.easymock.EasyMock;
@@ -84,7 +83,7 @@ public class LoadingLookupTest
     EasyMock.replay(reverseLookupCache);
 <<<<<<< HEAD
     Assert.assertEquals(
-        ImmutableMap.of("value", Lists.newArrayList("key")),
+        ImmutableMap.of("value", Collections.singletonList("key")),
         loadingLookup.unapplyAll(ImmutableSet.of("value"))
     );
 =======
