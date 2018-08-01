@@ -34,7 +34,9 @@ import com.google.inject.Inject;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.common.task.Tasks;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -382,12 +384,27 @@ public class TaskLockbox
           taskLock.getDataSource(),
           task.getDataSource()
       );
-      Preconditions.checkArgument(
-          task.getPriority() == taskLock.getPriority(),
-          "lock priority[%s] is different from task priority[%s]",
-          taskLock.getPriority(),
-          task.getPriority()
-      );
+
+      final int priority;
+      // Here, both task and taskLock can return 0 priority if the priority is not properly set, that is they are
+      // created in an older version of Druid.
+      if (task.getPriority() == taskLock.getPriority()) {
+        priority = task.getPriority();
+      } else {
+        // The priority of task and taskLock can be different when updating cluster if the task doesn't have the
+        // priority in taskContext while taskLock has. In this case, we simply ignores the task priority and uses the
+        // taskLock priority.
+        if (task.getContextValue(Tasks.PRIORITY_KEY) == null && task.getDefaultPriority() == taskLock.getPriority()) {
+          log.warn("Task priority is missing. Using taskLock priority[%d] instead.", taskLock.getPriority());
+          priority = taskLock.getPriority();
+        } else {
+          throw new ISE(
+              "lock priority[%s] is different from task priority[%s]",
+              taskLock.getPriority(),
+              task.getPriority()
+          );
+        }
+      }
 
       return createOrFindLockPosse(
           taskLock.getType(),
@@ -396,7 +413,7 @@ public class TaskLockbox
           taskLock.getDataSource(),
           taskLock.getInterval(),
           taskLock.getVersion(),
-          taskLock.getPriority(),
+          priority,
           taskLock.isRevoked()
       );
     }
@@ -986,7 +1003,21 @@ public class TaskLockbox
     boolean addTask(Task task)
     {
       Preconditions.checkArgument(taskLock.getGroupId().equals(task.getGroupId()));
-      Preconditions.checkArgument(taskLock.getPriority() == task.getPriority());
+
+      // The priority of task and taskLock can be different when updating cluster if the task doesn't have the
+      // priority in taskContext while taskLock has. In this case, we simply ignores the task priority and uses the
+      // taskLock priority.
+      if (taskLock.getPriority() != task.getPriority()) {
+        if (task.getContextValue(Tasks.PRIORITY_KEY) == null && task.getDefaultPriority() == taskLock.getPriority()) {
+          log.warn("Task priority is missing. Using taskLock priority[%d] instead.", taskLock.getPriority());
+        } else {
+          throw new IAE(
+              "Task priority[%d] is different from taskLock priority[%d]",
+              task.getPriority(),
+              taskLock.getPriority()
+          );
+        }
+      }
       return taskIds.add(task.getId());
     }
 
