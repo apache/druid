@@ -910,6 +910,7 @@
                 <artifactId>forbiddenapis</artifactId>
                 <version>2.3</version>
                 <configuration>
+                    <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
