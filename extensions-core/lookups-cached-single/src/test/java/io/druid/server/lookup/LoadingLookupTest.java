@@ -21,7 +21,6 @@ package io.druid.server.lookup;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import io.druid.common.config.NullHandling;
 import io.druid.server.lookup.cache.loading.LoadingCache;
 import org.easymock.EasyMock;
@@ -82,14 +81,7 @@ public class LoadingLookupTest
             .andReturn(Collections.singletonList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
-<<<<<<< HEAD
-    Assert.assertEquals(
-        ImmutableMap.of("value", Lists.newArrayList("key")),
-        loadingLookup.unapplyAll(ImmutableSet.of("value"))
-    );
-=======
     Assert.assertEquals(ImmutableMap.of("value", Collections.singletonList("key")), loadingLookup.unapplyAll(ImmutableSet.of("value")));
->>>>>>> upstream/master
     EasyMock.verify(reverseLookupCache);
   }
 
@@ -110,7 +102,7 @@ public class LoadingLookupTest
             .andThrow(new ExecutionException(null))
             .once();
     EasyMock.replay(lookupCache);
-    Assert.assertEquals(null, loadingLookup.apply("key"));
+    Assert.assertNull(loadingLookup.apply("key"));
     EasyMock.verify(lookupCache);
   }
 
@@ -121,7 +113,7 @@ public class LoadingLookupTest
             .andThrow(new ExecutionException(null))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(Collections.EMPTY_LIST, loadingLookup.unapply("value"));
+    Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply("value"));
     EasyMock.verify(reverseLookupCache);
   }
 
