@@ -190,10 +190,17 @@ public class BoundFilterTest extends BaseFilterTest
         new BoundDimFilter("dim3", null, "", false, false, false, null, StringComparators.LEXICOGRAPHIC),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
     );
-    assertFilterMatches(
-        new BoundDimFilter("dim3", null, "", false, true, false, null, StringComparators.LEXICOGRAPHIC),
-        ImmutableList.of()
-    );
+    if (NullHandling.sqlCompatible()) {
+      assertFilterMatches(
+          new BoundDimFilter("dim3", null, "", false, true, false, null, StringComparators.LEXICOGRAPHIC),
+          ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+      );
+    } else {
+      assertFilterMatches(
+          new BoundDimFilter("dim3", null, "", false, true, false, null, StringComparators.LEXICOGRAPHIC),
+          ImmutableList.of()
+      );
+    }
   }
 
 
