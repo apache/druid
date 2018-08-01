@@ -109,7 +109,7 @@ public class LoadingLookupTest
             .andThrow(new ExecutionException(null))
             .once();
     EasyMock.replay(lookupCache);
-    Assert.assertEquals(null, loadingLookup.apply("key"));
+    Assert.assertNull(loadingLookup.apply("key"));
     EasyMock.verify(lookupCache);
   }
 
@@ -120,7 +120,7 @@ public class LoadingLookupTest
             .andThrow(new ExecutionException(null))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(Collections.EMPTY_LIST, loadingLookup.unapply("value"));
+    Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply("value"));
     EasyMock.verify(reverseLookupCache);
   }
 
