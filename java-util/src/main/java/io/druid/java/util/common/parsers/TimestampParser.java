@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -40,7 +40,7 @@ public class TimestampParser
       final String format
   )
   {
-    if (format.equalsIgnoreCase("auto")) {
+    if ("auto".equalsIgnoreCase(format)) {
       // Could be iso or millis
       final DateTimes.UtcFormatter parser = DateTimes.wrapFormatter(createAutoParser());
       return (String input) -> {
@@ -65,20 +65,20 @@ public class TimestampParser
 
         return DateTimes.utc(Long.parseLong(input));
       };
-    } else if (format.equalsIgnoreCase("iso")) {
+    } else if ("iso".equalsIgnoreCase(format)) {
       return input -> {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
         return DateTimes.of(ParserUtils.stripQuotes(input));
       };
-    } else if (format.equalsIgnoreCase("posix")
-        || format.equalsIgnoreCase("millis")
-        || format.equalsIgnoreCase("nano")) {
+    } else if ("posix".equalsIgnoreCase(format)
+        || "millis".equalsIgnoreCase(format)
+        || "nano".equalsIgnoreCase(format)) {
       final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
       return input -> {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
         return numericFun.apply(Long.parseLong(ParserUtils.stripQuotes(input)));
       };
-    } else if (format.equalsIgnoreCase("ruby")) {
+    } else if ("ruby".equalsIgnoreCase(format)) {
       // Numeric parser ignores millis for ruby.
       final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
       return input -> {
@@ -104,9 +104,9 @@ public class TimestampParser
   )
   {
     // Ignore millis for ruby
-    if (format.equalsIgnoreCase("posix") || format.equalsIgnoreCase("ruby")) {
+    if ("posix".equalsIgnoreCase(format) || "ruby".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(TimeUnit.SECONDS.toMillis(input.longValue()));
-    } else if (format.equalsIgnoreCase("nano")) {
+    } else if ("nano".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(input.longValue()));
     } else {
       return input -> DateTimes.utc(input.longValue());

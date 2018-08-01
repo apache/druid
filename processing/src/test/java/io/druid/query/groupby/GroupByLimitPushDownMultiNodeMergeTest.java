@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -62,7 +62,6 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.TimeFormatExtractionFn;
@@ -507,18 +506,30 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
         .setVirtualColumns(
-            new ExpressionVirtualColumn("d0:v", "timestamp_extract(\"__time\",'YEAR','UTC')", ValueType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("d1:v", "timestamp_extract(\"__time\",'MONTH','UTC')", ValueType.LONG, TestExprMacroTable.INSTANCE),
-            new ExpressionVirtualColumn("d2:v", "timestamp_extract(\"__time\",'DAY','UTC')", ValueType.LONG, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn(
+                "d0:v",
+                "timestamp_extract(\"__time\",'YEAR','UTC')",
+                ValueType.LONG,
+                TestExprMacroTable.INSTANCE
+            ),
+            new ExpressionVirtualColumn(
+                "d1:v",
+                "timestamp_extract(\"__time\",'MONTH','UTC')",
+                ValueType.LONG,
+                TestExprMacroTable.INSTANCE
+            ),
+            new ExpressionVirtualColumn(
+                "d2:v",
+                "timestamp_extract(\"__time\",'DAY','UTC')",
+                ValueType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
         )
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG),
             new DefaultDimensionSpec("d1:v", "d1", ValueType.LONG),
             new DefaultDimensionSpec("d2:v", "d2", ValueType.LONG)
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(new CountAggregatorFactory("a0"))
-        )
+        ).setAggregatorSpecs(new CountAggregatorFactory("a0"))
         .setLimitSpec(
             ls2
         )
@@ -618,7 +629,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new ExtractionDimensionSpec(
                 Column.TIME_COLUMN_NAME,
@@ -632,10 +643,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
                     true
                 )
             )
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(new LongSumAggregatorFactory("metASum", "metA"))
         )
+        .setAggregatorSpecs(new LongSumAggregatorFactory("metASum", "metA"))
         .setLimitSpec(
             new DefaultLimitSpec(
                 Arrays.asList(

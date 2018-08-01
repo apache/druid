@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -37,7 +37,6 @@ import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
@@ -51,7 +50,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -74,7 +72,7 @@ public class CachingClusteredClientFunctionalityTest
   @Before
   public void setUp()
   {
-    timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
+    timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
     client = makeClient(
@@ -93,9 +91,10 @@ public class CachingClusteredClientFunctionalityTest
                                                         .dataSource("test")
                                                         .intervals("2015-01-02/2015-01-03")
                                                         .granularity("day")
-                                                        .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(
-                                                            "rows")))
-                                                        .context(ImmutableMap.<String, Object>of(
+                                                        .aggregators(Collections.singletonList(
+                                                            new CountAggregatorFactory(
+                                                                "rows")))
+                                                        .context(ImmutableMap.of(
                                                             "uncoveredIntervalsLimit",
                                                             3
                                                         ));

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -36,7 +36,6 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
@@ -63,6 +62,7 @@ import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -107,7 +107,7 @@ public class SchemalessTestSimpleTest
   final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum, uniques);
 
   final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+      Collections.singletonList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
   private final Segment segment;
@@ -127,7 +127,7 @@ public class SchemalessTestSimpleTest
                                   .granularity(allGran)
                                   .intervals(fullOnInterval)
                                   .aggregators(
-                                      Lists.<AggregatorFactory>newArrayList(
+                                      Lists.newArrayList(
                                           Iterables.concat(
                                               commonAggregators,
                                               Lists.newArrayList(
@@ -140,18 +140,18 @@ public class SchemalessTestSimpleTest
                                   .postAggregators(addRowsIndexConstant)
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", coalesceAbsentAndEmptyDims ? 10L : 11L)
-                            .put("index", 900.0)
-                            .put("addRowsIndexConstant", coalesceAbsentAndEmptyDims ? 911.0 : 912.0)
-                            .put("uniques", 2.000977198748901D)
-                            .put("maxIndex", 100.0)
-                            .put("minIndex", 0.0)
-                            .build()
+                    .put("rows", coalesceAbsentAndEmptyDims ? 10L : 11L)
+                    .put("index", 900.0)
+                    .put("addRowsIndexConstant", coalesceAbsentAndEmptyDims ? 911.0 : 912.0)
+                    .put("uniques", 2.000977198748901D)
+                    .put("maxIndex", 100.0)
+                    .put("minIndex", 0.0)
+                    .build()
             )
         )
     );
@@ -174,7 +174,7 @@ public class SchemalessTestSimpleTest
         .threshold(3)
         .intervals(fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonAggregators,
                     Lists.newArrayList(
@@ -184,46 +184,46 @@ public class SchemalessTestSimpleTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
 
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<DimensionAndMetricValueExtractor>asList(
+                Arrays.asList(
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("market", "spot")
-                                    .put("rows", 4L)
-                                    .put("index", 400.0D)
-                                    .put("addRowsIndexConstant", 405.0D)
-                                    .put("uniques", 1.0002442201269182D)
-                                    .put("maxIndex", 100.0)
-                                    .put("minIndex", 100.0)
-                                    .build()
+                            .put("market", "spot")
+                            .put("rows", 4L)
+                            .put("index", 400.0D)
+                            .put("addRowsIndexConstant", 405.0D)
+                            .put("uniques", 1.0002442201269182D)
+                            .put("maxIndex", 100.0)
+                            .put("minIndex", 100.0)
+                            .build()
                     ),
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("market", "")
-                                    .put("rows", 2L)
-                                    .put("index", 200.0D)
-                                    .put("addRowsIndexConstant", 203.0D)
-                                    .put("uniques", 0.0)
-                                    .put("maxIndex", 100.0D)
-                                    .put("minIndex", 100.0D)
-                                    .build()
+                            .put("market", "")
+                            .put("rows", 2L)
+                            .put("index", 200.0D)
+                            .put("addRowsIndexConstant", 203.0D)
+                            .put("uniques", 0.0)
+                            .put("maxIndex", 100.0D)
+                            .put("minIndex", 100.0D)
+                            .build()
                     ),
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("market", "total_market")
-                                    .put("rows", 2L)
-                                    .put("index", 200.0D)
-                                    .put("addRowsIndexConstant", 203.0D)
-                                    .put("uniques", 1.0002442201269182D)
-                                    .put("maxIndex", 100.0D)
-                                    .put("minIndex", 100.0D)
-                                    .build()
+                            .put("market", "total_market")
+                            .put("rows", 2L)
+                            .put("index", 200.0D)
+                            .put("addRowsIndexConstant", 203.0D)
+                            .put("uniques", 1.0002442201269182D)
+                            .put("maxIndex", 100.0D)
+                            .put("minIndex", 100.0D)
+                            .build()
                     )
                 )
             )
@@ -245,11 +245,11 @@ public class SchemalessTestSimpleTest
                               .query("a")
                               .build();
 
-    List<Result<SearchResultValue>> expectedResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(qualityDimension, "automotive"),
                     new SearchHit(placementDimension, "mezzanine"),
@@ -271,7 +271,7 @@ public class SchemalessTestSimpleTest
                                     .dataSource("testing")
                                     .build();
 
-    List<Result<TimeBoundaryResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeBoundaryResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(

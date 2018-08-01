@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -51,21 +51,21 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final long TIMEOUT = 1000;
 
-  private static final List<InputRow> ROWS = Arrays.<InputRow>asList(
+  private static final List<InputRow> ROWS = Arrays.asList(
       new MapBasedInputRow(
           DateTimes.of("2000"),
           ImmutableList.of("dim1"),
-          ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
+          ImmutableMap.of("dim1", "foo", "met1", "1")
       ),
       new MapBasedInputRow(
           DateTimes.of("2000T01"),
           ImmutableList.of("dim1"),
-          ImmutableMap.<String, Object>of("dim1", "foo", "met1", 2.0)
+          ImmutableMap.of("dim1", "foo", "met1", 2.0)
       ),
       new MapBasedInputRow(
           DateTimes.of("2000T01"),
           ImmutableList.of("dim2"),
-          ImmutableMap.<String, Object>of("dim2", "bar", "met1", 2.0)
+          ImmutableMap.of("dim2", "bar", "met1", 2.0)
       )
   );
 
@@ -185,7 +185,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
     final SegmentsForSequence segmentsForSequence = driver.getSegments().get("dummy");
     Assert.assertNotNull(segmentsForSequence);
     final List<SegmentWithState> segmentWithStates = segmentsForSequence
-        .segmentStateStream()
+        .allSegmentStateStream()
         .filter(segmentWithState -> segmentWithState.getState() == expectedState)
         .collect(Collectors.toList());
 

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,11 +20,12 @@
 package io.druid.collections.spatial;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -46,17 +47,30 @@ public class Node
     this(
         minCoordinates,
         maxCoordinates,
-        Lists.<Node>newArrayList(),
+        null,
         isLeaf,
         null,
         bitmapFactory.makeEmptyMutableBitmap()
     );
   }
 
+  /**
+   * This constructor accepts a single nullable child Node (null value means no child) instead of a collection of
+   * children Nodes, because Nodes with no more than one child are created in the codebase yet, while passing a
+   * collection of Nodes would necessitate making a defensive copy of this collection in the constructor and extra
+   * overhead.
+   *
+   * (One could note that the principle of making a defensive copy is happily violated just in this
+   * constructor, other parameters: minCoordinates, maxCoordinates and bitmap. These are recognized flaws that are not
+   * tackled yet.)
+   *
+   * If cases when a Node should be created with multiple children arise, this constructor should be changed to accept
+   * a collection of children Nodes.
+   */
   public Node(
       float[] minCoordinates,
       float[] maxCoordinates,
-      List<Node> children,
+      @Nullable Node child,
       boolean isLeaf,
       Node parent,
       MutableBitmap bitmap
@@ -66,8 +80,9 @@ public class Node
 
     this.minCoordinates = minCoordinates;
     this.maxCoordinates = maxCoordinates;
-    this.children = children;
-    for (Node child : children) {
+    this.children = new ArrayList<>(1);
+    if (child != null) {
+      children.add(child);
       child.setParent(this);
     }
     this.isLeaf = isLeaf;

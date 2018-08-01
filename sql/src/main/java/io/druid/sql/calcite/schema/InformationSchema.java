@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.segment.column.ValueType;
 import io.druid.server.security.AuthenticationResult;
@@ -56,6 +55,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -106,7 +106,7 @@ public class InformationSchema extends AbstractSchema
       .build();
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
   private static final Function<String, Iterable<ResourceAction>> DRUID_TABLE_RA_GENERATOR = datasourceName -> {
-    return Lists.newArrayList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
+    return Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
   };
 
   private final SchemaPlus rootSchema;
@@ -120,7 +120,7 @@ public class InformationSchema extends AbstractSchema
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
-    this.tableMap = ImmutableMap.<String, Table>of(
+    this.tableMap = ImmutableMap.of(
         SCHEMATA_TABLE, new SchemataTable(),
         TABLES_TABLE, new TablesTable(),
         COLUMNS_TABLE, new ColumnsTable()

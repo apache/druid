@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -115,15 +115,15 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", "hi")
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
-            Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "bo")
+            Collections.singletonList("sally"),
+            ImmutableMap.of("sally", "bo")
         )
     );
 
@@ -159,15 +159,15 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             DateTimes.of("2014-09-01T00:00:00"),
-            Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", "hi")
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             DateTimes.of("2014-09-01T01:00:00"),
             Lists.newArrayList("billy", "sally"),
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "billy", "hip",
                 "sally", "hop"
             )
@@ -214,7 +214,7 @@ public class IncrementalIndexStorageAdapterTest
   private static GroupByQueryEngine makeGroupByQueryEngine()
   {
     return new GroupByQueryEngine(
-        Suppliers.<GroupByQueryConfig>ofInstance(
+        Suppliers.ofInstance(
             new GroupByQueryConfig()
             {
               @Override
@@ -249,15 +249,15 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
-            Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", "hi")
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
-            Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "bo")
+            Collections.singletonList("sally"),
+            ImmutableMap.of("sally", "bo")
         )
     );
 
@@ -284,8 +284,8 @@ public class IncrementalIndexStorageAdapterTest
       index.add(
           new MapBasedInputRow(
               t.minus(1).getMillis(),
-              Lists.newArrayList("sally"),
-              ImmutableMap.<String, Object>of("sally", "ah")
+              Collections.singletonList("sally"),
+              ImmutableMap.of("sally", "ah")
           )
       );
 
@@ -307,8 +307,8 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
-            Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "bo")
+            Collections.singletonList("sally"),
+            ImmutableMap.of("sally", "bo")
         )
     );
 
@@ -331,7 +331,7 @@ public class IncrementalIndexStorageAdapterTest
             new TopNQueryBuilder()
                 .dataSource("test")
                 .granularity(Granularities.ALL)
-                .intervals(Lists.newArrayList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
+                .intervals(Collections.singletonList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
                 .dimension("sally")
                 .metric("cnt")
                 .threshold(10)
@@ -353,15 +353,15 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", "hi")
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
-            Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "bo")
+            Collections.singletonList("sally"),
+            ImmutableMap.of("sally", "bo")
         )
     );
 
@@ -398,8 +398,8 @@ public class IncrementalIndexStorageAdapterTest
       index.add(
           new MapBasedInputRow(
               timestamp,
-              Lists.newArrayList("billy"),
-              ImmutableMap.<String, Object>of("billy", "v1" + i)
+              Collections.singletonList("billy"),
+              ImmutableMap.of("billy", "v1" + i)
           )
       );
     }
@@ -426,7 +426,7 @@ public class IncrementalIndexStorageAdapterTest
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
             for (int i = 0; i < 1; i++) {
-              index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v2" + i)));
+              index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2" + i)));
             }
           }
           catch (Exception ex) {
@@ -460,8 +460,8 @@ public class IncrementalIndexStorageAdapterTest
       index.add(
           new MapBasedInputRow(
               timestamp,
-              Lists.newArrayList("billy"),
-              ImmutableMap.<String, Object>of("billy", "v0" + i)
+              Collections.singletonList("billy"),
+              ImmutableMap.of("billy", "v0" + i)
           )
       );
     }
@@ -487,7 +487,7 @@ public class IncrementalIndexStorageAdapterTest
 
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v1")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v1")));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);
@@ -498,8 +498,8 @@ public class IncrementalIndexStorageAdapterTest
               .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v2")));
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy2"), ImmutableMap.of("billy2", "v3")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy2"), ImmutableMap.of("billy2", "v3")));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);
@@ -514,8 +514,8 @@ public class IncrementalIndexStorageAdapterTest
               .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v3")));
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy3"), ImmutableMap.of("billy3", "")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v3")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy3"), ImmutableMap.of("billy3", "")));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);

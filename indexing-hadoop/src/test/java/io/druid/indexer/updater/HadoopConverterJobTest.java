@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -180,13 +180,13 @@ public class HadoopConverterJobTest
                 new UniformGranularitySpec(
                     Granularities.MONTH,
                     Granularities.DAY,
-                    ImmutableList.<Interval>of(interval)
+                    ImmutableList.of(interval)
                 ),
                 null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "static",
                     "paths", tmpInputFile.getAbsolutePath()
                 ),
@@ -302,7 +302,7 @@ public class HadoopConverterJobTest
             oldSemgments,
             true,
             tmpDir.toURI(),
-            ImmutableMap.<String, String>of(),
+            ImmutableMap.of(),
             null,
             tmpSegmentDir.toURI().toString()
         )
@@ -351,12 +351,12 @@ public class HadoopConverterJobTest
       Assert.assertEquals(oldSegment.getDataSource(), newSegment.getDataSource());
       Assert.assertEquals(oldSegment.getInterval(), newSegment.getInterval());
       Assert.assertEquals(
-          Sets.<String>newHashSet(oldSegment.getMetrics()),
-          Sets.<String>newHashSet(newSegment.getMetrics())
+          Sets.newHashSet(oldSegment.getMetrics()),
+          Sets.newHashSet(newSegment.getMetrics())
       );
       Assert.assertEquals(
-          Sets.<String>newHashSet(oldSegment.getDimensions()),
-          Sets.<String>newHashSet(newSegment.getDimensions())
+          Sets.newHashSet(oldSegment.getDimensions()),
+          Sets.newHashSet(newSegment.getDimensions())
       );
       Assert.assertEquals(oldSegment.getVersion() + "_converted", newSegment.getVersion());
       Assert.assertTrue(oldSegment.getSize() < newSegment.getSize());
@@ -408,7 +408,7 @@ public class HadoopConverterJobTest
             oldSemgments,
             true,
             tmpDir.toURI(),
-            ImmutableMap.<String, String>of(),
+            ImmutableMap.of(),
             null,
             tmpSegmentDir.toURI().toString()
         )

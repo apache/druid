@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -36,7 +36,6 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.GuiceAnnotationIntrospector;
@@ -324,9 +323,9 @@ public class IngestSegmentFirehoseFactoryTest
             new JSONParseSpec(
                 new TimestampSpec(TIME_COLUMN, "auto", null),
                 new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of()),
+                    DimensionsSpec.getDefaultSchemas(ImmutableList.of()),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-                    ImmutableList.<SpatialDimensionSchema>of()
+                    ImmutableList.of()
                 ),
                 null,
                 null
@@ -446,7 +445,7 @@ public class IngestSegmentFirehoseFactoryTest
 
   private static Map<String, Object> buildRow(Long ts)
   {
-    return ImmutableMap.<String, Object>of(
+    return ImmutableMap.of(
         TIME_COLUMN, ts,
         DIM_NAME, DIM_VALUE,
         DIM_FLOAT_NAME, METRIC_FLOAT_VALUE,
@@ -462,7 +461,7 @@ public class IngestSegmentFirehoseFactoryTest
         DATA_SOURCE_NAME,
         Intervals.ETERNITY,
         DATA_SOURCE_VERSION,
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type", "local",
             "path", persistDir.getAbsolutePath()
         ),

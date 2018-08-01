@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -24,17 +24,14 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.indexer.HadoopTuningConfig;
-import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
-import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
@@ -57,6 +54,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -103,7 +101,7 @@ public class MaterializedViewSupervisorTest
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     spec = new MaterializedViewSupervisorSpec(
         "base",
-        new DimensionsSpec(Lists.newArrayList(new StringDimensionSchema("dim")), null, null),
+        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim")), null, null),
         new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
         HadoopTuningConfig.makeDefaultTuningConfig(),
         null,
@@ -132,7 +130,7 @@ public class MaterializedViewSupervisorTest
             "base",
             Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
             "2015-01-02",
-            ImmutableMap.<String, Object>of(),
+            ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
             new HashBasedNumberedShardSpec(0, 1, null, null),
@@ -143,7 +141,7 @@ public class MaterializedViewSupervisorTest
             "base",
             Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
             "2015-01-03",
-            ImmutableMap.<String, Object>of(),
+            ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
             new HashBasedNumberedShardSpec(0, 1, null, null),
@@ -153,22 +151,22 @@ public class MaterializedViewSupervisorTest
     );
     indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments);
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    expect(taskMaster.getTaskRunner()).andReturn(Optional.<TaskRunner>absent()).anyTimes();
-    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = supervisor.checkSegments();
     Map<Interval, List<DataSegment>> expectedSegments = Maps.newHashMap();
     expectedSegments.put(
         Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), 
-        Lists.newArrayList(
+        Collections.singletonList(
             new DataSegment(
-                "base", 
-                Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), 
-                "2015-01-02", 
-                ImmutableMap.<String, Object>of(), 
-                ImmutableList.of("dim1", "dim2"), 
-                ImmutableList.of("m1"), 
+                "base",
+                Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+                "2015-01-02",
+                ImmutableMap.of(),
+                ImmutableList.of("dim1", "dim2"),
+                ImmutableList.of("m1"),
                 new HashBasedNumberedShardSpec(0, 1, null, null),
-                9, 
+                9,
                 1024
             )
         )

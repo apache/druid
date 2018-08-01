@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.DoubleDimensionSchema;
 import io.druid.data.input.impl.FloatDimensionSchema;
@@ -79,7 +78,7 @@ public class IncrementalIndexTest
   public static Collection<?> constructorFeeder()
   {
     DimensionsSpec dimensions = new DimensionsSpec(
-        Arrays.<DimensionSchema>asList(
+        Arrays.asList(
             new StringDimensionSchema("string"),
             new FloatDimensionSchema("float"),
             new LongDimensionSchema("long"),
@@ -158,14 +157,14 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
-            ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+            ImmutableMap.of("billy", "A", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe", "joe"),
-            ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+            ImmutableMap.of("billy", "A", "joe", "B")
         )
     );
   }
@@ -178,7 +177,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe", "joe"),
-            ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+            ImmutableMap.of("billy", "A", "joe", "B")
         )
     );
   }
@@ -191,21 +190,21 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
-            ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+            ImmutableMap.of("billy", "A", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
-            ImmutableMap.<String, Object>of("billy", "C", "joe", "B")
+            ImmutableMap.of("billy", "C", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
-            ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+            ImmutableMap.of("billy", "A", "joe", "B")
         )
     );
   }
@@ -220,7 +219,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             0,
             Lists.newArrayList("string", "float", "long", "double"),
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "string", "A",
                 "float", "19.0",
                 "long", "asdj",
@@ -238,7 +237,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             0,
             Lists.newArrayList("string", "float", "long", "double"),
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "string", "A",
                 "float", "aaa",
                 "long", 20,
@@ -256,7 +255,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             0,
             Lists.newArrayList("string", "float", "long", "double"),
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "string", "A",
                 "float", 19.0,
                 "long", 20,
@@ -277,7 +276,7 @@ public class IncrementalIndexTest
     MapBasedInputRow row = new MapBasedInputRow(
         System.currentTimeMillis() - 1,
         Lists.newArrayList("billy", "joe"),
-        ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+        ImmutableMap.of("billy", "A", "joe", "B")
     );
     IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(row);

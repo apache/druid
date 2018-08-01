@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -44,6 +44,7 @@ import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.common.task.Tasks;
 import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
@@ -95,6 +96,7 @@ import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -174,6 +176,11 @@ public class OverlordResource
           public Response apply(TaskQueue taskQueue)
           {
             try {
+              // Set default priority if needed
+              final Integer priority = task.getContextValue(Tasks.PRIORITY_KEY);
+              if (priority == null) {
+                task.addToContext(Tasks.PRIORITY_KEY, task.getDefaultPriority());
+              }
               taskQueue.add(task);
               return Response.ok(ImmutableMap.of("task", task.getId())).build();
             }
@@ -600,9 +607,9 @@ public class OverlordResource
         null
     );
 
-    Function<TaskInfo<Task>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
+    Function<TaskInfo<Task, TaskStatus>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
         taskInfo.getId(),
-        taskInfo.getTask().getType(),
+        taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
         taskInfo.getCreatedTime(),
         // Would be nice to include the real queue insertion time, but the
         // TaskStorage API doesn't yet allow it.
@@ -622,27 +629,27 @@ public class OverlordResource
         final Interval theInterval = Intervals.of(interval.replace("_", "/"));
         duration = theInterval.toDuration();
       }
-      final List<TaskInfo<Task>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
+      final List<TaskInfo<Task, TaskStatus>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
           maxCompletedTasks, duration, dataSource
       );
       final List<TaskStatusPlus> completedTasks = Lists.transform(taskInfoList, completeTaskTransformFunc);
       finalTaskList.addAll(completedTasks);
     }
 
-    List<TaskInfo<Task>> allActiveTaskInfo = Lists.newArrayList();
+    final List<TaskInfo<Task, TaskStatus>> allActiveTaskInfo;
     final List<AnyTask> allActiveTasks = Lists.newArrayList();
     if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
-      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
-      for (final TaskInfo<Task> task : allActiveTaskInfo) {
+      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
+      for (final TaskInfo<Task, TaskStatus> task : allActiveTaskInfo) {
         allActiveTasks.add(
             new AnyTask(
                 task.getId(),
-                task.getTask().getType(),
+                task.getTask() == null ? null : task.getTask().getType(),
                 SettableFuture.create(),
                 task.getDataSource(),
                 null,
                 null,
-                DateTimes.EPOCH,
+                task.getCreatedTime(),
                 DateTimes.EPOCH,
                 TaskLocation.unknown()
             ));
@@ -947,18 +954,15 @@ public class OverlordResource
             ).build()
         );
       }
-      return Lists.newArrayList(
-          new ResourceAction(
-              new Resource(taskDatasource, ResourceType.DATASOURCE),
-              Action.READ
-          )
+      return Collections.singletonList(
+          new ResourceAction(new Resource(taskDatasource, ResourceType.DATASOURCE), Action.READ)
       );
     };
     List<TaskStatusPlus> optionalTypeFilteredList = collectionToFilter;
     if (type != null) {
       optionalTypeFilteredList = collectionToFilter
           .stream()
-          .filter(task -> task.getType().equals(type))
+          .filter(task -> type.equals(task.getType()))
           .collect(Collectors.toList());
     }
     if (dataSource != null) {

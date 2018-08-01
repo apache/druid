@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -48,7 +48,6 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
@@ -65,6 +64,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -151,8 +151,8 @@ public class SelectQueryRunnerTest
   {
     return Druids.newSelectQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                 .dimensionSpecs(DefaultDimensionSpec.toSpec(Arrays.<String>asList()))
-                 .metrics(Arrays.<String>asList())
+                 .dimensionSpecs(DefaultDimensionSpec.toSpec(Collections.emptyList()))
+                 .metrics(Collections.emptyList())
                  .intervals(QueryRunnerTestHelper.fullOnInterval)
                  .granularity(QueryRunnerTestHelper.allGran)
                  .pagingSpec(PagingSpec.newSpec(3))
@@ -251,7 +251,7 @@ public class SelectQueryRunnerTest
 
     SelectQuery query = newTestQuery()
         .dimensionSpecs(
-            Arrays.<DimensionSpec>asList(
+            Arrays.asList(
                 new DefaultDimensionSpec(QueryRunnerTestHelper.marketDimension, "mar"),
                 new ExtractionDimensionSpec(
                     QueryRunnerTestHelper.qualityDimension,
@@ -266,13 +266,15 @@ public class SelectQueryRunnerTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
-    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
+    List<Result<SelectResultValue>> expectedResultsAsc = Collections.singletonList(
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
                 Sets.newHashSet("mar", "qual", "place"),
-                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat", "indexFloat", "indexMaxFloat"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat",
+                    "indexFloat", "indexMaxFloat"
+                ),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -312,13 +314,15 @@ public class SelectQueryRunnerTest
         )
     );
 
-    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+    List<Result<SelectResultValue>> expectedResultsDsc = Collections.singletonList(
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
                 ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
                 Sets.newHashSet("mar", "qual", "place"),
-                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat", "indexFloat", "indexMaxFloat"),
+                Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat",
+                    "indexFloat", "indexMaxFloat"
+                ),
                 Arrays.asList(
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
@@ -367,7 +371,7 @@ public class SelectQueryRunnerTest
     SelectQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.marketDimension))
-        .metrics(Arrays.asList(QueryRunnerTestHelper.indexMetric))
+        .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -389,8 +393,8 @@ public class SelectQueryRunnerTest
             },
             V_0112_0114
         ),
-        Lists.newArrayList("market"),
-        Lists.<String>newArrayList("index"),
+        Collections.singletonList("market"),
+        Collections.singletonList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -403,7 +407,7 @@ public class SelectQueryRunnerTest
     SelectQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
-        .metrics(Arrays.asList(QueryRunnerTestHelper.indexMetric))
+        .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .pagingSpec(new PagingSpec(toPagingIdentifier(3, descending), 3))
         .build();
 
@@ -419,8 +423,8 @@ public class SelectQueryRunnerTest
             },
             V_0112_0114
         ),
-        Lists.newArrayList("quality"),
-        Lists.<String>newArrayList("index"),
+        Collections.singletonList("quality"),
+        Collections.singletonList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -437,7 +441,7 @@ public class SelectQueryRunnerTest
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .granularity(QueryRunnerTestHelper.dayGran)
           .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
-          .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
+          .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
           .pagingSpec(new PagingSpec(toPagingIdentifier(param[0], descending), param[1]))
           .build();
 
@@ -481,8 +485,8 @@ public class SelectQueryRunnerTest
       PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
       List<Result<SelectResultValue>> expectedResults = toExpected(
           events,
-          Lists.newArrayList("quality"),
-          Lists.<String>newArrayList("index"),
+          Collections.singletonList("quality"),
+          Collections.singletonList("index"),
           offset.startOffset(),
           offset.threshold()
       );
@@ -505,7 +509,7 @@ public class SelectQueryRunnerTest
         )
         .granularity(QueryRunnerTestHelper.allGran)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
-        .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
+        .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .pagingSpec(new PagingSpec(null, 10, true))
         .virtualColumns(
             new ExpressionVirtualColumn("expr", "index / 10.0", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
@@ -534,8 +538,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
-        Lists.newArrayList("quality"),
-        Lists.<String>newArrayList("index"),
+        Collections.singletonList("quality"),
+        Collections.singletonList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -555,7 +559,7 @@ public class SelectQueryRunnerTest
         .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "replaced", lookupExtractionFn))
         .granularity(QueryRunnerTestHelper.dayGran)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
-        .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
+        .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
 
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
@@ -587,8 +591,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
-        Lists.newArrayList(QueryRunnerTestHelper.qualityDimension),
-        Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
+        Collections.singletonList(QueryRunnerTestHelper.qualityDimension),
+        Collections.singletonList(QueryRunnerTestHelper.indexMetric),
         offset.startOffset(),
         offset.threshold()
     );
@@ -604,7 +608,7 @@ public class SelectQueryRunnerTest
         .intervals(I_0112_0114)
         .filters(
             new AndDimFilter(
-                Arrays.<DimFilter>asList(
+                Arrays.asList(
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null),
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo", null)
                 )
@@ -614,11 +618,11 @@ public class SelectQueryRunnerTest
 
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
 
-    List<Result<SelectResultValue>> expectedResults = Arrays.asList(
+    List<Result<SelectResultValue>> expectedResults = Collections.singletonList(
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
-                ImmutableMap.<String, Integer>of(),
+                ImmutableMap.of(),
                 Sets.newHashSet(
                     "market",
                     "quality",
@@ -640,7 +644,7 @@ public class SelectQueryRunnerTest
                     "indexFloat",
                     "indexMaxFloat"
                 ),
-                Lists.<EventHolder>newArrayList()
+                Lists.newArrayList()
             )
         )
     );
@@ -654,7 +658,7 @@ public class SelectQueryRunnerTest
     SelectQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .dimensionSpecs(DefaultDimensionSpec.toSpec("foo"))
-        .metrics(Lists.<String>newArrayList("foo2"))
+        .metrics(Collections.singletonList("foo2"))
         .build();
 
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
@@ -671,8 +675,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
-        Lists.newArrayList("foo"),
-        Lists.<String>newArrayList("foo2"),
+        Collections.singletonList("foo"),
+        Collections.singletonList("foo2"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -682,7 +686,7 @@ public class SelectQueryRunnerTest
   @Test
   public void testFullOnSelectWithLongAndFloat()
   {
-    List<DimensionSpec> dimSpecs = Arrays.<DimensionSpec>asList(
+    List<DimensionSpec> dimSpecs = Arrays.asList(
         new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", ValueType.FLOAT),
         new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", ValueType.LONG)
     );
@@ -696,7 +700,7 @@ public class SelectQueryRunnerTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
-    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
+    List<Result<SelectResultValue>> expectedResultsAsc = Collections.singletonList(
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
@@ -742,7 +746,7 @@ public class SelectQueryRunnerTest
         )
     );
 
-    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+    List<Result<SelectResultValue>> expectedResultsDsc = Collections.singletonList(
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
@@ -797,7 +801,7 @@ public class SelectQueryRunnerTest
     String jsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn jsExtractionFn = new JavaScriptExtractionFn(jsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    List<DimensionSpec> dimSpecs = Arrays.<DimensionSpec>asList(
+    List<DimensionSpec> dimSpecs = Arrays.asList(
         new ExtractionDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", jsExtractionFn),
         new ExtractionDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", jsExtractionFn)
     );
@@ -811,7 +815,7 @@ public class SelectQueryRunnerTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
-    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
+    List<Result<SelectResultValue>> expectedResultsAsc = Collections.singletonList(
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
@@ -857,7 +861,7 @@ public class SelectQueryRunnerTest
         )
     );
 
-    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+    List<Result<SelectResultValue>> expectedResultsDsc = Collections.singletonList(
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
@@ -1003,8 +1007,8 @@ public class SelectQueryRunnerTest
               new DateTime(group.get(0).get(EventHolder.timestampKey), ISOChronology.getInstanceUTC()),
               new SelectResultValue(
                   ImmutableMap.of(QueryRunnerTestHelper.segmentId, lastOffset),
-                  Sets.<String>newHashSet(dimensions),
-                  Sets.<String>newHashSet(metrics),
+                  Sets.newHashSet(dimensions),
+                  Sets.newHashSet(metrics),
                   holders)
           )
       );

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -98,7 +98,6 @@ import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
@@ -149,6 +148,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -627,7 +627,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
-        Arrays.asList(
+        Collections.singletonList(
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:50:00.000Z, event={t=3000000, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]"
         )
     );
@@ -1377,7 +1377,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       }
     };
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
+        ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
@@ -1475,7 +1475,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
                                   .dataSource("test_ds")
                                   .filters(filter)
                                   .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
+                                      ImmutableList.of(
                                           new LongSumAggregatorFactory(metric, metric)
                                       )
                                   ).granularity(Granularities.ALL)

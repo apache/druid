@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -79,6 +79,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -183,7 +184,7 @@ public class ServerManagerTest
         Granularities.DAY,
         "test",
         Intervals.of("P1d/2011-04-01"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-01"))
         )
     );
@@ -193,7 +194,7 @@ public class ServerManagerTest
     future = assertQueryable(
         Granularities.DAY,
         "test", Intervals.of("P2d/2011-04-02"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-01")),
             new Pair<String, Interval>("2", Intervals.of("P1d/2011-04-02"))
         )
@@ -210,7 +211,7 @@ public class ServerManagerTest
     Future future = assertQueryable(
         Granularities.DAY,
         dataSouce, interval,
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("2", interval)
         )
     );
@@ -220,7 +221,7 @@ public class ServerManagerTest
     future = assertQueryable(
         Granularities.DAY,
         dataSouce, interval,
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("1", interval)
         )
     );
@@ -235,7 +236,7 @@ public class ServerManagerTest
     Future future = assertQueryable(
         Granularities.DAY,
         "test", Intervals.of("2011-04-04/2011-04-06"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
@@ -247,7 +248,7 @@ public class ServerManagerTest
     future = assertQueryable(
         Granularities.HOUR,
         "test", Intervals.of("2011-04-04/2011-04-04T06"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T02/2011-04-04T03")),
@@ -260,7 +261,7 @@ public class ServerManagerTest
     future = assertQueryable(
         Granularities.HOUR,
         "test", Intervals.of("2011-04-04/2011-04-04T03"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T02/2011-04-04T03"))
@@ -271,7 +272,7 @@ public class ServerManagerTest
     future = assertQueryable(
         Granularities.HOUR,
         "test", Intervals.of("2011-04-04T04/2011-04-04T06"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T04/2011-04-04T05")),
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T05/2011-04-04T06"))
         )
@@ -287,7 +288,7 @@ public class ServerManagerTest
     Future future = assertQueryable(
         Granularities.DAY,
         "test", Intervals.of("2011-04-04/2011-04-06"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
@@ -326,7 +327,7 @@ public class ServerManagerTest
     Future future = assertQueryable(
         Granularities.DAY,
         "test", Intervals.of("2011-04-04/2011-04-06"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
@@ -369,7 +370,7 @@ public class ServerManagerTest
     Future future = assertQueryable(
         Granularities.DAY,
         "test", Intervals.of("2011-04-04/2011-04-06"),
-        ImmutableList.<Pair<String, Interval>>of(
+        ImmutableList.of(
             new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
     );
@@ -427,7 +428,7 @@ public class ServerManagerTest
   )
   {
     final Iterator<Pair<String, Interval>> expectedIter = expected.iterator();
-    final List<Interval> intervals = Arrays.asList(interval);
+    final List<Interval> intervals = Collections.singletonList(interval);
     final SearchQuery query = Druids.newSearchQueryBuilder()
                                     .dataSource(dataSource)
                                     .intervals(intervals)
@@ -473,7 +474,7 @@ public class ServerManagerTest
               dataSource,
               interval,
               version,
-              ImmutableMap.<String, Object>of("version", version, "interval", interval),
+              ImmutableMap.of("version", version, "interval", interval),
               Arrays.asList("dim1", "dim2", "dim3"),
               Arrays.asList("metric1", "metric2"),
               NoneShardSpec.instance(),

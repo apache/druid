@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -320,7 +320,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     // Setup MetadataSegmentManager
     DruidDataSource[] druidDataSources = {
-        new DruidDataSource(dataSource, Collections.<String, String>emptyMap())
+        new DruidDataSource(dataSource, Collections.emptyMap())
     };
     final DataSegment dataSegment = new DataSegment(
         dataSource,
@@ -578,7 +578,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
         dataSource, interval, "dummy_version", new ConcurrentHashMap<>(),
-        Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, 0L
+        Lists.newArrayList(), Lists.newArrayList(), null, 0, 0L
     );
     return segment;
   }

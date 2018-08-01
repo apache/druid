@@ -9,6 +9,7 @@
     <inspection_tool class="ArrayEquals" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ArrayHashCode" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ArrayObjectsEquals" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="ArraysAsListWithZeroOrOneArgument" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="AssertWithSideEffects" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CastConflictsWithInstanceof" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CastToIncompatibleInterface" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -92,6 +93,7 @@
     <inspection_tool class="ObjectToString" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PrimitiveArrayArgumentToVariableArgMethod" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantThrows" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="RedundantTypeArguments" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ReflectionForUnavailableAnnotation" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ReplaceAllDot" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ResultOfObjectAllocationIgnored" enabled="true" level="WARNING" enabled_by_default="true">
@@ -109,6 +111,10 @@
         <constraint name="__context__" target="true" within="" contains="" />
         <constraint name="x" within="" contains="" />
         <constraint name="y" nameOfExprType="IndexedInts" exprTypeWithinHierarchy="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Lists.newArrayList() with a single argument. Use Collections.singletonList() instead" created="1532737126203" text="Lists.newArrayList($x$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="x" nameOfExprType="java\.lang\.Iterable|java\.util\.Iterator|Object\[\]" expressionTypes="java.lang.Iterable|java.util.Iterator|Object[]" exprTypeWithinHierarchy="true" negateName="true" negateExprType="true" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
       </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
@@ -141,6 +147,9 @@
     <inspection_tool class="SyntaxError" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TextLabelInSwitchStatement" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ThrowableNotThrown" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="ToArrayCallWithZeroLengthArrayArgument" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myMode" value="BY_LEVEL" />
+    </inspection_tool>
     <inspection_tool class="UnnecessaryEnumModifier" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnnecessaryFullyQualifiedName" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="NonGeneratedFiles" level="ERROR" enabled="true">

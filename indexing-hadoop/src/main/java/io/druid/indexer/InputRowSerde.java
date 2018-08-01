@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -331,11 +331,11 @@ public class InputRowSerde
 
           String t = aggFactory.getTypeName();
 
-          if (t.equals("float")) {
+          if ("float".equals(t)) {
             out.writeFloat(agg.getFloat());
-          } else if (t.equals("long")) {
+          } else if ("long".equals(t)) {
             WritableUtils.writeVLong(out, agg.getLong());
-          } else if (t.equals("double")) {
+          } else if ("double".equals(t)) {
             out.writeDouble(agg.getDouble());
           } else {
             //its a complex metric
@@ -450,11 +450,11 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         String metric = readString(in);
         String type = getType(metric, aggs, i);
-        if (type.equals("float")) {
+        if ("float".equals(type)) {
           event.put(metric, in.readFloat());
-        } else if (type.equals("long")) {
+        } else if ("long".equals(type)) {
           event.put(metric, WritableUtils.readVLong(in));
-        } else if (type.equals("double")) {
+        } else if ("double".equals(type)) {
           event.put(metric, in.readDouble());
         } else {
           ComplexMetricSerde serde = getComplexMetricSerde(type);

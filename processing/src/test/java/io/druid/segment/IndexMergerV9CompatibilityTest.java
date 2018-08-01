@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -96,27 +96,27 @@ public class IndexMergerV9CompatibilityTest
     indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
     events = new ArrayList<>();
 
-    final Map<String, Object> map1 = ImmutableMap.<String, Object>of(
-        DIMS.get(0), ImmutableList.<String>of("dim00", "dim01"),
+    final Map<String, Object> map1 = ImmutableMap.of(
+        DIMS.get(0), ImmutableList.of("dim00", "dim01"),
         DIMS.get(1), "dim10"
     );
 
     final List<String> nullList = Collections.singletonList(null);
 
-    final Map<String, Object> map2 = ImmutableMap.<String, Object>of(
+    final Map<String, Object> map2 = ImmutableMap.of(
         DIMS.get(0), nullList,
         DIMS.get(1), "dim10"
     );
 
 
-    final Map<String, Object> map3 = ImmutableMap.<String, Object>of(
+    final Map<String, Object> map3 = ImmutableMap.of(
         DIMS.get(0),
-        ImmutableList.<String>of("dim00", "dim01")
+        ImmutableList.of("dim00", "dim01")
     );
 
-    final Map<String, Object> map4 = ImmutableMap.<String, Object>of();
+    final Map<String, Object> map4 = ImmutableMap.of();
 
-    final Map<String, Object> map5 = ImmutableMap.<String, Object>of(DIMS.get(1), "dim10");
+    final Map<String, Object> map5 = ImmutableMap.of(DIMS.get(1), "dim10");
 
     final Map<String, Object> map6 = new HashMap<>();
     map6.put(DIMS.get(1), null); // ImmutableMap cannot take null

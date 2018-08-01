@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -49,6 +49,7 @@ import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
@@ -136,6 +137,10 @@ public class CompactionTask extends AbstractTask
     Preconditions.checkArgument(interval != null || segments != null, "interval or segments should be specified");
     Preconditions.checkArgument(interval == null || segments == null, "one of interval and segments should be null");
 
+    if (interval != null && interval.toDurationMillis() == 0) {
+      throw new IAE("Interval[%s] is empty, must specify a nonempty interval", interval);
+    }
+
     this.interval = interval;
     this.segments = segments;
     this.dimensionsSpec = dimensionsSpec;
@@ -178,9 +183,9 @@ public class CompactionTask extends AbstractTask
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
+    return Tasks.DEFAULT_MERGE_TASK_PRIORITY;
   }
 
   @VisibleForTesting
@@ -225,7 +230,7 @@ public class CompactionTask extends AbstractTask
     }
 
     if (indexTaskSpec == null) {
-      log.warn("Failed to generate compaction spec");
+      log.warn("Interval[%s] has no segments, nothing to do.", interval);
       return TaskStatus.failure(getId());
     } else {
       final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(indexTaskSpec);
@@ -237,7 +242,7 @@ public class CompactionTask extends AbstractTask
 
   /**
    * Generate {@link IndexIngestionSpec} from input segments.
-
+   *
    * @return null if input segments don't exist. Otherwise, a generated ingestionSpec.
    */
   @Nullable

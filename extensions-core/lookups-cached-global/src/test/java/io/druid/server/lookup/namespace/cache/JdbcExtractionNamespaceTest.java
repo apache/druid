@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -33,7 +33,6 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.lookup.namespace.CacheGenerator;
-import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.server.lookup.namespace.JdbcCacheGenerator;
 import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
@@ -195,7 +194,7 @@ public class JdbcExtractionNamespaceTest
             NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
             scheduler = new CacheScheduler(
                 noopServiceEmitter,
-                ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+                ImmutableMap.of(
                     JdbcExtractionNamespace.class,
                     new CacheGenerator<JdbcExtractionNamespace>()
                     {
@@ -362,7 +361,7 @@ public class JdbcExtractionNamespaceTest
     Thread.sleep(2);
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testMappingWithoutFilter()
       throws InterruptedException
   {
@@ -389,7 +388,7 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
-  @Test(timeout = 20_000L)
+  @Test(timeout = 60_000L)
   public void testMappingWithFilter()
       throws InterruptedException
   {
@@ -412,7 +411,7 @@ public class JdbcExtractionNamespaceTest
         String field = val[0];
         String filterVal = val[1];
 
-        if (filterVal.equals("1")) {
+        if ("1".equals(filterVal)) {
           Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
         } else {
           Assert.assertEquals("non-null check", null, Strings.emptyToNull(map.get(key)));
@@ -421,7 +420,7 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testSkipOld()
       throws InterruptedException
   {

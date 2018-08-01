@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import io.druid.indexing.common.TaskLock;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;
@@ -36,6 +36,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -64,17 +65,17 @@ public abstract class AbstractTask implements Task
 
   protected AbstractTask(
       String id,
-      String groupId,
-      TaskResource taskResource,
+      @Nullable String groupId,
+      @Nullable TaskResource taskResource,
       String dataSource,
-      Map<String, Object> context
+      @Nullable Map<String, Object> context
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = groupId == null ? id : groupId;
     this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.context = context;
+    this.context = context == null ? new HashMap<>() : context;
   }
 
   static String getOrMakeId(String id, final String typeName, String dataSource)
@@ -162,11 +163,13 @@ public abstract class AbstractTask implements Task
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("type", getType())
-                  .add("dataSource", dataSource)
-                  .toString();
+    return "AbstractTask{" +
+           "id='" + id + '\'' +
+           ", groupId='" + groupId + '\'' +
+           ", taskResource=" + taskResource +
+           ", dataSource='" + dataSource + '\'' +
+           ", context=" + context +
+           '}';
   }
 
   /**
@@ -207,13 +210,21 @@ public abstract class AbstractTask implements Task
       return false;
     }
 
-    return true;
+    if (!groupId.equals(that.groupId)) {
+      return false;
+    }
+
+    if (!dataSource.equals(that.dataSource)) {
+      return false;
+    }
+
+    return context.equals(that.context);
   }
 
   @Override
   public int hashCode()
   {
-    return id.hashCode();
+    return Objects.hashCode(id, groupId, dataSource, context);
   }
 
   static List<TaskLock> getTaskLocks(TaskActionClient client) throws IOException

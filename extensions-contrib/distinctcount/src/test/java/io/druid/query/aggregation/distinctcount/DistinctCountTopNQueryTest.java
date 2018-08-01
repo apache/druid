@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -84,21 +84,21 @@ public class DistinctCountTopNQueryTest
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "0", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "0", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "1", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "1", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "2", client_type, "android")
+            ImmutableMap.of(visitor_id, "2", client_type, "android")
         )
     );
 
@@ -124,12 +124,12 @@ public class DistinctCountTopNQueryTest
             time,
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         client_type, "iphone",
                         "UV", 2L,
                         "rows", 2L
                     ),
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         client_type, "android",
                         "UV", 1L,
                         "rows", 1L

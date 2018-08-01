@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -86,7 +86,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.java.util.common.parsers.JSONPathFieldSpec;
 import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.emitter.core.NoopEmitter;
@@ -102,7 +101,6 @@ import io.druid.query.Druids;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
@@ -244,8 +242,8 @@ public class KafkaIndexTaskTest
                       null,
                       null
                   ),
-                  new JSONPathSpec(true, ImmutableList.<JSONPathFieldSpec>of()),
-                  ImmutableMap.<String, Boolean>of()
+                  new JSONPathSpec(true, ImmutableList.of()),
+                  ImmutableMap.of()
               ),
               StandardCharsets.UTF_8.name()
           ),
@@ -263,21 +261,21 @@ public class KafkaIndexTaskTest
   private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)
   {
     return ImmutableList.of(
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2008", "a", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2009", "b", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2010", "c", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2011", "d", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2011", "e", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, StringUtils.toUtf8("unparseable")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, StringUtils.toUtf8("unparseable2")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, null),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2013", "f", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2049", "f", "y", "notanumber", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2049", "f", "y", "10", "notanumber", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 0, null, JB("2049", "f", "y", "10", "20.0", "notanumber")),
-        new ProducerRecord<byte[], byte[]>(topic, 1, null, JB("2012", "g", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<byte[], byte[]>(topic, 1, null, JB("2011", "h", "y", "10", "20.0", "1.0"))
+        new ProducerRecord<>(topic, 0, null, JB("2008", "a", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, JB("2009", "b", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, JB("2010", "c", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, JB("2011", "d", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, JB("2011", "e", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("unparseable")),
+        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("unparseable2")),
+        new ProducerRecord<>(topic, 0, null, null),
+        new ProducerRecord<>(topic, 0, null, JB("2013", "f", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, JB("2049", "f", "y", "notanumber", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, JB("2049", "f", "y", "10", "notanumber", "1.0")),
+        new ProducerRecord<>(topic, 0, null, JB("2049", "f", "y", "10", "20.0", "notanumber")),
+        new ProducerRecord<>(topic, 1, null, JB("2012", "g", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 1, null, JB("2011", "h", "y", "10", "20.0", "1.0"))
     );
   }
 
@@ -378,12 +376,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -420,12 +418,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -496,12 +494,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             baseSequenceName,
             startPartitions,
             endPartitions,
             consumerProps,
             true,
-            false,
             null,
             null,
             false
@@ -514,18 +512,20 @@ public class KafkaIndexTaskTest
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
     Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets) || checkpoint2.getPartitionOffsetMap()
                                                                                                .equals(currentOffsets));
-    task.getRunner().setEndOffsets(currentOffsets, true, false);
+    task.getRunner().setEndOffsets(currentOffsets, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     Assert.assertEquals(1, checkpointRequestsHash.size());
-    Assert.assertTrue(checkpointRequestsHash.contains(
-        Objects.hash(
-            DATA_SCHEMA.getDataSource(),
-            baseSequenceName,
-            new KafkaDataSourceMetadata(startPartitions),
-            new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets))
+    Assert.assertTrue(
+        checkpointRequestsHash.contains(
+            Objects.hash(
+                DATA_SCHEMA.getDataSource(),
+                0,
+                new KafkaDataSourceMetadata(startPartitions),
+                new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets))
+            )
         )
-    ));
+    );
 
     // Check metrics
     Assert.assertEquals(8, task.getRunner().getRowIngestionMeters().getProcessed());
@@ -585,12 +585,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             baseSequenceName,
             startPartitions,
             endPartitions,
             consumerProps,
             true,
-            false,
             null,
             null,
             false
@@ -604,18 +604,20 @@ public class KafkaIndexTaskTest
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
     Assert.assertTrue(checkpoint.getPartitionOffsetMap().equals(currentOffsets));
-    task.getRunner().setEndOffsets(currentOffsets, true, false);
+    task.getRunner().setEndOffsets(currentOffsets, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     Assert.assertEquals(1, checkpointRequestsHash.size());
-    Assert.assertTrue(checkpointRequestsHash.contains(
-        Objects.hash(
-            DATA_SCHEMA.getDataSource(),
-            baseSequenceName,
-            new KafkaDataSourceMetadata(startPartitions),
-            new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoint.getPartitionOffsetMap()))
+    Assert.assertTrue(
+        checkpointRequestsHash.contains(
+            Objects.hash(
+                DATA_SCHEMA.getDataSource(),
+                0,
+                new KafkaDataSourceMetadata(startPartitions),
+                new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoint.getPartitionOffsetMap()))
+            )
         )
-    ));
+    );
 
     // Check metrics
     Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getProcessed());
@@ -642,12 +644,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             DateTimes.of("2010"),
             null,
             false
@@ -696,12 +698,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             DateTimes.of("2010"),
             false
@@ -760,12 +762,12 @@ public class KafkaIndexTaskTest
             )
         ),
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -820,12 +822,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -861,12 +863,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -913,12 +915,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -928,10 +930,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(
-        isIncrementalHandoffSupported ? TaskState.SUCCESS : TaskState.FAILED,
-        future.get().getStatusCode()
-    );
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     // Check metrics
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
@@ -971,12 +970,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 7L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1015,12 +1014,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 13L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1097,12 +1096,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1157,12 +1156,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task1 = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1171,12 +1170,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task2 = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1225,12 +1224,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task1 = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1239,12 +1238,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task2 = createTask(
         null,
         new KafkaIOConfig(
+            1,
             "sequence1",
             new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1294,11 +1293,11 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task1 = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
-            false,
             false,
             null,
             null,
@@ -1308,11 +1307,11 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task2 = createTask(
         null,
         new KafkaIOConfig(
+            1,
             "sequence1",
             new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
-            false,
             false,
             null,
             null,
@@ -1368,12 +1367,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 2L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1433,12 +1432,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task1 = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1447,12 +1446,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task2 = createTask(
         null,
         new KafkaIOConfig(
+            1,
             "sequence1",
             new KafkaPartitions(topic, ImmutableMap.of(1, 0L)),
             new KafkaPartitions(topic, ImmutableMap.of(1, 1L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1503,12 +1502,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task1 = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1540,12 +1539,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task2 = createTask(
         task1.getId(),
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1592,12 +1591,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1622,7 +1621,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(KafkaIndexTask.Status.READING, task.getRunner().getStatus());
 
     Map<Integer, Long> currentOffsets = objectMapper.readValue(
-        task.getRunner().pause(0).getEntity().toString(),
+        task.getRunner().pause().getEntity().toString(),
         new TypeReference<Map<Integer, Long>>()
         {
         }
@@ -1671,104 +1670,17 @@ public class KafkaIndexTaskTest
   }
 
   @Test(timeout = 60_000L)
-  public void testRunAndPauseAfterReadWithModifiedEndOffsets() throws Exception
-  {
-    final KafkaIndexTask task = createTask(
-        null,
-        new KafkaIOConfig(
-            "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 1L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
-            kafkaServer.consumerProperties(),
-            true,
-            true,
-            null,
-            null,
-            false
-        )
-    );
-
-    final ListenableFuture<TaskStatus> future = runTask(task);
-
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-    }
-
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
-      Thread.sleep(25);
-    }
-
-    // reached the end of the assigned offsets and paused instead of publishing
-    Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
-
-    Assert.assertEquals(ImmutableMap.of(0, 3L), task.getRunner().getEndOffsets());
-    Map<Integer, Long> newEndOffsets = ImmutableMap.of(0, 4L);
-    task.getRunner().setEndOffsets(newEndOffsets, false, true);
-    Assert.assertEquals(newEndOffsets, task.getRunner().getEndOffsets());
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
-    task.getRunner().resume();
-
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
-      Thread.sleep(25);
-    }
-
-    // reached the end of the updated offsets and paused
-    Assert.assertEquals(newEndOffsets, task.getRunner().getCurrentOffsets());
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
-
-    // try again but with resume flag == true
-    newEndOffsets = ImmutableMap.of(0, 7L);
-    task.getRunner().setEndOffsets(newEndOffsets, true, true);
-    Assert.assertEquals(newEndOffsets, task.getRunner().getEndOffsets());
-    Assert.assertNotEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
-
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
-      Thread.sleep(25);
-    }
-
-    Assert.assertEquals(newEndOffsets, task.getRunner().getCurrentOffsets());
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
-
-    task.getRunner().resume();
-
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
-
-    // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2009/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2011/P1D", 0);
-    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
-    Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 7L))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
-    );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", desc1));
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc2));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc3));
-  }
-
-  @Test(timeout = 30_000L)
   public void testRunWithOffsetOutOfRangeExceptionAndPause() throws Exception
   {
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1781,14 +1693,14 @@ public class KafkaIndexTaskTest
       Thread.sleep(2000);
     }
 
-    task.getRunner().pause(0);
+    task.getRunner().pause();
 
     while (!task.getRunner().getStatus().equals(KafkaIndexTask.Status.PAUSED)) {
       Thread.sleep(25);
     }
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testRunWithOffsetOutOfRangeExceptionAndNextOffsetGreaterThanLeastAvailable() throws Exception
   {
     resetOffsetAutomatically = true;
@@ -1802,12 +1714,12 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             new KafkaPartitions(topic, ImmutableMap.of(0, 200L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 500L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -1855,13 +1767,13 @@ public class KafkaIndexTaskTest
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
+            0,
             "sequence0",
             // task should ignore these and use sequence info sent in the context
             new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
             new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false,
             null,
             null,
             false
@@ -2076,7 +1988,7 @@ public class KafkaIndexTaskTest
       }
     };
     return new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
+        ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
@@ -2145,18 +2057,20 @@ public class KafkaIndexTaskTest
           @Override
           public boolean checkPointDataSourceMetadata(
               String supervisorId,
-              @Nullable String sequenceName,
+              int taskGroupId,
               @Nullable DataSourceMetadata previousDataSourceMetadata,
               @Nullable DataSourceMetadata currentDataSourceMetadata
           )
           {
             log.info("Adding checkpoint hash to the set");
-            checkpointRequestsHash.add(Objects.hash(
-                supervisorId,
-                sequenceName,
-                previousDataSourceMetadata,
-                currentDataSourceMetadata
-            ));
+            checkpointRequestsHash.add(
+                Objects.hash(
+                    supervisorId,
+                    taskGroupId,
+                    previousDataSourceMetadata,
+                    currentDataSourceMetadata
+                )
+            );
             return true;
           }
         }
@@ -2301,7 +2215,7 @@ public class KafkaIndexTaskTest
     CompressionUtils.unzip(
         Files.asByteSource(new File(indexBasePath.listFiles()[0], "index.zip")),
         outputLocation,
-        Predicates.<Throwable>alwaysFalse(),
+        Predicates.alwaysFalse(),
         false
     );
     IndexIO indexIO = new TestUtils().getTestIndexIO();
@@ -2322,7 +2236,7 @@ public class KafkaIndexTaskTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(DATA_SCHEMA.getDataSource())
                                   .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
+                                      ImmutableList.of(
                                           new LongSumAggregatorFactory("rows", "rows")
                                       )
                                   ).granularity(Granularities.ALL)

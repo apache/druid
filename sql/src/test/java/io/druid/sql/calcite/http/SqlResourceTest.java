@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -180,7 +180,7 @@ public class SqlResourceTest extends CalciteTestBase
         new SqlQuery(
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
             SqlQuery.ResultFormat.OBJECT,
-            ImmutableMap.<String, Object>of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles")
+            ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles")
         )
     ).rhs;
 
@@ -235,7 +235,7 @@ public class SqlResourceTest extends CalciteTestBase
         ImmutableList.of(
             ImmutableMap.<String, Object>of(
                 "PLAN",
-                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{\"skipEmptyBuckets\":true}}], signature=[{a0:LONG}])\n"
+                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true}}], signature=[{a0:LONG}])\n"
             )
         ),
         rows
@@ -283,7 +283,7 @@ public class SqlResourceTest extends CalciteTestBase
         new SqlQuery(
             "SELECT DISTINCT dim1 FROM foo",
             SqlQuery.ResultFormat.OBJECT,
-            ImmutableMap.<String, Object>of("maxMergingDictionarySize", 1)
+            ImmutableMap.of("maxMergingDictionarySize", 1)
         )
     ).lhs;
 
@@ -305,7 +305,7 @@ public class SqlResourceTest extends CalciteTestBase
       output.write(baos);
       return Pair.of(
           null,
-          JSON_MAPPER.<T>readValue(baos.toByteArray(), typeReference)
+          JSON_MAPPER.readValue(baos.toByteArray(), typeReference)
       );
     } else {
       return Pair.of(

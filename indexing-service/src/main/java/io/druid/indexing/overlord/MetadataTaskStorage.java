@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -36,7 +35,6 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -46,12 +44,12 @@ import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.MetadataStorageActionHandlerTypes;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
 {
@@ -185,44 +183,23 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<Task> getActiveTasks()
   {
-    return ImmutableList.copyOf(
-        Iterables.transform(
-            Iterables.filter(
-                handler.getActiveEntriesWithStatus(),
-                new Predicate<Pair<Task, TaskStatus>>()
-                {
-                  @Override
-                  public boolean apply(
-                      @Nullable Pair<Task, TaskStatus> input
-                  )
-                  {
-                    return input.rhs.isRunnable();
-                  }
-                }
-            ),
-            new Function<Pair<Task, TaskStatus>, Task>()
-            {
-              @Nullable
-              @Override
-              public Task apply(@Nullable Pair<Task, TaskStatus> input)
-              {
-                return input.lhs;
-              }
-            }
-        )
-    );
+    return handler.getActiveTaskInfo(null)
+           .stream()
+           .filter(taskInfo -> taskInfo.getStatus().isRunnable())
+           .map(TaskInfo::getTask)
+           .collect(Collectors.toList());
   }
 
   @Override
-  public List<TaskInfo<Task>> getActiveTaskInfo()
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
     return ImmutableList.copyOf(
-        handler.getActiveTaskInfo()
+        handler.getActiveTaskInfo(dataSource)
     );
   }
 
   @Override
-  public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
+  public List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses,
       @Nullable Duration duration,
       @Nullable String datasource
@@ -235,13 +212,6 @@ public class MetadataTaskStorage implements TaskStorage
             datasource
         )
     );
-  }
-
-  @Nullable
-  @Override
-  public Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId)
-  {
-    return handler.getCreatedDateAndDataSource(taskId);
   }
 
   @Override

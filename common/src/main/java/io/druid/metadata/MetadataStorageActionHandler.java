@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,7 +21,6 @@ package io.druid.metadata;
 
 import com.google.common.base.Optional;
 import io.druid.indexer.TaskInfo;
-import io.druid.java.util.common.Pair;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -80,27 +79,6 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   Optional<StatusType> getStatus(String entryId);
 
   /**
-   * Return all active entries with their respective status
-   *
-   * @return list of (entry, status) pairs
-   */
-  List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus();
-
-  default List<StatusType> getInactiveStatusesSince(DateTime timestamp)
-  {
-    return getInactiveStatusesSince(timestamp, null);
-  }
-
-  /**
-   * Return up to {@code maxNumStatuses} statuses for inactive entries created on or later than the given timestamp
-   *
-   * @param timestamp timestamp
-   * @param maxNumStatuses maxNumStatuses
-   * @return list of statuses
-   */
-  List<StatusType> getInactiveStatusesSince(DateTime timestamp, @Nullable Integer maxNumStatuses);
-
-  /**
    * Return up to {@code maxNumStatuses} {@link TaskInfo} objects for all inactive entries
    * created on or later than the given timestamp
    *
@@ -109,7 +87,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType>> getCompletedTaskInfo(
+  List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
       @Nullable String datasource
@@ -120,15 +98,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType>> getActiveTaskInfo();
-
-  /**
-   * Return createdDate and dataSource for the given id
-   *
-   * @return a pair of createdDate and dataSource or null if an entry for the given id is not found
-   */
-  @Nullable
-  Pair<DateTime, String> getCreatedDateAndDataSource(String entryId);
+  List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource);
 
   /**
    * Add a lock to the given entry
