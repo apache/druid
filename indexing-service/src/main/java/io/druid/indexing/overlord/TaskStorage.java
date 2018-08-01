@@ -95,6 +95,9 @@ public interface TaskStorage
    */
   Optional<TaskStatus> getStatus(String taskid);
 
+  @Nullable
+  TaskInfo<Task, TaskStatus> getTaskInfo(String taskId);
+
   /**
    * Add an action taken by a task to the audit log.
    *

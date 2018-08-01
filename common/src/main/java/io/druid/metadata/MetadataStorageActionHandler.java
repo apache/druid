@@ -78,6 +78,9 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    */
   Optional<StatusType> getStatus(String entryId);
 
+  @Nullable
+  TaskInfo<EntryType, StatusType> getTaskInfo(String entryId);
+
   /**
    * Return up to {@code maxNumStatuses} {@link TaskInfo} objects for all inactive entries
    * created on or later than the given timestamp

@@ -40,7 +40,6 @@ import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.Pair;
 import io.druid.segment.TestHelper;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
@@ -863,22 +862,13 @@ public class OverlordResourceTest
   public void testGetTaskStatus() throws Exception
   {
     expectAuthorizationTokenCheck();
-    EasyMock.expect(taskStorageQueryAdapter.getTask("mytask"))
-            .andReturn(Optional.of(NoopTask.create("mytask", 0)));
+    final Task task = NoopTask.create("mytask", 0);
+    final TaskStatus status = TaskStatus.running("mytask");
 
-    EasyMock.expect(taskStorageQueryAdapter.getStatus("mytask"))
-            .andReturn(Optional.of(TaskStatus.running("mytask")));
+    EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("mytask"))
+            .andReturn(new TaskInfo<>(task.getId(), DateTimes.of("2018-01-01"), status, task.getDataSource(), task));
 
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource("mytask"))
-            .andReturn(Pair.of(DateTimes.of("2018-01-01"), "mydatasource"));
-
-    EasyMock.expect(taskStorageQueryAdapter.getTask("othertask"))
-            .andReturn(Optional.absent());
-
-    EasyMock.expect(taskStorageQueryAdapter.getStatus("othertask"))
-            .andReturn(Optional.absent());
-
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource("othertask"))
+    EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("othertask"))
             .andReturn(null);
 
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks())
@@ -903,7 +893,7 @@ public class OverlordResourceTest
                 RunnerTaskState.RUNNING,
                 -1L,
                 TaskLocation.unknown(),
-                "mydatasource",
+                task.getDataSource(),
                 null
             )
         ),
