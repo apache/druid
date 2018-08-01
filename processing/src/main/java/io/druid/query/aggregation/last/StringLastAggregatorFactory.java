@@ -21,23 +21,19 @@ package io.druid.query.aggregation.last;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import io.druid.collections.SerializablePair;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.BaseObjectColumnValueSelector;
+import io.druid.query.aggregation.SerializablePairLongString;
+import io.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -45,126 +41,91 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class LongLastAggregatorFactory extends AggregatorFactory
+
+@JsonTypeName("stringLast")
+public class StringLastAggregatorFactory extends AggregatorFactory
 {
   private final String fieldName;
   private final String name;
+  protected final int maxStringBytes;
 
   @JsonCreator
-  public LongLastAggregatorFactory(
+  public StringLastAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("maxStringBytes") Integer maxStringBytes
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
+    this.maxStringBytes = maxStringBytes == null
+                          ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
+                          : maxStringBytes;
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongLastAggregator(
+    return new StringLastAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName)
+        metricFactory.makeColumnValueSelector(fieldName),
+        maxStringBytes
     );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongLastBufferAggregator(
+    return new StringLastBufferAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName)
+        metricFactory.makeColumnValueSelector(fieldName),
+        maxStringBytes
     );
   }
 
   @Override
   public Comparator getComparator()
   {
-    return LongFirstAggregatorFactory.VALUE_COMPARATOR;
+    return StringFirstAggregatorFactory.VALUE_COMPARATOR;
   }
 
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
+    return StringFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
   }
 
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    throw new UOE("LongLastAggregatorFactory is not supported during ingestion for rollup");
+    return new StringLastAggregateCombiner();
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongLastAggregatorFactory(name, name)
-    {
-      @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
-      {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return new LongLastAggregator(null, null)
-        {
-          @Override
-          public void aggregate()
-          {
-            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.getObject();
-            if (pair.lhs >= lastTime) {
-              lastTime = pair.lhs;
-              lastValue = pair.rhs;
-            }
-          }
-        };
-      }
-
-      @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
-      {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return new LongLastBufferAggregator(null, null)
-        {
-          @Override
-          public void aggregate(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.getObject();
-            long lastTime = buf.getLong(position);
-            if (pair.lhs >= lastTime) {
-              buf.putLong(position, pair.lhs);
-              buf.putLong(position + Long.BYTES, pair.rhs);
-            }
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("selector", selector);
-          }
-        };
-      }
-    };
+    return new StringLastFoldingAggregatorFactory(name, name, maxStringBytes);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new LongLastAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new StringLastAggregatorFactory(fieldName, fieldName, maxStringBytes));
   }
 
   @Override
   public Object deserialize(Object object)
   {
     Map map = (Map) object;
-    return new SerializablePair<>(((Number) map.get("lhs")).longValue(), ((Number) map.get("rhs")).longValue());
+    return new SerializablePairLongString(((Number) map.get("lhs")).longValue(), ((String) map.get("rhs")));
   }
 
   @Override
   public Object finalizeComputation(Object object)
   {
-    return ((SerializablePair<Long, Long>) object).rhs;
+    return ((SerializablePairLongString) object).rhs;
   }
 
   @Override
@@ -180,6 +141,12 @@ public class LongLastAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
+  @JsonProperty
+  public Integer getMaxStringBytes()
+  {
+    return maxStringBytes;
+  }
+
   @Override
   public List<String> requiredFields()
   {
@@ -189,24 +156,22 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
-                     .put(AggregatorUtil.LONG_LAST_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.STRING_LAST_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendInt(maxStringBytes)
+        .build();
   }
 
   @Override
   public String getTypeName()
   {
-    return "long";
+    return "serializablePairLongString";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES * 2;
+    return Long.BYTES + Integer.BYTES + maxStringBytes;
   }
 
   @Override
@@ -219,23 +184,24 @@ public class LongLastAggregatorFactory extends AggregatorFactory
       return false;
     }
 
-    LongLastAggregatorFactory that = (LongLastAggregatorFactory) o;
+    StringLastAggregatorFactory that = (StringLastAggregatorFactory) o;
 
-    return name.equals(that.name) && fieldName.equals(that.fieldName);
+    return fieldName.equals(that.fieldName) && name.equals(that.name) && maxStringBytes == that.maxStringBytes;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName);
+    return Objects.hash(name, fieldName, maxStringBytes);
   }
 
   @Override
   public String toString()
   {
-    return "LongLastAggregatorFactory{" +
+    return "StringFirstAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
+           ", maxStringBytes=" + maxStringBytes + '\'' +
            '}';
   }
 }
