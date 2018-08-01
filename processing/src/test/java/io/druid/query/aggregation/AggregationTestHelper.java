@@ -90,6 +90,7 @@ import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -326,7 +327,7 @@ public class AggregationTestHelper
   {
     File segmentDir = tempFolder.newFolder();
     createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
-    return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
   public Sequence<Row> createIndexAndRunQueryOnSegment(
@@ -341,7 +342,7 @@ public class AggregationTestHelper
   {
     File segmentDir = tempFolder.newFolder();
     createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
-    return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
   public void createIndex(

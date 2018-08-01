@@ -96,6 +96,7 @@ import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -953,11 +954,8 @@ public class OverlordResource
             ).build()
         );
       }
-      return Lists.newArrayList(
-          new ResourceAction(
-              new Resource(taskDatasource, ResourceType.DATASOURCE),
-              Action.READ
-          )
+      return Collections.singletonList(
+          new ResourceAction(new Resource(taskDatasource, ResourceType.DATASOURCE), Action.READ)
       );
     };
     List<TaskStatusPlus> optionalTypeFilteredList = collectionToFilter;

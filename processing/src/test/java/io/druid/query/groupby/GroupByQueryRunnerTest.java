@@ -81,7 +81,6 @@ import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.dimension.RegexFilteredDimensionSpec;
@@ -431,15 +430,11 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
-                new DoubleSumAggregatorFactory("idxDouble", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "index"),
+                            new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
+                            new DoubleSumAggregatorFactory("idxDouble", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -477,12 +472,9 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("nonexistent0", "alias0"),
-                new ExtractionDimensionSpec("nonexistent1", "alias1", new StringFormatExtractionFn("foo"))
-            )
-        )
-        .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+            new DefaultDimensionSpec("nonexistent0", "alias0"),
+            new ExtractionDimensionSpec("nonexistent1", "alias1", new StringFormatExtractionFn("foo"))
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -506,13 +498,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
                 new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
@@ -570,13 +557,8 @@ public class GroupByQueryRunnerTest
                 TestExprMacroTable.INSTANCE
             )
         )
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("vc", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("vc", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -629,13 +611,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new DurationGranularity(86400L, 0L))
         .build();
 
@@ -675,13 +652,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("alias", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("alias", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
   }
@@ -693,13 +665,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of("sortByDimsFirst", true, "groupByStrategy", "v2"))
         .build();
@@ -744,13 +711,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setContext(ImmutableMap.of("chunkPeriod", "P1D"))
         .build();
@@ -778,7 +740,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -815,13 +777,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("placementish", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("placementish", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -850,17 +807,9 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimFilter(new SelectorDimFilter("placementish", "a", null))
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("placementish", "alias"),
-                new DefaultDimensionSpec("placementish", "alias2")
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+            new DefaultDimensionSpec("placementish", "alias"),
+            new DefaultDimensionSpec("placementish", "alias2")
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -882,16 +831,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("placementish", "alias"),
             new DefaultDimensionSpec("quality", "quality")
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -1107,16 +1050,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("quality", "quality"),
             new DefaultDimensionSpec("placementish", "alias")
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -1332,13 +1269,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of("maxResults", 1))
         .build();
@@ -1381,13 +1313,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 60000))
         .build();
@@ -1425,13 +1352,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 1))
         .build();
@@ -1475,13 +1397,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of("maxOnDiskStorage", 0, "maxMergingDictionarySize", 1))
         .build();
@@ -1525,13 +1442,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of("maxOnDiskStorage", 1, "maxMergingDictionarySize", 1))
         .build();
@@ -1580,7 +1492,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setLimitSpec(
             new DefaultLimitSpec(
@@ -1600,8 +1512,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(ImmutableList.of(new CountAggregatorFactory("count")))
+        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 0))
         .build();
@@ -1638,22 +1549,11 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -1716,22 +1616,11 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, false, false)
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, false, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -1794,22 +1683,11 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, true, false)
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, true, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -1872,22 +1750,11 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, "MISSING", true, false)
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(new MapLookupExtractor(map, false), false, "MISSING", true, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -1949,22 +1816,11 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, true, false)
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, true, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -2017,12 +1873,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.qualityUniques
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.qualityUniques)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -2047,15 +1898,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new HyperUniquesAggregatorFactory(
-                    "quality_uniques",
-                    "quality_uniques"
-                )
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new HyperUniquesAggregatorFactory(
+            "quality_uniques",
+            "quality_uniques"
+        ))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new HyperUniqueFinalizingPostAggregator("quality_uniques", "quality_uniques")
@@ -2085,12 +1931,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.qualityCardinality
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.qualityCardinality)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -2115,13 +1956,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("market", "market")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongFirstAggregatorFactory("first", "index"),
-                new LongLastAggregatorFactory("last", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"))
+        .setAggregatorSpecs(new LongFirstAggregatorFactory("first", "index"),
+                            new LongLastAggregatorFactory("last", "index"))
         .setGranularity(QueryRunnerTestHelper.monthGran)
         .build();
 
@@ -2151,16 +1988,12 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.emptyInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("market", "market")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexLongSum,
-                QueryRunnerTestHelper.qualityCardinality,
-                new LongFirstAggregatorFactory("first", "index"),
-                new LongLastAggregatorFactory("last", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            QueryRunnerTestHelper.indexLongSum,
+                            QueryRunnerTestHelper.qualityCardinality,
+                            new LongFirstAggregatorFactory("first", "index"),
+                            new LongLastAggregatorFactory("last", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -2190,18 +2023,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec("quality", "alias", nullExtractionFn)
-            )
-        )
+        .setDimensions(new ExtractionDimensionSpec("quality", "alias", nullExtractionFn))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -2259,18 +2083,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec("quality", "alias", emptyStringExtractionFn)
-            )
-        )
+        .setDimensions(new ExtractionDimensionSpec("quality", "alias", emptyStringExtractionFn))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -2308,23 +2123,11 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setInterval("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
-                                     .setDimensions(
-                                         Lists.newArrayList(
-                                             (DimensionSpec) new DefaultDimensionSpec(
-                                                 "quality",
-                                                 "alias"
-                                             )
-                                         )
-                                     )
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory(
-                                                 "idx",
-                                                 "index"
-                                             )
-                                         )
-                                     )
+                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory(
+                                         "idx",
+                                         "index"
+                                     ))
                                      .setGranularity(
                                          new PeriodGranularity(
                                              new Period("P1D"),
@@ -2511,13 +2314,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery fullQuery = builder.build();
@@ -2533,10 +2331,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -2596,13 +2394,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setLimit(limit);
 
@@ -2638,13 +2431,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(Granularities.DAY)
         .setLimit(limit)
         .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING);
@@ -2695,13 +2483,8 @@ public class GroupByQueryRunnerTest
                 TestExprMacroTable.INSTANCE
             )
         )
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "expr")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "expr"))
         .setGranularity(Granularities.DAY)
         .setLimit(limit)
         .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING);
@@ -2743,13 +2526,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setLimit(-1);
 
@@ -2822,13 +2600,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setLimitSpec(orderBySpec);
 
@@ -2844,10 +2617,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -2870,13 +2643,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn("rows")
         .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
@@ -2967,13 +2735,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn("rows", OrderByColumnSpec.Direction.DESCENDING)
         .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
@@ -3009,13 +2772,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new DoubleSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new DoubleSumAggregatorFactory("idx", "index"))
         .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING)
         .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
@@ -3052,13 +2810,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec("rows", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC))
         .addOrderByColumn(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
@@ -3092,31 +2845,17 @@ public class GroupByQueryRunnerTest
   {
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    "marketalias"
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            "marketalias"
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "marketalias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 3
+                Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
+                3
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -3153,30 +2892,19 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    QueryRunnerTestHelper.marketDimension
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.marketDimension
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        QueryRunnerTestHelper.marketDimension,
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 3
+                Collections.singletonList(
+                    new OrderByColumnSpec(QueryRunnerTestHelper.marketDimension, OrderByColumnSpec.Direction.DESCENDING)
+                ),
+                3
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -3201,32 +2929,21 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    QueryRunnerTestHelper.marketDimension
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.marketDimension
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        QueryRunnerTestHelper.uniqueMetric,
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 3
+                Collections.singletonList(
+                    new OrderByColumnSpec(QueryRunnerTestHelper.uniqueMetric, OrderByColumnSpec.Direction.DESCENDING)
+                ),
+                3
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.qualityUniques
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.qualityUniques)
         .setPostAggregatorSpecs(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new HyperUniqueFinalizingPostAggregator(
                     QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                     QueryRunnerTestHelper.uniqueMetric
@@ -3275,38 +2992,23 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    QueryRunnerTestHelper.marketDimension
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.marketDimension
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        QueryRunnerTestHelper.uniqueMetric,
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 3
+                Collections.singletonList(
+                    new OrderByColumnSpec(QueryRunnerTestHelper.uniqueMetric, OrderByColumnSpec.Direction.DESCENDING)
+                ),
+                3
             )
         )
-        .setHavingSpec(
-            new GreaterThanHavingSpec(
-                QueryRunnerTestHelper.uniqueMetric,
-                8
-            )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.qualityUniques
-            )
-        )
+        .setHavingSpec(new GreaterThanHavingSpec(QueryRunnerTestHelper.uniqueMetric, 8))
+        .setAggregatorSpecs(QueryRunnerTestHelper.qualityUniques)
         .setPostAggregatorSpecs(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new HyperUniqueFinalizingPostAggregator(
                     QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                     QueryRunnerTestHelper.uniqueMetric
@@ -3337,38 +3039,26 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    QueryRunnerTestHelper.marketDimension
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.marketDimension
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
+                Collections.singletonList(
                     new OrderByColumnSpec(
                         QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                         OrderByColumnSpec.Direction.DESCENDING
                     )
-                ), 3
+                ),
+                3
             )
         )
-        .setHavingSpec(
-            new GreaterThanHavingSpec(
-                QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
-                8
-            )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.qualityUniques
-            )
-        )
+        .setHavingSpec(new GreaterThanHavingSpec(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, 8))
+        .setAggregatorSpecs(QueryRunnerTestHelper.qualityUniques)
         .setPostAggregatorSpecs(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new HyperUniqueFinalizingPostAggregator(
                     QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                     QueryRunnerTestHelper.uniqueMetric
@@ -3398,33 +3088,24 @@ public class GroupByQueryRunnerTest
   {
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    QueryRunnerTestHelper.marketDimension
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.marketDimension
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
+                Collections.singletonList(
                     new OrderByColumnSpec(
                         QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                         OrderByColumnSpec.Direction.DESCENDING
                     )
-                ), 3
+                ),
+                3
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.qualityUniques
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.qualityUniques)
         .setPostAggregatorSpecs(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new HyperUniqueFinalizingPostAggregator(
                     QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
                     QueryRunnerTestHelper.uniqueMetric
@@ -3484,24 +3165,17 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
-                )
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Collections.singletonList(new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)),
+                null
             )
         )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
-        .setLimitSpec(new DefaultLimitSpec(Lists.newArrayList(
-            new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)), null))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -3547,24 +3221,17 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
-                )
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird).setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Collections.singletonList(new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)),
+                11
             )
         )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
-        .setLimitSpec(new DefaultLimitSpec(Lists.newArrayList(
-            new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)), 11))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of("sortByDimsFirst", true))
         .build();
@@ -3600,33 +3267,19 @@ public class GroupByQueryRunnerTest
   {
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    QueryRunnerTestHelper.marketDimension
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.dayGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.marketDimension
+        ))
         .setInterval(QueryRunnerTestHelper.firstToThird)
         // Using a limitSpec here to achieve a per group limit is incorrect.
         // Limit is applied on the overall results.
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "rows",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 2
+                Collections.singletonList(new OrderByColumnSpec("rows", OrderByColumnSpec.Direction.DESCENDING)),
+                2
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -3679,20 +3332,13 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("index", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.addRowsIndexConstant))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
-                ImmutableList.of(
-                    new GreaterThanHavingSpec(QueryRunnerTestHelper.addRowsIndexConstantMetric, 1000L)
-                )
+                ImmutableList.of(new GreaterThanHavingSpec(QueryRunnerTestHelper.addRowsIndexConstantMetric, 1000L))
             )
         );
 
@@ -3708,10 +3354,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -3734,23 +3380,13 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-01-25/2011-01-28")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new DoubleSumAggregatorFactory("index", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new DoubleSumAggregatorFactory("index", "index"))
         .setGranularity(Granularities.ALL)
         .setHavingSpec(new GreaterThanHavingSpec("index", 310L))
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "index",
-                        OrderByColumnSpec.Direction.ASCENDING
-                    )
-                ),
+                Collections.singletonList(new OrderByColumnSpec("index", OrderByColumnSpec.Direction.ASCENDING)),
                 5
             )
         );
@@ -3844,13 +3480,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("index", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.addRowsIndexConstant))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
@@ -3883,13 +3514,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
@@ -3936,13 +3562,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(havingSpec);
 
@@ -3983,13 +3604,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(havingSpec);
 
@@ -4014,13 +3630,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
@@ -4043,10 +3654,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -4105,13 +3716,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new ArithmeticPostAggregator(
@@ -4152,10 +3758,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -4204,12 +3810,8 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .setDimFilter(new RegexDimFilter("quality", "auto.*", null))
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "quality")))
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
@@ -4231,12 +3833,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
         .addDimension("billy")
-        .addDimension("quality")
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        .addDimension("quality").setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
@@ -4290,20 +3887,16 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new JavaScriptDimFilter(
             "quality",
             "function(dim){ return true; }",
             null,
             JavaScriptConfig.getEnabledInstance()
         ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "index"),
+                            new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4311,13 +3904,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("alias", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"), new LongSumAggregatorFactory("idx", "idx"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4355,20 +3943,16 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new JavaScriptDimFilter(
             "quality",
             "function(dim){ return true; }",
             null,
             JavaScriptConfig.getEnabledInstance()
         ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "index"),
+                            new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4383,13 +3967,8 @@ public class GroupByQueryRunnerTest
                 )
             )
         )
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("alias", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"), new LongSumAggregatorFactory("idx", "idx"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4427,20 +4006,16 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new JavaScriptDimFilter(
             "quality",
             "function(dim){ return true; }",
             null,
             JavaScriptConfig.getEnabledInstance()
         ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "index"),
+                            new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of("chunkPeriod", "P1D"))
         .build();
@@ -4456,13 +4031,8 @@ public class GroupByQueryRunnerTest
                 )
             )
         )
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("alias", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"), new LongSumAggregatorFactory("idx", "idx"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4502,20 +4072,16 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new JavaScriptDimFilter(
             "quality",
             "function(dim){ return true; }",
             null,
             JavaScriptConfig.getEnabledInstance()
         ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "index"),
+                            new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4529,20 +4095,8 @@ public class GroupByQueryRunnerTest
                 )
             )
         )
-        .setDimensions(Lists.newArrayList(
-            new ExtractionDimensionSpec(
-                "alias",
-                "alias",
-                new RegexDimExtractionFn("(a).*", true, "a")
-            )
-                       )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx")
-            )
-        )
+        .setDimensions(new ExtractionDimensionSpec("alias", "alias", new RegexDimExtractionFn("(a).*", true, "a")))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"), new LongSumAggregatorFactory("idx", "idx"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4563,14 +4117,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "index"),
+                            new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4578,13 +4128,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new DoubleMaxAggregatorFactory("idx", "idx"),
-                new DoubleMaxAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new DoubleMaxAggregatorFactory("idx", "idx"),
+                            new DoubleMaxAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4603,13 +4149,10 @@ public class GroupByQueryRunnerTest
         .setVirtualColumns(
             new ExpressionVirtualColumn("expr", "-index + 100", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "expr"),
-                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
-            )
-        ).build();
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "expr"),
+                            new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen"))
+        .build();
     query = (GroupByQuery) query.withDataSource(new QueryDataSource(subquery));
 
     expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
@@ -4631,15 +4174,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ArithmeticPostAggregator(
                     "post_agg",
                     "+",
@@ -4657,14 +4195,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new DoubleMaxAggregatorFactory("idx1", "idx"),
-                new DoubleMaxAggregatorFactory("idx2", "idx"),
-                new DoubleMaxAggregatorFactory("idx3", "post_agg"),
-                new DoubleMaxAggregatorFactory("idx4", "post_agg")
-            )
-        )
+        .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx1", "idx"),
+                            new DoubleMaxAggregatorFactory("idx2", "idx"),
+                            new DoubleMaxAggregatorFactory("idx3", "post_agg"),
+                            new DoubleMaxAggregatorFactory("idx4", "post_agg"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4689,13 +4223,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "quality")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4703,11 +4232,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new DoubleMaxAggregatorFactory("idx", "idx")
-            )
-        )
+        .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx", "idx"))
         .setDimFilter(
             new OrDimFilter(
                 Lists.newArrayList(
@@ -4742,13 +4267,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4756,11 +4276,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.secondOnly)
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new DoubleMaxAggregatorFactory("idx", "idx")
-            )
-        )
+        .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx", "idx"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4784,22 +4300,11 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("market", "market"),
-                new ExtractionDimensionSpec(
-                    Column.TIME_COLUMN_NAME,
-                    Column.TIME_COLUMN_NAME,
-                    new TimeFormatExtractionFn("EEEE", null, null, null, false)
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexDoubleSum
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new ExtractionDimensionSpec(
+            Column.TIME_COLUMN_NAME,
+            Column.TIME_COLUMN_NAME,
+            new TimeFormatExtractionFn("EEEE", null, null, null, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
         .setPostAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimFilter(
@@ -4826,13 +4331,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "__time")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "__time"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setHavingSpec(
             new OrHavingSpec(
@@ -4858,13 +4358,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.emptyInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4872,11 +4367,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new DoubleMaxAggregatorFactory("idx", "idx")
-            )
-        )
+        .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx", "idx"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -4891,19 +4382,13 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new JavaScriptDimFilter(
             "quality",
             "function(dim){ return true; }",
             null,
             JavaScriptConfig.getEnabledInstance()
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx_subagg", "index")
-            )
-        )
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx_subagg", "index"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new ArithmeticPostAggregator(
@@ -4922,13 +4407,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("alias", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx_subpostagg")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"),
+                            new LongSumAggregatorFactory("idx", "idx_subpostagg"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new ArithmeticPostAggregator(
@@ -5157,19 +4638,13 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new JavaScriptDimFilter(
             "quality",
             "function(dim){ return true; }",
             null,
             JavaScriptConfig.getEnabledInstance()
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx_subagg", "index")
-            )
-        )
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx_subagg", "index"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new ArithmeticPostAggregator(
@@ -5201,13 +4676,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("alias", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx_subpostagg")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"),
+                            new LongSumAggregatorFactory("idx", "idx_subpostagg"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new ArithmeticPostAggregator(
@@ -5414,27 +4885,23 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new JavaScriptDimFilter(
             "market",
             "function(dim){ return true; }",
             null,
             JavaScriptConfig.getEnabledInstance()
         ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new DoubleSumAggregatorFactory("idx_subagg", "index"),
-                new JavaScriptAggregatorFactory(
-                    "js_agg",
-                    Arrays.asList("index", "market"),
-                    "function(current, index, dim){return current + index + dim.length;}",
-                    "function(){return 0;}",
-                    "function(a,b){return a + b;}",
-                    JavaScriptConfig.getEnabledInstance()
-                )
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new DoubleSumAggregatorFactory("idx_subagg", "index"),
+                            new JavaScriptAggregatorFactory(
+                                "js_agg",
+                                Arrays.asList("index", "market"),
+                                "function(current, index, dim){return current + index + dim.length;}",
+                                "function(){return 0;}",
+                                "function(a,b){return a + b;}",
+                                JavaScriptConfig.getEnabledInstance()
+                            ))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new ArithmeticPostAggregator(
@@ -5466,14 +4933,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("alias", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx_subpostagg"),
-                new DoubleSumAggregatorFactory("js_outer_agg", "js_agg")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"),
+                            new LongSumAggregatorFactory("idx", "idx_subpostagg"),
+                            new DoubleSumAggregatorFactory("js_outer_agg", "js_agg"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new ArithmeticPostAggregator(
@@ -5579,14 +5042,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("market", "market"),
-                                                         new DefaultDimensionSpec("quality", "quality")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("index", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5596,11 +5053,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
         .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(
-            ImmutableList.of(
-                new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, filter)
-            )
-        )
+        .setAggregatorSpecs(new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, filter))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -5618,14 +5071,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("market", "market"),
-                                                         new DefaultDimensionSpec("quality", "quality")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("index", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5637,11 +5084,7 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
         .setDimensions(Lists.newArrayList())
         .setDimFilter(firstDaysFilter)
-        .setAggregatorSpecs(
-            ImmutableList.of(
-                new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, fridayFilter)
-            )
-        )
+        .setAggregatorSpecs(new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, fridayFilter))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5667,7 +5110,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5675,8 +5118,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(ImmutableList.of(new CountAggregatorFactory("count")))
+        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 10000))
         .build();
@@ -5695,7 +5137,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5704,8 +5146,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setVirtualColumns(new ExpressionVirtualColumn("expr", "1", ValueType.FLOAT, TestExprMacroTable.INSTANCE))
-        .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(ImmutableList.of(new LongSumAggregatorFactory("count", "expr")))
+        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new LongSumAggregatorFactory("count", "expr"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -5723,16 +5164,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("market", "market"),
-            new DefaultDimensionSpec("quality", "quality")
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("index", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5740,18 +5173,14 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(
-            ImmutableList.of(
-                new CardinalityAggregatorFactory("car",
-                                                 ImmutableList.of(new DefaultDimensionSpec(
-                                                     "quality",
-                                                     "quality"
-                                                 )),
-                                                 false
-                )
-            )
-        )
+        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new CardinalityAggregatorFactory(
+            "car",
+            ImmutableList.of(new DefaultDimensionSpec(
+                "quality",
+                "quality"
+            )),
+            false
+        ))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -5769,7 +5198,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setLimitSpec(
             new DefaultLimitSpec(
@@ -5783,8 +5212,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(ImmutableList.of(new CountAggregatorFactory("count")))
+        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -5813,14 +5241,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("market", "market"),
-                                                         new DefaultDimensionSpec("quality", "quality")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("index", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5828,19 +5250,15 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "quality")))
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new JavaScriptAggregatorFactory(
-                    "js_agg",
-                    Arrays.asList("index", "market"),
-                    "function(current, index, dim){return current + index + dim.length;}",
-                    "function(){return 0;}",
-                    "function(a,b){return a + b;}",
-                    JavaScriptConfig.getEnabledInstance()
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(new JavaScriptAggregatorFactory(
+            "js_agg",
+            Arrays.asList("index", "market"),
+            "function(current, index, dim){return current + index + dim.length;}",
+            "function(){return 0;}",
+            "function(a,b){return a + b;}",
+            JavaScriptConfig.getEnabledInstance()
+        ))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5876,14 +5294,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("market", "market"),
-                                                         new DefaultDimensionSpec("quality", "quality")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("index", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5891,19 +5303,15 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "quality")))
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new JavaScriptAggregatorFactory(
-                    "js_agg",
-                    Arrays.asList("index", "rows"),
-                    "function(current, index, rows){return current + index + rows;}",
-                    "function(){return 0;}",
-                    "function(a,b){return a + b;}",
-                    JavaScriptConfig.getEnabledInstance()
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(new JavaScriptAggregatorFactory(
+            "js_agg",
+            Arrays.asList("index", "rows"),
+            "function(current, index, rows){return current + index + rows;}",
+            "function(){return 0;}",
+            "function(a,b){return a + b;}",
+            JavaScriptConfig.getEnabledInstance()
+        ))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5939,14 +5347,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new HyperUniquesAggregatorFactory("quality_uniques", "quality_uniques")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "index"),
+                            new HyperUniquesAggregatorFactory("quality_uniques", "quality_uniques"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -5954,14 +5358,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("alias", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx"),
-                new HyperUniquesAggregatorFactory("uniq", "quality_uniques")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"),
+                            new LongSumAggregatorFactory("idx", "idx"),
+                            new HyperUniquesAggregatorFactory("uniq", "quality_uniques"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -6080,13 +5480,9 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new HyperUniquesAggregatorFactory("quality_uniques_inner", "quality_uniques")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("idx", "index"),
+                            new HyperUniquesAggregatorFactory("quality_uniques_inner", "quality_uniques"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new FieldAccessPostAggregator("quality_uniques_inner_post", "quality_uniques_inner")
@@ -6100,13 +5496,9 @@ public class GroupByQueryRunnerTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx"),
-                new HyperUniquesAggregatorFactory("quality_uniques_outer", "quality_uniques_inner_post")
-            )
-        )
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"),
+                            new LongSumAggregatorFactory("idx", "idx"),
+                            new HyperUniquesAggregatorFactory("quality_uniques_outer", "quality_uniques_inner_post"))
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new HyperUniqueFinalizingPostAggregator("quality_uniques_outer_post", "quality_uniques_outer")
@@ -6141,14 +5533,10 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(ImmutableList.of(new DefaultDimensionSpec("market", "market")))
-        .setAggregatorSpecs(
-            ImmutableList.of(
-                QueryRunnerTestHelper.rowsCount,
-                new LongFirstAggregatorFactory("innerfirst", "index"),
-                new LongLastAggregatorFactory("innerlast", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongFirstAggregatorFactory("innerfirst", "index"),
+                            new LongLastAggregatorFactory("innerlast", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setContext(ImmutableMap.of("finalize", true))
         .build();
@@ -6158,12 +5546,8 @@ public class GroupByQueryRunnerTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
         .setDimensions(Lists.newArrayList())
-        .setAggregatorSpecs(
-            ImmutableList.of(
-                new LongFirstAggregatorFactory("first", "innerfirst"),
-                new LongLastAggregatorFactory("last", "innerlast")
-            )
-        )
+        .setAggregatorSpecs(new LongFirstAggregatorFactory("first", "innerfirst"),
+                            new LongLastAggregatorFactory("last", "innerlast"))
         .setGranularity(QueryRunnerTestHelper.monthGran)
         .build();
 
@@ -6185,13 +5569,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
-                QueryRunnerTestHelper.__timeLongSum
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
+                            QueryRunnerTestHelper.__timeLongSum)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -6218,22 +5598,11 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("market", "market"),
-                new ExtractionDimensionSpec(
-                    Column.TIME_COLUMN_NAME,
-                    "dayOfWeek",
-                    new TimeFormatExtractionFn("EEEE", null, null, null, false)
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexDoubleSum
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new ExtractionDimensionSpec(
+            Column.TIME_COLUMN_NAME,
+            "dayOfWeek",
+            new TimeFormatExtractionFn("EEEE", null, null, null, false)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
         .setPostAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimFilter(
@@ -6474,27 +5843,16 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("market", "market"),
-                new ExtractionDimensionSpec(
-                    Column.TIME_COLUMN_NAME,
-                    "dayOfWeek",
-                    new CascadeExtractionFn(
-                        new ExtractionFn[]{
-                            new TimeFormatExtractionFn("EEEE", null, null, null, false),
-                            nullWednesdays,
-                        }
-                    )
-                )
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new ExtractionDimensionSpec(
+            Column.TIME_COLUMN_NAME,
+            "dayOfWeek",
+            new CascadeExtractionFn(
+                new ExtractionFn[]{
+                    new TimeFormatExtractionFn("EEEE", null, null, null, false),
+                    nullWednesdays,
+                    }
             )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexDoubleSum
-            )
-        )
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
         .setPostAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimFilter(
@@ -6724,13 +6082,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.of("bySegment", true));
@@ -6785,31 +6138,17 @@ public class GroupByQueryRunnerTest
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(
-                        new MapLookupExtractor(
-                            ImmutableMap.of(
-                                "mezzanine",
-                                "mezzanine0"
-                            ),
-                            false
-                        ), false, null, false,
-                        false
-                    )
-                )
+        .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(
+                new MapLookupExtractor(ImmutableMap.of("mezzanine", "mezzanine0"), false),
+                false,
+                null,
+                false,
+                false
             )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.of("bySegment", true));
@@ -6859,31 +6198,17 @@ public class GroupByQueryRunnerTest
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(
-                        new MapLookupExtractor(
-                            ImmutableMap.of(
-                                "mezzanine",
-                                "mezzanine0"
-                            ),
-                            false
-                        ), false, null, true,
-                        false
-                    )
-                )
+        .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(
+                new MapLookupExtractor(ImmutableMap.of("mezzanine", "mezzanine0"), false),
+                false,
+                null,
+                true,
+                false
             )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.of("bySegment", true));
@@ -6929,22 +6254,12 @@ public class GroupByQueryRunnerTest
         new SelectorDimFilter("quality", "travel", null)
     );
 
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(
-                                         Lists.newArrayList(
-                                             new DefaultDimensionSpec(
-                                                 "quality",
-                                                 "alias"
-                                             )
-                                         )
-                                     )
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory("idx", "index")
-                                         )
-                                     )
+                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                                                         new LongSumAggregatorFactory("idx", "index"))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
                                      .setDimFilter(new OrDimFilter(dimFilters))
                                      .build();
@@ -6991,22 +6306,12 @@ public class GroupByQueryRunnerTest
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(
-                                         Lists.newArrayList(
-                                             new DefaultDimensionSpec(
-                                                 "quality",
-                                                 "alias"
-                                             )
-                                         )
-                                     )
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory("idx", "index")
-                                         )
-                                     )
+                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                                                         new LongSumAggregatorFactory("idx", "index"))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
                                      .setDimFilter(new ExtractionDimFilter("quality", "", lookupExtractionFn, null))
                                      .build();
@@ -7039,31 +6344,17 @@ public class GroupByQueryRunnerTest
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(
-                                         Lists.newArrayList(
-                                             new DefaultDimensionSpec(
-                                                 "quality",
-                                                 "alias"
-                                             )
-                                         )
-                                     )
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory("idx", "index")
-                                         )
-                                     )
+                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                                                         new LongSumAggregatorFactory("idx", "index"))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
                                      .setDimFilter(
-                                         new ExtractionDimFilter(
-                                             "quality",
-                                             "NOT_THERE",
-                                             lookupExtractionFn,
-                                             null
-                                         )
-                                     ).build();
+                                         new ExtractionDimFilter("quality", "NOT_THERE", lookupExtractionFn, null)
+                                     )
+                                     .build();
     List<Row> expectedResults = Collections.emptyList();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -7087,22 +6378,12 @@ public class GroupByQueryRunnerTest
       extractionMap.put("", "NOT_USED");
     }
 
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(
-                                         Lists.newArrayList(
-                                             new DefaultDimensionSpec(
-                                                 "null_column",
-                                                 "alias"
-                                             )
-                                         )
-                                     )
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory("idx", "index")
-                                         )
-                                     )
+                                     .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
+                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                                                         new LongSumAggregatorFactory("idx", "index"))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
                                      .setDimFilter(
                                          new ExtractionDimFilter(
@@ -7112,6 +6393,7 @@ public class GroupByQueryRunnerTest
                                              null
                                          )
                                      ).build();
+
     List<Row> expectedResults = Arrays
         .asList(
             GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
@@ -7139,27 +6421,17 @@ public class GroupByQueryRunnerTest
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "missing", true, false);
     DimFilter filter = new ExtractionDimFilter("quality", "mezzanineANDnews", lookupExtractionFn, null);
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(
-                                         Lists.newArrayList(
-                                             new DefaultDimensionSpec(
-                                                 "quality",
-                                                 "alias"
-                                             )
-                                         )
-                                     )
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, filter),
-                                             (AggregatorFactory) new FilteredAggregatorFactory(
-                                                 new LongSumAggregatorFactory(
-                                                     "idx",
-                                                     "index"
-                                                 ), filter
-                                             )
-                                         )
-                                     )
+                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                                     .setAggregatorSpecs(new FilteredAggregatorFactory(
+                                         QueryRunnerTestHelper.rowsCount,
+                                         filter
+                                     ), new FilteredAggregatorFactory(
+                                         new LongSumAggregatorFactory("idx", "index"),
+                                         filter
+                                     ))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
                                      .build();
     List<Row> expectedResults = Arrays.asList(
@@ -7310,24 +6582,21 @@ public class GroupByQueryRunnerTest
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(Lists.newArrayList(new DefaultDimensionSpec(
-                                         "quality",
-                                         "alias"
-                                     )))
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory("idx", "index")
-                                         ))
+                                     .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                                                         new LongSumAggregatorFactory("idx", "index"))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(new ExtractionDimFilter(
-                                         "quality",
-                                         "newsANDmezzanine",
-                                         lookupExtractionFn,
-                                         null
-                                     ))
+                                     .setDimFilter(
+                                         new ExtractionDimFilter(
+                                             "quality",
+                                             "newsANDmezzanine",
+                                             lookupExtractionFn,
+                                             null
+                                         )
+                                     )
                                      .build();
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
@@ -7357,24 +6626,22 @@ public class GroupByQueryRunnerTest
       lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, true);
     }
 
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(Lists.newArrayList(new DefaultDimensionSpec(
-                                         "null_column",
-                                         "alias"
-                                     )))
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory("idx", "index")
-                                         ))
+                                     .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
+                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                                                         new LongSumAggregatorFactory("idx", "index"))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(new ExtractionDimFilter(
-                                         "null_column",
-                                         "EMPTY",
-                                         lookupExtractionFn,
-                                         null
-                                     )).build();
+                                     .setDimFilter(
+                                         new ExtractionDimFilter(
+                                             "null_column",
+                                             "EMPTY",
+                                             lookupExtractionFn,
+                                             null
+                                         )
+                                     )
+                                     .build();
     List<Row> expectedResults = Arrays
         .asList(
             GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
@@ -7444,13 +6711,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(superFilter)
         .setContext(ImmutableMap.of("bySegment", true));
@@ -7491,33 +6753,27 @@ public class GroupByQueryRunnerTest
                                            StringComparators.ALPHANUMERIC
     ));
     superFilterList.add(new RegexDimFilter("null_column", "EMPTY", extractionFn));
-    superFilterList.add(new SearchQueryDimFilter(
-        "null_column",
-        new ContainsSearchQuerySpec("EMPTY", true),
-        extractionFn
-    ));
+    superFilterList.add(
+        new SearchQueryDimFilter("null_column", new ContainsSearchQuerySpec("EMPTY", true), extractionFn)
+    );
     superFilterList.add(new JavaScriptDimFilter("null_column", jsFn, extractionFn, JavaScriptConfig.getEnabledInstance()));
     DimFilter superFilter = new AndDimFilter(superFilterList);
 
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(Lists.newArrayList(new DefaultDimensionSpec(
-                                         "null_column",
-                                         "alias"
-                                     )))
+                                     .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
                                      .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory("idx", "index")
-                                         ))
+                                         QueryRunnerTestHelper.rowsCount,
+                                         new LongSumAggregatorFactory("idx", "index")
+                                     )
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
                                      .setDimFilter(superFilter).build();
 
-    List<Row> expectedResults = Arrays
-        .asList(
-            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
-            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
-        );
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
+    );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
@@ -7533,21 +6789,16 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("market", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new CardinalityAggregatorFactory(
-                    "numVals",
-                    ImmutableList.of(new ExtractionDimensionSpec(
-                        QueryRunnerTestHelper.qualityDimension,
-                        QueryRunnerTestHelper.qualityDimension,
-                        helloFn
-                    )),
-                    false
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new CardinalityAggregatorFactory(
+            "numVals",
+            ImmutableList.of(new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.qualityDimension,
+                QueryRunnerTestHelper.qualityDimension,
+                helloFn
+            )),
+            false
+        ))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -7571,20 +6822,15 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("market", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new CardinalityAggregatorFactory(
-                    "numVals",
-                    ImmutableList.of(new DefaultDimensionSpec(
-                        QueryRunnerTestHelper.indexMetric,
-                        QueryRunnerTestHelper.indexMetric
-                    )),
-                    false
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("market", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new CardinalityAggregatorFactory(
+            "numVals",
+            ImmutableList.of(new DefaultDimensionSpec(
+                QueryRunnerTestHelper.indexMetric,
+                QueryRunnerTestHelper.indexMetric
+            )),
+            false
+        ))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -7613,14 +6859,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG)))
+        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
             "ql_alias",
             OrderByColumnSpec.Direction.ASCENDING,
@@ -7676,14 +6917,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG)))
+        .setDimensions(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
             "ql_alias",
             OrderByColumnSpec.Direction.DESCENDING,
@@ -7742,14 +6978,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new ExtractionDimensionSpec("qualityLong", "ql_alias", jsExtractionFn)))
+        .setDimensions(new ExtractionDimensionSpec("qualityLong", "ql_alias", jsExtractionFn))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -7789,14 +7020,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG)))
+        .setDimensions(new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -7834,14 +7060,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new ExtractionDimensionSpec("__time", "time_alias", jsExtractionFn)))
+        .setDimensions(new ExtractionDimensionSpec("__time", "time_alias", jsExtractionFn))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -7881,14 +7102,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)))
+        .setDimensions(new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
             "index_alias",
             OrderByColumnSpec.Direction.ASCENDING,
@@ -7945,14 +7161,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT)))
+        .setDimensions(new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
             "qf_alias",
             OrderByColumnSpec.Direction.DESCENDING,
@@ -8008,14 +7219,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("qualityDouble", "alias", ValueType.DOUBLE)))
+        .setDimensions(new DefaultDimensionSpec("qualityDouble", "alias", ValueType.DOUBLE))
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .addOrderByColumn(new OrderByColumnSpec(
             "alias",
             OrderByColumnSpec.Direction.DESCENDING,
@@ -8074,14 +7280,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new ExtractionDimensionSpec("index", "index_alias", jsExtractionFn)))
+        .setDimensions(new ExtractionDimensionSpec("index", "index_alias", jsExtractionFn))
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -8125,18 +7326,11 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("market", "alias"),
-                new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
-                new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
-                new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
-            )
-        )
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+            new DefaultDimensionSpec("market", "alias"),
+            new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
+            new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
+            new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setHavingSpec(
             new DimFilterHavingSpec(
                 new AndDimFilter(
@@ -8189,18 +7383,11 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("qualityLong", "ql_alias"),
-                new DefaultDimensionSpec("qualityFloat", "qf_alias")
-            )
+            new DefaultDimensionSpec("qualityLong", "ql_alias"),
+            new DefaultDimensionSpec("qualityFloat", "qf_alias")
         )
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -8245,19 +7432,12 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("qualityLong", "ql_alias"),
-                new DefaultDimensionSpec("qualityFloat", "qf_alias"),
-                new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias")
-            )
+            new DefaultDimensionSpec("qualityLong", "ql_alias"),
+            new DefaultDimensionSpec("qualityFloat", "qf_alias"),
+            new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias")
         )
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -8266,18 +7446,11 @@ public class GroupByQueryRunnerTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG),
-                new DefaultDimensionSpec("ql_alias", "ql_alias_long", ValueType.LONG),
-                new DefaultDimensionSpec("qf_alias", "qf_alias_float", ValueType.FLOAT),
-                new DefaultDimensionSpec("ql_alias", "ql_alias_float", ValueType.FLOAT)
-            )
-        )
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new CountAggregatorFactory("count")
-            )
-        )
+            new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG),
+            new DefaultDimensionSpec("ql_alias", "ql_alias_long", ValueType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qf_alias_float", ValueType.FLOAT),
+            new DefaultDimensionSpec("ql_alias", "ql_alias_float", ValueType.FLOAT)
+        ).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -8328,18 +7501,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                regexSpec,
-                listFilteredSpec
-            )
-        )
+        .setDimensions(regexSpec, listFilteredSpec)
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new CountAggregatorFactory("count")
-            )
-        )
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .addOrderByColumn("ql")
         .build();
@@ -8389,18 +7553,9 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                regexSpec,
-                listFilteredSpec
-            )
-        )
+        .setDimensions(regexSpec, listFilteredSpec)
         .setDimFilter(new InDimFilter("quality", Arrays.asList("entertainment", "technology"), null))
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new CountAggregatorFactory("count")
-            )
-        )
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
     List<Row> expectedResults;
@@ -8453,25 +7608,17 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("quality", "alias"),
-                new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
-                new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT)
-            )
+            new DefaultDimensionSpec("quality", "alias"),
+            new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
+            new DefaultDimensionSpec("qualityFloat", "qf_alias", ValueType.FLOAT)
         )
         .setDimFilter(
             new InDimFilter(
                 "quality",
-                Lists.newArrayList("entertainment"),
+                Collections.singletonList("entertainment"),
                 null
             )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -8480,10 +7627,8 @@ public class GroupByQueryRunnerTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("ql_alias", "quallong", ValueType.LONG),
-                new DefaultDimensionSpec("qf_alias", "qualfloat", ValueType.FLOAT)
-            )
+            new DefaultDimensionSpec("ql_alias", "quallong", ValueType.LONG),
+            new DefaultDimensionSpec("qf_alias", "qualfloat", ValueType.FLOAT)
         )
         .setDimFilter(
             new AndDimFilter(
@@ -8502,12 +7647,8 @@ public class GroupByQueryRunnerTest
                 )
             )
         )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("ql_alias_sum", "ql_alias"),
-                new DoubleSumAggregatorFactory("qf_alias_sum", "qf_alias")
-            )
-        )
+        .setAggregatorSpecs(new LongSumAggregatorFactory("ql_alias_sum", "ql_alias"),
+                            new DoubleSumAggregatorFactory("qf_alias_sum", "qf_alias"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -8538,17 +7679,10 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("market", "alias"),
-                new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
-                new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
-            )
-        )
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+            new DefaultDimensionSpec("market", "alias"),
+            new DefaultDimensionSpec("__time", "time_alias", ValueType.LONG),
+            new DefaultDimensionSpec("index", "index_alias", ValueType.FLOAT)
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -8557,17 +7691,11 @@ public class GroupByQueryRunnerTest
         .setDataSource(subQuery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("alias", "market"),
-                new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG)
-            )
+            new DefaultDimensionSpec("alias", "market"),
+            new DefaultDimensionSpec("time_alias", "time_alias2", ValueType.LONG)
         )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new LongMaxAggregatorFactory("time_alias_max", "time_alias"),
-                new DoubleMaxAggregatorFactory("index_alias_max", "index_alias")
-            )
-        )
+        .setAggregatorSpecs(new LongMaxAggregatorFactory("time_alias_max", "time_alias"),
+                            new DoubleMaxAggregatorFactory("index_alias_max", "index_alias"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -8634,19 +7762,14 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new ExtractionDimensionSpec(
+        .setDimensions(new ExtractionDimensionSpec(
             QueryRunnerTestHelper.qualityDimension,
             "alias",
             ValueType.LONG,
             strlenFn
-        )))
+        ))
         .setDimFilter(new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "entertainment", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -8682,33 +7805,29 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new SelectorDimFilter("quality", "technology", null))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("qlLong", "qualityLong"),
-                new DoubleSumAggregatorFactory("qlFloat", "qualityLong"),
-                new JavaScriptAggregatorFactory(
-                    "qlJs",
-                    ImmutableList.of("qualityLong"),
-                    "function(a,b) { return a + b; }",
-                    "function() { return 0; }",
-                    "function(a,b) { return a + b }",
-                    JavaScriptConfig.getEnabledInstance()
-                ),
-                new DoubleSumAggregatorFactory("qfFloat", "qualityFloat"),
-                new LongSumAggregatorFactory("qfLong", "qualityFloat"),
-                new JavaScriptAggregatorFactory(
-                    "qfJs",
-                    ImmutableList.of("qualityFloat"),
-                    "function(a,b) { return a + b; }",
-                    "function() { return 0; }",
-                    "function(a,b) { return a + b }",
-                    JavaScriptConfig.getEnabledInstance()
-                )
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
+                            new LongSumAggregatorFactory("qlLong", "qualityLong"),
+                            new DoubleSumAggregatorFactory("qlFloat", "qualityLong"),
+                            new JavaScriptAggregatorFactory(
+                                "qlJs",
+                                ImmutableList.of("qualityLong"),
+                                "function(a,b) { return a + b; }",
+                                "function() { return 0; }",
+                                "function(a,b) { return a + b }",
+                                JavaScriptConfig.getEnabledInstance()
+                            ),
+                            new DoubleSumAggregatorFactory("qfFloat", "qualityFloat"),
+                            new LongSumAggregatorFactory("qfLong", "qualityFloat"),
+                            new JavaScriptAggregatorFactory(
+                                "qfJs",
+                                ImmutableList.of("qualityFloat"),
+                                "function(a,b) { return a + b; }",
+                                "function() { return 0; }",
+                                "function(a,b) { return a + b }",
+                                JavaScriptConfig.getEnabledInstance()
+                            ))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -8756,23 +7875,14 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("quality", "alias"),
-                new ExtractionDimensionSpec(
-                    "qualityFloat",
-                    "qf_inner",
-                    ValueType.FLOAT,
-                    jsExtractionFn
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"), new ExtractionDimensionSpec(
+            "qualityFloat",
+            "qf_inner",
+            ValueType.FLOAT,
+            jsExtractionFn
+        ))
         .setDimFilter(new SelectorDimFilter("quality", "technology", null))
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -8780,22 +7890,12 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("alias", "alias"),
-                new ExtractionDimensionSpec(
-                    "qf_inner",
-                    "qf_outer",
-                    ValueType.FLOAT,
-                    jsExtractionFn
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"), new ExtractionDimensionSpec(
+            "qf_inner",
+            "qf_outer",
+            ValueType.FLOAT,
+            jsExtractionFn
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -8824,23 +7924,14 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("quality", "alias"),
-                new ExtractionDimensionSpec(
-                    Column.TIME_COLUMN_NAME,
-                    "time_day",
-                    ValueType.LONG,
-                    new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"), new ExtractionDimensionSpec(
+            Column.TIME_COLUMN_NAME,
+            "time_day",
+            ValueType.LONG,
+            new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)
+        ))
         .setDimFilter(new SelectorDimFilter("quality", "technology", null))
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -8848,22 +7939,12 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.newArrayList(
-                new DefaultDimensionSpec("alias", "alias"),
-                new ExtractionDimensionSpec(
-                    "time_day",
-                    "time_week",
-                    ValueType.LONG,
-                    new TimeFormatExtractionFn(null, null, null, Granularities.WEEK, true)
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"), new ExtractionDimensionSpec(
+            "time_day",
+            "time_week",
+            ValueType.LONG,
+            new TimeFormatExtractionFn(null, null, null, Granularities.WEEK, true)
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -8888,38 +7969,21 @@ public class GroupByQueryRunnerTest
     }
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    "marketalias"
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            "marketalias"
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "marketalias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ),
+                Collections.singletonList(new OrderByColumnSpec(
+                    "marketalias",
+                    OrderByColumnSpec.Direction.DESCENDING
+                )),
                 2
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
-                true
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -8953,30 +8017,15 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "alias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ),
+                Collections.singletonList(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.DESCENDING)),
                 5
             )
         )
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
-                true
-            )
-        )
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -8989,10 +8038,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
@@ -9035,30 +8084,15 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "idx",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ),
+                Collections.singletonList(new OrderByColumnSpec("idx", OrderByColumnSpec.Direction.DESCENDING)),
                 5
             )
         )
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
-                true
-            )
-        )
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
         .setGranularity(Granularities.ALL);
 
     final GroupByQuery allGranQuery = builder.build();
@@ -9073,10 +8107,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
@@ -9117,37 +8151,19 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("quality", "alias"),
-            new DefaultDimensionSpec("market", "market")
-                       )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"), new DefaultDimensionSpec("market", "market"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setLimitSpec(
             new DefaultLimitSpec(
                 Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "alias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    ),
-                    new OrderByColumnSpec(
-                        "market",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
+                    new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.DESCENDING),
+                    new OrderByColumnSpec("market", OrderByColumnSpec.Direction.DESCENDING)
                 ),
                 5
             )
         )
         .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
-                true
-            )
+            ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true)
         )
         .setGranularity(Granularities.ALL);
 
@@ -9163,10 +8179,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
@@ -9207,17 +8223,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("quality", "alias"),
-            new DefaultDimensionSpec("market", "market")
-                       )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"), new DefaultDimensionSpec("market", "market"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setLimitSpec(
             new DefaultLimitSpec(
                 Lists.newArrayList(
@@ -9257,10 +8264,10 @@ public class GroupByQueryRunnerTest
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-02/2011-04-03")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
             );
             final QueryPlus<Row> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-04-03/2011-04-04")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
             );
 
             return factory.getToolchest().mergeResults(
@@ -9299,36 +8306,22 @@ public class GroupByQueryRunnerTest
 
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    "marketalias"
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            "marketalias"
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "constant",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ),
+                Collections.singletonList(new OrderByColumnSpec(
+                    "constant",
+                    OrderByColumnSpec.Direction.DESCENDING
+                )),
                 2
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setPostAggregatorSpecs(
-            Lists.newArrayList(
-                new ConstantPostAggregator("constant", 1)
-            )
+            Collections.singletonList(new ConstantPostAggregator("constant", 1))
         )
         .setContext(
             ImmutableMap.of(
@@ -9348,21 +8341,14 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.emptyInterval)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
+                Collections.singletonList(new OrderByColumnSpec(
                         "alias",
                         OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ),
+                    )),
                 5
             )
         )
@@ -9373,17 +8359,8 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(
-            Collections.singletonList(
-                new DoubleMaxAggregatorFactory("idx", "idx")
-            )
-        )
-        .setLimitSpec(
-            new DefaultLimitSpec(
-                null,
-                5
-            )
-        )
+        .setAggregatorSpecs(new DoubleMaxAggregatorFactory("idx", "idx"))
+        .setLimitSpec(new DefaultLimitSpec(null, 5))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -9399,7 +8376,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setDimFilter(new JavaScriptDimFilter(
             "quality",
             "function(dim){ return true; }",
@@ -9408,21 +8385,14 @@ public class GroupByQueryRunnerTest
         ))
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "alias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ),
+                Collections.singletonList(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.DESCENDING)),
                 12
             )
         )
         .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index"),
-                new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
-            )
+            QueryRunnerTestHelper.rowsCount,
+            new LongSumAggregatorFactory("idx", "index"),
+            new LongSumAggregatorFactory("indexMaxPlusTen", "indexMaxPlusTen")
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
@@ -9437,24 +8407,16 @@ public class GroupByQueryRunnerTest
                     Intervals.of("2011-04-02T00:00:00.000Z/2011-04-03T00:00:00.000Z")
                 )
             )
-        )
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("alias", "alias")))
+        ).setDimensions(new DefaultDimensionSpec("alias", "alias"))
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "alias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ),
+                Collections.singletonList(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.DESCENDING)),
                 15
             )
         )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx")
-            )
+            new LongSumAggregatorFactory("rows", "rows"),
+            new LongSumAggregatorFactory("idx", "idx")
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
@@ -9490,40 +8452,17 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Collections.singletonList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    "marketalias"
-                )
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec(QueryRunnerTestHelper.marketDimension, "marketalias"))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "marketalias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ),
+                Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
                 2
             )
         )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount
-            )
-        )
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
-                true
-            )
-        )
-        .setHavingSpec(
-            new GreaterThanHavingSpec("rows", 10)
-        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true))
+        .setHavingSpec(new GreaterThanHavingSpec("rows", 10))
         .build();
   }
 
@@ -9539,21 +8478,12 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("quality", "alias"),
             new ExtractionDimensionSpec("quality", "qualityLen", ValueType.LONG, StrlenExtractionFn.instance())
-        ))
-        .setDimFilter(new SelectorDimFilter(
-            "quality",
-            "technology",
-            null
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
         )
+        .setDimFilter(new SelectorDimFilter("quality", "technology", null))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 

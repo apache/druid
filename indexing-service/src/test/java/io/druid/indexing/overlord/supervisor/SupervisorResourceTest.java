@@ -24,7 +24,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.TaskMaster;
@@ -107,7 +106,7 @@ public class SupervisorResourceTest extends EasyMockSupport
       @Override
       public List<String> getDataSources()
       {
-        return Lists.newArrayList("datasource1");
+        return Collections.singletonList("datasource1");
       }
     };
 
@@ -147,7 +146,7 @@ public class SupervisorResourceTest extends EasyMockSupport
       @Override
       public List<String> getDataSources()
       {
-        return Lists.newArrayList("datasource1");
+        return Collections.singletonList("datasource1");
       }
     };
     SupervisorSpec spec2 = new TestSupervisorSpec("id2", null, null) {
@@ -155,7 +154,7 @@ public class SupervisorResourceTest extends EasyMockSupport
       @Override
       public List<String> getDataSources()
       {
-        return Lists.newArrayList("datasource2");
+        return Collections.singletonList("datasource2");
       }
     };
 
@@ -753,7 +752,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     NoopSupervisorSpec deserializedSpec = mapper.readValue(oldSpec, NoopSupervisorSpec.class);
     Assert.assertEquals(expectedSpec, deserializedSpec);
 
-    NoopSupervisorSpec spec1 = new NoopSupervisorSpec("abcd", Lists.newArrayList("defg"));
+    NoopSupervisorSpec spec1 = new NoopSupervisorSpec("abcd", Collections.singletonList("defg"));
     NoopSupervisorSpec spec2 = mapper.readValue(
         mapper.writeValueAsBytes(spec1),
         NoopSupervisorSpec.class

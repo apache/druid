@@ -893,6 +893,13 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
+    public Builder setDimensions(DimensionSpec... dimensions)
+    {
+      this.dimensions = new ArrayList<>(Arrays.asList(dimensions));
+      this.postProcessingFn = null;
+      return this;
+    }
+
     public Builder addAggregator(AggregatorFactory aggregator)
     {
       if (aggregatorSpecs == null) {
@@ -907,6 +914,13 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder setAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
     {
       this.aggregatorSpecs = Lists.newArrayList(aggregatorSpecs);
+      this.postProcessingFn = null;
+      return this;
+    }
+
+    public Builder setAggregatorSpecs(AggregatorFactory... aggregatorSpecs)
+    {
+      this.aggregatorSpecs = new ArrayList<>(Arrays.asList(aggregatorSpecs));
       this.postProcessingFn = null;
       return this;
     }

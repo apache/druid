@@ -20,7 +20,6 @@
 package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.granularity.PeriodGranularity;
@@ -43,7 +42,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -79,8 +77,8 @@ public class VarianceGroupByQueryTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(Collections.singletonList(VarianceTestHelper.indexVarianceAggr))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(VarianceTestHelper.indexVarianceAggr)
         .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.stddevOfIndexPostAggr))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
@@ -121,14 +119,10 @@ public class VarianceGroupByQueryTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                VarianceTestHelper.rowsCount,
-                VarianceTestHelper.indexVarianceAggr,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(VarianceTestHelper.rowsCount,
+                            VarianceTestHelper.indexVarianceAggr,
+                            new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             Collections.singletonList(VarianceTestHelper.stddevOfIndexPostAggr)
         )
@@ -181,14 +175,10 @@ public class VarianceGroupByQueryTest
         .builder()
         .setDataSource(VarianceTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                VarianceTestHelper.rowsCount,
-                VarianceTestHelper.indexLongSum,
-                VarianceTestHelper.indexVarianceAggr
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(VarianceTestHelper.rowsCount,
+                            VarianceTestHelper.indexLongSum,
+                            VarianceTestHelper.indexVarianceAggr)
         .setPostAggregatorSpecs(ImmutableList.of(VarianceTestHelper.stddevOfIndexPostAggr))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(

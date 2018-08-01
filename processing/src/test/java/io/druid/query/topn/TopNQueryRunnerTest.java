@@ -1721,11 +1721,8 @@ public class TopNQueryRunnerTest
         .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
     assertExpectedResults(
-        Lists.newArrayList(
-            new Result<TopNResultValue>(
-                DateTimes.of("2011-04-01T00:00:00.000Z"),
-                new TopNResultValue(Lists.<Map<String, Object>>newArrayList())
-            )
+        Collections.singletonList(
+            new Result<>(DateTimes.of("2011-04-01T00:00:00.000Z"), new TopNResultValue(Collections.emptyList()))
         ),
         query
     );
@@ -1750,12 +1747,10 @@ public class TopNQueryRunnerTest
         .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
     assertExpectedResults(
-        Lists.newArrayList(
-            new Result<TopNResultValue>(
-                DateTimes.of("2011-04-01T00:00:00.000Z"),
-                new TopNResultValue(Lists.<Map<String, Object>>newArrayList())
-            )
-        ), query
+        Collections.singletonList(
+            new Result<>(DateTimes.of("2011-04-01T00:00:00.000Z"), new TopNResultValue(Collections.emptyList()))
+        ),
+        query
     );
   }
 
@@ -1845,7 +1840,7 @@ public class TopNQueryRunnerTest
         .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
-    final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
@@ -1886,7 +1881,7 @@ public class TopNQueryRunnerTest
         .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
-    final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
@@ -1934,8 +1929,8 @@ public class TopNQueryRunnerTest
         .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
-    final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
-        new Result<>(
+    final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<TopNResultValue>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(

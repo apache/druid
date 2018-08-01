@@ -19,7 +19,6 @@
 
 package io.druid.initialization;
 
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -37,6 +36,7 @@ import org.junit.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.util.Collections;
 import java.util.Properties;
 
 /**
@@ -58,7 +58,7 @@ public class ComposingEmitterModuleTest
   public void testGetEmitter()
   {
     ComposingEmitterConfig config = EasyMock.createMock(ComposingEmitterConfig.class);
-    EasyMock.expect(config.getEmitters()).andReturn(Lists.newArrayList(testEmitterType)).anyTimes();
+    EasyMock.expect(config.getEmitters()).andReturn(Collections.singletonList(testEmitterType)).anyTimes();
 
     Injector injector = EasyMock.createMock(Injector.class);
     EasyMock.expect(injector.getInstance(Key.get(Emitter.class, Names.named(testEmitterType)))).andReturn(emitter);

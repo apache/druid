@@ -79,13 +79,17 @@ public class LoadingLookupTest
   public void testUnapplyAll() throws ExecutionException
   {
     EasyMock.expect(reverseLookupCache.get(EasyMock.eq("value"), EasyMock.anyObject(Callable.class)))
-            .andReturn(Lists.newArrayList("key"))
+            .andReturn(Collections.singletonList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
+<<<<<<< HEAD
     Assert.assertEquals(
         ImmutableMap.of("value", Lists.newArrayList("key")),
         loadingLookup.unapplyAll(ImmutableSet.of("value"))
     );
+=======
+    Assert.assertEquals(ImmutableMap.of("value", Collections.singletonList("key")), loadingLookup.unapplyAll(ImmutableSet.of("value")));
+>>>>>>> upstream/master
     EasyMock.verify(reverseLookupCache);
   }
 

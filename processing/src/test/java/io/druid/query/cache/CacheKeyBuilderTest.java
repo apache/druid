@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -260,13 +261,13 @@ public class CacheKeyBuilderTest
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheables(Lists.newArrayList(testtest))
+            .appendCacheables(Collections.singletonList(testtest))
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheables(Lists.newArrayList(testtest))
+            .appendCacheables(Collections.singletonList(testtest))
             .appendCacheables(Lists.newArrayList())
             .build()
     );
@@ -274,7 +275,7 @@ public class CacheKeyBuilderTest
     keys.add(
         new CacheKeyBuilder((byte) 10)
             .appendCacheables(Lists.newArrayList())
-            .appendCacheables(Lists.newArrayList(testtest))
+            .appendCacheables(Collections.singletonList(testtest))
             .build()
     );
 
@@ -298,17 +299,17 @@ public class CacheKeyBuilderTest
         .build();
 
     byte[] key2 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Lists.newArrayList(""))
+        .appendStrings(Collections.singletonList(""))
         .build();
 
     assertFalse(Arrays.equals(key1, key2));
 
     key1 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Lists.newArrayList(""))
+        .appendStrings(Collections.singletonList(""))
         .build();
 
     key2 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Lists.newArrayList((String) null))
+        .appendStrings(Collections.singletonList((String) null))
         .build();
 
     assertArrayEquals(key1, key2);
@@ -322,7 +323,7 @@ public class CacheKeyBuilderTest
         .build();
 
     final byte[] key2 = new CacheKeyBuilder((byte) 10)
-        .appendCacheables(Lists.newArrayList((Cacheable) null))
+        .appendCacheables(Collections.singletonList((Cacheable) null))
         .build();
 
     assertFalse(Arrays.equals(key1, key2));

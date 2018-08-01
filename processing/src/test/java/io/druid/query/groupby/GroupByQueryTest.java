@@ -22,7 +22,6 @@ package io.druid.query.groupby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -46,7 +45,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class GroupByQueryTest
@@ -60,13 +59,8 @@ public class GroupByQueryTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setPostAggregatorSpecs(ImmutableList.of(new FieldAccessPostAggregator("x", "idx")))
         .setLimitSpec(
@@ -110,11 +104,11 @@ public class GroupByQueryTest
   @Test
   public void testSegmentLookUpForNestedQueries()
   {
-    QuerySegmentSpec innerQuerySegmentSpec = new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of(
+    QuerySegmentSpec innerQuerySegmentSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of(
         "2011-11-07/2011-11-08")));
-    QuerySegmentSpec outerQuerySegmentSpec = new MultipleIntervalSegmentSpec(Lists.newArrayList((Intervals.of(
+    QuerySegmentSpec outerQuerySegmentSpec = new MultipleIntervalSegmentSpec(Collections.singletonList((Intervals.of(
         "2011-11-04/2011-11-08"))));
-    List<AggregatorFactory> aggs = Lists.newArrayList(QueryRunnerTestHelper.rowsCount);
+    List<AggregatorFactory> aggs = Collections.singletonList(QueryRunnerTestHelper.rowsCount);
     final GroupByQuery innerQuery = GroupByQuery.builder()
                                                 .setDataSource("blah")
                                                 .setInterval(innerQuerySegmentSpec)
