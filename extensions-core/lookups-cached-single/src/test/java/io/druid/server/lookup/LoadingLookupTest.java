@@ -81,14 +81,7 @@ public class LoadingLookupTest
             .andReturn(Collections.singletonList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
-<<<<<<< HEAD
-    Assert.assertEquals(
-        ImmutableMap.of("value", Collections.singletonList("key")),
-        loadingLookup.unapplyAll(ImmutableSet.of("value"))
-    );
-=======
     Assert.assertEquals(ImmutableMap.of("value", Collections.singletonList("key")), loadingLookup.unapplyAll(ImmutableSet.of("value")));
->>>>>>> upstream/master
     EasyMock.verify(reverseLookupCache);
   }
 
