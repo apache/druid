@@ -19,25 +19,35 @@
 
 package io.druid.java.util.http.client.netty;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.DefaultChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpClientCodec;
+import io.druid.java.util.common.logger.Logger;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
 
 /**
  */
-public class HttpClientPipelineFactory implements ChannelPipelineFactory
+@ChannelHandler.Sharable
+public class HttpClientHandler extends HttpContentDecompressor
 {
+  private static final Logger LOGGER = new Logger(HttpClientHandler.class);
+
   @Override
-  public ChannelPipeline getPipeline()
+  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
   {
-    ChannelPipeline pipeline = new DefaultChannelPipeline();
-
-    pipeline.addLast("codec", new HttpClientCodec());
-    pipeline.addLast("inflater", new HttpContentDecompressor());
-    pipeline.addLast("handler", new HttpClientHandler());
-
-    return pipeline;
+    try {
+      final Throwable cause = e.getCause();
+      if (cause != null) {
+        LOGGER.error(cause, "Caught exception from [%s] channel handler", ctx.getName());
+      }
+    }
+    finally {
+      try {
+        ctx.getChannel().close();
+      }
+      finally {
+        ctx.sendUpstream(e);
+      }
+    }
   }
 }

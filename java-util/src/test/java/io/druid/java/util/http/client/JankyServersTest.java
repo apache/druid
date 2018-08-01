@@ -317,8 +317,8 @@ public class JankyServersTest
         e = e1.getCause();
       }
 
-      Assert.assertTrue("IllegalArgumentException thrown by 'get'", e instanceof IllegalArgumentException);
-      Assert.assertTrue("Expected error message", e.getMessage().matches(".*invalid version format:.*"));
+      Assert.assertTrue("ChannelException thrown by 'get'", e instanceof ChannelException);
+      Assert.assertEquals("Expected error message", "Channel disconnected", e.getMessage());
     }
     finally {
       lifecycle.stop();
