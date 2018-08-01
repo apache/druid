@@ -74,7 +74,6 @@ public class SystemSchema extends AbstractSchema
   private static final String TASKS_TABLE = "TASKS";
   private static final int SEGMENTS_TABLE_SIZE;
   private static final int SERVERSEGMENTS_TABLE_SIZE;
-  private static final int TASKS_TABLE_DATASOURCE_INDEX;
 
   private static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -118,11 +117,11 @@ public class SystemSchema extends AbstractSchema
       .build();
 
   private final Map<String, Table> tableMap;
+  private final BrokerServerView serverView;
 
   static {
     SEGMENTS_TABLE_SIZE = SEGMENTS_SIGNATURE.getRowOrder().size();
     SERVERSEGMENTS_TABLE_SIZE = SERVERSEGMENTS_SIGNATURE.getRowOrder().size();
-    TASKS_TABLE_DATASOURCE_INDEX = TASKS_SIGNATURE.getRowOrder().indexOf("DATASOURCE");
   }
 
   @Inject
@@ -135,10 +134,11 @@ public class SystemSchema extends AbstractSchema
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
+    this.serverView = serverView;
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(serverView, coordinatorDruidLeaderClient, jsonMapper),
-        SERVERS_TABLE, new ServersTable(serverView),
-        SERVERSEGMENTS_TABLE, new ServerSegmentsTable(serverView),
+        SEGMENTS_TABLE, new SegmentsTable(coordinatorDruidLeaderClient, jsonMapper),
+        SERVERS_TABLE, new ServersTable(),
+        SERVERSEGMENTS_TABLE, new ServerSegmentsTable(),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper)
     );
   }
@@ -149,19 +149,16 @@ public class SystemSchema extends AbstractSchema
     return tableMap;
   }
 
-  class SegmentsTable extends AbstractTable implements ScannableTable
+  private class SegmentsTable extends AbstractTable implements ScannableTable
   {
-    private final BrokerServerView serverView;
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
 
     public SegmentsTable(
-        BrokerServerView serverView,
         DruidLeaderClient druidLeaderClient,
         ObjectMapper jsonMapper
     )
     {
-      this.serverView = serverView;
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
     }
@@ -285,12 +282,6 @@ public class SystemSchema extends AbstractSchema
 
   private class ServersTable extends AbstractTable implements ScannableTable
   {
-    private final BrokerServerView serverView;
-
-    public ServersTable(BrokerServerView serverView)
-    {
-      this.serverView = serverView;
-    }
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
@@ -323,12 +314,6 @@ public class SystemSchema extends AbstractSchema
 
   private class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
-    private final BrokerServerView serverView;
-
-    public ServerSegmentsTable(BrokerServerView serverView)
-    {
-      this.serverView = serverView;
-    }
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
@@ -361,7 +346,7 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
-  private class TasksTable extends AbstractTable implements ScannableTable
+  private static class TasksTable extends AbstractTable implements ScannableTable
   {
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
