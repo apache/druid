@@ -50,6 +50,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -228,7 +229,7 @@ public class GroupByQueryMergeBufferTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
@@ -249,14 +250,14 @@ public class GroupByQueryMergeBufferTest
                             .setDataSource(QueryRunnerTestHelper.dataSource)
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
@@ -279,23 +280,23 @@ public class GroupByQueryMergeBufferTest
                                             .setDataSource(QueryRunnerTestHelper.dataSource)
                                             .setInterval(QueryRunnerTestHelper.firstToThird)
                                             .setGranularity(Granularities.ALL)
-                                            .setDimensions(Lists.newArrayList(
+                                            .setDimensions(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
-                                            ))
-                                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
+                                            )
+                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                                             .build()
                             )
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
@@ -326,28 +327,29 @@ public class GroupByQueryMergeBufferTest
                                                                 new DefaultDimensionSpec("market", null),
                                                                 new DefaultDimensionSpec("placement", null)
                                                             ))
-                                                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
+                                                            .setAggregatorSpecs(Collections.singletonList(
+                                                                QueryRunnerTestHelper.rowsCount))
                                                             .build()
                                             )
                                             .setInterval(QueryRunnerTestHelper.firstToThird)
                                             .setGranularity(Granularities.ALL)
-                                            .setDimensions(Lists.newArrayList(
+                                            .setDimensions(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
-                                            ))
-                                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
+                                            )
+                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                                             .build()
                             )
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 

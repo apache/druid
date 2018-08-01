@@ -300,16 +300,14 @@ public class OrderedMergeSequenceTest
   public void testHierarchicalMerge() throws Exception
   {
     final Sequence<Integer> seq1 = makeUnorderedMergedSequence(
-        Ordering.natural(), Lists.newArrayList(
-        TestSequence.create(1)
-    )
+        Ordering.natural(),
+        Collections.singletonList(TestSequence.create(1))
     );
 
 
     final Sequence<Integer> seq2 = makeUnorderedMergedSequence(
-        Ordering.natural(), Lists.newArrayList(
-        TestSequence.create(1)
-    )
+        Ordering.natural(),
+        Collections.singletonList(TestSequence.create(1))
     );
     final OrderedMergeSequence<Integer> finalMerged = new OrderedMergeSequence<Integer>(
         Ordering.natural(),
@@ -325,15 +323,14 @@ public class OrderedMergeSequenceTest
   public void testMergeMerge() throws Exception
   {
     final Sequence<Integer> seq1 = makeUnorderedMergedSequence(
-        Ordering.natural(), Lists.newArrayList(
-            TestSequence.create(1)
-        )
+        Ordering.natural(),
+        Collections.singletonList(TestSequence.create(1))
     );
 
     final OrderedMergeSequence<Integer> finalMerged = new OrderedMergeSequence<Integer>(
         Ordering.natural(),
         Sequences.simple(
-            Lists.newArrayList(seq1)
+            Collections.singletonList(seq1)
         )
     );
 
@@ -344,9 +341,8 @@ public class OrderedMergeSequenceTest
   public void testOne() throws Exception
   {
     final MergeSequence<Integer> seq1 = makeUnorderedMergedSequence(
-        Ordering.natural(), Lists.newArrayList(
-            TestSequence.create(1)
-        )
+        Ordering.natural(),
+        Collections.singletonList(TestSequence.create(1))
     );
 
     SequenceTestHelper.testAll(seq1, Collections.singletonList(1));

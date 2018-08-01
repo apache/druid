@@ -277,7 +277,7 @@ public class SearchBenchmark
                  .granularity(Granularities.ALL)
                  .intervals(intervalSpec)
                  .query("")
-                 .dimensions(Lists.newArrayList("dimUniform"))
+                 .dimensions(Collections.singletonList("dimUniform"))
                  .filters(new AndDimFilter(dimFilters));
   }
 
@@ -306,7 +306,7 @@ public class SearchBenchmark
                  .granularity(Granularities.ALL)
                  .intervals(intervalSpec)
                  .query("")
-                 .dimensions(Lists.newArrayList("dimUniform"))
+                 .dimensions(Collections.singletonList("dimUniform"))
                  .filters(new AndDimFilter(dimFilters));
   }
 

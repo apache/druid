@@ -20,7 +20,6 @@
 package io.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
@@ -74,7 +73,8 @@ public class Tasks
           toBeAccumulated.add(interval);
         } else {
           compactIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
-          toBeAccumulated = Lists.newArrayList(interval);
+          toBeAccumulated.clear();
+          toBeAccumulated.add(interval);
         }
       }
     }

@@ -115,14 +115,14 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy"),
+            Collections.singletonList("billy"),
             ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
-            Lists.newArrayList("sally"),
+            Collections.singletonList("sally"),
             ImmutableMap.of("sally", "bo")
         )
     );
@@ -159,7 +159,7 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             DateTimes.of("2014-09-01T00:00:00"),
-            Lists.newArrayList("billy"),
+            Collections.singletonList("billy"),
             ImmutableMap.of("billy", "hi")
         )
     );
@@ -249,14 +249,14 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
-            Lists.newArrayList("billy"),
+            Collections.singletonList("billy"),
             ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
-            Lists.newArrayList("sally"),
+            Collections.singletonList("sally"),
             ImmutableMap.of("sally", "bo")
         )
     );
@@ -284,7 +284,7 @@ public class IncrementalIndexStorageAdapterTest
       index.add(
           new MapBasedInputRow(
               t.minus(1).getMillis(),
-              Lists.newArrayList("sally"),
+              Collections.singletonList("sally"),
               ImmutableMap.of("sally", "ah")
           )
       );
@@ -307,7 +307,7 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             t.minus(1).getMillis(),
-            Lists.newArrayList("sally"),
+            Collections.singletonList("sally"),
             ImmutableMap.of("sally", "bo")
         )
     );
@@ -331,7 +331,7 @@ public class IncrementalIndexStorageAdapterTest
             new TopNQueryBuilder()
                 .dataSource("test")
                 .granularity(Granularities.ALL)
-                .intervals(Lists.newArrayList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
+                .intervals(Collections.singletonList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
                 .dimension("sally")
                 .metric("cnt")
                 .threshold(10)
@@ -353,14 +353,14 @@ public class IncrementalIndexStorageAdapterTest
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy"),
+            Collections.singletonList("billy"),
             ImmutableMap.of("billy", "hi")
         )
     );
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
-            Lists.newArrayList("sally"),
+            Collections.singletonList("sally"),
             ImmutableMap.of("sally", "bo")
         )
     );
@@ -398,7 +398,7 @@ public class IncrementalIndexStorageAdapterTest
       index.add(
           new MapBasedInputRow(
               timestamp,
-              Lists.newArrayList("billy"),
+              Collections.singletonList("billy"),
               ImmutableMap.of("billy", "v1" + i)
           )
       );
@@ -426,7 +426,7 @@ public class IncrementalIndexStorageAdapterTest
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
             for (int i = 0; i < 1; i++) {
-              index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v2" + i)));
+              index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2" + i)));
             }
           }
           catch (Exception ex) {
@@ -460,7 +460,7 @@ public class IncrementalIndexStorageAdapterTest
       index.add(
           new MapBasedInputRow(
               timestamp,
-              Lists.newArrayList("billy"),
+              Collections.singletonList("billy"),
               ImmutableMap.of("billy", "v0" + i)
           )
       );
@@ -487,7 +487,7 @@ public class IncrementalIndexStorageAdapterTest
 
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v1")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v1")));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);
@@ -498,8 +498,8 @@ public class IncrementalIndexStorageAdapterTest
               .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v2")));
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy2"), ImmutableMap.of("billy2", "v3")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy2"), ImmutableMap.of("billy2", "v3")));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);
@@ -514,8 +514,8 @@ public class IncrementalIndexStorageAdapterTest
               .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v3")));
-            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy3"), ImmutableMap.of("billy3", "")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v3")));
+            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy3"), ImmutableMap.of("billy3", "")));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);

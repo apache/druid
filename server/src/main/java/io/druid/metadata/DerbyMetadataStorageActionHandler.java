@@ -47,7 +47,7 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
   }
 
   @Override
-  protected Query<Map<String, Object>> createInactiveStatusesSinceQuery(
+  protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
       Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
   )
   {
