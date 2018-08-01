@@ -92,6 +92,9 @@ public class SystemSchema extends AbstractSchema
       .builder()
       .add("SERVER", ValueType.STRING)
       .add("SERVER_TYPE", ValueType.STRING)
+      .add("TIER", ValueType.STRING)
+      .add("CURR_SIZE", ValueType.STRING)
+      .add("MAX_SIZE", ValueType.STRING)
       .build();
 
   private static final RowSignature SERVERSEGMENTS_SIGNATURE = RowSignature
@@ -162,7 +165,6 @@ public class SystemSchema extends AbstractSchema
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
     }
-
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
@@ -310,7 +312,10 @@ public class SystemSchema extends AbstractSchema
           .from(serverViewClients.values())
           .transform(val -> new Object[]{
               val.getServer().getHost(),
-              val.getServer().getType()
+              val.getServer().getType(),
+              val.getServer().getTier(),
+              val.getServer().getCurrSize(),
+              val.getServer().getMaxSize()
           });
       return Linq4j.asEnumerable(results);
     }

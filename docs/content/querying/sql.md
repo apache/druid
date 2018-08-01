@@ -430,6 +430,10 @@ plan SQL queries. This metadata is cached on broker startup and also updated per
 [SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
+Druid exposes system information through special system tables. There are two such schemas available : Information Schema and System Schema
+
+## INFORMATION SCHEMA
+
 You can access table and column metadata through JDBC using `connection.getMetaData()`, or through the
 INFORMATION_SCHEMA tables described below. For example, to retrieve metadata for the Druid
 datasource "foo", use the query:
@@ -480,6 +484,77 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |CHARACTER_SET_NAME||
 |COLLATION_NAME||
 |JDBC_TYPE|Type code from java.sql.Types (Druid extension)|
+
+## SYSTEM SCHEMA
+
+SYSTEM_TABLES provide visibility into the druid segments, servers and tasks.
+For example to retrieve all segments for datasource "wikipedia", use the query:
+```sql
+select * from SYS.SEGMENTS where DATASOURCE='wikipedia';
+```
+
+### SEGMENTS table
+Segments tables provides details on all the segments, both published and served(but not published).
+
+
+|Column|Notes|
+|------|-----|
+|SEGMENT_ID||
+|DATASOURCE||
+|START||
+|END||
+|IS_PUBLISHED|segment in metadata store|
+|IS_AVAILABLE|segment is being served|
+|IS_REALTIME|segment served on a realtime server|
+|PAYLOAD|jsonified datasegment payload|
+
+### SERVERS table
+
+
+|Column|Notes|
+|------|-----|
+|SERVER||
+|SERVER_TYPE||
+|TIER||
+|CURRENT_SIZE||
+|MAX_SIZE||
+
+To retrieve all servers information, use the query
+```sql
+select * from SYS.SERVERS;
+```
+
+### SEGMENTSERVERS table
+
+SEGMENTSERVERS is used to join SEGMENTS with SERVERS table
+
+|Column|Notes|
+|------|-----|
+|SERVER||
+|SEGMENT_ID||
+
+### TASKS table
+
+TASKS table provides tasks info from overlord.
+
+|Column|Notes|
+|------|-----|
+|TASK_ID||
+|TYPE||
+|DATASOURCE||
+|CREATED_TIME||
+|QUEUE_INSERTION_TIME||
+|STATUS||
+|RUNNER_STATUS||
+|DURATION||
+|LOCATION||
+|ERROR_MSG||
+
+For example, to retrieve tasks information filtered by status, use the query
+```sql
+select * from SYS.TASKS where STATUS='FAILED';
+```
+
 
 ## Server configuration
 
