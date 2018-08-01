@@ -65,8 +65,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -130,13 +128,8 @@ public class SqlBenchmark
         .builder()
         .setDataSource("foo")
         .setInterval(Intervals.ETERNITY)
-        .setDimensions(
-            Arrays.asList(
-                new DefaultDimensionSpec("dimZipf", "d0"),
-                new DefaultDimensionSpec("dimSequential", "d1")
-            )
-        )
-        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("c")))
+        .setDimensions(new DefaultDimensionSpec("dimZipf", "d0"), new DefaultDimensionSpec("dimSequential", "d1"))
+        .setAggregatorSpecs(new CountAggregatorFactory("c"))
         .setGranularity(Granularities.ALL)
         .build();
 

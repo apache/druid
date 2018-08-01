@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -39,6 +38,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.Collections;
 
 @RunWith(Parameterized.class)
 public class EmptyIndexTest
@@ -83,7 +83,7 @@ public class EmptyIndexTest
           new ConciseBitmapFactory()
       );
       TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory).merge(
-          Lists.newArrayList(emptyIndexAdapter),
+          Collections.singletonList(emptyIndexAdapter),
           true,
           new AggregatorFactory[0],
           tmpDir,

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
@@ -38,6 +37,8 @@ import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Collections;
 
 public class HadoopIngestionSpecTest
 {
@@ -77,7 +78,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "getIntervals",
-        Lists.newArrayList(Intervals.of("2012-01-01/P1D")),
+        Collections.singletonList(Intervals.of("2012-01-01/P1D")),
         granularitySpec.getIntervals().get()
     );
 

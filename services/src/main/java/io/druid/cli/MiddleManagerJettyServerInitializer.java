@@ -20,7 +20,6 @@
 package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -42,6 +41,7 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -60,9 +60,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     this.authConfig = authConfig;
   }
 
-  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/status/health"
-  );
+  private static List<String> UNSECURED_PATHS = Collections.singletonList("/status/health");
 
   @Override
   public void initialize(Server server, Injector injector)

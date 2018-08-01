@@ -22,7 +22,6 @@ package io.druid.security.authorization;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.security.basic.BasicAuthCommonCacheConfig;
@@ -42,6 +41,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 public class BasicRoleBasedAuthorizerTest
@@ -107,11 +107,8 @@ public class BasicRoleBasedAuthorizerTest
     updater.createRole(AUTHORIZER_NAME, "druidRole");
     updater.assignRole(AUTHORIZER_NAME, "druid", "druidRole");
 
-    List<ResourceAction> permissions = Lists.newArrayList(
-        new ResourceAction(
-            new Resource("testResource", ResourceType.DATASOURCE),
-            Action.WRITE
-        )
+    List<ResourceAction> permissions = Collections.singletonList(
+        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE)
     );
 
     updater.setPermissions(AUTHORIZER_NAME, "druidRole", permissions);

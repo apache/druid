@@ -22,13 +22,13 @@ package io.druid.collections.bitmap;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import io.druid.extendedset.intset.ConciseSet;
 import io.druid.extendedset.intset.ImmutableConciseSet;
 import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
 
 public class ConciseBitmapFactoryTest
@@ -40,7 +40,7 @@ public class ConciseBitmapFactoryTest
 
     ImmutableBitmap bitmap = factory.union(
         Iterables.transform(
-            Lists.newArrayList(new WrappedConciseBitmap()),
+            Collections.singletonList(new WrappedConciseBitmap()),
             new Function<WrappedConciseBitmap, ImmutableBitmap>()
             {
               @Override

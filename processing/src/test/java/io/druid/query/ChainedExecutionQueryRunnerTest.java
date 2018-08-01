@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -122,7 +123,7 @@ public class ChainedExecutionQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
-                                  .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")))
+                                  .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
 
@@ -247,7 +248,7 @@ public class ChainedExecutionQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
-                                  .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")))
+                                  .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
@@ -345,7 +346,7 @@ public class ChainedExecutionQueryRunnerTest
 
       hasCompleted = true;
       stop.countDown();
-      return Sequences.simple(Lists.newArrayList(123));
+      return Sequences.simple(Collections.singletonList(123));
     }
   }
 }

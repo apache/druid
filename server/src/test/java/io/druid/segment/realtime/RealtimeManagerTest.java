@@ -487,13 +487,8 @@ public class RealtimeManagerTest
           .builder()
           .setDataSource(QueryRunnerTestHelper.dataSource)
           .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-          .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-          .setAggregatorSpecs(
-              Arrays.asList(
-                  QueryRunnerTestHelper.rowsCount,
-                  new LongSumAggregatorFactory("idx", "index")
-              )
-          )
+          .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+          .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
           .setGranularity(QueryRunnerTestHelper.dayGran)
           .build();
       plumber.setRunners(ImmutableMap.of(query.getIntervals().get(0), runner));
@@ -565,13 +560,8 @@ public class RealtimeManagerTest
           .builder()
           .setDataSource(QueryRunnerTestHelper.dataSource)
           .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-          .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-          .setAggregatorSpecs(
-              Arrays.asList(
-                  QueryRunnerTestHelper.rowsCount,
-                  new LongSumAggregatorFactory("idx", "index")
-              )
-          )
+          .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+          .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
           .setGranularity(QueryRunnerTestHelper.dayGran)
           .build();
       plumber.setRunners(ImmutableMap.of(query.getIntervals().get(0), runner));
@@ -677,13 +667,8 @@ public class RealtimeManagerTest
                     descriptor_26_28_1,
                     descriptor_28_29_1
                 )))
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 

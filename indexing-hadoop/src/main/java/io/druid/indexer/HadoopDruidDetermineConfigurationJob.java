@@ -29,6 +29,7 @@ import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -81,7 +82,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
           log.info("DateTime[%s], spec[%s]", bucket, specs);
         } else {
           final HadoopyShardSpec spec = new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++);
-          shardSpecs.put(bucket.getMillis(), Lists.newArrayList(spec));
+          shardSpecs.put(bucket.getMillis(), Collections.singletonList(spec));
           log.info("DateTime[%s], spec[%s]", bucket, spec);
         }
       }

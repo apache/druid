@@ -2427,12 +2427,8 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
-                        .setAggregatorSpecs(
-                            ImmutableList.of(
-                                new FloatMinAggregatorFactory("a0", "m1"),
-                                new FloatMaxAggregatorFactory("a1", "m1")
-                            )
-                        )
+                        .setAggregatorSpecs(new FloatMinAggregatorFactory("a0", "m1"),
+                                            new FloatMaxAggregatorFactory("a1", "m1"))
                         .setPostAggregatorSpecs(ImmutableList.of(EXPRESSION_POST_AGG("p0", "(\"a0\" + \"a1\")")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
@@ -2473,12 +2469,8 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
-                        .setAggregatorSpecs(
-                            ImmutableList.of(
-                                new FloatMinAggregatorFactory("a0", "m1"),
-                                new FloatMaxAggregatorFactory("a1", "m1")
-                            )
-                        )
+                        .setAggregatorSpecs(new FloatMinAggregatorFactory("a0", "m1"),
+                                            new FloatMaxAggregatorFactory("a1", "m1"))
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
                                 EXPRESSION_POST_AGG("p0", "(\"a0\" + \"a1\")")

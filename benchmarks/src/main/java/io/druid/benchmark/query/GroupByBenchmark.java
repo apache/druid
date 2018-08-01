@@ -189,17 +189,8 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.newArrayList(
-              new DefaultDimensionSpec("dimSequential", null),
-              new DefaultDimensionSpec("dimZipf", null)
-              //new DefaultDimensionSpec("dimUniform", null),
-              //new DefaultDimensionSpec("dimSequentialHalfNull", null)
-              //new DefaultDimensionSpec("dimMultivalEnumerated", null), //multival dims greatly increase the running time, disable for now
-              //new DefaultDimensionSpec("dimMultivalEnumerated2", null)
-          ))
-          .setAggregatorSpecs(
-              queryAggs
-          )
+          .setDimensions(new DefaultDimensionSpec("dimSequential", null), new DefaultDimensionSpec("dimZipf", null))
+          .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
@@ -218,13 +209,8 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.newArrayList(
-              new DefaultDimensionSpec("dimSequential", null),
-              new DefaultDimensionSpec("dimZipf", null)
-          ))
-          .setAggregatorSpecs(
-              queryAggs
-          )
+          .setDimensions(new DefaultDimensionSpec("dimSequential", null), new DefaultDimensionSpec("dimZipf", null))
+          .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularities.DAY)
           .build();
 
@@ -232,12 +218,8 @@ public class GroupByBenchmark
           .builder()
           .setDataSource(subqueryA)
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.newArrayList(
-              new DefaultDimensionSpec("dimSequential", null)
-          ))
-          .setAggregatorSpecs(
-              queryAggs
-          )
+          .setDimensions(new DefaultDimensionSpec("dimSequential", null))
+          .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularities.WEEK)
           .build();
 
@@ -259,7 +241,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dimUniform", null)))
+          .setDimensions(new DefaultDimensionSpec("dimUniform", null))
           .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .setDimFilter(new BoundDimFilter("dimUniform", "0", "100", true, true, null, null, null))
@@ -283,7 +265,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dimZipf", null)))
+          .setDimensions(new DefaultDimensionSpec("dimZipf", null))
           .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .build();
@@ -308,9 +290,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.newArrayList(
-              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.STRING)
-          ))
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.STRING))
           .setAggregatorSpecs(
               queryAggs
           )
@@ -335,9 +315,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.newArrayList(
-              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.LONG)
-          ))
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.LONG))
           .setAggregatorSpecs(
               queryAggs
           )
@@ -362,12 +340,8 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.newArrayList(
-              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.FLOAT)
-          ))
-          .setAggregatorSpecs(
-              queryAggs
-          )
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.FLOAT))
+          .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
