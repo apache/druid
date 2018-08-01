@@ -253,8 +253,6 @@ public class OverlordResource
     TaskStatusResponse response = null;
 
     if (taskInfo != null) {
-      final BiFunction<TaskInfo<Task, TaskStatus>, RunnerTaskState, TaskStatusPlus> convertFn =
-          newTaskInfo2TaskStatusPlusFn();
       if (taskMaster.getTaskRunner().isPresent()) {
         final TaskRunner taskRunner = taskMaster.getTaskRunner().get();
         final TaskRunnerWorkItem workItem = taskRunner
@@ -266,13 +264,42 @@ public class OverlordResource
         if (workItem != null) {
           response = new TaskStatusResponse(
               workItem.getTaskId(),
-              convertFn.apply(taskInfo, taskRunner.getRunnerTaskState(workItem.getTaskId()))
+              new TaskStatusPlus(
+                  taskInfo.getId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+                  taskInfo.getCreatedTime(),
+                  // Would be nice to include the real queue insertion time, but the
+                  // TaskStorage API doesn't yet allow it.
+                  DateTimes.EPOCH,
+                  taskInfo.getStatus().getStatusCode(),
+                  taskRunner.getRunnerTaskState(workItem.getTaskId()),
+                  taskInfo.getStatus().getDuration(),
+                  workItem.getLocation(),
+                  taskInfo.getDataSource(),
+                  taskInfo.getStatus().getErrorMsg()
+              )
           );
         }
       }
 
       if (response == null) {
-        response = new TaskStatusResponse(taskid, convertFn.apply(taskInfo, RunnerTaskState.WAITING));
+        response = new TaskStatusResponse(
+            taskid,
+            new TaskStatusPlus(
+                taskInfo.getId(),
+                taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+                taskInfo.getCreatedTime(),
+                // Would be nice to include the real queue insertion time, but the
+                // TaskStorage API doesn't yet allow it.
+                DateTimes.EPOCH,
+                taskInfo.getStatus().getStatusCode(),
+                RunnerTaskState.WAITING,
+                taskInfo.getStatus().getDuration(),
+                TaskLocation.unknown(),
+                taskInfo.getDataSource(),
+                taskInfo.getStatus().getErrorMsg()
+            )
+        );
       }
     } else {
       response = new TaskStatusResponse(taskid, null);
@@ -631,8 +658,20 @@ public class OverlordResource
         null
     );
 
-    final BiFunction<TaskInfo<Task, TaskStatus>, RunnerTaskState, TaskStatusPlus> completeTaskTransformFunc =
-        newTaskInfo2TaskStatusPlusFn();
+    Function<TaskInfo<Task, TaskStatus>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
+        taskInfo.getId(),
+        taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+        taskInfo.getCreatedTime(),
+        // Would be nice to include the real queue insertion time, but the
+        // TaskStorage API doesn't yet allow it.
+        DateTimes.EPOCH,
+        taskInfo.getStatus().getStatusCode(),
+        RunnerTaskState.NONE,
+        taskInfo.getStatus().getDuration(),
+        TaskLocation.unknown(),
+        taskInfo.getDataSource(),
+        taskInfo.getStatus().getErrorMsg()
+    );
 
     //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
     if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
@@ -644,10 +683,9 @@ public class OverlordResource
       final List<TaskInfo<Task, TaskStatus>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
           maxCompletedTasks, duration, dataSource
       );
-      final List<TaskStatusPlus> completedTasks = new ArrayList<>(taskInfoList.size());
-      taskInfoList.forEach(
-          taskInfo -> completedTasks.add(completeTaskTransformFunc.apply(taskInfo, RunnerTaskState.NONE))
-      );
+      final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
+                                                              .map(completeTaskTransformFunc::apply)
+                                                              .collect(Collectors.toList());
       finalTaskList.addAll(completedTasks);
     }
 
