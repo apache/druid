@@ -20,12 +20,12 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
@@ -45,6 +45,7 @@ import io.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStr
 import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 import io.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
+import io.druid.query.groupby.epinephelinae.column.NullableValueGroupByColumnSelectorStrategy;
 import io.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.ColumnValueSelector;
@@ -124,8 +125,8 @@ public class GroupByQueryEngineV2
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
-    final String fudgeTimestampString = Strings.emptyToNull(
-        query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, "")
+    final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
+        query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, null)
     );
 
     final DateTime fudgeTimestamp = fudgeTimestampString == null
@@ -248,13 +249,22 @@ public class GroupByQueryEngineV2
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
         case LONG:
-          return new LongGroupByColumnSelectorStrategy();
+          return makeNullableStrategy(new LongGroupByColumnSelectorStrategy());
         case FLOAT:
-          return new FloatGroupByColumnSelectorStrategy();
+          return makeNullableStrategy(new FloatGroupByColumnSelectorStrategy());
         case DOUBLE:
-          return new DoubleGroupByColumnSelectorStrategy();
+          return makeNullableStrategy(new DoubleGroupByColumnSelectorStrategy());
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+      }
+    }
+
+    private GroupByColumnSelectorStrategy makeNullableStrategy(GroupByColumnSelectorStrategy delegate)
+    {
+      if (NullHandling.sqlCompatible()) {
+        return new NullableValueGroupByColumnSelectorStrategy(delegate);
+      } else {
+        return delegate;
       }
     }
   }
@@ -544,7 +554,8 @@ public class GroupByQueryEngineV2
         selectorPlus.getColumnSelectorStrategy().processValueFromGroupingKey(
             selectorPlus,
             key,
-            map
+            map,
+            selectorPlus.getKeyBufferPosition()
         );
       }
     }
@@ -684,19 +695,16 @@ public class GroupByQueryEngineV2
           (dimName, baseVal) -> {
             switch (outputType) {
               case STRING:
-                baseVal = baseVal == null ? "" : baseVal.toString();
+                baseVal = DimensionHandlerUtils.convertObjectToString(baseVal);
                 break;
               case LONG:
                 baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
-                baseVal = baseVal == null ? 0L : baseVal;
                 break;
               case FLOAT:
                 baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
-                baseVal = baseVal == null ? 0.f : baseVal;
                 break;
               case DOUBLE:
                 baseVal = DimensionHandlerUtils.convertObjectToDouble(baseVal);
-                baseVal = baseVal == null ? 0.d : baseVal;
                 break;
               default:
                 throw new IAE("Unsupported type: " + outputType);

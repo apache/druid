@@ -29,7 +29,6 @@ public class CalcitesTest extends CalciteTestBase
   @Test
   public void testEscapeStringLiteral()
   {
-    Assert.assertEquals("''", Calcites.escapeStringLiteral(null));
     Assert.assertEquals("''", Calcites.escapeStringLiteral(""));
     Assert.assertEquals("'foo'", Calcites.escapeStringLiteral("foo"));
     Assert.assertEquals("'foo bar'", Calcites.escapeStringLiteral("foo bar"));

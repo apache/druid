@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -100,7 +101,7 @@ public class StreamingMergeSortedGrouperTest
   @Test(timeout = 60_000L)
   public void testStreamingAggregateWithMinimumBuffer() throws ExecutionException, InterruptedException
   {
-    testStreamingAggregate(60);
+    testStreamingAggregate(83);
   }
 
   private void testStreamingAggregate(int bufferSize) throws ExecutionException, InterruptedException
@@ -128,7 +129,10 @@ public class StreamingMergeSortedGrouperTest
       });
 
       final List<Entry<Integer>> unsortedEntries = Lists.newArrayList(grouper.iterator(true));
-      final List<Entry<Integer>> actual = Ordering.from((Comparator<Entry<Integer>>) (o1, o2) -> Ints.compare(o1.getKey(), o2.getKey()))
+      final List<Entry<Integer>> actual = Ordering.from((Comparator<Entry<Integer>>) (o1, o2) -> Ints.compare(
+          o1.getKey(),
+          o2.getKey()
+      ))
                                                   .sortedCopy(unsortedEntries);
 
       if (!actual.equals(expected)) {
@@ -145,7 +149,11 @@ public class StreamingMergeSortedGrouperTest
   public void testNotEnoughBuffer()
   {
     expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Buffer[50] should be large enough to store at least three records[20]");
+    if (NullHandling.replaceWithDefault()) {
+      expectedException.expectMessage("Buffer[50] should be large enough to store at least three records[20]");
+    } else {
+      expectedException.expectMessage("Buffer[50] should be large enough to store at least three records[21]");
+    }
 
     newGrouper(GrouperTestUtil.newColumnSelectorFactory(), 50);
   }
@@ -157,7 +165,7 @@ public class StreamingMergeSortedGrouperTest
     expectedException.expectCause(CoreMatchers.instanceOf(TimeoutException.class));
 
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final StreamingMergeSortedGrouper<Integer> grouper = newGrouper(columnSelectorFactory, 60);
+    final StreamingMergeSortedGrouper<Integer> grouper = newGrouper(columnSelectorFactory, 100);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     grouper.aggregate(6);

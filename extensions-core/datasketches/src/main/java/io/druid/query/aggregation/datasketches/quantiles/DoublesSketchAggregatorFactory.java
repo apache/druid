@@ -106,13 +106,13 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
       if (selector instanceof NilColumnValueSelector) {
         return new DoublesSketchNoOpBufferAggregator();
       }
-      return new DoublesSketchBuildBufferAggregator(selector, k, getMaxIntermediateSize());
+      return new DoublesSketchBuildBufferAggregator(selector, k, getMaxIntermediateSizeWithNulls());
     }
     final ColumnValueSelector<DoublesSketch> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       return new DoublesSketchNoOpBufferAggregator();
     }
-    return new DoublesSketchMergeBufferAggregator(selector, k, getMaxIntermediateSize());
+    return new DoublesSketchMergeBufferAggregator(selector, k, getMaxIntermediateSizeWithNulls());
   }
 
   @Override

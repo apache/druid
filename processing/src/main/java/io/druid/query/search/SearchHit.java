@@ -22,6 +22,7 @@ package io.druid.query.search;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.common.config.NullHandling;
 
 /**
  */
@@ -39,7 +40,7 @@ public class SearchHit implements Comparable<SearchHit>
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension);
-    this.value = Preconditions.checkNotNull(value);
+    this.value = NullHandling.nullToEmptyIfNeeded(value);
     this.count = count;
   }
 

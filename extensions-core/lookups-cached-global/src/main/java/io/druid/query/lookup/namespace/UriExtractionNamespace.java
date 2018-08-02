@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.parsers.CSVParser;
@@ -396,8 +397,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
           "Must specify more than one column to have a key value pair"
       );
       final DelimitedParser delegate = new DelimitedParser(
-          Strings.emptyToNull(delimiter),
-          Strings.emptyToNull(listDelimiter),
+          StringUtils.emptyToNullNonDruidDataString(delimiter),
+          StringUtils.emptyToNullNonDruidDataString(listDelimiter),
           hasHeaderRow,
           skipHeaderRows
       );

@@ -90,7 +90,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     for (int i = 0; i < aggregatorFactories.length; i++) {
       aggregators[i] = aggregatorFactories[i].factorizeBuffered(columnSelectorFactory);
       aggregatorOffsets[i] = offset;
-      offset += aggregatorFactories[i].getMaxIntermediateSize();
+      offset += aggregatorFactories[i].getMaxIntermediateSizeWithNulls();
     }
 
     // For each bucket, store an extra field indicating the bucket's current index within the heap when

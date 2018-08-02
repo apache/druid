@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
@@ -116,7 +117,8 @@ public class SchemalessTestSimpleTest
   public SchemalessTestSimpleTest(Segment segment, boolean coalesceAbsentAndEmptyDims)
   {
     this.segment = segment;
-    this.coalesceAbsentAndEmptyDims = coalesceAbsentAndEmptyDims;
+    // Empty and empty dims are equivalent only when replaceWithDefault is true
+    this.coalesceAbsentAndEmptyDims = coalesceAbsentAndEmptyDims && NullHandling.replaceWithDefault();
   }
 
   @Test
@@ -141,7 +143,7 @@ public class SchemalessTestSimpleTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeseriesResultValue>(
+        new Result(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -150,13 +152,13 @@ public class SchemalessTestSimpleTest
                     .put("addRowsIndexConstant", coalesceAbsentAndEmptyDims ? 911.0 : 912.0)
                     .put("uniques", 2.000977198748901D)
                     .put("maxIndex", 100.0)
-                    .put("minIndex", 0.0)
+                    .put("minIndex", NullHandling.replaceWithDefault() ? 0.0 : 100.0)
                     .build()
             )
         )
     );
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap();
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
   }
 

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.IAE;
 import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -109,11 +110,21 @@ public class ArithmeticPostAggregator implements PostAggregator
   public Object compute(Map<String, Object> values)
   {
     Iterator<PostAggregator> fieldsIter = fields.iterator();
-    double retVal = 0.0;
+    Double retVal = NullHandling.defaultDoubleValue();
     if (fieldsIter.hasNext()) {
-      retVal = ((Number) fieldsIter.next().compute(values)).doubleValue();
+      Number nextVal = (Number) fieldsIter.next().compute(values);
+      if (nextVal == null) {
+        // As per SQL standard if any of the value is null, arithmetic operators will return null.
+        return null;
+      }
+      retVal = nextVal.doubleValue();
       while (fieldsIter.hasNext()) {
-        retVal = op.compute(retVal, ((Number) fieldsIter.next().compute(values)).doubleValue());
+        nextVal = (Number) fieldsIter.next().compute(values);
+        if (nextVal == null) {
+          // As per SQL standard if any of the value is null, arithmetic operators will return null.
+          return null;
+        }
+        retVal = op.compute(retVal, (nextVal).doubleValue());
       }
     }
     return retVal;
@@ -268,7 +279,7 @@ public class ArithmeticPostAggregator implements PostAggregator
     /**
      * Ensures the following order: numeric > NaN > Infinite.
      *
-     * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
+     * The name may be referenced via {@link #valueOf(String)} in the constructor {@link
      * ArithmeticPostAggregator#ArithmeticPostAggregator(String, String, List, String)}.
      */
     @SuppressWarnings("unused")

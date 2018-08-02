@@ -21,6 +21,7 @@ package io.druid.segment.filter;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.druid.common.config.NullHandling;
 import io.druid.math.expr.Evals;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -58,6 +59,9 @@ public class ExpressionFilter implements Filter
       @Override
       public boolean matches()
       {
+        if (NullHandling.sqlCompatible() && selector.isNull()) {
+          return false;
+        }
         return Evals.asBoolean(selector.getLong());
       }
 
@@ -108,7 +112,8 @@ public class ExpressionFilter implements Filter
           value -> expr.eval(identifierName -> {
             // There's only one binding, and it must be the single column, so it can safely be ignored in production.
             assert column.equals(identifierName);
-            return value;
+            // convert null to Empty before passing to expressions if needed.
+            return NullHandling.nullToEmptyIfNeeded(value);
           }).asBoolean()
       );
     }

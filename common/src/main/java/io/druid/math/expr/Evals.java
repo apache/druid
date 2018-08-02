@@ -19,7 +19,7 @@
 
 package io.druid.math.expr;
 
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.Arrays;
@@ -83,6 +83,6 @@ public class Evals
 
   public static boolean asBoolean(String x)
   {
-    return !Strings.isNullOrEmpty(x) && Boolean.valueOf(x);
+    return !NullHandling.isNullOrEquivalent(x) && Boolean.valueOf(x);
   }
 }

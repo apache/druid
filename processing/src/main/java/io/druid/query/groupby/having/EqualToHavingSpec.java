@@ -68,7 +68,11 @@ public class EqualToHavingSpec extends BaseHavingSpec
   @Override
   public boolean eval(Row row)
   {
-    return HavingSpecMetricComparator.compare(row, aggregationName, value, aggregators) == 0;
+    Object metricVal = row.getRaw(aggregationName);
+    if (metricVal == null || value == null) {
+      return metricVal == null && value == null;
+    }
+    return HavingSpecMetricComparator.compare(aggregationName, value, aggregators, metricVal) == 0;
   }
 
   /**

@@ -21,12 +21,17 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.IntervalDimFilter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.column.Column;
 import io.druid.segment.filter.Filters;
+import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -137,7 +142,67 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return delegate.getMaxIntermediateSize();
+    return delegate.getMaxIntermediateSizeWithNulls();
+  }
+
+  @Override
+  public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    if (filter instanceof IntervalDimFilter) {
+      IntervalDimFilter intervalDimFilter = ((IntervalDimFilter) filter);
+      if (intervalDimFilter.getExtractionFn() != null) {
+        // no support for extraction functions right now
+        return this;
+      }
+
+      if (!intervalDimFilter.getDimension().equals(Column.TIME_COLUMN_NAME)) {
+        // segment time boundary optimization only applies when we filter on __time
+        return this;
+      }
+
+      Interval segmentInterval = optimizationContext.getSegmentDescriptor().getInterval();
+      List<Interval> filterIntervals = intervalDimFilter.getIntervals();
+      List<Interval> excludedFilterIntervals = new ArrayList<>();
+      List<Interval> effectiveFilterIntervals = new ArrayList<>();
+
+      boolean segmentIsCovered = false;
+      for (Interval filterInterval : filterIntervals) {
+        Interval overlap = filterInterval.overlap(segmentInterval);
+        if (overlap == null) {
+          excludedFilterIntervals.add(filterInterval);
+          continue;
+        }
+
+        if (overlap.equals(segmentInterval)) {
+          segmentIsCovered = true;
+          break;
+        } else {
+          // clip the overlapping interval to the segment time boundaries
+          effectiveFilterIntervals.add(overlap);
+        }
+      }
+
+      // we can skip applying this filter, everything in the segment will match
+      if (segmentIsCovered) {
+        return delegate;
+      }
+
+      // we can skip this filter, nothing in the segment would match
+      if (excludedFilterIntervals.size() == filterIntervals.size()) {
+        return new SuppressedAggregatorFactory(delegate);
+      }
+
+      return new FilteredAggregatorFactory(
+          delegate,
+          new IntervalDimFilter(
+              intervalDimFilter.getDimension(),
+              effectiveFilterIntervals,
+              intervalDimFilter.getExtractionFn()
+          )
+      );
+    } else {
+      return this;
+    }
   }
 
   @JsonProperty

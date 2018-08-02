@@ -44,7 +44,7 @@ public interface BufferAggregator extends HotLoopCallee
    *
    * <b>Implementations must not change the position, limit or mark of the given buffer</b>
    *
-   * This method must not exceed the number of bytes returned by {@link AggregatorFactory#getMaxIntermediateSize()}
+   * This method must not exceed the number of bytes returned by {@link AggregatorFactory#getMaxIntermediateSizeWithNulls}
    * in the corresponding {@link AggregatorFactory}
    *
    * @param buf byte buffer to initialize

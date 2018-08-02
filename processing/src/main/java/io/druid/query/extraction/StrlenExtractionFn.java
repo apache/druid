@@ -20,6 +20,7 @@
 package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import io.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 
@@ -38,8 +39,12 @@ public class StrlenExtractionFn extends DimExtractionFn
   }
 
   @Override
+  @Nullable
   public String apply(@Nullable String value)
   {
+    if (NullHandling.sqlCompatible() && value == null) {
+      return null;
+    }
     return String.valueOf(value == null ? 0 : value.length());
   }
 
