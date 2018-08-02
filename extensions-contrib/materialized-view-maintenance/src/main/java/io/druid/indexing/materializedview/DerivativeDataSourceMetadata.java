@@ -42,11 +42,11 @@ public class DerivativeDataSourceMetadata implements DataSourceMetadata
       @JsonProperty("metrics") Set<String> metrics
   )
   {
-    this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions cannot be null. This is not a valid DerivativeDataSourceMetadata.");
-    this.metrics = Preconditions.checkNotNull(metrics, "metrics cannot be null. This is not a valid DerivativeDataSourceMetadata.");
-
     Preconditions.checkArgument(!Strings.isNullOrEmpty(baseDataSource), "baseDataSource cannot be null or empty. Please provide a baseDataSource.");
     this.baseDataSource = baseDataSource;
+
+    this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions cannot be null. This is not a valid DerivativeDataSourceMetadata.");
+    this.metrics = Preconditions.checkNotNull(metrics, "metrics cannot be null. This is not a valid DerivativeDataSourceMetadata.");
   }
 
   @JsonProperty("baseDataSource")
