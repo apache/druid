@@ -109,4 +109,9 @@ public interface Query<T>
   String getId();
 
   Query<T> withDataSource(DataSource dataSource);
+
+  default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    return this;
+  }
 }

@@ -23,6 +23,7 @@ import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -170,6 +171,14 @@ public abstract class AggregatorFactory implements Cacheable
   public int getMaxIntermediateSizeWithNulls()
   {
     return getMaxIntermediateSize();
+  }
+
+  /**
+   * Return a potentially optimized form of this AggregatorFactory for per-segment queries.
+   */
+  public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    return this;
   }
 
   /**
