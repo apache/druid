@@ -23,12 +23,12 @@ import io.druid.java.util.common.logger.Logger;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  */
 @ChannelHandler.Sharable
-public class HttpClientHandler extends HttpContentDecompressor
+public class HttpClientHandler extends SimpleChannelUpstreamHandler
 {
   private static final Logger LOGGER = new Logger(HttpClientHandler.class);
 
@@ -42,12 +42,7 @@ public class HttpClientHandler extends HttpContentDecompressor
       }
     }
     finally {
-      try {
-        ctx.getChannel().close();
-      }
-      finally {
-        ctx.sendUpstream(e);
-      }
+      ctx.getChannel().close();
     }
   }
 }

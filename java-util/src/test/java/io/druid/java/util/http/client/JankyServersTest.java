@@ -31,7 +31,9 @@ import org.joda.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -54,6 +56,9 @@ public class JankyServersTest
   static ServerSocket silentServerSocket;
   static ServerSocket echoServerSocket;
   static ServerSocket closingServerSocket;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @BeforeClass
   public static void setUp() throws Exception
@@ -309,16 +314,10 @@ public class JankyServersTest
               new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
-      Throwable e = null;
-      try {
-        response.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-      }
+      expectedException.expect(ExecutionException.class);
+      expectedException.expectMessage("Channel disconnected");
 
-      Assert.assertTrue("ChannelException thrown by 'get'", e instanceof ChannelException);
-      Assert.assertEquals("Expected error message", "Channel disconnected", e.getMessage());
+      response.get();
     }
     finally {
       lifecycle.stop();
