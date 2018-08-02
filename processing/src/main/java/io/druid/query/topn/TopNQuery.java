@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.query.Queries;
 import io.druid.query.Query;
 import io.druid.query.Result;
@@ -36,6 +37,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumns;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -183,6 +185,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return new TopNQueryBuilder(this).dataSource(dataSource).build();
   }
 
+  @Override
+  public Query<Result<TopNResultValue>> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    return new TopNQueryBuilder(this).aggregators(optimizeAggs(optimizationContext)).build();
+  }
+
   public TopNQuery withThreshold(int threshold)
   {
     return new TopNQueryBuilder(this).threshold(threshold).build();
@@ -251,5 +259,14 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         aggregatorSpecs,
         postAggregatorSpecs
     );
+  }
+
+  private List<AggregatorFactory> optimizeAggs(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    List<AggregatorFactory> optimizedAggs = new ArrayList<>();
+    for (AggregatorFactory aggregatorFactory : aggregatorSpecs) {
+      optimizedAggs.add(aggregatorFactory.optimizeForSegment(optimizationContext));
+    }
+    return optimizedAggs;
   }
 }
