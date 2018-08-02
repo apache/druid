@@ -99,7 +99,7 @@ public class StringFirstTimeseriesQueryTest
                                   .granularity(QueryRunnerTestHelper.allGran)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
-                                      Lists.newArrayList(
+                                      Collections.singletonList(
                                           new StringFirstAggregatorFactory(
                                               "last_client_type", client_type, 1024
                                           )

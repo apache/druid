@@ -20,6 +20,10 @@
 package io.druid.query.aggregation.first;
 
 import io.druid.java.util.common.Pair;
+import io.druid.query.aggregation.AggregateCombiner;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
@@ -35,8 +39,8 @@ import java.nio.ByteBuffer;
 public class StringFirstAggregationTest
 {
   private final Integer MAX_STRING_SIZE = 1024;
-  private StringFirstAggregatorFactory stringLastAggFactory;
-  private StringFirstAggregatorFactory combiningAggFactory;
+  private AggregatorFactory stringLastAggFactory;
+  private AggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
   private TestObjectColumnSelector<String> valueSelector;
@@ -56,7 +60,7 @@ public class StringFirstAggregationTest
   public void setup()
   {
     stringLastAggFactory = new StringFirstAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
-    combiningAggFactory = (StringFirstAggregatorFactory) stringLastAggFactory.getCombiningFactory();
+    combiningAggFactory = stringLastAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     valueSelector = new TestObjectColumnSelector<>(strings);
     objectSelector = new TestObjectColumnSelector<>(pairs);
@@ -70,7 +74,7 @@ public class StringFirstAggregationTest
   @Test
   public void testStringLastAggregator()
   {
-    StringFirstAggregator agg = (StringFirstAggregator) stringLastAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = stringLastAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -85,7 +89,7 @@ public class StringFirstAggregationTest
   @Test
   public void testStringLastBufferAggregator()
   {
-    StringFirstBufferAggregator agg = (StringFirstBufferAggregator) stringLastAggFactory.factorizeBuffered(
+    BufferAggregator agg = stringLastAggFactory.factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[stringLastAggFactory.getMaxIntermediateSize()]);
@@ -112,7 +116,7 @@ public class StringFirstAggregationTest
   @Test
   public void testStringLastCombiningAggregator()
   {
-    StringFirstAggregator agg = (StringFirstAggregator) combiningAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -129,7 +133,7 @@ public class StringFirstAggregationTest
   @Test
   public void testStringFirstCombiningBufferAggregator()
   {
-    StringFirstBufferAggregator agg = (StringFirstBufferAggregator) combiningAggFactory.factorizeBuffered(
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[stringLastAggFactory.getMaxIntermediateSize()]);
@@ -153,8 +157,8 @@ public class StringFirstAggregationTest
     final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
     TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringFirstAggregateCombiner stringFirstAggregateCombiner =
-        (StringFirstAggregateCombiner) combiningAggFactory.makeAggregateCombiner();
+    AggregateCombiner stringFirstAggregateCombiner =
+        combiningAggFactory.makeAggregateCombiner();
 
     stringFirstAggregateCombiner.reset(columnSelector);
 
@@ -171,7 +175,7 @@ public class StringFirstAggregationTest
   }
 
   private void aggregate(
-      StringFirstAggregator agg
+      Aggregator agg
   )
   {
     agg.aggregate();
@@ -181,7 +185,7 @@ public class StringFirstAggregationTest
   }
 
   private void aggregate(
-      StringFirstBufferAggregator agg,
+      BufferAggregator agg,
       ByteBuffer buff,
       int position
   )
