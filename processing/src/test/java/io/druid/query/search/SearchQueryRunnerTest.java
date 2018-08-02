@@ -22,6 +22,7 @@ package io.druid.query.search;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -752,7 +753,7 @@ public class SearchQueryRunnerTest
     QueryRunner runner = factory.createRunner(new QueryableIndexSegment("asdf", TestIndex.persistRealtimeAndLoadMMapped(index)));
     List<SearchHit> expectedHits = Lists.newLinkedList();
     expectedHits.add(new SearchHit("table", "table", 1));
-    expectedHits.add(new SearchHit("table", "", 1));
+    expectedHits.add(new SearchHit("table", NullHandling.defaultStringValue(), 1));
     checkSearchQuery(searchQuery, runner, expectedHits);
   }
 

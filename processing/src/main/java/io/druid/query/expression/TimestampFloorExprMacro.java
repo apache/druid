@@ -92,7 +92,12 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      return ExprEval.of(granularity.bucketStart(DateTimes.utc(arg.eval(bindings).asLong())).getMillis());
+      ExprEval eval = arg.eval(bindings);
+      if (eval.isNumericNull()) {
+        // Return null if the argument if null.
+        return ExprEval.of(null);
+      }
+      return ExprEval.of(granularity.bucketStart(DateTimes.utc(eval.asLong())).getMillis());
     }
 
     @Override

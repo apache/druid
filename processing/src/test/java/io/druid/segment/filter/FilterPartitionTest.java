@@ -21,9 +21,9 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -116,7 +116,7 @@ public class FilterPartitionTest extends BaseFilterTest
       if (extractionFn == null) {
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
-        final String valueOrNull = Strings.emptyToNull(value);
+        final String valueOrNull = NullHandling.emptyToNullIfNeeded(value);
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
@@ -199,7 +199,11 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testSinglePreFilterWithNulls()
   {
-    assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of("0"));
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of("0"));
+    } else {
+      assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of());
+    }
     assertFilterMatches(new SelectorDimFilter("dim1", "", null), ImmutableList.of("0"));
     assertFilterMatches(new SelectorDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new SelectorDimFilter("dim1", "2", null), ImmutableList.of("2"));
@@ -212,7 +216,11 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testSinglePostFilterWithNulls()
   {
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", null, null), ImmutableList.of("0"));
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", null, null), ImmutableList.of("0"));
+    } else {
+      assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", null, null), ImmutableList.of());
+    }
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "", null), ImmutableList.of("0"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "2", null), ImmutableList.of("2"));
@@ -221,8 +229,11 @@ public class FilterPartitionTest extends BaseFilterTest
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "abc", null), ImmutableList.of("5", "8"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "ab", null), ImmutableList.of());
 
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-null", JS_EXTRACTION_FN), ImmutableList.of("0"));
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-null", JS_EXTRACTION_FN), ImmutableList.of("0"));
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-null", JS_EXTRACTION_FN), ImmutableList.of("0"));
+    } else {
+      assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-", JS_EXTRACTION_FN), ImmutableList.of("0"));
+    }
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-10", JS_EXTRACTION_FN), ImmutableList.of("1"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-2", JS_EXTRACTION_FN), ImmutableList.of("2"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-1", JS_EXTRACTION_FN), ImmutableList.of("3", "9"));
@@ -234,13 +245,23 @@ public class FilterPartitionTest extends BaseFilterTest
   @Test
   public void testBasicPreAndPostFilterWithNulls()
   {
-    assertFilterMatches(
-        new AndDimFilter(Arrays.asList(
-            new SelectorDimFilter("dim2", "a", null),
-            new NoBitmapSelectorDimFilter("dim1", null, null)
-        )),
-        ImmutableList.of("0")
-    );
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          new AndDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim2", "a", null),
+              new NoBitmapSelectorDimFilter("dim1", null, null)
+          )),
+          ImmutableList.of("0")
+      );
+    } else {
+      assertFilterMatches(
+          new AndDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim2", "a", null),
+              new NoBitmapSelectorDimFilter("dim1", null, null)
+          )),
+          ImmutableList.of()
+      );
+    }
 
     assertFilterMatches(
         new AndDimFilter(Arrays.asList(
@@ -274,14 +295,51 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of()
     );
 
-
-    assertFilterMatches(
-        new AndDimFilter(Arrays.asList(
-            new SelectorDimFilter("dim2", "super-a", JS_EXTRACTION_FN),
-            new NoBitmapSelectorDimFilter("dim1", "super-null", JS_EXTRACTION_FN)
-        )),
-        ImmutableList.of("0")
-    );
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          new AndDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim2", "super-a", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim1", "super-null", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of("0")
+      );
+      assertFilterMatches(
+          new AndDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim1", "super-2", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim2", "super-null", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of("2")
+      );
+    } else {
+      assertFilterMatches(
+          new AndDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim2", "super-a", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim1", "super-", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of("0")
+      );
+      assertFilterMatches(
+          new AndDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim2", "super-a", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim1", "super-null", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new AndDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim1", "super-2", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim2", "super-", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of("2")
+      );
+      assertFilterMatches(
+          new AndDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim1", "super-2", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim2", "super-null", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of()
+      );
+    }
 
     assertFilterMatches(
         new AndDimFilter(Arrays.asList(
@@ -289,14 +347,6 @@ public class FilterPartitionTest extends BaseFilterTest
             new NoBitmapSelectorDimFilter("dim2", "super-null", JS_EXTRACTION_FN)
         )),
         ImmutableList.of("1")
-    );
-
-    assertFilterMatches(
-        new AndDimFilter(Arrays.asList(
-            new SelectorDimFilter("dim1", "super-2", JS_EXTRACTION_FN),
-            new NoBitmapSelectorDimFilter("dim2", "super-null", JS_EXTRACTION_FN)
-        )),
-        ImmutableList.of("2")
     );
 
     assertFilterMatches(
@@ -327,13 +377,23 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of("0", "3")
     );
 
-    assertFilterMatches(
-        new OrDimFilter(Arrays.asList(
-            new SelectorDimFilter("dim1", "abc", null),
-            new NoBitmapSelectorDimFilter("dim2", null, null)
-        )),
-        ImmutableList.of("1", "2", "5", "8")
-    );
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          new OrDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim1", "abc", null),
+              new NoBitmapSelectorDimFilter("dim2", null, null)
+          )),
+          ImmutableList.of("1", "2", "5", "8")
+      );
+    } else {
+      assertFilterMatches(
+          new OrDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim1", "abc", null),
+              new NoBitmapSelectorDimFilter("dim2", null, null)
+          )),
+          ImmutableList.of("1", "5", "8")
+      );
+    }
 
     assertFilterMatches(
         new OrDimFilter(Arrays.asList(
@@ -382,13 +442,32 @@ public class FilterPartitionTest extends BaseFilterTest
         )),
         ImmutableList.of("0", "3")
     );
-    assertFilterMatches(
-        new OrDimFilter(Arrays.asList(
-            new SelectorDimFilter("dim1", "super-abc", JS_EXTRACTION_FN),
-            new NoBitmapSelectorDimFilter("dim2", "super-null", JS_EXTRACTION_FN)
-        )),
-        ImmutableList.of("1", "2", "5", "8")
-    );
+
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          new OrDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim1", "super-abc", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim2", "super-null", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of("1", "2", "5", "8")
+      );
+    } else {
+      assertFilterMatches(
+          new OrDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim1", "super-abc", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim2", "super-null", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of("1", "5", "8")
+      );
+      assertFilterMatches(
+          new OrDimFilter(Arrays.asList(
+              new SelectorDimFilter("dim1", "super-abc", JS_EXTRACTION_FN),
+              new NoBitmapSelectorDimFilter("dim2", "super-", JS_EXTRACTION_FN)
+          )),
+          ImmutableList.of("2", "5", "8")
+      );
+    }
+
     assertFilterMatches(
         new OrDimFilter(Arrays.asList(
             new SelectorDimFilter("dim1", "super-2", JS_EXTRACTION_FN),
@@ -432,7 +511,14 @@ public class FilterPartitionTest extends BaseFilterTest
   public void testMissingColumnSpecifiedInDimensionList()
   {
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim3", null, null), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim3", "", null), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          new NoBitmapSelectorDimFilter("dim3", "", null),
+          ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+      );
+    } else {
+      assertFilterMatches(new NoBitmapSelectorDimFilter("dim3", "", null), ImmutableList.of());
+    }
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim3", "a", null), ImmutableList.of());
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim3", "b", null), ImmutableList.of());
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim3", "c", null), ImmutableList.of());
@@ -482,7 +568,17 @@ public class FilterPartitionTest extends BaseFilterTest
   public void testMissingColumnNotSpecifiedInDimensionList()
   {
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim4", null, null), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim4", "", null), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          new NoBitmapSelectorDimFilter("dim4", "", null),
+          ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+      );
+    } else {
+      assertFilterMatches(
+          new NoBitmapSelectorDimFilter("dim4", "", null),
+          ImmutableList.of()
+      );
+    }
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim4", "a", null), ImmutableList.of());
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim4", "b", null), ImmutableList.of());
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim4", "c", null), ImmutableList.of());

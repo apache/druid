@@ -21,10 +21,11 @@ package io.druid.server.lookup;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.server.lookup.cache.polling.OffHeapPollingCache;
@@ -190,7 +191,7 @@ public class PollingLookupTest
       public String apply(String input)
       {
         //make sure to rewrite null strings as empty.
-        return Strings.nullToEmpty(input);
+        return NullHandling.nullToEmptyIfNeeded(input);
       }
     }));
   }
@@ -207,7 +208,7 @@ public class PollingLookupTest
     for (Map.Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String val = entry.getValue();
-      Assert.assertEquals("non-null check", Strings.emptyToNull(val), lookup.apply(key));
+      Assert.assertEquals("non-null check", NullHandling.emptyToNullIfNeeded(val), lookup.apply(key));
     }
   }
 }

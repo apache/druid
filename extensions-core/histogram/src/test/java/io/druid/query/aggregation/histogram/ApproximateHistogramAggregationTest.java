@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
@@ -79,10 +80,14 @@ public class ApproximateHistogramAggregationTest
   @Test
   public void testIngestWithNullsToZeroAndQuery() throws Exception
   {
-    MapBasedRow row = ingestAndQuery(false);
-    Assert.assertEquals(0.0, row.getMetric("index_min").floatValue(), 0.0001);
-    Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
-    Assert.assertEquals(131.428176, row.getMetric("index_quantile").floatValue(), 0.0001);
+    // Nulls are ignored and not replaced with default for SQL compatible null handling.
+    // This is already tested in testIngestWithNullsIgnoredAndQuery()
+    if (NullHandling.replaceWithDefault()) {
+      MapBasedRow row = ingestAndQuery(false);
+      Assert.assertEquals(0.0F, row.getMetric("index_min"));
+      Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
+      Assert.assertEquals(131.428176, row.getMetric("index_quantile").floatValue(), 0.0001);
+    }
   }
 
   private MapBasedRow ingestAndQuery(boolean ignoreNulls) throws Exception

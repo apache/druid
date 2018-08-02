@@ -21,11 +21,11 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import io.druid.collections.bitmap.BitmapFactory;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
-import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
@@ -118,7 +118,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void queryId(QueryType query)
   {
-    setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
+    setDimension(DruidMetrics.ID, StringUtils.nullToEmptyNonDruidDataString(query.getId()));
   }
 
   @Override

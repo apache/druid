@@ -150,6 +150,9 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public boolean isNull()
   {
-    return getObject().isNull();
+    // It is possible for an expression to have a non-null String value but it can return null when parsed
+    // as a primitive long/float/double.
+    // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
+    return getObject().isNumericNull();
   }
 }

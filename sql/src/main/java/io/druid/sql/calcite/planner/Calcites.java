@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.planner;
 
+import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import io.druid.java.util.common.DateTimes;
@@ -107,26 +108,24 @@ public class Calcites
 
   public static String escapeStringLiteral(final String s)
   {
-    if (s == null) {
-      return "''";
-    } else {
-      boolean isPlainAscii = true;
-      final StringBuilder builder = new StringBuilder("'");
-      for (int i = 0; i < s.length(); i++) {
-        final char c = s.charAt(i);
-        if (Character.isLetterOrDigit(c) || c == ' ') {
-          builder.append(c);
-          if (c > 127) {
-            isPlainAscii = false;
-          }
-        } else {
-          builder.append("\\").append(BaseEncoding.base16().encode(Chars.toByteArray(c)));
+    Preconditions.checkNotNull(s);
+    boolean isPlainAscii = true;
+    final StringBuilder builder = new StringBuilder("'");
+    for (int i = 0; i < s.length(); i++) {
+      final char c = s.charAt(i);
+      if (Character.isLetterOrDigit(c) || c == ' ') {
+        builder.append(c);
+        if (c > 127) {
           isPlainAscii = false;
         }
+      } else {
+        builder.append("\\").append(BaseEncoding.base16().encode(Chars.toByteArray(c)));
+        isPlainAscii = false;
       }
-      builder.append("'");
-      return isPlainAscii ? builder.toString() : "U&" + builder.toString();
     }
+    builder.append("'");
+    return isPlainAscii ? builder.toString() : "U&" + builder.toString();
+
   }
 
   public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
