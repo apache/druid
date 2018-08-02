@@ -24,21 +24,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
-import java.nio.ByteBuffer;
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 
@@ -47,6 +48,8 @@ import java.util.Objects;
 public class SelectorDimFilter implements DimFilter
 {
   private final String dimension;
+
+  @Nullable
   private final String value;
   private final ExtractionFn extractionFn;
 
@@ -66,31 +69,28 @@ public class SelectorDimFilter implements DimFilter
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
 
     this.dimension = dimension;
-    this.value = Strings.nullToEmpty(value);
+    this.value = NullHandling.emptyToNullIfNeeded(value);
     this.extractionFn = extractionFn;
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    byte[] valueBytes = (value == null) ? new byte[]{} : StringUtils.toUtf8(value);
-    byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
-
-    return ByteBuffer.allocate(3 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
-                     .put(DimFilterUtils.SELECTOR_CACHE_ID)
-                     .put(dimensionBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(valueBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(extractionFnBytes)
-                     .array();
+    return new CacheKeyBuilder(DimFilterUtils.SELECTOR_CACHE_ID)
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendString(dimension)
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendByte(value == null ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
+        .appendString(value)
+        .appendByte(DimFilterUtils.STRING_SEPARATOR)
+        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
+        .build();
   }
 
   @Override
   public DimFilter optimize()
   {
-    return new InDimFilter(dimension, ImmutableList.of(value), extractionFn).optimize();
+    return new InDimFilter(dimension, Collections.singletonList(value), extractionFn).optimize();
   }
 
   @Override
@@ -99,14 +99,13 @@ public class SelectorDimFilter implements DimFilter
     if (extractionFn == null) {
       return new SelectorFilter(dimension, value);
     } else {
-      final String valueOrNull = Strings.emptyToNull(value);
 
       final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
       {
         @Override
         public Predicate<String> makeStringPredicate()
         {
-          return Predicates.equalTo(valueOrNull);
+          return Predicates.equalTo(value);
         }
 
         @Override
@@ -190,7 +189,14 @@ public class SelectorDimFilter implements DimFilter
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    retSet.add(Range.singleton(Strings.nullToEmpty(value)));
+    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueEquivalent == null) {
+      // Case when SQL compatible null handling is enabled
+      // Nulls are less than empty String in segments
+      retSet.add(Range.lessThan(""));
+    } else {
+      retSet.add(Range.singleton(valueEquivalent));
+    }
     return retSet;
   }
 
@@ -219,6 +225,10 @@ public class SelectorDimFilter implements DimFilter
       if (longPredicate != null) {
         return;
       }
+      if (value == null) {
+        longPredicate = DruidLongPredicate.MATCH_NULL_ONLY;
+        return;
+      }
       final Long valueAsLong = GuavaUtils.tryParseLong(value);
       if (valueAsLong == null) {
         longPredicate = DruidLongPredicate.ALWAYS_FALSE;
@@ -239,6 +249,11 @@ public class SelectorDimFilter implements DimFilter
       if (floatPredicate != null) {
         return;
       }
+
+      if (value == null) {
+        floatPredicate = DruidFloatPredicate.MATCH_NULL_ONLY;
+        return;
+      }
       final Float valueAsFloat = Floats.tryParse(value);
 
       if (valueAsFloat == null) {
@@ -257,6 +272,10 @@ public class SelectorDimFilter implements DimFilter
     }
     synchronized (initLock) {
       if (druidDoublePredicate != null) {
+        return;
+      }
+      if (value == null) {
+        druidDoublePredicate = DruidDoublePredicate.MATCH_NULL_ONLY;
         return;
       }
       final Double aDouble = Doubles.tryParse(value);

@@ -44,9 +44,8 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
   {
-    final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(getName());
     return new StringLastAggregator(null, null, maxStringBytes)
     {
       @Override
@@ -62,9 +61,8 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
   {
-    final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(getName());
     return new StringLastBufferAggregator(null, null, maxStringBytes)
     {
       @Override

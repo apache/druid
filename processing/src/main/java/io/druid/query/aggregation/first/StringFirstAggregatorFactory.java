@@ -29,8 +29,10 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.NullableAggregatorFactory;
 import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.cache.CacheKeyBuilder;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
 
@@ -42,7 +44,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @JsonTypeName("stringFirst")
-public class StringFirstAggregatorFactory extends AggregatorFactory
+public class StringFirstAggregatorFactory extends NullableAggregatorFactory<BaseObjectColumnValueSelector>
 {
   public static final int DEFAULT_MAX_STRING_SIZE = 1024;
 
@@ -107,21 +109,27 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  protected BaseObjectColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  {
+    return metricFactory.makeColumnValueSelector(fieldName);
+  }
+
+  @Override
+  public Aggregator factorize(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
   {
     return new StringFirstAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName),
+        selector,
         maxStringBytes
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
   {
     return new StringFirstBufferAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName),
+        selector,
         maxStringBytes
     );
   }

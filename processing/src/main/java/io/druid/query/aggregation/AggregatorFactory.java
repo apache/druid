@@ -37,6 +37,8 @@ import java.util.Map;
  * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e. g. min,
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
+ * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
+ * to extend {@link NullableAggregatorFactory}.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
@@ -60,7 +62,8 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @return an object representing the combination of lhs and rhs, this can be a new object or a mutation of the inputs
    */
-  public abstract Object combine(Object lhs, Object rhs);
+  @Nullable
+  public abstract Object combine(@Nullable Object lhs, @Nullable Object rhs);
 
   /**
    * Creates an AggregateCombiner to fold rollup aggregation results from serveral "rows" of different indexes during
@@ -74,6 +77,20 @@ public abstract class AggregatorFactory implements Cacheable
   public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("[%s] does not implement makeAggregateCombiner()", this.getClass().getName());
+  }
+
+  /**
+   * Creates an {@link AggregateCombiner} which supports nullability.
+   * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
+   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
+   *
+   * @see AggregateCombiner
+   * @see NullableAggregatorFactory
+   */
+  public AggregateCombiner makeNullableAggregateCombiner()
+  {
+    return makeAggregateCombiner();
   }
 
   /**
@@ -127,7 +144,8 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @return the finalized value that should be returned for the initial query
    */
-  public abstract Object finalizeComputation(Object object);
+  @Nullable
+  public abstract Object finalizeComputation(@Nullable Object object);
 
   public abstract String getName();
 
@@ -141,6 +159,19 @@ public abstract class AggregatorFactory implements Cacheable
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
    */
   public abstract int getMaxIntermediateSize();
+
+  /**
+   * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
+   * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
+   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
+   *
+   * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
+   */
+  public int getMaxIntermediateSizeWithNulls()
+  {
+    return getMaxIntermediateSize();
+  }
 
   /**
    * Return a potentially optimized form of this AggregatorFactory for per-segment queries.

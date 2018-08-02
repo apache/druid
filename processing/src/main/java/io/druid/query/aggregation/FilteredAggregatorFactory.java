@@ -142,7 +142,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return delegate.getMaxIntermediateSize();
+    return delegate.getMaxIntermediateSizeWithNulls();
   }
 
   @Override

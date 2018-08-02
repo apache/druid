@@ -20,7 +20,9 @@
 package io.druid.query.groupby.epinephelinae.column;
 
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DimensionHandlerUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -35,10 +37,13 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
 
   @Override
   public void processValueFromGroupingKey(
-      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap
+      GroupByColumnSelectorPlus selectorPlus,
+      ByteBuffer key,
+      Map<String, Object> resultMap,
+      int keyBufferPosition
   )
   {
-    final float val = key.getFloat(selectorPlus.getKeyBufferPosition());
+    final float val = key.getFloat(keyBufferPosition);
     resultMap.put(selectorPlus.getOutputName(), val);
   }
 
@@ -55,17 +60,21 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   }
 
   @Override
-  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
-    keyBuffer.putFloat(keyBufferPosition, (Float) obj);
+    keyBuffer.putFloat(keyBufferPosition, DimensionHandlerUtils.nullToZero((Float) obj));
   }
 
   @Override
   public void initGroupingKeyColumnValue(
-      int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
+      int keyBufferPosition,
+      int columnIndex,
+      Object rowObj,
+      ByteBuffer keyBuffer,
+      int[] stack
   )
   {
-    keyBuffer.putFloat(keyBufferPosition, (Float) rowObj);
+    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
     stack[columnIndex] = 1;
   }
 

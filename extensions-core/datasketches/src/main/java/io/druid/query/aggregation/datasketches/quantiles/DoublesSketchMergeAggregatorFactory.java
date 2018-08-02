@@ -57,7 +57,7 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
     if (selector instanceof NilColumnValueSelector) {
       return new DoublesSketchNoOpBufferAggregator();
     }
-    return new DoublesSketchMergeBufferAggregator(selector, getK(), getMaxIntermediateSize());
+    return new DoublesSketchMergeBufferAggregator(selector, getK(), getMaxIntermediateSizeWithNulls());
   }
 
 }

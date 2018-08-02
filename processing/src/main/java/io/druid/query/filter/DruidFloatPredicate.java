@@ -20,11 +20,36 @@
 package io.druid.query.filter;
 
 /**
- * FloatPredicate is only supported in Java 8+, so use this to avoid boxing when a float predicate is needed.
+ * Note: this is not a {@link io.druid.guice.annotations.PublicApi} or an
+ * {@link io.druid.guice.annotations.ExtensionPoint} of Druid.
  */
+// All implementations are currently lambda expressions and intellij inspections wrongly complains about unused
+// variable. SupressWarnings can be removed once https://youtrack.jetbrains.com/issue/IDEA-191743 is resolved.
+@SuppressWarnings("unused")
 public interface DruidFloatPredicate
 {
   DruidFloatPredicate ALWAYS_FALSE = input -> false;
 
+  DruidFloatPredicate MATCH_NULL_ONLY = new DruidFloatPredicate()
+  {
+    @Override
+    public boolean applyFloat(float input)
+    {
+      return false;
+    }
+
+    @Override
+    public boolean applyNull()
+    {
+      return true;
+    }
+  };
+
+
   boolean applyFloat(float input);
+
+  default boolean applyNull()
+  {
+    return false;
+  }
 }

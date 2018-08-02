@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -81,21 +82,24 @@ public class AppenderatorTest
 
       // add
       commitMetadata.put("x", "1");
-      Assert.assertEquals(1,
-                          appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier)
-                                      .getNumRowsInSegment()
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier)
+                      .getNumRowsInSegment()
       );
 
       commitMetadata.put("x", "2");
-      Assert.assertEquals(2,
-                          appenderator.add(IDENTIFIERS.get(0), IR("2000", "bar", 2), committerSupplier)
-                                      .getNumRowsInSegment()
+      Assert.assertEquals(
+          2,
+          appenderator.add(IDENTIFIERS.get(0), IR("2000", "bar", 2), committerSupplier)
+                      .getNumRowsInSegment()
       );
 
       commitMetadata.put("x", "3");
-      Assert.assertEquals(1,
-                          appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 4), committerSupplier)
-                                      .getNumRowsInSegment()
+      Assert.assertEquals(
+          1,
+          appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 4), committerSupplier)
+                      .getNumRowsInSegment()
       );
 
       // getSegments
@@ -171,10 +175,17 @@ public class AppenderatorTest
 
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
-      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138
-      Assert.assertEquals(138, ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0)));
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138 + 1 byte when null handling is enabled
+      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      Assert.assertEquals(
+          138 + nullHandlingOverhead,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
       appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
-      Assert.assertEquals(138, ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1)));
+      Assert.assertEquals(
+          138 + nullHandlingOverhead,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1))
+      );
       appenderator.close();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
     }
@@ -208,9 +219,13 @@ public class AppenderatorTest
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138
-      Assert.assertEquals(138, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      Assert.assertEquals(138 + nullHandlingOverhead, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
       appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
-      Assert.assertEquals(276, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(
+          276 + 2 * nullHandlingOverhead,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
       appenderator.close();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
     }
@@ -246,10 +261,17 @@ public class AppenderatorTest
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
       //we still calculate the size even when ignoring it to make persist decision
-      Assert.assertEquals(138, ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0)));
+      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      Assert.assertEquals(
+          138 + nullHandlingOverhead,
+          ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
+      );
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
-      Assert.assertEquals(276, ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory());
+      Assert.assertEquals(
+          276 + 2 * nullHandlingOverhead,
+          ((AppenderatorImpl) appenderator).getBytesCurrentlyInMemory()
+      );
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.close();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());

@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -223,9 +224,9 @@ public class FilteredAggregatorTest
 
   private void assertValues(FilteredAggregator agg, TestFloatColumnSelector selector, double... expectedVals)
   {
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
     for (double expectedVal : expectedVals) {
       aggregate(selector, agg);
       Assert.assertEquals(expectedVal, agg.get());

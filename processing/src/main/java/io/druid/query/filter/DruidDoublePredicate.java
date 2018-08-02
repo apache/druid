@@ -19,12 +19,38 @@
 
 package io.druid.query.filter;
 
-
+/**
+ * Note: this is not a {@link io.druid.guice.annotations.PublicApi} or an
+ * {@link io.druid.guice.annotations.ExtensionPoint} of Druid.
+ */
+// All implementations are currently lambda expressions and intellij inspections wrongly complains about unused
+// variable. SupressWarnings can be removed once https://youtrack.jetbrains.com/issue/IDEA-191743 is resolved.
+@SuppressWarnings("unused")
 public interface DruidDoublePredicate
 {
   DruidDoublePredicate ALWAYS_FALSE = input -> false;
 
   DruidDoublePredicate ALWAYS_TRUE = input -> true;
 
+  DruidDoublePredicate MATCH_NULL_ONLY = new DruidDoublePredicate()
+  {
+    @Override
+    public boolean applyDouble(double input)
+    {
+      return false;
+    }
+
+    @Override
+    public boolean applyNull()
+    {
+      return true;
+    }
+  };
+
   boolean applyDouble(double input);
+
+  default boolean applyNull()
+  {
+    return false;
+  }
 }

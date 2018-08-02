@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.common.config.NullHandling;
 import io.druid.query.extraction.StringFormatExtractionFn;
 import io.druid.query.extraction.SubstringDimExtractionFn;
 import io.druid.segment.data.IndexedInts;
@@ -68,7 +69,7 @@ public class ConstantDimensionSelectorTest
   public void testLookupId()
   {
     Assert.assertEquals(0, NULL_SELECTOR.idLookup().lookupId(null));
-    Assert.assertEquals(0, NULL_SELECTOR.idLookup().lookupId(""));
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0 : -1, NULL_SELECTOR.idLookup().lookupId(""));
     Assert.assertEquals(-1, NULL_SELECTOR.idLookup().lookupId("billy"));
     Assert.assertEquals(-1, NULL_SELECTOR.idLookup().lookupId("bob"));
 

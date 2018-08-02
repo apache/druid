@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import io.druid.client.DirectDruidClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
@@ -285,11 +286,12 @@ public class QueryLifecycle
 
     try {
       final long queryTimeNs = System.nanoTime() - startNs;
+
       QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,
           toolChest,
           baseQuery,
-          Strings.nullToEmpty(remoteAddress)
+          StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
       queryMetrics.success(success);
       queryMetrics.reportQueryTime(queryTimeNs);
@@ -323,11 +325,10 @@ public class QueryLifecycle
           statsMap.put("reason", e.toString());
         }
       }
-
       requestLogger.log(
           new RequestLogLine(
               DateTimes.utc(startMs),
-              Strings.nullToEmpty(remoteAddress),
+              StringUtils.nullToEmptyNonDruidDataString(remoteAddress),
               baseQuery,
               new QueryStats(statsMap)
           )

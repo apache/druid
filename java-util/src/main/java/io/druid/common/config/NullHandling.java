@@ -41,18 +41,22 @@ public class NullHandling
   public static final Double ZERO_DOUBLE = 0.0d;
   public static final Float ZERO_FLOAT = 0.0f;
   public static final Long ZERO_LONG = 0L;
+  public static final byte IS_NULL_BYTE = (byte) 1;
+  public static final byte IS_NOT_NULL_BYTE = (byte) 0;
 
   /**
    * INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
    * See io.druid.guice.NullHandlingModule for details.
    * It does not take effect in all unit tests since we don't use Guice Injection.
-   * For tests default system property is supposed to be used only in tests
    */
   @Inject
   private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(
       Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
   );
 
+  /**
+   * whether nulls should be replaced with default value.
+   */
   public static boolean replaceWithDefault()
   {
     return INSTANCE.isUseDefaultValuesForNull();

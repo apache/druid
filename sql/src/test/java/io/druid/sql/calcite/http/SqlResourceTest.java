@@ -23,7 +23,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.client.TimelineServerView;
+import io.druid.common.config.NullHandling;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
@@ -223,7 +225,15 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
+        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
+            ImmutableMap.of("x", "", "y", ""),
+            ImmutableMap.of("x", "a", "y", "a"),
+            ImmutableMap.of("x", "abc", "y", "abc")
+        ) :
+        ImmutableList.of(
+            // x and y both should be null instead of empty string
+            Maps.transformValues(ImmutableMap.of("x", "", "y", ""), (val) -> null),
             ImmutableMap.of("x", "", "y", ""),
             ImmutableMap.of("x", "a", "y", "a"),
             ImmutableMap.of("x", "abc", "y", "abc")

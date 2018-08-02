@@ -19,13 +19,19 @@
 
 package io.druid.query.filter;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public interface ValueGetter
 {
-  // It is not ideal that Long and Float values will get
-  // converted to strings. We should also add functions
-  // for these and modify ColumnComparisonFilter to handle
-  // comparing Long and Float columns to eachother.
+  /**
+   * It is not ideal that Long and Float values will get
+   * converted to strings. We should also add functions
+   * for these and modify ColumnComparisonFilter to handle
+   * comparing Long and Float columns to eachother.
+   * Returns null when the underlying Long/Float value is null.
+   */
+  @Nullable
   String[] get();
 }
