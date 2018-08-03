@@ -139,7 +139,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   @Override
   public boolean nameLookupPossibleInAdvance()
   {
-    return selector.nameLookupPossibleInAdvance();
+    return true;
   }
 
   @Nullable
@@ -153,7 +153,7 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
   @Override
   public Object getObject()
   {
-    return lookupName(getRow().get(0));
+    return defaultGetObject();
   }
 
   @Override
