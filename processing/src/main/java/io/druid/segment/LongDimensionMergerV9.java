@@ -33,7 +33,7 @@ public class LongDimensionMergerV9 extends NumericDimensionMergerV9
   }
 
   @Override
-  ColumnSerializer setupEncodedValueWriter()
+  GenericColumnSerializer setupEncodedValueWriter()
   {
     return IndexMergerV9.createLongColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
   }

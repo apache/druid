@@ -21,7 +21,7 @@ package io.druid.query.aggregation.histogram;
 
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
-import io.druid.segment.ColumnSerializer;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -92,7 +92,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }

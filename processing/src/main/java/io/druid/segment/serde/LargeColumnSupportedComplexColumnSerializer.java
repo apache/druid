@@ -23,7 +23,7 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ColumnSerializer;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
@@ -31,7 +31,7 @@ import io.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-public class LargeColumnSupportedComplexColumnSerializer<T> implements ColumnSerializer<T>
+public class LargeColumnSupportedComplexColumnSerializer<T> implements GenericColumnSerializer<T>
 {
   @PublicApi
   public static <T> LargeColumnSupportedComplexColumnSerializer<T> create(

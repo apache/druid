@@ -24,7 +24,7 @@ import com.google.common.hash.HashFunction;
 import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogCollector;
-import io.druid.segment.ColumnSerializer;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
@@ -153,7 +153,7 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
   }
 
   @Override
-  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String metric)
+  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String metric)
   {
     return LargeColumnSupportedComplexColumnSerializer.createWithColumnSize(
         segmentWriteOutMedium,

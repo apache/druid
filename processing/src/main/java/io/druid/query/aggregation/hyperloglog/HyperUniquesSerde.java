@@ -22,7 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.hll.HyperLogLogHash;
-import io.druid.segment.ColumnSerializer;
+import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -140,7 +140,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }

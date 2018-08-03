@@ -42,7 +42,7 @@ import java.nio.channels.WritableByteChannel;
  * and second the actual row values.
  * This class is unsafe for concurrent use from multiple threads.
  */
-public class LongColumnSerializerV2 implements ColumnSerializer<Object>
+public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
 {
   public static LongColumnSerializerV2 create(
       SegmentWriteOutMedium segmentWriteOutMedium,

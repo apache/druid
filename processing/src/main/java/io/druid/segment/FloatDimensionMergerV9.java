@@ -33,7 +33,7 @@ public class FloatDimensionMergerV9 extends NumericDimensionMergerV9
   }
 
   @Override
-  ColumnSerializer setupEncodedValueWriter()
+  GenericColumnSerializer setupEncodedValueWriter()
   {
     return IndexMergerV9.createFloatColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
   }

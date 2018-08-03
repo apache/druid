@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-public class DoubleColumnSerializer implements ColumnSerializer<Object>
+public class DoubleColumnSerializer implements GenericColumnSerializer<Object>
 {
   public static DoubleColumnSerializer create(
       SegmentWriteOutMedium segmentWriteOutMedium,

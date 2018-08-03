@@ -25,13 +25,14 @@ import io.druid.segment.serde.Serializer;
 import java.io.IOException;
 
 /**
- * ColumnSerializer can be implemented in custom aggregator extensions that would like to take full control of column
+ * GenericColumnSerializer can be implemented in custom aggregator extensions that would like to take full control of column
  * serialization. That implementation would be returned by overriding {@link
  * io.druid.segment.serde.ComplexMetricSerde#getSerializer}
- * @param <T>
+ *
+ * TODO rename to "ColumnSerializer" prior to Druid 1.0
  */
 @ExtensionPoint
-public interface ColumnSerializer<T> extends Serializer
+public interface GenericColumnSerializer<T> extends Serializer
 {
   void open() throws IOException;
 
