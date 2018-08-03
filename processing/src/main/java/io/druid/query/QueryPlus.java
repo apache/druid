@@ -144,4 +144,9 @@ public final class QueryPlus<T>
   {
     return query.getRunner(walker).run(this, context);
   }
+
+  public QueryPlus<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    return new QueryPlus<>(query.optimizeForSegment(optimizationContext), queryMetrics, identity);
+  }
 }

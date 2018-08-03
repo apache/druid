@@ -58,6 +58,7 @@ import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ColumnHolder;
@@ -534,19 +535,19 @@ public class GroupByQuery extends BaseQuery<Row>
     for (DimensionSpec dimension : dimensions) {
       final int dimCompare;
       if (dimension.getOutputType() == ValueType.LONG) {
-        dimCompare = Long.compare(
-            ((Number) lhs.getRaw(dimension.getOutputName())).longValue(),
-            ((Number) rhs.getRaw(dimension.getOutputName())).longValue()
+        dimCompare = Comparators.<Long>naturalNullsFirst().compare(
+            DimensionHandlerUtils.convertObjectToLong(lhs.getRaw(dimension.getOutputName())),
+            DimensionHandlerUtils.convertObjectToLong(rhs.getRaw(dimension.getOutputName()))
         );
       } else if (dimension.getOutputType() == ValueType.FLOAT) {
-        dimCompare = Float.compare(
-            ((Number) lhs.getRaw(dimension.getOutputName())).floatValue(),
-            ((Number) rhs.getRaw(dimension.getOutputName())).floatValue()
+        dimCompare = Comparators.<Float>naturalNullsFirst().compare(
+            DimensionHandlerUtils.convertObjectToFloat(lhs.getRaw(dimension.getOutputName())),
+            DimensionHandlerUtils.convertObjectToFloat(rhs.getRaw(dimension.getOutputName()))
         );
       } else if (dimension.getOutputType() == ValueType.DOUBLE) {
-        dimCompare = Double.compare(
-            ((Number) lhs.getRaw(dimension.getOutputName())).doubleValue(),
-            ((Number) rhs.getRaw(dimension.getOutputName())).doubleValue()
+        dimCompare = Comparators.<Double>naturalNullsFirst().compare(
+            DimensionHandlerUtils.convertObjectToDouble(lhs.getRaw(dimension.getOutputName())),
+            DimensionHandlerUtils.convertObjectToDouble(rhs.getRaw(dimension.getOutputName()))
         );
       } else {
         dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(
@@ -893,6 +894,13 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
+    public Builder setDimensions(DimensionSpec... dimensions)
+    {
+      this.dimensions = new ArrayList<>(Arrays.asList(dimensions));
+      this.postProcessingFn = null;
+      return this;
+    }
+
     public Builder addAggregator(AggregatorFactory aggregator)
     {
       if (aggregatorSpecs == null) {
@@ -907,6 +915,13 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder setAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
     {
       this.aggregatorSpecs = Lists.newArrayList(aggregatorSpecs);
+      this.postProcessingFn = null;
+      return this;
+    }
+
+    public Builder setAggregatorSpecs(AggregatorFactory... aggregatorSpecs)
+    {
+      this.aggregatorSpecs = new ArrayList<>(Arrays.asList(aggregatorSpecs));
       this.postProcessingFn = null;
       return this;
     }

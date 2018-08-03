@@ -19,7 +19,6 @@
 
 package io.druid.segment.realtime.plumber;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableSegmentLoadInfo;
@@ -36,6 +35,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CoordinatorBasedSegmentHandoffNotifierTest
@@ -73,15 +73,14 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
     EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
             .andReturn(
-                Lists.newArrayList(
+                Collections.singletonList(
                     new ImmutableSegmentLoadInfo(
                         segment,
-                        Sets.newHashSet(
-                            createRealtimeServerMetadata("a1")
-                        )
+                        Sets.newHashSet(createRealtimeServerMetadata("a1"))
                     )
                 )
-            ).anyTimes();
+            )
+            .anyTimes();
     EasyMock.replay(coordinatorClient);
     CoordinatorBasedSegmentHandoffNotifier notifier = new CoordinatorBasedSegmentHandoffNotifier(
         "test_ds",
@@ -90,14 +89,9 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
     final AtomicBoolean callbackCalled = new AtomicBoolean(false);
     notifier.registerSegmentHandoffCallback(
-        descriptor, MoreExecutors.sameThreadExecutor(), new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            callbackCalled.set(true);
-          }
-        }
+        descriptor,
+        MoreExecutors.sameThreadExecutor(),
+        () -> callbackCalled.set(true)
     );
     notifier.checkForSegmentHandoffs();
     // callback should have registered
@@ -130,15 +124,14 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
     EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
             .andReturn(
-                Lists.newArrayList(
+                Collections.singletonList(
                     new ImmutableSegmentLoadInfo(
                         segment,
-                        Sets.newHashSet(
-                            createHistoricalServerMetadata("a1")
-                        )
+                        Sets.newHashSet(createHistoricalServerMetadata("a1"))
                     )
                 )
-            ).anyTimes();
+            )
+            .anyTimes();
     EasyMock.replay(coordinatorClient);
     CoordinatorBasedSegmentHandoffNotifier notifier = new CoordinatorBasedSegmentHandoffNotifier(
         "test_ds",
@@ -147,14 +140,9 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
 
     notifier.registerSegmentHandoffCallback(
-        descriptor, MoreExecutors.sameThreadExecutor(), new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            callbackCalled.set(true);
-          }
-        }
+        descriptor,
+        MoreExecutors.sameThreadExecutor(),
+        () -> callbackCalled.set(true)
     );
     Assert.assertEquals(1, notifier.getHandOffCallbacks().size());
     Assert.assertTrue(notifier.getHandOffCallbacks().containsKey(descriptor));
@@ -173,7 +161,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
     Assert.assertFalse(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(interval, "v1", 2),
                     Sets.newHashSet(createHistoricalServerMetadata("a"))
@@ -185,7 +173,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
 
     Assert.assertTrue(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(interval, "v2", 2),
                     Sets.newHashSet(createHistoricalServerMetadata("a"))
@@ -197,7 +185,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
 
     Assert.assertTrue(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(interval, "v1", 2),
                     Sets.newHashSet(createHistoricalServerMetadata("a"))
@@ -217,7 +205,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
     Assert.assertTrue(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(interval, "v1", 2),
                     Sets.newHashSet(createHistoricalServerMetadata("a"))
@@ -229,7 +217,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
 
     Assert.assertFalse(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(interval, "v1", 2),
                     Sets.newHashSet(createRealtimeServerMetadata("a"))
@@ -248,7 +236,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
     Assert.assertTrue(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(interval, "v1", 1),
                     Sets.newHashSet(createHistoricalServerMetadata("a"))
@@ -260,7 +248,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
 
     Assert.assertFalse(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(interval, "v1", 1),
                     Sets.newHashSet(createHistoricalServerMetadata("a"))
@@ -278,41 +266,25 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
 
     Assert.assertFalse(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
-                    createSegment(
-                        Intervals.of(
-                            "2011-04-01/2011-04-02"
-                        ), "v1", 1
-                    ),
+                    createSegment(Intervals.of("2011-04-01/2011-04-02"), "v1", 1),
                     Sets.newHashSet(createHistoricalServerMetadata("a"))
                 )
             ),
-            new SegmentDescriptor(
-                Intervals.of(
-                    "2011-04-01/2011-04-03"
-                ), "v1", 1
-            )
+            new SegmentDescriptor(Intervals.of("2011-04-01/2011-04-03"), "v1", 1)
         )
     );
 
     Assert.assertTrue(
         CoordinatorBasedSegmentHandoffNotifier.isHandOffComplete(
-            Lists.newArrayList(
+            Collections.singletonList(
                 new ImmutableSegmentLoadInfo(
-                    createSegment(
-                        Intervals.of(
-                            "2011-04-01/2011-04-04"
-                        ), "v1", 1
-                    ),
+                    createSegment(Intervals.of("2011-04-01/2011-04-04"), "v1", 1),
                     Sets.newHashSet(createHistoricalServerMetadata("a"))
                 )
             ),
-            new SegmentDescriptor(
-                Intervals.of(
-                    "2011-04-02/2011-04-03"
-                ), "v1", 1
-            )
+            new SegmentDescriptor(Intervals.of("2011-04-02/2011-04-03"), "v1", 1)
         )
     );
   }

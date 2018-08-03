@@ -21,6 +21,7 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -75,7 +76,7 @@ public class MatchingDimExtractionFnTest
 
     Assert.assertNull(extractionFn.apply((Object) null));
     Assert.assertNull(extractionFn.apply((String) null));
-    Assert.assertNull(extractionFn.apply((String) ""));
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply((String) ""));
   }
 
   @Test

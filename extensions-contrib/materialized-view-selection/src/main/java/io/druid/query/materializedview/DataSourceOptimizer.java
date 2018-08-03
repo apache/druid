@@ -88,7 +88,7 @@ public class DataSourceOptimizer
     Set<DerivativeDataSource> derivatives = DerivativeDataSourceManager.getDerivatives(datasourceName);
     
     if (derivatives.isEmpty()) {
-      return Lists.newArrayList(query);
+      return Collections.singletonList(query);
     }
     lock.readLock().lock();
     try {
@@ -113,7 +113,7 @@ public class DataSourceOptimizer
         missFields.get(datasourceName).putIfAbsent(requiredFields, new AtomicLong(0));
         missFields.get(datasourceName).get(requiredFields).incrementAndGet();
         costTime.get(datasourceName).addAndGet(System.currentTimeMillis() - start);
-        return Lists.newArrayList(query);
+        return Collections.singletonList(query);
       }
       
       List<Query> queries = Lists.newArrayList();
@@ -147,7 +147,7 @@ public class DataSourceOptimizer
 
       if (queries.isEmpty()) {
         costTime.get(datasourceName).addAndGet(System.currentTimeMillis() - start);
-        return Lists.newArrayList(query);
+        return Collections.singletonList(query);
       }
 
       //after materialized view selection, the result of the remaining query interval will be computed based on

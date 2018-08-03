@@ -38,6 +38,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -149,12 +150,12 @@ public class HadoopDruidIndexerConfigTest
             null,
             null,
             ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(),
-                                                              Lists.newArrayList(new HadoopyShardSpec(
+                                                              Collections.singletonList(new HadoopyShardSpec(
                                                                   NoneShardSpec.instance(),
                                                                   1
                                                               )),
                                                               DateTimes.of("2010-01-01T02:00:00").getMillis(),
-                                                              Lists.newArrayList(new HadoopyShardSpec(
+                                                              Collections.singletonList(new HadoopyShardSpec(
                                                                   NoneShardSpec.instance(),
                                                                   2
                                                               ))

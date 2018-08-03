@@ -111,7 +111,7 @@ public class VarianceAggregatorTest
         colSelectorFactory
     );
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[aggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[aggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     assertValues((VarianceAggregatorCollector) agg.get(buffer, 0), 0, 0d, 0d);

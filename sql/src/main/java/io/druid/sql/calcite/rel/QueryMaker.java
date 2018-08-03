@@ -22,10 +22,10 @@ package io.druid.sql.calcite.rel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
@@ -400,7 +400,7 @@ public class QueryMaker
 
     if (SqlTypeName.CHAR_TYPES.contains(sqlType)) {
       if (value == null || value instanceof String) {
-        coercedValue = Strings.nullToEmpty((String) value);
+        coercedValue = NullHandling.nullToEmptyIfNeeded((String) value);
       } else if (value instanceof NlsString) {
         coercedValue = ((NlsString) value).getValue();
       } else if (value instanceof Number) {

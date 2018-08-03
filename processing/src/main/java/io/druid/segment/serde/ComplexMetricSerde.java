@@ -22,9 +22,9 @@ package io.druid.segment.serde;
 import com.google.common.base.Function;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.segment.ColumnSerializer;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.ObjectStrategy;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import javax.annotation.Nullable;

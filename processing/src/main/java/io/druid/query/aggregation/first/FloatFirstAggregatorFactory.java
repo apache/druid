@@ -22,8 +22,6 @@ package io.druid.query.aggregation.first;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
@@ -32,11 +30,13 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.NullableAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.ColumnHolder;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -45,17 +45,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class FloatFirstAggregatorFactory extends AggregatorFactory
+public class FloatFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
-  public static final Comparator VALUE_COMPARATOR = (o1, o2) -> Doubles.compare(
-      ((SerializablePair<Long, Float>) o1).rhs,
-      ((SerializablePair<Long, Float>) o2).rhs
-  );
+  public static final Comparator VALUE_COMPARATOR =
+      Comparator.comparingDouble(o -> ((SerializablePair<Long, Float>) o).rhs);
 
-  public static final Comparator TIME_COMPARATOR = (o1, o2) -> Longs.compare(
-      ((SerializablePair<Long, Object>) o1).lhs,
-      ((SerializablePair<Long, Object>) o2).lhs
-  );
+  public static final Comparator TIME_COMPARATOR =
+      Comparator.comparingLong(o -> ((SerializablePair<Long, Object>) o).lhs);
 
   private final String fieldName;
   private final String name;
@@ -74,20 +70,23 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    return new FloatFirstAggregator(
-        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName)
-    );
+    return metricFactory.makeColumnValueSelector(fieldName);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  {
+    return new FloatFirstAggregator(metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME), selector);
+  }
+
+  @Override
+  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     return new FloatFirstBufferAggregator(
         metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName)
+        selector
     );
   }
 
@@ -98,8 +97,15 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return TIME_COMPARATOR.compare(lhs, rhs) <= 0 ? lhs : rhs;
   }
 
@@ -115,9 +121,8 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
     return new FloatFirstAggregatorFactory(name, name)
     {
       @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
+      public Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
       {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return new FloatFirstAggregator(null, null)
         {
           @Override
@@ -133,9 +138,8 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
       {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return new FloatFirstBufferAggregator(null, null)
         {
           @Override
@@ -173,9 +177,10 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return ((SerializablePair<Long, Float>) object).rhs;
+    return object == null ? null : ((SerializablePair<Long, Float>) object).rhs;
   }
 
   @Override

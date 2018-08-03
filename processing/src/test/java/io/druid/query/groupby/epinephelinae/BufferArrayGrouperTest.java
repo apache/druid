@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -90,17 +91,23 @@ public class BufferArrayGrouperTest
   @Test
   public void testRequiredBufferCapacity()
   {
-    int[] cardinalityArray = new int[] {1, 10, Integer.MAX_VALUE - 1};
-    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {
+    int[] cardinalityArray = new int[]{1, 10, Integer.MAX_VALUE - 1};
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new LongSumAggregatorFactory("sum", "sum")
     };
-
-    long[] requiredSizes = new long[] {17, 90, 16911433721L};
+    long[] requiredSizes;
+    if (NullHandling.sqlCompatible()) {
+      // We need additional size to store nullability information.
+      requiredSizes = new long[]{19, 101, 19058917368L};
+    } else {
+      requiredSizes = new long[]{17, 90, 16911433721L};
+    }
 
     for (int i = 0; i < cardinalityArray.length; i++) {
       Assert.assertEquals(requiredSizes[i], BufferArrayGrouper.requiredBufferCapacity(
           cardinalityArray[i],
-          aggregatorFactories));
+          aggregatorFactories
+      ));
     }
   }
 }

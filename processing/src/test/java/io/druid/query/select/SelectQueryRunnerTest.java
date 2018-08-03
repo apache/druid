@@ -393,8 +393,8 @@ public class SelectQueryRunnerTest
             },
             V_0112_0114
         ),
-        Lists.newArrayList("market"),
-        Lists.newArrayList("index"),
+        Collections.singletonList("market"),
+        Collections.singletonList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -423,8 +423,8 @@ public class SelectQueryRunnerTest
             },
             V_0112_0114
         ),
-        Lists.newArrayList("quality"),
-        Lists.newArrayList("index"),
+        Collections.singletonList("quality"),
+        Collections.singletonList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -441,7 +441,7 @@ public class SelectQueryRunnerTest
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .granularity(QueryRunnerTestHelper.dayGran)
           .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
-          .metrics(Lists.newArrayList(QueryRunnerTestHelper.indexMetric))
+          .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
           .pagingSpec(new PagingSpec(toPagingIdentifier(param[0], descending), param[1]))
           .build();
 
@@ -485,8 +485,8 @@ public class SelectQueryRunnerTest
       PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
       List<Result<SelectResultValue>> expectedResults = toExpected(
           events,
-          Lists.newArrayList("quality"),
-          Lists.newArrayList("index"),
+          Collections.singletonList("quality"),
+          Collections.singletonList("index"),
           offset.startOffset(),
           offset.threshold()
       );
@@ -509,7 +509,7 @@ public class SelectQueryRunnerTest
         )
         .granularity(QueryRunnerTestHelper.allGran)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
-        .metrics(Lists.newArrayList(QueryRunnerTestHelper.indexMetric))
+        .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .pagingSpec(new PagingSpec(null, 10, true))
         .virtualColumns(
             new ExpressionVirtualColumn("expr", "index / 10.0", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
@@ -538,8 +538,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
-        Lists.newArrayList("quality"),
-        Lists.newArrayList("index"),
+        Collections.singletonList("quality"),
+        Collections.singletonList("index"),
         offset.startOffset(),
         offset.threshold()
     );
@@ -559,7 +559,7 @@ public class SelectQueryRunnerTest
         .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "replaced", lookupExtractionFn))
         .granularity(QueryRunnerTestHelper.dayGran)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
-        .metrics(Lists.newArrayList(QueryRunnerTestHelper.indexMetric))
+        .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
 
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
@@ -591,8 +591,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
-        Lists.newArrayList(QueryRunnerTestHelper.qualityDimension),
-        Lists.newArrayList(QueryRunnerTestHelper.indexMetric),
+        Collections.singletonList(QueryRunnerTestHelper.qualityDimension),
+        Collections.singletonList(QueryRunnerTestHelper.indexMetric),
         offset.startOffset(),
         offset.threshold()
     );
@@ -658,7 +658,7 @@ public class SelectQueryRunnerTest
     SelectQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .dimensionSpecs(DefaultDimensionSpec.toSpec("foo"))
-        .metrics(Lists.newArrayList("foo2"))
+        .metrics(Collections.singletonList("foo2"))
         .build();
 
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
@@ -675,8 +675,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
-        Lists.newArrayList("foo"),
-        Lists.newArrayList("foo2"),
+        Collections.singletonList("foo"),
+        Collections.singletonList("foo2"),
         offset.startOffset(),
         offset.threshold()
     );

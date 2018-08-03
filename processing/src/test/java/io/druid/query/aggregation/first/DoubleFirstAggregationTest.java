@@ -22,7 +22,9 @@ package io.druid.query.aggregation.first;
 import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
@@ -71,7 +73,7 @@ public class DoubleFirstAggregationTest
   @Test
   public void testDoubleFirstAggregator()
   {
-    DoubleFirstAggregator agg = (DoubleFirstAggregator) doubleFirstAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = doubleFirstAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -89,10 +91,10 @@ public class DoubleFirstAggregationTest
   @Test
   public void testDoubleFirstBufferAggregator()
   {
-    DoubleFirstBufferAggregator agg = (DoubleFirstBufferAggregator) doubleFirstAggFactory.factorizeBuffered(
+    BufferAggregator agg = doubleFirstAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -119,7 +121,7 @@ public class DoubleFirstAggregationTest
   @Test
   public void testDoubleFirstCombiningAggregator()
   {
-    DoubleFirstAggregator agg = (DoubleFirstAggregator) combiningAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -138,10 +140,10 @@ public class DoubleFirstAggregationTest
   @Test
   public void testDoubleFirstCombiningBufferAggregator()
   {
-    DoubleFirstBufferAggregator agg = (DoubleFirstBufferAggregator) combiningAggFactory.factorizeBuffered(
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -168,7 +170,7 @@ public class DoubleFirstAggregationTest
   }
 
   private void aggregate(
-      DoubleFirstAggregator agg
+      Aggregator agg
   )
   {
     agg.aggregate();
@@ -178,7 +180,7 @@ public class DoubleFirstAggregationTest
   }
 
   private void aggregate(
-      DoubleFirstBufferAggregator agg,
+      BufferAggregator agg,
       ByteBuffer buff,
       int position
   )

@@ -21,7 +21,6 @@ package io.druid.server.lookup.cache.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -126,7 +125,7 @@ public class LoadingCacheTest
       }
     });
     Assert.assertEquals("value2", loadingCache.getIfPresent("key2"));
-    loadingCache.invalidateAll(Lists.newArrayList("key2"));
+    loadingCache.invalidateAll(Collections.singletonList("key2"));
     Assert.assertEquals(null, loadingCache.getIfPresent("key2"));
   }
 

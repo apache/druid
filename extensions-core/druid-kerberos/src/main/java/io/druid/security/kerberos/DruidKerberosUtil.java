@@ -95,6 +95,7 @@ public class DruidKerberosUtil
   {
     if (!Strings.isNullOrEmpty(internalClientPrincipal) && !Strings.isNullOrEmpty(internalClientKeytab)) {
       Configuration conf = new Configuration();
+      conf.setClassLoader(DruidKerberosModule.class.getClassLoader());
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
       UserGroupInformation.setConfiguration(conf);
       try {

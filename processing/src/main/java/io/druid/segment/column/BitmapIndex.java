@@ -22,6 +22,8 @@ package io.druid.segment.column;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public interface BitmapIndex
@@ -41,7 +43,7 @@ public interface BitmapIndex
    * @param value value to search for
    * @return index of value, or negative number equal to (-(insertion point) - 1).
    */
-  int getIndex(String value);
+  int getIndex(@Nullable String value);
 
   ImmutableBitmap getBitmap(int idx);
 }

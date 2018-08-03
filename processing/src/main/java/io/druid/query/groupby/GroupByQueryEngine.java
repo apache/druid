@@ -178,37 +178,33 @@ public class GroupByQueryEngine
       return positions;
     }
 
-    private List<ByteBuffer> updateValues(
-        ByteBuffer key,
-        List<DimensionSelector> dims
-    )
+    @Nullable
+    private List<ByteBuffer> updateValues(ByteBuffer key, List<DimensionSelector> dims)
     {
       if (dims.size() > 0) {
-        List<ByteBuffer> retVal = null;
-        List<ByteBuffer> unaggregatedBuffers = null;
-
         final DimensionSelector dimSelector = dims.get(0);
         final IndexedInts row = dimSelector.getRow();
         final int rowSize = row.size();
         if (rowSize == 0) {
           ByteBuffer newKey = key.duplicate();
           newKey.putInt(MISSING_VALUE);
-          unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+          return updateValues(newKey, dims.subList(1, dims.size()));
         } else {
+          List<ByteBuffer> retVal = null;
           for (int i = 0; i < rowSize; i++) {
             ByteBuffer newKey = key.duplicate();
             int dimValue = row.get(i);
             newKey.putInt(dimValue);
-            unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+            List<ByteBuffer> unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+            if (unaggregatedBuffers != null) {
+              if (retVal == null) {
+                retVal = Lists.newArrayList();
+              }
+              retVal.addAll(unaggregatedBuffers);
+            }
           }
+          return retVal;
         }
-        if (unaggregatedBuffers != null) {
-          if (retVal == null) {
-            retVal = Lists.newArrayList();
-          }
-          retVal.addAll(unaggregatedBuffers);
-        }
-        return retVal;
       } else {
         key.clear();
         Integer position = positionsHash.get(key);
@@ -222,7 +218,7 @@ public class GroupByQueryEngine
 
           position = positionMaintainer.getNext();
           if (position == null) {
-            return Lists.newArrayList(keyCopy);
+            return Collections.singletonList(keyCopy);
           }
 
           positions.put(keyCopy, position);
@@ -349,7 +345,7 @@ public class GroupByQueryEngine
         AggregatorFactory aggregatorSpec = aggregatorSpecs.get(i);
         aggregators[i] = aggregatorSpec.factorizeBuffered(cursor.getColumnSelectorFactory());
         metricNames[i] = aggregatorSpec.getName();
-        sizesRequired[i] = aggregatorSpec.getMaxIntermediateSize();
+        sizesRequired[i] = aggregatorSpec.getMaxIntermediateSizeWithNulls();
       }
     }
 

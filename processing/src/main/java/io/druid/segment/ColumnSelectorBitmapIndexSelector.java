@@ -190,7 +190,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
          * i.e., return an 'insertion point' of 1 for non-null values (see {@link BitmapIndex} interface)
          */
         @Override
-        public int getIndex(String value)
+        public int getIndex(@Nullable String value)
         {
           return NullHandling.isNullOrEquivalent(value) ? 0 : -2;
         }
@@ -234,7 +234,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-    return bitmapIndex.getBitmap(bitmapIndex.getIndex(NullHandling.emptyToNullIfNeeded(value)));
+    return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
   }
 
   @Override

@@ -26,6 +26,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Rows;
@@ -45,6 +46,7 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.WritableUtils;
 
+import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -288,20 +290,18 @@ public class InputRowSerde
       List<String> dimList = row.getDimensions();
 
       WritableUtils.writeVInt(out, dimList.size());
-      if (dimList != null) {
-        for (String dim : dimList) {
-          IndexSerdeTypeHelper typeHelper = typeHelperMap.get(dim);
-          if (typeHelper == null) {
-            typeHelper = STRING_HELPER;
-          }
-          writeString(dim, out);
+      for (String dim : dimList) {
+        IndexSerdeTypeHelper typeHelper = typeHelperMap.get(dim);
+        if (typeHelper == null) {
+          typeHelper = STRING_HELPER;
+        }
+        writeString(dim, out);
 
-          try {
-            typeHelper.serialize(out, row.getRaw(dim));
-          }
-          catch (ParseException pe) {
-            parseExceptionMessages.add(pe.getMessage());
-          }
+        try {
+          typeHelper.serialize(out, row.getRaw(dim));
+        }
+        catch (ParseException pe) {
+          parseExceptionMessages.add(pe.getMessage());
         }
       }
 
@@ -313,12 +313,7 @@ public class InputRowSerde
         writeString(k, out);
 
         try (Aggregator agg = aggFactory.factorize(
-            IncrementalIndex.makeColumnSelectorFactory(
-                VirtualColumns.EMPTY,
-                aggFactory,
-                supplier,
-                true
-            )
+            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, aggFactory, supplier, true)
         )) {
           try {
             agg.aggregate();
@@ -330,19 +325,22 @@ public class InputRowSerde
           }
 
           String t = aggFactory.getTypeName();
-
-          if ("float".equals(t)) {
-            out.writeFloat(agg.getFloat());
-          } else if ("long".equals(t)) {
-            WritableUtils.writeVLong(out, agg.getLong());
-          } else if ("double".equals(t)) {
-            out.writeDouble(agg.getDouble());
+          if (agg.isNull()) {
+            out.writeByte(NullHandling.IS_NULL_BYTE);
           } else {
-            //its a complex metric
-            Object val = agg.get();
-            ComplexMetricSerde serde = getComplexMetricSerde(t);
-            //noinspection unchecked
-            writeBytes(serde.toBytes(val), out);
+            out.writeByte(NullHandling.IS_NOT_NULL_BYTE);
+            if ("float".equals(t)) {
+              out.writeFloat(agg.getFloat());
+            } else if ("long".equals(t)) {
+              WritableUtils.writeVLong(out, agg.getLong());
+            } else if ("double".equals(t)) {
+              out.writeDouble(agg.getDouble());
+            } else {
+              //its a complex metric
+              Object val = agg.get();
+              ComplexMetricSerde serde = getComplexMetricSerde(t);
+              writeBytes(serde.toBytes(val), out);
+            }
           }
         }
       }
@@ -354,10 +352,13 @@ public class InputRowSerde
     }
   }
 
-  private static void writeBytes(byte[] value, ByteArrayDataOutput out) throws IOException
+  private static void writeBytes(@Nullable byte[] value, ByteArrayDataOutput out) throws IOException
   {
-    WritableUtils.writeVInt(out, value.length);
-    out.write(value, 0, value.length);
+    int length = value == null ? -1 : value.length;
+    WritableUtils.writeVInt(out, length);
+    if (value != null) {
+      out.write(value, 0, value.length);
+    }
   }
 
   private static void writeString(String value, ByteArrayDataOutput out) throws IOException
@@ -451,6 +452,11 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         String metric = readString(in);
         String type = getType(metric, aggs, i);
+        byte metricNullability = in.readByte();
+        if (metricNullability == NullHandling.IS_NULL_BYTE) {
+          // metric value is null.
+          continue;
+        }
         if ("float".equals(type)) {
           event.put(metric, in.readFloat());
         } else if ("long".equals(type)) {

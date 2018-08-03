@@ -85,6 +85,7 @@ import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthorizerMapper;
@@ -190,7 +191,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
-     this(
+    this(
         id,
         makeGroupId(ingestionSchema),
         taskResource,
@@ -267,6 +268,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
   static boolean isReady(TaskActionClient actionClient, SortedSet<Interval> intervals) throws IOException
   {
+    // Sanity check preventing empty intervals (which cannot be locked, and don't make sense anyway).
+    for (Interval interval : intervals) {
+      if (interval.toDurationMillis() == 0) {
+        throw new ISE("Cannot run with empty interval[%s]", interval);
+      }
+    }
+
     final List<TaskLock> locks = getTaskLocks(actionClient);
     if (locks.size() == 0) {
       try {
@@ -394,7 +402,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus run(final TaskToolbox toolbox)
   {
     try {
       if (chatHandlerProvider.isPresent()) {
@@ -411,10 +419,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
-      if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-        // pass toolbox to Firehose
-        ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
-      }
+      setFirehoseFactoryToolbox(firehoseFactory, toolbox);
 
       final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
       // Firehose temporary directory is automatically removed when this IndexTask completes.
@@ -466,6 +471,25 @@ public class IndexTask extends AbstractTask implements ChatHandler
     finally {
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
+      }
+    }
+  }
+
+  // pass toolbox to any IngestSegmentFirehoseFactory
+  private void setFirehoseFactoryToolbox(FirehoseFactory firehoseFactory, TaskToolbox toolbox)
+  {
+    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
+      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
+      return;
+    }
+
+    if (firehoseFactory instanceof CombiningFirehoseFactory) {
+      for (FirehoseFactory delegateFactory : ((CombiningFirehoseFactory) firehoseFactory).getDelegateFactoryList()) {
+        if (delegateFactory instanceof IngestSegmentFirehoseFactory) {
+          ((IngestSegmentFirehoseFactory) delegateFactory).setTaskToolbox(toolbox);
+        } else if (delegateFactory instanceof CombiningFirehoseFactory) {
+          setFirehoseFactoryToolbox(delegateFactory, toolbox);
+        }
       }
     }
   }
@@ -777,7 +801,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
           determinePartitionsMeters.incrementUnparseable();
           if (determinePartitionsMeters.getUnparseable() > ingestionSchema.getTuningConfig()
-                                                                                       .getMaxParseExceptions()) {
+                                                                          .getMaxParseExceptions()) {
             throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
           }
         }
@@ -917,7 +941,12 @@ public class IndexTask extends AbstractTask implements ChatHandler
     };
 
     try (
-        final Appenderator appenderator = newAppenderator(buildSegmentsFireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
+        final Appenderator appenderator = newAppenderator(
+            buildSegmentsFireDepartmentMetrics,
+            toolbox,
+            dataSchema,
+            tuningConfig
+        );
         final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
@@ -1288,7 +1317,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
         @JsonProperty("publishTimeout") @Nullable Long publishTimeout, // deprecated
         @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
-        @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        @JsonProperty("segmentWriteOutMediumFactory") @Nullable
+            SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
         @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
@@ -1368,12 +1398,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
         this.maxParseExceptions = 0;
         this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
       } else {
-        this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+        this.maxParseExceptions = maxParseExceptions == null
+                                  ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+                                  : maxParseExceptions;
         this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                        ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
-                                        : maxSavedParseExceptions;
+                                       ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+                                       : maxSavedParseExceptions;
       }
-      this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
+      this.logParseExceptions = logParseExceptions == null
+                                ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
+                                : logParseExceptions;
     }
 
     private static Integer initializeTargetPartitionSize(Integer numShards, Integer targetPartitionSize)

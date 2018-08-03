@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.post;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -26,13 +27,16 @@ import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedRow;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregator;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -40,6 +44,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -70,14 +75,16 @@ public class FinalizingFieldAccessPostAggregatorTest
   {
     String aggName = "biily";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
-    EasyMock.expect(aggFactory.finalizeComputation("test"))
-            .andReturn(new Long(3L))
-            .times(1);
+    EasyMock.expect(aggFactory.getComparator()).andReturn(Comparators.naturalNullsFirst()).once();
+    EasyMock.expect(aggFactory.finalizeComputation("test")).andReturn(3L).once();
     EasyMock.replay(aggFactory);
 
-    FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
+    FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
         "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
+
+    // Check that the class matches exactly; see https://github.com/apache/incubator-druid/issues/6063
+    Assert.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
 
     Map<String, Object> metricValues = Maps.newHashMap();
     metricValues.put(aggName, "test");
@@ -91,12 +98,11 @@ public class FinalizingFieldAccessPostAggregatorTest
   {
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
-    EasyMock.expect(aggFactory.finalizeComputation("test"))
-            .andReturn(new Long(3L))
-            .times(1);
+    EasyMock.expect(aggFactory.getComparator()).andReturn(Comparators.naturalNullsFirst()).once();
+    EasyMock.expect(aggFactory.finalizeComputation("test")).andReturn(3L).once();
     EasyMock.replay(aggFactory);
 
-    FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
+    FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
         "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
 
@@ -130,11 +136,11 @@ public class FinalizingFieldAccessPostAggregatorTest
             .andReturn(null)
             .times(1);
     EasyMock.expect(aggFactory.getComparator())
-        .andReturn(Ordering.natural().<Long>nullsLast())
-        .times(1);
+            .andReturn(Ordering.natural().<Long>nullsLast())
+            .times(1);
     EasyMock.replay(aggFactory);
 
-    FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
+    FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
         "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
 
@@ -159,7 +165,7 @@ public class FinalizingFieldAccessPostAggregatorTest
             .times(1);
     EasyMock.replay(aggFactory);
 
-    FinalizingFieldAccessPostAggregator postAgg = FinalizingFieldAccessPostAggregator.buildDecorated(
+    FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
         "final_billy", "joe", ImmutableMap.of(aggName, aggFactory));
 
     List<Object> computedValues = Lists.newArrayList();
@@ -171,7 +177,10 @@ public class FinalizingFieldAccessPostAggregatorTest
     computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val4")));
     Collections.sort(computedValues, postAgg.getComparator());
 
-    Assert.assertArrayEquals(new Object[]{null, "test_val1", "test_val2", "test_val4"}, computedValues.toArray(new Object[0]));
+    Assert.assertArrayEquals(
+        new Object[]{null, "test_val1", "test_val2", "test_val4"},
+        computedValues.toArray(new Object[0])
+    );
 
     EasyMock.verify();
   }
@@ -180,7 +189,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   public void testIngestAndQueryWithArithmeticPostAggregator() throws Exception
   {
     AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Lists.newArrayList(new AggregatorsModule()),
+        Collections.singletonList(new AggregatorsModule()),
         GroupByQueryRunnerTest.testConfigs().get(0),
         tempFoler
     );
@@ -237,5 +246,29 @@ public class FinalizingFieldAccessPostAggregatorTest
     Assert.assertEquals(3.0, row.getMetric("hll_market").floatValue(), 0.1);
     Assert.assertEquals(9.0, row.getMetric("hll_quality").floatValue(), 0.1);
     Assert.assertEquals(12.0, row.getMetric("uniq_add").floatValue(), 0.1);
+  }
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    final FinalizingFieldAccessPostAggregator original = new FinalizingFieldAccessPostAggregator("foo", "bar");
+    final FinalizingFieldAccessPostAggregator decorated = original.decorate(
+        ImmutableMap.of("bar", new CountAggregatorFactory("bar"))
+    );
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Assert.assertEquals(
+        original,
+        objectMapper.readValue(objectMapper.writeValueAsString(decorated), PostAggregator.class)
+    );
+  }
+
+  private static FinalizingFieldAccessPostAggregator buildDecorated(
+      String name,
+      String fieldName,
+      Map<String, AggregatorFactory> aggregators
+  )
+  {
+    FinalizingFieldAccessPostAggregator ret = new FinalizingFieldAccessPostAggregator(name, fieldName);
+    return ret.decorate(aggregators);
   }
 }

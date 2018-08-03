@@ -23,9 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +38,6 @@ import java.util.stream.Collectors;
  */
 public class Rows
 {
-  public static final Long LONG_ZERO = 0L;
 
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
@@ -53,10 +54,7 @@ public class Rows
         dims.put(dim, dimValues);
       }
     }
-    return ImmutableList.of(
-        timeStamp,
-        dims
-    );
+    return ImmutableList.of(timeStamp, dims);
   }
 
   /**
@@ -85,10 +83,11 @@ public class Rows
    * @throws NullPointerException if the string is null
    * @throws ParseException       if the column cannot be converted to a number
    */
+  @Nullable
   public static Number objectToNumber(final String name, final Object inputValue)
   {
     if (inputValue == null) {
-      return Rows.LONG_ZERO;
+      return NullHandling.defaultLongValue();
     }
 
     if (inputValue instanceof Number) {

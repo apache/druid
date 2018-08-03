@@ -21,7 +21,6 @@ package io.druid.query;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -300,7 +299,7 @@ public class DoubleStorageTest
         ImmutableList.of(TIME_COLUMN, DIM_NAME, DIM_FLOAT_NAME),
         getStreamOfEvents().collect(Collectors.toList())
     );
-    List<ScanResultValue> expectedResults = Lists.newArrayList(expectedScanResult);
+    List<ScanResultValue> expectedResults = Collections.singletonList(expectedScanResult);
     ScanQueryRunnerTest.verify(expectedResults, results);
   }
 

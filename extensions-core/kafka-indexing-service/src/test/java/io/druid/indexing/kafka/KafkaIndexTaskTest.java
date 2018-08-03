@@ -115,6 +115,7 @@ import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
@@ -2244,7 +2245,7 @@ public class KafkaIndexTaskTest
     List<Result<TimeseriesResultValue>> results =
         task.getQueryRunner(query).run(wrap(query), ImmutableMap.of()).toList();
 
-    return results.isEmpty() ? 0 : results.get(0).getValue().getLongMetric("rows");
+    return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }
 
   private static byte[] JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)

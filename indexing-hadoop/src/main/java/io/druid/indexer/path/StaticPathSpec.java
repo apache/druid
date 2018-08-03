@@ -21,11 +21,11 @@ package io.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -126,7 +126,9 @@ public class StaticPathSpec implements PathSpec
   private static void addInputPath(Job job, Iterable<String> pathStrings, Class<? extends InputFormat> inputFormatClass)
   {
     Configuration conf = job.getConfiguration();
-    StringBuilder inputFormats = new StringBuilder(Strings.nullToEmpty(conf.get(MultipleInputs.DIR_FORMATS)));
+    StringBuilder inputFormats = new StringBuilder(
+        StringUtils.nullToEmptyNonDruidDataString(conf.get(MultipleInputs.DIR_FORMATS))
+    );
 
     String[] paths = Iterables.toArray(pathStrings, String.class);
     for (int i = 0; i < paths.length - 1; i++) {

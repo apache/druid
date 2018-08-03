@@ -252,7 +252,7 @@ public class PooledTopNAlgorithm
     int numBytesPerRecord = 0;
 
     for (int i = 0; i < query.getAggregatorSpecs().size(); ++i) {
-      aggregatorSizes[i] = query.getAggregatorSpecs().get(i).getMaxIntermediateSize();
+      aggregatorSizes[i] = query.getAggregatorSpecs().get(i).getMaxIntermediateSizeWithNulls();
       numBytesPerRecord += aggregatorSizes[i];
     }
 

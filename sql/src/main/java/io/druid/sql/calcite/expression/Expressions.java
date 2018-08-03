@@ -22,6 +22,7 @@ package io.druid.sql.calcite.expression;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularity;
@@ -33,12 +34,12 @@ import io.druid.query.expression.TimestampFloorExprMacro;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExpressionDimFilter;
 import io.druid.query.filter.LikeDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.ColumnHolder;
@@ -311,13 +312,10 @@ public class Expressions
         return null;
       }
 
-      final BoundDimFilter equalFilter = Bounds.equalTo(
-          new BoundRefKey(
-              druidExpression.getSimpleExtraction().getColumn(),
-              druidExpression.getSimpleExtraction().getExtractionFn(),
-              StringComparators.LEXICOGRAPHIC
-          ),
-          ""
+      final DimFilter equalFilter = new SelectorDimFilter(
+          druidExpression.getSimpleExtraction().getColumn(),
+          NullHandling.defaultStringValue(),
+          druidExpression.getSimpleExtraction().getExtractionFn()
       );
 
       return kind == SqlKind.IS_NOT_NULL ? new NotDimFilter(equalFilter) : equalFilter;

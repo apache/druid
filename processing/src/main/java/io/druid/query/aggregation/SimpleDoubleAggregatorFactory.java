@@ -34,7 +34,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
+public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFactory<BaseDoubleColumnValueSelector>
 {
   protected final String name;
   @Nullable
@@ -106,7 +106,8 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

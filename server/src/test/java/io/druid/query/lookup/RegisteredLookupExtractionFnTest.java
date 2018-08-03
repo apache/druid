@@ -66,7 +66,7 @@ public class RegisteredLookupExtractionFnTest
     Assert.assertEquals(false, fn.isInjective());
     Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, fn.getExtractionType());
 
-    for (String orig : Arrays.asList("", "foo", "bat")) {
+    for (String orig : Arrays.asList(null, "foo", "bat")) {
       Assert.assertEquals(LOOKUP_EXTRACTOR.apply(orig), fn.apply(orig));
     }
     Assert.assertEquals("not in the map", fn.apply("not in the map"));

@@ -95,6 +95,13 @@ public class AggregatorUtil
   public static final byte ARRAY_OF_DOUBLES_SKETCH_T_TEST_CACHE_TYPE_ID = 0x29;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID = 0x2A;
 
+  // StringFirst, StringLast aggregator
+  public static final byte STRING_FIRST_CACHE_TYPE_ID = 0x2B;
+  public static final byte STRING_LAST_CACHE_TYPE_ID = 0x2C;
+
+  // Suppressed aggregator
+  public static final byte SUPPRESSED_AGG_CACHE_TYPE_ID = 0x2D;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *
@@ -169,8 +176,10 @@ public class AggregatorUtil
         @Override
         public float getFloat()
         {
+          // Although baseSelector.getObject is nullable
+          // exprEval returned from Expression selectors is never null.
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : (float) exprEval.asDouble();
+          return exprEval.isNumericNull() ? nullValue : (float) exprEval.asDouble();
         }
 
         @Override
@@ -183,7 +192,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionFloatColumnSelector();
@@ -211,7 +220,7 @@ public class AggregatorUtil
         public long getLong()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : exprEval.asLong();
+          return exprEval.isNumericNull() ? nullValue : exprEval.asLong();
         }
 
         @Override
@@ -224,7 +233,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionLongColumnSelector();
@@ -252,7 +261,7 @@ public class AggregatorUtil
         public double getDouble()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : exprEval.asDouble();
+          return exprEval.isNumericNull() ? nullValue : exprEval.asDouble();
         }
 
         @Override
@@ -265,7 +274,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionDoubleColumnSelector();

@@ -196,7 +196,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
     // We need the inner incremental index to have all the columns required by the outer query
     final GroupByQuery innerQuery = new GroupByQuery.Builder(subquery)
-        .setAggregatorSpecs(Lists.newArrayList(aggs))
+        .setAggregatorSpecs(ImmutableList.copyOf(aggs))
         .setInterval(subquery.getIntervals())
         .setPostAggregatorSpecs(Lists.newArrayList())
         .build();

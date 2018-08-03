@@ -68,7 +68,7 @@ public class ParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "B")),
-            Lists.newArrayList("B"),
+            Collections.singletonList("B"),
             Lists.newArrayList()
         ),
         ",",

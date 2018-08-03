@@ -44,9 +44,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
-    Double ret = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
-    // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
-    return ret == null ? DimensionHandlerUtils.ZERO_DOUBLE : ret;
+    return DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
   }
 
   @Override

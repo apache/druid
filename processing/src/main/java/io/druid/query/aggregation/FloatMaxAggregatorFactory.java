@@ -24,8 +24,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -51,20 +53,39 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  protected BaseFloatColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMaxAggregator(getFloatColumnSelector(metricFactory, Float.NEGATIVE_INFINITY));
+    return getFloatColumnSelector(
+        metricFactory,
+        Float.NEGATIVE_INFINITY
+    );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseFloatColumnValueSelector selector)
   {
-    return new FloatMaxBufferAggregator(getFloatColumnSelector(metricFactory, Float.NEGATIVE_INFINITY));
+    return new FloatMaxAggregator(selector);
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      BaseFloatColumnValueSelector selector
+  )
   {
+    return new FloatMaxBufferAggregator(selector);
+  }
+
+  @Override
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
+  {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return FloatMaxAggregator.combineValues(lhs, rhs);
   }
 

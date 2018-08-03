@@ -22,7 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -63,7 +63,7 @@ public class SubstringDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String dimValue)
   {
-    if (Strings.isNullOrEmpty(dimValue)) {
+    if (NullHandling.isNullOrEquivalent(dimValue)) {
       return null;
     }
 
