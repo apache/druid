@@ -27,8 +27,11 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.util.Timer;
 
@@ -109,6 +112,28 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
 
       final ChannelPipeline pipeline = connectFuture.getChannel().getPipeline();
       pipeline.addFirst("ssl", sslHandler);
+      pipeline.addFirst("handler", new SimpleChannelUpstreamHandler()
+      {
+        private final Logger LOGGER = new Logger(SimpleChannelUpstreamHandler.class);
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+        {
+          final Channel channel = ctx.getChannel();
+          if (channel == null) {
+            // For the case where this pipeline is not attached yet.
+            LOGGER.error("This channel is null. Channel handler is [%s]", ctx.getName());
+            return;
+          }
+          final Throwable cause = e.getCause();
+          if (channel.isOpen()) {
+            LOGGER.error(cause, "Caught exception from [%s] channel handler. Now, closing it...", ctx.getName());
+            channel.close();
+          } else {
+            LOGGER.warn(cause, "Exception occurred with closed channel. Channel handler is [%s]", ctx.getName());
+          }
+        }
+      });
 
       final ChannelFuture handshakeFuture = Channels.future(connectFuture.getChannel());
       connectFuture.addListener(

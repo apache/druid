@@ -36,7 +36,6 @@ public class HttpClientPipelineFactory implements ChannelPipelineFactory
 
     pipeline.addLast("codec", new HttpClientCodec());
     pipeline.addLast("inflater", new HttpContentDecompressor());
-    pipeline.addLast("handler", new HttpClientHandler());
 
     return pipeline;
   }

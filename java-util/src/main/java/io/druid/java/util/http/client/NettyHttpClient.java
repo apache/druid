@@ -280,18 +280,18 @@ public class NettyHttpClient extends AbstractHttpClient
             if (response != null) {
               handler.exceptionCaught(response, event.getCause());
             }
-            removeHandlers();
             try {
-              channel.close();
+              if (channel.isOpen()) {
+                channel.close();
+              }
             }
             catch (Exception e) {
-              // ignore
+              log.warn(e, "Error while closing channel");
             }
             finally {
+              removeHandlers();
               channelResourceContainer.returnResource();
             }
-
-            context.sendUpstream(event);
           }
 
           @Override
@@ -310,7 +310,6 @@ public class NettyHttpClient extends AbstractHttpClient
               log.warn("[%s] Channel disconnected before response complete", requestDesc);
               retVal.setException(new ChannelException("Channel disconnected"));
             }
-            context.sendUpstream(event);
           }
 
           private void removeHandlers()

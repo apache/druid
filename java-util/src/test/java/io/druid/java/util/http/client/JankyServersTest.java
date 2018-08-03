@@ -315,7 +315,7 @@ public class JankyServersTest
           );
 
       expectedException.expect(ExecutionException.class);
-      expectedException.expectMessage("Channel disconnected");
+      expectedException.expectMessage("java.lang.IllegalArgumentException: invalid version format: GET");
 
       response.get();
     }
