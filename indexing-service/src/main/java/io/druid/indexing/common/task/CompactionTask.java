@@ -335,7 +335,7 @@ public class CompactionTask extends AbstractTask
       TaskToolbox toolbox,
       DataSchema dataSchema,
       Interval interval
-      )
+  )
   {
     return new IndexIOConfig(
         new IngestSegmentFirehoseFactory(
