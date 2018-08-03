@@ -233,12 +233,6 @@ public class OverlordTest
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("task", taskId_0), response.getEntity());
 
-    final Map<String, Object> context = task_0.getContext();
-    Assert.assertEquals(1, context.size());
-    final Integer priority = (Integer) context.get(Tasks.PRIORITY_KEY);
-    Assert.assertNotNull(priority);
-    Assert.assertEquals(Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY, priority.intValue());
-
     // Duplicate task - should fail
     response = overlordResource.taskPost(task_0, req);
     Assert.assertEquals(400, response.getStatus());
