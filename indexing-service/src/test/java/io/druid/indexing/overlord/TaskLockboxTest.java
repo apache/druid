@@ -301,7 +301,7 @@ public class TaskLockboxTest
             task.getDataSource(),
             Intervals.of("2017/2018"),
             "v1",
-            task.getDefaultPriority()
+            task.getPriority()
         )
     );
 
@@ -337,8 +337,8 @@ public class TaskLockboxTest
     );
 
     final TaskLockbox lockbox = new TaskLockbox(taskStorage);
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("lock priority[10] is different from task priority[0]");
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("lock priority[10] is different from task priority[50]");
     lockbox.syncFromStorage();
   }
 
@@ -636,7 +636,7 @@ public class TaskLockboxTest
 
     @JsonIgnore
     @Override
-    public int getPriority()
+    public Integer getPriority()
     {
       return super.getPriority();
     }

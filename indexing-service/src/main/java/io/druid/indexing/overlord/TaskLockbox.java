@@ -34,9 +34,7 @@ import com.google.inject.Inject;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.common.task.Tasks;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -132,17 +130,23 @@ public class TaskLockbox
         final TaskLock savedTaskLock = taskAndLock.rhs;
         if (savedTaskLock.getInterval().toDurationMillis() <= 0) {
           // "Impossible", but you never know what crazy stuff can be restored from storage.
-          log.warn("WTF?! Got lock with empty interval for task: %s", task.getId());
+          log.warn("WTF?! Got lock[%s] with empty interval for task: %s", savedTaskLock, task.getId());
           continue;
         }
 
-        final TaskLockPosse taskLockPosse = createOrFindLockPosse(task, savedTaskLock);
+        // Create a new taskLock if it doesn't have a proper priority,
+        // so that every taskLock in memory has the priority.
+        final TaskLock savedTaskLockWithPriority = savedTaskLock.getPriority() == null
+                                      ? TaskLock.withPriority(savedTaskLock, task.getPriority())
+                                      : savedTaskLock;
+
+        final TaskLockPosse taskLockPosse = createOrFindLockPosse(task, savedTaskLockWithPriority);
         if (taskLockPosse != null) {
           taskLockPosse.addTask(task);
 
           final TaskLock taskLock = taskLockPosse.getTaskLock();
 
-          if (savedTaskLock.getVersion().equals(taskLock.getVersion())) {
+          if (savedTaskLockWithPriority.getVersion().equals(taskLock.getVersion())) {
             taskLockCount++;
             log.info(
                 "Reacquired lock[%s] for task: %s",
@@ -153,8 +157,8 @@ public class TaskLockbox
             taskLockCount++;
             log.info(
                 "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task: %s",
-                savedTaskLock.getInterval(),
-                savedTaskLock.getVersion(),
+                savedTaskLockWithPriority.getInterval(),
+                savedTaskLockWithPriority.getVersion(),
                 taskLock.getVersion(),
                 task.getId()
             );
@@ -162,8 +166,8 @@ public class TaskLockbox
         } else {
           throw new ISE(
               "Could not reacquire lock on interval[%s] version[%s] for task: %s",
-              savedTaskLock.getInterval(),
-              savedTaskLock.getVersion(),
+              savedTaskLockWithPriority.getInterval(),
+              savedTaskLockWithPriority.getVersion(),
               task.getId()
           );
         }
@@ -384,27 +388,15 @@ public class TaskLockbox
           taskLock.getDataSource(),
           task.getDataSource()
       );
+      final int taskPriority = task.getPriority();
+      final int lockPriority = taskLock.getNonNullPriority();
 
-      final int priority;
-      // Here, both task and taskLock can return 0 priority if the priority is not properly set, that is they are
-      // created in an older version of Druid.
-      if (task.getPriority() == taskLock.getPriority()) {
-        priority = task.getPriority();
-      } else {
-        // The priority of task and taskLock can be different when updating cluster if the task doesn't have the
-        // priority in taskContext while taskLock has. In this case, we simply ignores the task priority and uses the
-        // taskLock priority.
-        if (task.getContextValue(Tasks.PRIORITY_KEY) == null && task.getDefaultPriority() == taskLock.getPriority()) {
-          log.warn("Task priority is missing. Using taskLock priority[%d] instead.", taskLock.getPriority());
-          priority = taskLock.getPriority();
-        } else {
-          throw new ISE(
-              "lock priority[%s] is different from task priority[%s]",
-              taskLock.getPriority(),
-              task.getPriority()
-          );
-        }
-      }
+      Preconditions.checkArgument(
+          lockPriority == taskPriority,
+          "lock priority[%s] is different from task priority[%s]",
+          lockPriority,
+          taskPriority
+      );
 
       return createOrFindLockPosse(
           taskLock.getType(),
@@ -413,7 +405,7 @@ public class TaskLockbox
           taskLock.getDataSource(),
           taskLock.getInterval(),
           taskLock.getVersion(),
-          priority,
+          taskPriority,
           taskLock.isRevoked()
       );
     }
@@ -942,7 +934,7 @@ public class TaskLockbox
   private static boolean isRevocable(TaskLockPosse lockPosse, int tryLockPriority)
   {
     final TaskLock existingLock = lockPosse.getTaskLock();
-    return existingLock.isRevoked() || existingLock.getPriority() < tryLockPriority;
+    return existingLock.isRevoked() || existingLock.getNonNullPriority() < tryLockPriority;
   }
 
   private TaskLockPosse getOnlyTaskLockPosseContainingInterval(Task task, Interval interval)
@@ -1003,21 +995,7 @@ public class TaskLockbox
     boolean addTask(Task task)
     {
       Preconditions.checkArgument(taskLock.getGroupId().equals(task.getGroupId()));
-
-      // The priority of task and taskLock can be different when updating cluster if the task doesn't have the
-      // priority in taskContext while taskLock has. In this case, we simply ignores the task priority and uses the
-      // taskLock priority.
-      if (taskLock.getPriority() != task.getPriority()) {
-        if (task.getContextValue(Tasks.PRIORITY_KEY) == null && task.getDefaultPriority() == taskLock.getPriority()) {
-          log.warn("Task priority is missing. Using taskLock priority[%d] instead.", taskLock.getPriority());
-        } else {
-          throw new IAE(
-              "Task priority[%d] is different from taskLock priority[%d]",
-              task.getPriority(),
-              taskLock.getPriority()
-          );
-        }
-      }
+      Preconditions.checkArgument(taskLock.getNonNullPriority() == task.getPriority());
       return taskIds.add(task.getId());
     }
 
