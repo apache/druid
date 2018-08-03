@@ -303,18 +303,7 @@ public class CompactionTask extends AbstractTask
         specs.add(
             new IndexIngestionSpec(
                 dataSchema,
-                new IndexIOConfig(
-                    new IngestSegmentFirehoseFactory(
-                        segmentProvider.dataSource,
-                        holder.getInterval(),
-                        null, // no filter
-                        // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
-                        dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
-                        Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
-                        toolbox.getIndexIO()
-                    ),
-                    false
-                ),
+                createIoConfig(toolbox, dataSchema, holder.getInterval()),
                 tuningConfig
             )
         );
@@ -335,22 +324,31 @@ public class CompactionTask extends AbstractTask
       return Collections.singletonList(
           new IndexIngestionSpec(
               dataSchema,
-              new IndexIOConfig(
-                  new IngestSegmentFirehoseFactory(
-                      segmentProvider.dataSource,
-                      segmentProvider.interval,
-                      null, // no filter
-                      // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
-                      dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
-                      Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
-                      toolbox.getIndexIO()
-                  ),
-                  false
-              ),
+              createIoConfig(toolbox, dataSchema, segmentProvider.interval),
               tuningConfig
           )
       );
     }
+  }
+
+  private static IndexIOConfig createIoConfig(
+      TaskToolbox toolbox,
+      DataSchema dataSchema,
+      Interval interval
+      )
+  {
+    return new IndexIOConfig(
+        new IngestSegmentFirehoseFactory(
+            dataSchema.getDataSource(),
+            interval,
+            null, // no filter
+            // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
+            dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
+            Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
+            toolbox.getIndexIO()
+        ),
+        false
+    );
   }
 
   private static Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> prepareSegments(
