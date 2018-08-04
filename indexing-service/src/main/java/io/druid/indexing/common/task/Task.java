@@ -98,14 +98,6 @@ public interface Task
   }
 
   /**
-   * Returns the default task priority. It can vary depending on the task type.
-   */
-  default int getDefaultPriority()
-  {
-    return Tasks.DEFAULT_TASK_PRIORITY;
-  }
-
-  /**
    * Returns a {@link TaskResource} for this task. Task resources define specific worker requirements a task may
    * require.
    *
