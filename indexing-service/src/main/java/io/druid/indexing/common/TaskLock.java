@@ -37,8 +37,21 @@ public class TaskLock
   private final String dataSource;
   private final Interval interval;
   private final String version;
-  private final int priority;
+  private final Integer priority;
   private final boolean revoked;
+
+  public static TaskLock withPriority(TaskLock lock, int priority)
+  {
+    return new TaskLock(
+        lock.type,
+        lock.getGroupId(),
+        lock.getDataSource(),
+        lock.getInterval(),
+        lock.getVersion(),
+        priority,
+        lock.isRevoked()
+    );
+  }
 
   @JsonCreator
   public TaskLock(
@@ -47,7 +60,7 @@ public class TaskLock
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
-      @JsonProperty("priority") int priority,
+      @JsonProperty("priority") @Nullable Integer priority,
       @JsonProperty("revoked") boolean revoked
   )
   {
@@ -116,9 +129,15 @@ public class TaskLock
   }
 
   @JsonProperty
-  public int getPriority()
+  @Nullable
+  public Integer getPriority()
   {
     return priority;
+  }
+
+  public int getNonNullPriority()
+  {
+    return Preconditions.checkNotNull(priority, "priority");
   }
 
   @JsonProperty
@@ -139,7 +158,7 @@ public class TaskLock
              this.dataSource.equals(that.dataSource) &&
              this.interval.equals(that.interval) &&
              this.version.equals(that.version) &&
-             this.priority == that.priority &&
+             Objects.equal(this.priority, that.priority) &&
              this.revoked == that.revoked;
     }
   }
