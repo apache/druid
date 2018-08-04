@@ -331,11 +331,7 @@ public class CompactionTask extends AbstractTask
     }
   }
 
-  private static IndexIOConfig createIoConfig(
-      TaskToolbox toolbox,
-      DataSchema dataSchema,
-      Interval interval
-  )
+  private static IndexIOConfig createIoConfig(TaskToolbox toolbox, DataSchema dataSchema, Interval interval)
   {
     return new IndexIOConfig(
         new IngestSegmentFirehoseFactory(
