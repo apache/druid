@@ -112,7 +112,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
 
       final ChannelPipeline pipeline = connectFuture.getChannel().getPipeline();
       pipeline.addFirst("ssl", sslHandler);
-      pipeline.addFirst("handler", new SimpleChannelUpstreamHandler()
+      pipeline.addLast("connectionErrorHandler", new SimpleChannelUpstreamHandler()
       {
         private final Logger LOGGER = new Logger(SimpleChannelUpstreamHandler.class);
 
