@@ -289,7 +289,6 @@ public class NettyHttpClient extends AbstractHttpClient
               log.warn(e, "Error while closing channel");
             }
             finally {
-              removeHandlers();
               channelResourceContainer.returnResource();
             }
           }
