@@ -35,9 +35,9 @@ Note that while this property is set on the middle manager configuration, its ac
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.middlemanager.cache.useCache`|true, false|Enable the cache on the middle manager (and spawned peon nodes).|false|
-|`druid.middlemanager.cache.populateCache`|true, false|Populate the cache on the middle manager (and spawned peon nodes).|false|
-|`druid.middlemanager.cache.unCacheable`|All druid query types|All query types to not cache.|`["groupBy", "select"]`|
+|`druid.realtime.cache.useCache`|true, false|Enable the cache on the middle manager (and spawned peon nodes).|false|
+|`druid.realtime.cache.populateCache`|true, false|Populate the cache on the middle manager (and spawned peon nodes).|false|
+|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`["groupBy", "select"]`|
 
 See [cache configuration](caching.html) for how to configure cache settings.
 
