@@ -27,6 +27,20 @@ The indexing service uses several of the global configs in [Configuration](../co
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/middlemanager|
 
+
+### Caching
+
+You can optionally configure caching to be enabled on the middle manager node by setting caching configs here.
+Note that while this property is set on the middle manager configuration, its actually the spawned peon nodes that have the caching functionality enabled.
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.middlemanager.cache.useCache`|true, false|Enable the cache on the middle manager (and spawned peon nodes).|false|
+|`druid.middlemanager.cache.populateCache`|true, false|Populate the cache on the middle manager (and spawned peon nodes).|false|
+|`druid.middlemanager.cache.unCacheable`|All druid query types|All query types to not cache.|`["groupBy", "select"]`|
+
+See [cache configuration](caching.html) for how to configure cache settings.
+
 #### Task Logging
 
 If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
