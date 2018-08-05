@@ -368,19 +368,24 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @VisibleForTesting
     public Builder setSimpleTestingIndexSchema(final AggregatorFactory... metrics)
     {
-      this.incrementalIndexSchema = new IncrementalIndexSchema.Builder()
-          .withMetrics(metrics)
-          .build();
-      return this;
+      return setSimpleTestingIndexSchema(null, metrics);
     }
 
+
+    /**
+     * A helper method to set a simple index schema with controllable metrics and rollup, and default values for the
+     * other parameters. Note that this method is normally used for testing and benchmarking; it is unlikely that you
+     * would use it in production settings.
+     *
+     * @param metrics variable array of {@link AggregatorFactory} metrics
+     *
+     * @return this
+     */
     @VisibleForTesting
-    public Builder setSimpleTestingIndexSchema(boolean rollup, final AggregatorFactory... metrics)
+    public Builder setSimpleTestingIndexSchema(@Nullable Boolean rollup, final AggregatorFactory... metrics)
     {
-      this.incrementalIndexSchema = new IncrementalIndexSchema.Builder()
-          .withMetrics(metrics)
-          .withRollup(rollup)
-          .build();
+      IncrementalIndexSchema.Builder builder = new IncrementalIndexSchema.Builder().withMetrics(metrics);
+      this.incrementalIndexSchema = rollup != null ? builder.withRollup(rollup).build() : builder.build();
       return this;
     }
 
@@ -1408,15 +1413,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
 
     private Stream<IncrementalIndexRow> timeAndDimsOrderedConcat(
-        final Collection<Deque<IncrementalIndexRow>> rowGroups,
-        final boolean descending
+        final Collection<Deque<IncrementalIndexRow>> rowGroups
     )
     {
-      if (descending) {
-        return rowGroups.stream()
-                        .flatMap(Collection::stream)
-                        .sorted(incrementalIndexRowComparator.reversed());
-      }
       return rowGroups.stream()
                       .flatMap(Collection::stream)
                       .sorted(incrementalIndexRowComparator);
@@ -1431,7 +1430,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public Iterable<IncrementalIndexRow> persistIterable()
     {
-      return () -> timeAndDimsOrderedConcat(facts.values(), false).iterator();
+      return () -> timeAndDimsOrderedConcat(facts.values()).iterator();
     }
 
     @Override
