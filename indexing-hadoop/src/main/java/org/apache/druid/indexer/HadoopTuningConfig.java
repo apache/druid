@@ -46,6 +46,11 @@ public class HadoopTuningConfig implements TuningConfig
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final boolean DEFAULT_USE_COMBINER = false;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
+  private static final String MAPREDUCE_JOB_USER_CLASSPATH_FIRST = "mapreduce.job.user.classpath.first";
+
+  // Netflix specific override. The version of hadoop we use causes class path conflicts for druid
+  // index job. Setting this property by default helps gets past various pesky class path issues.
+  private static final String DEFAULT_MAPREDUCE_JOB_USER_CLASSPATH_FIRST = "true";
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
@@ -146,9 +151,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
-    this.jobProperties = (jobProperties == null
-                          ? ImmutableMap.of()
-                          : ImmutableMap.copyOf(jobProperties));
+    this.jobProperties = setJobUserClassPathFirstProperty(jobProperties);
     this.combineText = combineText;
     this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();
     this.numBackgroundPersistThreads = numBackgroundPersistThreads == null
@@ -172,6 +175,15 @@ public class HadoopTuningConfig implements TuningConfig
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
 
     this.useYarnRMJobStatusFallback = useYarnRMJobStatusFallback == null ? true : useYarnRMJobStatusFallback;
+  }
+
+  private Map<String, String> setJobUserClassPathFirstProperty(Map<String, String> jobProperties)
+  {
+    if (jobProperties != null) {
+      jobProperties.putIfAbsent(MAPREDUCE_JOB_USER_CLASSPATH_FIRST, DEFAULT_MAPREDUCE_JOB_USER_CLASSPATH_FIRST);
+      return ImmutableMap.copyOf(jobProperties);
+    }
+    return ImmutableMap.of(MAPREDUCE_JOB_USER_CLASSPATH_FIRST, DEFAULT_MAPREDUCE_JOB_USER_CLASSPATH_FIRST);
   }
 
   @JsonProperty
