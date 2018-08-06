@@ -166,7 +166,7 @@ public class Execs
     return t;
   }
 
-  private static final int dummyThradNumber = 17;
+  private static final int DUMMY_THREAD_NUMBER = 17;
 
   /**
    * Fail fast if the format can't take a single argument integer for a thread counter.
@@ -174,9 +174,10 @@ public class Execs
    * Note that LACK of any argument in the format string still renders a valid name
    *
    * @param format The name format to check
+   * @throws java.util.IllegalFormatException if the format passed in does is not able to take a single thread parameter
    */
   public static void checkThreadNameFormat(String format)
   {
-    StringUtils.format(format, dummyThradNumber);
+    StringUtils.format(format, DUMMY_THREAD_NUMBER);
   }
 }
