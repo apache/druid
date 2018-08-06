@@ -75,11 +75,8 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   )
   {
     final String metric = query.getTopNMetricSpec().getMetricName(query.getDimensionSpec());
-    Pair<List<AggregatorFactory>, List<PostAggregator>> condensedAggPostAggPair = AggregatorUtil.condensedAggregators(
-        query.getAggregatorSpecs(),
-        query.getPostAggregatorSpecs(),
-        metric
-    );
+    Pair<List<AggregatorFactory>, List<PostAggregator>> condensedAggPostAggPair =
+        AggregatorUtil.condensedAggregators(query.getAggregatorSpecs(), query.getPostAggregatorSpecs(), metric);
 
     if (condensedAggPostAggPair.lhs.isEmpty() && condensedAggPostAggPair.rhs.isEmpty()) {
       throw new ISE("WTF! Can't find the metric to do topN over?");

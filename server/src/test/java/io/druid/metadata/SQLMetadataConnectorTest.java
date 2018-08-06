@@ -26,7 +26,8 @@ import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class SQLMetadataConnectorTest
@@ -47,7 +48,7 @@ public class SQLMetadataConnectorTest
   @Test
   public void testCreateTables()
   {
-    final LinkedList<String> tables = new LinkedList<String>();
+    final List<String> tables = new ArrayList<>();
     final String entryType = tablesConfig.getTaskEntryType();
     tables.add(tablesConfig.getConfigTable());
     tables.add(tablesConfig.getSegmentsTable());

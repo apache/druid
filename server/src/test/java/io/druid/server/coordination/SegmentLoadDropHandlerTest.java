@@ -45,6 +45,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -283,7 +284,7 @@ public class SegmentLoadDropHandlerTest
   @Test
   public void testLoadCache() throws Exception
   {
-    List<DataSegment> segments = Lists.newLinkedList();
+    List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < COUNT; ++i) {
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
@@ -415,7 +416,7 @@ public class SegmentLoadDropHandlerTest
         announcer, EasyMock.createNiceMock(DataSegmentServerAnnouncer.class), segmentManager
     );
 
-    List<DataSegment> segments = Lists.newLinkedList();
+    List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < COUNT; ++i) {
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));

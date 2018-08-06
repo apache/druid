@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.indexer.TaskInfo;
 import io.druid.java.util.common.DateTimes;
@@ -47,6 +46,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -457,29 +457,18 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 .bind("entryId", entryId)
                 .map(ByteArrayMapper.FIRST)
                 .fold(
-                    Lists.newLinkedList(),
-                    new Folder3<List<LogType>, byte[]>()
-                    {
-                      @Override
-                      public List<LogType> fold(
-                          List<LogType> list, byte[] bytes, FoldController control, StatementContext ctx
-                      ) throws SQLException
-                      {
-                        try {
-                          list.add(
-                              jsonMapper.readValue(
-                                  bytes, logType
-                              )
-                          );
-                          return list;
-                        }
-                        catch (IOException e) {
-                          log.makeAlert(e, "Failed to deserialize log")
-                             .addData("entryId", entryId)
-                             .addData("payload", StringUtils.fromUtf8(bytes))
-                             .emit();
-                          throw new SQLException(e);
-                        }
+                    new ArrayList<>(),
+                    (List<LogType> list, byte[] bytes, FoldController control, StatementContext ctx) -> {
+                      try {
+                        list.add(jsonMapper.readValue(bytes, logType));
+                        return list;
+                      }
+                      catch (IOException e) {
+                        log.makeAlert(e, "Failed to deserialize log")
+                           .addData("entryId", entryId)
+                           .addData("payload", StringUtils.fromUtf8(bytes))
+                           .emit();
+                        throw new SQLException(e);
                       }
                     }
                 );

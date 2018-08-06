@@ -4,3 +4,7 @@ com.google.common.util.concurrent.Futures#transform(com.google.common.util.concu
 com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#emptyIterator()
 com.google.common.base.Charsets @ Use java.nio.charset.StandardCharsets instead
 java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
+
+java.util.LinkedList @ Use ArrayList or ArrayDeque instead
+com.google.common.collect.Lists#newLinkedList() @ Use ArrayList or ArrayDeque instead
+com.google.common.collect.Lists#newLinkedList(java.lang.Iterable) @ Use ArrayList or ArrayDeque instead

@@ -68,7 +68,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -347,8 +346,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     );
     final long timestamp = System.currentTimeMillis();
     final Interval queryInterval = Intervals.of("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
-    final List<ListenableFuture<?>> indexFutures = new LinkedList<>();
-    final List<ListenableFuture<?>> queryFutures = new LinkedList<>();
+    final List<ListenableFuture<?>> indexFutures = new ArrayList<>();
+    final List<ListenableFuture<?>> queryFutures = new ArrayList<>();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(incrementalIndex, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),

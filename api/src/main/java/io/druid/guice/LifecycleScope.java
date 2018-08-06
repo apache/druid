@@ -19,13 +19,13 @@
 
 package io.druid.guice;
 
-import com.google.common.collect.Lists;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.Scope;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,7 +37,7 @@ public class LifecycleScope implements Scope
   private final Lifecycle.Stage stage;
 
   private Lifecycle lifecycle;
-  private final List<Object> instances = Lists.newLinkedList();
+  private final List<Object> instances = new ArrayList<>();
 
   public LifecycleScope(Lifecycle.Stage stage)
   {

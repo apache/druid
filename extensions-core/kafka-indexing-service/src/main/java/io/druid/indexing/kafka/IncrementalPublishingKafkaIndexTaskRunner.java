@@ -99,11 +99,11 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -181,8 +181,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private final RowIngestionMeters rowIngestionMeters;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
-  private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new LinkedList<>();
-  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new LinkedList<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
 
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)

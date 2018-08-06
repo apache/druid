@@ -23,7 +23,6 @@ import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import sun.misc.Unsafe;
@@ -31,6 +30,7 @@ import sun.misc.Unsafe;
 import java.lang.reflect.Field;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -41,7 +41,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 {
   private final HashFunction fn = Hashing.murmur3_128();
 
-  private final List<HyperLogLogCollector> collectors = Lists.newLinkedList();
+  private final List<HyperLogLogCollector> collectors = new ArrayList<>();
 
   @Param({"true"}) boolean targetIsDirect;
   @Param({"default", "random", "0"}) String alignment;
