@@ -179,7 +179,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private static class TestFirehose implements Firehose
   {
     private final InputRowParser<Map<String, Object>> parser;
-    private final Deque<Map<String, Object>> queue = new ArrayDeque<>();
+    private final Deque<Optional<Map<String, Object>>> queue = new ArrayDeque<>();
     private boolean closed = false;
 
     public TestFirehose(final InputRowParser<Map<String, Object>> parser)
@@ -190,7 +190,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     public void addRows(List<Map<String, Object>> rows)
     {
       synchronized (this) {
-        queue.addAll(rows);
+        rows.stream().map(Optional::ofNullable).forEach(queue::add);
         notifyAll();
       }
     }
@@ -216,7 +216,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     public InputRow nextRow()
     {
       synchronized (this) {
-        final InputRow row = parser.parseBatch(queue.removeFirst()).get(0);
+        final InputRow row = parser.parseBatch(queue.removeFirst().orElse(null)).get(0);
         if (row != null && row.getRaw(FAIL_DIM) != null) {
           throw new ParseException(FAIL_DIM);
         }
