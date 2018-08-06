@@ -157,4 +157,54 @@ public class BenchmarkSchemas
     );
     SCHEMA_MAP.put("simpleFloat", basicSchema);
   }
+
+  static { // schema with high opportunity for rollup
+    List<BenchmarkColumnSchema> rolloColumns = ImmutableList.of(
+        // dims
+        BenchmarkColumnSchema.makeEnumerated(
+            "dimEnumerated",
+            ValueType.STRING,
+            false,
+            1,
+            null,
+            Arrays.asList("Hello", "World", "Foo", "Bar", "Baz"),
+            Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
+        ),
+        BenchmarkColumnSchema.makeEnumerated(
+            "dimEnumerated2",
+            ValueType.STRING,
+            false,
+            1,
+            null,
+            Arrays.asList("Apple", "Orange", "Xylophone", "Corundum", null),
+            Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
+        ),
+        BenchmarkColumnSchema.makeZipf("dimZipf", ValueType.STRING, false, 1, null, 1, 100, 2.0),
+        BenchmarkColumnSchema.makeDiscreteUniform("dimUniform", ValueType.STRING, false, 1, null, 1, 100),
+
+        // metrics
+        BenchmarkColumnSchema.makeZipf("metLongZipf", ValueType.LONG, true, 1, null, 0, 10000, 2.0),
+        BenchmarkColumnSchema.makeDiscreteUniform("metLongUniform", ValueType.LONG, true, 1, null, 0, 500),
+        BenchmarkColumnSchema.makeNormal("metFloatNormal", ValueType.FLOAT, true, 1, null, 5000.0, 1.0, true),
+        BenchmarkColumnSchema.makeZipf("metFloatZipf", ValueType.FLOAT, true, 1, null, 0, 1000, 1.5)
+    );
+
+    List<AggregatorFactory> rolloSchemaIngestAggs = new ArrayList<>();
+    rolloSchemaIngestAggs.add(new CountAggregatorFactory("rows"));
+    rolloSchemaIngestAggs.add(new LongSumAggregatorFactory("sumLongSequential", "metLongSequential"));
+    rolloSchemaIngestAggs.add(new LongMaxAggregatorFactory("maxLongUniform", "metLongUniform"));
+    rolloSchemaIngestAggs.add(new DoubleSumAggregatorFactory("sumFloatNormal", "metFloatNormal"));
+    rolloSchemaIngestAggs.add(new DoubleMinAggregatorFactory("minFloatZipf", "metFloatZipf"));
+    rolloSchemaIngestAggs.add(new HyperUniquesAggregatorFactory("hyper", "dimHyperUnique"));
+
+    Interval basicSchemaDataInterval = Intervals.utc(0, 1000000);
+
+    BenchmarkSchemaInfo rolloSchema = new BenchmarkSchemaInfo(
+        rolloColumns,
+        rolloSchemaIngestAggs,
+        basicSchemaDataInterval,
+        true
+    );
+    SCHEMA_MAP.put("rollo", rolloSchema);
+  }
 }
