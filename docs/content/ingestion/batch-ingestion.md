@@ -8,7 +8,7 @@ Druid can load data from static files through a variety of methods described her
 
 ## Native Batch Ingestion
 
-Druid has built-in batch ingestion functionality. See [here](../ingestion/native-batch.html) for more info.
+Druid has built-in batch ingestion functionality. See [here](../ingestion/native_tasks.html) for more info.
 
 ## Hadoop Batch Ingestion
 
