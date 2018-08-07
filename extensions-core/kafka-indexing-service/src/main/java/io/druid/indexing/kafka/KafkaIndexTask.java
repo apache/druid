@@ -247,7 +247,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         toolbox.getEmitter(),
         toolbox.getQueryExecutorService(),
         toolbox.getCache(),
-        toolbox.getCacheConfig()
+        toolbox.getCacheConfig(),
+        toolbox.getCachePopulatorStats()
     );
   }
 

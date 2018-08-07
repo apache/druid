@@ -21,11 +21,11 @@ package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.guice.annotations.Processing;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -51,6 +51,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
   private final IndexMerger indexMerger;
   private final Cache cache;
   private final CacheConfig cacheConfig;
+  private final CachePopulatorStats cachePopulatorStats;
 
   public DefaultRealtimeAppenderatorFactory(
       @JacksonInject ServiceEmitter emitter,
@@ -62,7 +63,8 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
       @JacksonInject IndexIO indexIO,
       @JacksonInject IndexMerger indexMerger,
       @JacksonInject Cache cache,
-      @JacksonInject CacheConfig cacheConfig
+      @JacksonInject CacheConfig cacheConfig,
+      @JacksonInject CachePopulatorStats cachePopulatorStats
   )
   {
     this.emitter = emitter;
@@ -75,6 +77,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
     this.indexMerger = indexMerger;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
+    this.cachePopulatorStats = cachePopulatorStats;
   }
 
   @Override
@@ -103,7 +106,8 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
         emitter,
         queryExecutorService,
         cache,
-        cacheConfig
+        cacheConfig,
+        cachePopulatorStats
     );
   }
 
