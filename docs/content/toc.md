@@ -3,7 +3,12 @@ layout: toc
 ---
 
 ## Getting Started
-  * [Concepts](/docs/VERSION/design/)
+  * [Design](/docs/VERSION/design/index.html)
+    * [What is Druid?](/docs/VERSION/design/index.html#what-is-druid)
+    * [Architecture](/docs/VERSION/design/index.html#architecture)
+    * [Query processing](/docs/VERSION/design/index.html#query-processing)
+    * [External dependencies](/docs/VERSION/design/index.html#external-dependencies)
+    * [Ingestion overview](/docs/VERSION/ingest/overview.html)
   * [Quickstart](/docs/VERSION/tutorials/quickstart.html)
   * [Loading Data](/docs/VERSION/tutorials/ingestion.html)
     * [Loading from Files](/docs/VERSION/tutorials/tutorial-batch.html)
@@ -12,6 +17,7 @@ layout: toc
   * [Clustering](/docs/VERSION/tutorials/cluster.html)
 
 ## Data Ingestion
+  * [Ingestion overview](/docs/VERSION/ingest/overview.html)
   * [Data Formats](/docs/VERSION/ingestion/data-formats.html)
   * [Ingestion Spec](/docs/VERSION/ingestion/index.html)
   * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
