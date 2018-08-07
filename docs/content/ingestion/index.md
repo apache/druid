@@ -87,7 +87,8 @@ An example dataSchema is shown below:
     "segmentGranularity" : "DAY",
     "queryGranularity" : "NONE",
     "intervals" : [ "2013-08-31/2013-09-01" ]
-  }
+  },
+  "transformSpec" : null
 }
 ```
 
@@ -97,6 +98,7 @@ An example dataSchema is shown below:
 | parser | JSON Object | Specifies how ingested data can be parsed. | yes |
 | metricsSpec | JSON Object array | A list of [aggregators](../querying/aggregations.html). | yes |
 | granularitySpec | JSON Object | Specifies how to create segments and roll up data. | yes |
+| transformSpec | JSON Object | Specifes how to filter and transform input data. See [transform specs](../ingestion/transform-spec.html).| no |
 
 ## Parser
 
@@ -233,7 +235,9 @@ For example, the following `dimensionsSpec` section from a `dataSchema` ingests 
 }
 ```
 
-
+## metricsSpec
+ The `metricsSpec` is a list of [aggregators](../querying/aggregations.html). If `rollup` is false in the granularity spec, the metrics spec should be an empty list and all columns should be defined in the `dimensionsSpec` instead (without rollup, there isn't a real distinction between dimensions and metrics at ingestion time). This is optional, however.
+ 
 ## GranularitySpec
 
 The default granularity spec is `uniform`, and can be changed by setting the `type` field.
@@ -259,6 +263,10 @@ This spec is used to generate segments with arbitrary intervals (it tries to cre
 | queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. | no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
 | intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | yes for batch, no for real-time |
+
+# Transform Spec
+
+Transform specs allow Druid to transform and filter input data during ingestion. See [Transform specs](../ingestion/transform-spec.html)
 
 # IO Config
 
