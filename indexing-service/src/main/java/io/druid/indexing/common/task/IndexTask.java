@@ -86,6 +86,7 @@ import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthorizerMapper;
@@ -241,9 +242,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   }
 
   @Override
-  public int getDefaultPriority()
+  public int getPriority()
   {
-    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 
   @Override
@@ -419,10 +420,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
-      if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-        // pass toolbox to Firehose
-        ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
-      }
+      setFirehoseFactoryToolbox(firehoseFactory, toolbox);
 
       final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
       // Firehose temporary directory is automatically removed when this IndexTask completes.
@@ -474,6 +472,25 @@ public class IndexTask extends AbstractTask implements ChatHandler
     finally {
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
+      }
+    }
+  }
+
+  // pass toolbox to any IngestSegmentFirehoseFactory
+  private void setFirehoseFactoryToolbox(FirehoseFactory firehoseFactory, TaskToolbox toolbox)
+  {
+    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
+      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
+      return;
+    }
+
+    if (firehoseFactory instanceof CombiningFirehoseFactory) {
+      for (FirehoseFactory delegateFactory : ((CombiningFirehoseFactory) firehoseFactory).getDelegateFactoryList()) {
+        if (delegateFactory instanceof IngestSegmentFirehoseFactory) {
+          ((IngestSegmentFirehoseFactory) delegateFactory).setTaskToolbox(toolbox);
+        } else if (delegateFactory instanceof CombiningFirehoseFactory) {
+          setFirehoseFactoryToolbox(delegateFactory, toolbox);
+        }
       }
     }
   }

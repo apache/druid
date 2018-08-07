@@ -143,16 +143,14 @@ public class MergeSequenceTest
   {
     final Sequence<Integer> seq1 = new MergeSequence<>(
         Ordering.natural(), Sequences.simple(
-        Lists.newArrayList(
-            TestSequence.create(1)
-        )
+        Collections.singletonList(TestSequence.create(1))
     )
     );
 
     final Sequence<Integer> finalMerged = new MergeSequence<>(
         Ordering.natural(),
         Sequences.simple(
-            Lists.newArrayList(seq1)
+            Collections.singletonList(seq1)
         )
     );
 
@@ -164,9 +162,7 @@ public class MergeSequenceTest
   {
     final Sequence<Integer> mergeOne = new MergeSequence<>(
         Ordering.natural(), Sequences.simple(
-        Lists.newArrayList(
-            TestSequence.create(1)
-        )
+        Collections.singletonList(TestSequence.create(1))
     )
     );
 

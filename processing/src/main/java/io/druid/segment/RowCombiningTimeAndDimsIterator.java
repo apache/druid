@@ -117,7 +117,7 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
     );
 
     combinedMetricSelectors = new AggregateCombiner[metricAggs.length];
-    Arrays.setAll(combinedMetricSelectors, metricIndex -> metricAggs[metricIndex].makeAggregateCombiner());
+    Arrays.setAll(combinedMetricSelectors, metricIndex -> metricAggs[metricIndex].makeNullableAggregateCombiner());
     combinedMetricNames = metricNames;
 
     combinedTimeAndDimsPointersByOriginalIteratorIndex = new TimeAndDimsPointer[numCombinedIterators];

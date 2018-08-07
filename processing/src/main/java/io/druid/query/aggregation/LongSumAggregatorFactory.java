@@ -24,8 +24,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -51,20 +53,39 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  protected BaseLongColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumAggregator(getLongColumnSelector(metricFactory, 0L));
+    return getLongColumnSelector(
+        metricFactory,
+        0L
+    );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
   {
-    return new LongSumBufferAggregator(getLongColumnSelector(metricFactory, 0L));
+    return new LongSumAggregator(selector);
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      BaseLongColumnValueSelector selector
+  )
   {
+    return new LongSumBufferAggregator(selector);
+  }
+
+  @Override
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
+  {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return LongSumAggregator.combineValues(lhs, rhs);
   }
 

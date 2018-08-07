@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import com.google.common.base.Strings;
 import io.druid.indexing.overlord.DataSourceMetadata;
 
 import java.util.Objects;
@@ -41,7 +42,9 @@ public class DerivativeDataSourceMetadata implements DataSourceMetadata
       @JsonProperty("metrics") Set<String> metrics
   )
   {
-    this.baseDataSource = Preconditions.checkNotNull(baseDataSource, "baseDataSource cannot be null. This is not a valid DerivativeDataSourceMetadata.");
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(baseDataSource), "baseDataSource cannot be null or empty. Please provide a baseDataSource.");
+    this.baseDataSource = baseDataSource;
+
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions cannot be null. This is not a valid DerivativeDataSourceMetadata.");
     this.metrics = Preconditions.checkNotNull(metrics, "metrics cannot be null. This is not a valid DerivativeDataSourceMetadata.");
   }

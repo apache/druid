@@ -19,7 +19,6 @@
 
 package io.druid.server.http;
 
-import com.google.common.collect.Lists;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.InventoryView;
@@ -66,9 +65,8 @@ public interface InventoryViewUtils
     Iterable<ImmutableDruidDataSource> filteredResources = AuthorizationUtils.filterAuthorizedResources(
         request,
         getDataSources(inventoryView),
-        datasource -> Lists.newArrayList(
-            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasource.getName())
-        ),
+        datasource ->
+            Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasource.getName())),
         authorizerMapper
     );
     SortedSet<ImmutableDruidDataSource> set = new TreeSet<>(comparingByName());

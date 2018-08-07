@@ -1426,7 +1426,7 @@ public class CachingClusteredClientTest
 
     SelectQuery query = builder
         .intervals("2011-01-01/2011-01-10")
-        .dimensionSpecs(Lists.newArrayList(new DefaultDimensionSpec("a", "a2")))
+        .dimensionSpecs(Collections.singletonList(new DefaultDimensionSpec("a", "a2")))
         .build();
     TestHelper.assertExpectedResults(
         makeSelectResults(
@@ -1462,8 +1462,7 @@ public class CachingClusteredClientTest
         .setDataSource(DATA_SOURCE)
         .setQuerySegmentSpec(SEG_SPEC)
         .setDimFilter(DIM_FILTER)
-        .setGranularity(GRANULARITY)
-        .setDimensions(Collections.singletonList(new DefaultDimensionSpec("a", "a")))
+        .setGranularity(GRANULARITY).setDimensions(new DefaultDimensionSpec("a", "a"))
         .setAggregatorSpecs(aggsWithUniques)
         .setPostAggregatorSpecs(POST_AGGS)
         .setContext(CONTEXT);
@@ -2974,8 +2973,7 @@ public class CachingClusteredClientTest
         .setDataSource(DATA_SOURCE)
         .setQuerySegmentSpec(SEG_SPEC)
         .setDimFilter(DIM_FILTER)
-        .setGranularity(GRANULARITY)
-        .setDimensions(Collections.singletonList(new DefaultDimensionSpec("a", "output")))
+        .setGranularity(GRANULARITY).setDimensions(new DefaultDimensionSpec("a", "output"))
         .setAggregatorSpecs(AGGS)
         .setContext(CONTEXT);
 
@@ -3036,8 +3034,7 @@ public class CachingClusteredClientTest
     );
 
     GroupByQuery query = builder
-        .setInterval("2011-01-05/2011-01-10")
-        .setDimensions(Collections.singletonList(new DefaultDimensionSpec("a", "output2")))
+        .setInterval("2011-01-05/2011-01-10").setDimensions(new DefaultDimensionSpec("a", "output2"))
         .setAggregatorSpecs(RENAMED_AGGS)
         .build();
     TestHelper.assertExpectedObjects(

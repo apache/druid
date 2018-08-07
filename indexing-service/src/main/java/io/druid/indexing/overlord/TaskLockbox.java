@@ -130,17 +130,23 @@ public class TaskLockbox
         final TaskLock savedTaskLock = taskAndLock.rhs;
         if (savedTaskLock.getInterval().toDurationMillis() <= 0) {
           // "Impossible", but you never know what crazy stuff can be restored from storage.
-          log.warn("WTF?! Got lock with empty interval for task: %s", task.getId());
+          log.warn("WTF?! Got lock[%s] with empty interval for task: %s", savedTaskLock, task.getId());
           continue;
         }
 
-        final TaskLockPosse taskLockPosse = createOrFindLockPosse(task, savedTaskLock);
+        // Create a new taskLock if it doesn't have a proper priority,
+        // so that every taskLock in memory has the priority.
+        final TaskLock savedTaskLockWithPriority = savedTaskLock.getPriority() == null
+                                      ? TaskLock.withPriority(savedTaskLock, task.getPriority())
+                                      : savedTaskLock;
+
+        final TaskLockPosse taskLockPosse = createOrFindLockPosse(task, savedTaskLockWithPriority);
         if (taskLockPosse != null) {
           taskLockPosse.addTask(task);
 
           final TaskLock taskLock = taskLockPosse.getTaskLock();
 
-          if (savedTaskLock.getVersion().equals(taskLock.getVersion())) {
+          if (savedTaskLockWithPriority.getVersion().equals(taskLock.getVersion())) {
             taskLockCount++;
             log.info(
                 "Reacquired lock[%s] for task: %s",
@@ -151,8 +157,8 @@ public class TaskLockbox
             taskLockCount++;
             log.info(
                 "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task: %s",
-                savedTaskLock.getInterval(),
-                savedTaskLock.getVersion(),
+                savedTaskLockWithPriority.getInterval(),
+                savedTaskLockWithPriority.getVersion(),
                 taskLock.getVersion(),
                 task.getId()
             );
@@ -160,8 +166,8 @@ public class TaskLockbox
         } else {
           throw new ISE(
               "Could not reacquire lock on interval[%s] version[%s] for task: %s",
-              savedTaskLock.getInterval(),
-              savedTaskLock.getVersion(),
+              savedTaskLockWithPriority.getInterval(),
+              savedTaskLockWithPriority.getVersion(),
               task.getId()
           );
         }
@@ -382,11 +388,14 @@ public class TaskLockbox
           taskLock.getDataSource(),
           task.getDataSource()
       );
+      final int taskPriority = task.getPriority();
+      final int lockPriority = taskLock.getNonNullPriority();
+
       Preconditions.checkArgument(
-          task.getPriority() == taskLock.getPriority(),
+          lockPriority == taskPriority,
           "lock priority[%s] is different from task priority[%s]",
-          taskLock.getPriority(),
-          task.getPriority()
+          lockPriority,
+          taskPriority
       );
 
       return createOrFindLockPosse(
@@ -396,7 +405,7 @@ public class TaskLockbox
           taskLock.getDataSource(),
           taskLock.getInterval(),
           taskLock.getVersion(),
-          taskLock.getPriority(),
+          taskPriority,
           taskLock.isRevoked()
       );
     }
@@ -925,7 +934,7 @@ public class TaskLockbox
   private static boolean isRevocable(TaskLockPosse lockPosse, int tryLockPriority)
   {
     final TaskLock existingLock = lockPosse.getTaskLock();
-    return existingLock.isRevoked() || existingLock.getPriority() < tryLockPriority;
+    return existingLock.isRevoked() || existingLock.getNonNullPriority() < tryLockPriority;
   }
 
   private TaskLockPosse getOnlyTaskLockPosseContainingInterval(Task task, Interval interval)
@@ -993,11 +1002,11 @@ public class TaskLockbox
           taskLock.getGroupId()
       );
       Preconditions.checkArgument(
-          taskLock.getPriority() == task.getPriority(),
+          taskLock.getNonNullPriority() == task.getPriority(),
           "priority[%s] of task[%s] is different from the existing lockPosse's priority[%s]",
           task.getPriority(),
           task.getId(),
-          taskLock.getPriority()
+          taskLock.getNonNullPriority()
       );
       return taskIds.add(task.getId());
     }

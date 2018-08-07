@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.Pair;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
@@ -148,7 +149,7 @@ public class BoundFilter implements Filter
     if (!boundDimFilter.hasLowerBound()) {
       startIndex = 0;
     } else {
-      final int found = bitmapIndex.getIndex(boundDimFilter.getLower());
+      final int found = bitmapIndex.getIndex(NullHandling.emptyToNullIfNeeded(boundDimFilter.getLower()));
       if (found >= 0) {
         startIndex = boundDimFilter.isLowerStrict() ? found + 1 : found;
       } else {
@@ -159,7 +160,7 @@ public class BoundFilter implements Filter
     if (!boundDimFilter.hasUpperBound()) {
       endIndex = bitmapIndex.getCardinality();
     } else {
-      final int found = bitmapIndex.getIndex(boundDimFilter.getUpper());
+      final int found = bitmapIndex.getIndex(NullHandling.emptyToNullIfNeeded(boundDimFilter.getUpper()));
       if (found >= 0) {
         endIndex = boundDimFilter.isUpperStrict() ? found : found + 1;
       } else {
@@ -249,9 +250,10 @@ public class BoundFilter implements Filter
   {
     if (input == null) {
       return (!boundDimFilter.hasLowerBound()
-              || (boundDimFilter.getLower().isEmpty() && !boundDimFilter.isLowerStrict())) // lower bound allows null
+              || (NullHandling.isNullOrEquivalent(boundDimFilter.getLower()) && !boundDimFilter.isLowerStrict()))
+             // lower bound allows null
              && (!boundDimFilter.hasUpperBound()
-                 || !boundDimFilter.getUpper().isEmpty()
+                 || !NullHandling.isNullOrEquivalent(boundDimFilter.getUpper())
                  || !boundDimFilter.isUpperStrict()); // upper bound allows null
     }
     int lowerComparing = 1;

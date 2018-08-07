@@ -79,7 +79,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
-                                                   : new PlainFactsHolder(sortFacts);
+                                                   : new PlainFactsHolder(sortFacts, dimsComparator());
     maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
   }
 
@@ -106,7 +106,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     long maxAggregatorIntermediateSize = Integer.BYTES * incrementalIndexSchema.getMetrics().length;
     maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
-                                           .mapToLong(aggregator -> aggregator.getMaxIntermediateSize() + Long.BYTES * 2)
+                                           .mapToLong(aggregator -> aggregator.getMaxIntermediateSizeWithNulls() + Long.BYTES * 2)
                                            .sum();
     return maxAggregatorIntermediateSize;
   }

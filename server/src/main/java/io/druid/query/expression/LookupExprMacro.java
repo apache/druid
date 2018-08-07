@@ -19,8 +19,8 @@
 
 package io.druid.query.expression;
 
-import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -77,7 +77,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(extractionFn.apply(Strings.emptyToNull(arg.eval(bindings).asString())));
+        return ExprEval.of(extractionFn.apply(NullHandling.emptyToNullIfNeeded(arg.eval(bindings).asString())));
       }
 
       @Override

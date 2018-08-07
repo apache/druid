@@ -22,7 +22,7 @@ matrix:
         - NAME="strict compilation"
       install: true
       # Strict compilation requires more than 2 GB
-      script: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B
+      script: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B --fail-at-end
 
       # processing module test
     - sudo: false
@@ -32,6 +32,15 @@ matrix:
       before_script:
         - unset _JAVA_OPTIONS
       script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl processing
+
+      # processing module tests with SQL Compatibility enabled
+    - sudo: false
+      env:
+        - NAME="processing module test with SQL Compatibility"
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -Ddruid.generic.useDefaultValueForNull=false -pl processing
 
       # server module test
     - sudo: false
@@ -43,6 +52,17 @@ matrix:
       # Server module test is run without the parallel-test option because it's memory sensitive and often fails with that option.
       script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -pl server
 
+      # server module test with SQL Compatibility enabled
+    - sudo: false
+      env:
+        - NAME="server module test with SQL Compatibility enabled"
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+      # Server module test is run without the parallel-test option because it's memory sensitive and often fails with that option.
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -pl server -Ddruid.generic.useDefaultValueForNull=false
+
+
       # other modules test
     - sudo: false
       env:
@@ -52,6 +72,16 @@ matrix:
       before_script:
         - unset _JAVA_OPTIONS
       script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -pl '!processing,!server'
+
+      # other modules test with SQL Compatibility enabled
+    - sudo: false
+      env:
+        - NAME="other modules test with SQL Compatibility"
+        - AWS_REGION=us-east-1 # set a aws region for unit tests
+      install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
+      before_script:
+        - unset _JAVA_OPTIONS
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -Pparallel-test -Dmaven.fork.count=2 -Ddruid.generic.useDefaultValueForNull=false -pl '!processing,!server'
 
       # run integration tests
     - sudo: required

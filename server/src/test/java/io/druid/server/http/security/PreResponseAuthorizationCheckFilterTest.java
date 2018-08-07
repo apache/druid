@@ -19,7 +19,6 @@
 
 package io.druid.server.http.security;
 
-import com.google.common.collect.Lists;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
@@ -38,11 +37,12 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Collections;
 import java.util.List;
 
 public class PreResponseAuthorizationCheckFilterTest
 {
-  private static List<Authenticator> authenticators = Lists.newArrayList(new AllowAllAuthenticator());
+  private static List<Authenticator> authenticators = Collections.singletonList(new AllowAllAuthenticator());
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();

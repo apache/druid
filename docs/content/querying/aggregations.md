@@ -102,7 +102,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 ### First / Last aggregator
 
-First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
+(Double/Float/Long) First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
 
 Note that queries with first/last aggregators on a segment created with rollup enabled will return the rolled up value, and not the last value within the raw ingested data.
 
@@ -175,6 +175,36 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "type" : "longLast",
   "name" : <output_name>, 
   "fieldName" : <metric_name>,
+}
+```
+
+#### `stringFirst` aggregator
+
+`stringFirst` computes the metric value with the minimum timestamp or `null` if no row exist
+
+```json
+{
+  "type" : "stringFirst",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "maxStringBytes" : <integer> # (optional, defaults to 1024),
+  "filterNullValues" : <boolean> # (optional, defaults to false)
+}
+```
+
+
+
+#### `stringLast` aggregator
+
+`stringLast` computes the metric value with the maximum timestamp or `null` if no row exist
+
+```json
+{
+  "type" : "stringLast",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "maxStringBytes" : <integer> # (optional, defaults to 1024),
+  "filterNullValues" : <boolean> # (optional, defaults to false)
 }
 ```
 

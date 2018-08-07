@@ -21,10 +21,10 @@ package io.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
@@ -216,8 +216,8 @@ public class SegmentAnalyzer
     }
 
     if (analyzingMinMax() && cardinality > 0) {
-      min = Strings.nullToEmpty(bitmapIndex.getValue(0));
-      max = Strings.nullToEmpty(bitmapIndex.getValue(cardinality - 1));
+      min = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(0));
+      max = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(cardinality - 1));
     }
 
     return new ColumnAnalysis(

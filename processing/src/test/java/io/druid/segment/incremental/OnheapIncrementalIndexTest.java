@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.Aggregator;
@@ -30,6 +29,7 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -64,7 +64,7 @@ public class OnheapIncrementalIndexTest
             for (int j = 0; j < MAX_ROWS / addThreadCount; ++j) {
               index.add(new MapBasedInputRow(
                   0,
-                  Lists.newArrayList("billy"),
+                  Collections.singletonList("billy"),
                   ImmutableMap.of("billy", random.nextLong(), "max", 1)
               ));
             }
@@ -122,7 +122,7 @@ public class OnheapIncrementalIndexTest
 
     index.add(new MapBasedInputRow(
             0,
-            Lists.newArrayList("billy"),
+            Collections.singletonList("billy"),
             ImmutableMap.of("billy", 1, "max", 1)
     ));
 

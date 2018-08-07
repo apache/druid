@@ -203,9 +203,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   }
 
   @Override
-  public int getDefaultPriority()
+  public int getPriority()
   {
-    return Tasks.DEFAULT_REALTIME_TASK_PRIORITY;
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_REALTIME_TASK_PRIORITY);
   }
 
   @Override
