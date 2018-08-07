@@ -22,6 +22,7 @@ layout: toc
     * [Stream Pull](/docs/VERSION/ingestion/stream-pull.html)
   * [Updating Existing Data](/docs/VERSION/ingestion/update-existing-data.html)
   * [Ingestion Tasks](/docs/VERSION/ingestion/tasks.html)
+  * [Transform Specs](/docs/VERSION/ingestion/transform-spec.html)
   * [FAQ](/docs/VERSION/ingestion/faq.html)
 
 ## Querying
@@ -50,6 +51,7 @@ layout: toc
   * [Multitenancy](/docs/VERSION/querying/multitenancy.html)
   * [Caching](/docs/VERSION/querying/caching.html)
   * [Sorting Orders](/docs/VERSION/querying/sorting-orders.html)
+  * [Virtual Columns](/docs/VERSION/querying/virtual-columns.html)
 
 ## Design
   * [Overview](/docs/VERSION/design/design.html)
@@ -110,5 +112,6 @@ layout: toc
 
 
 ## Misc
+  * [Druid Expressions Language](/docs/VERSION/misc/math-expr.html)
   * [Papers & Talks](/docs/VERSION/misc/papers-and-talks.html)
   * [Thanks](/thanks.html)
