@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.client.indexing.ClientCompactQueryTuningConfig;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.client.indexing.NoopIndexingServiceClient;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
@@ -55,7 +56,7 @@ public class DruidCoordinatorSegmentCompactorTest
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
-  private final IndexingServiceClient indexingServiceClient = new IndexingServiceClient(null, null)
+  private final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
   {
     private int compactVersionSuffix = 0;
     private int idSuffix = 0;

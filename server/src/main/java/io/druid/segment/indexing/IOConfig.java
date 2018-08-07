@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "realtime", value = RealtimeIOConfig.class),
+    @JsonSubTypes.Type(name = "realtime", value = RealtimeIOConfig.class)
 })
 public interface IOConfig
 {

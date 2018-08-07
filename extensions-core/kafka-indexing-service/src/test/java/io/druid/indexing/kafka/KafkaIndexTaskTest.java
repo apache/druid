@@ -50,6 +50,7 @@ import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.Counters;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
@@ -2050,6 +2051,7 @@ public class KafkaIndexTaskTest
     taskLockbox = new TaskLockbox(taskStorage);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
+        taskStorage,
         metadataStorageCoordinator,
         emitter,
         new SupervisorManager(null)
@@ -2073,7 +2075,8 @@ public class KafkaIndexTaskTest
             );
             return true;
           }
-        }
+        },
+        new Counters()
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

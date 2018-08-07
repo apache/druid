@@ -72,4 +72,9 @@ public interface FirehoseFactory<T extends InputRowParser>
   {
     return connect(parser);
   }
+
+  default boolean isSplittable()
+  {
+    return false;
+  }
 }

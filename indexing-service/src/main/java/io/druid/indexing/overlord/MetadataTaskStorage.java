@@ -180,6 +180,13 @@ public class MetadataTaskStorage implements TaskStorage
     return handler.getStatus(taskId);
   }
 
+  @Nullable
+  @Override
+  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  {
+    return handler.getTaskInfo(taskId);
+  }
+
   @Override
   public List<Task> getActiveTasks()
   {

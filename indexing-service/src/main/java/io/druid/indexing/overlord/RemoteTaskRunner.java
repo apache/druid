@@ -45,6 +45,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.Task;
@@ -87,6 +88,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -463,6 +465,23 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     // Racey, since there is a period of time during assignment when a task is neither pending nor running
     return ImmutableList.copyOf(Iterables.concat(pendingTasks.values(), runningTasks.values(), completeTasks.values()));
+  }
+
+  @Nullable
+  @Override
+  public RunnerTaskState getRunnerTaskState(String taskId)
+  {
+    if (pendingTasks.containsKey(taskId)) {
+      return RunnerTaskState.PENDING;
+    }
+    if (runningTasks.containsKey(taskId)) {
+      return RunnerTaskState.RUNNING;
+    }
+    if (completeTasks.containsKey(taskId)) {
+      return RunnerTaskState.NONE;
+    }
+
+    return null;
   }
 
   @Override

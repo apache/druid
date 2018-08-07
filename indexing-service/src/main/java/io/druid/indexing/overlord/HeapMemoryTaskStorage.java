@@ -149,6 +149,32 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
+  @Nullable
+  @Override
+  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskId, "taskId");
+      final TaskStuff taskStuff = tasks.get(taskId);
+      if (taskStuff != null) {
+        return new TaskInfo<>(
+            taskStuff.getTask().getId(),
+            taskStuff.getCreatedDate(),
+            taskStuff.getStatus(),
+            taskStuff.getDataSource(),
+            taskStuff.getTask()
+        );
+      } else {
+        return null;
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
   @Override
   public List<Task> getActiveTasks()
   {
