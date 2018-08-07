@@ -183,7 +183,7 @@ Druid nodes periodically emit metrics and different metrics monitors can be incl
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.monitoring.emissionPeriod`|How often metrics are emitted.|PT1m|
+|`druid.monitoring.emissionPeriod`|How often metrics are emitted.|PT1M|
 |`druid.monitoring.monitors`|Sets list of Druid monitors used by a node. See below for names and more information. For example, you can specify monitors for a Broker with `druid.monitoring.monitors=["io.druid.java.util.metrics.SysMonitor","io.druid.java.util.metrics.JvmMonitor"]`.|none (no monitors)|
 
 The following monitors are available:
