@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 
-# What is Druid?
+# What is Druid?<a id="what-is-druid"></a>
 
 Druid is a data store designed for high-performance slice-and-dice analytics
 ("[OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing)"-style) on large data sets. Druid is most often
@@ -46,7 +46,7 @@ offers exact count-distinct and exact ranking.
 9. **Automatic summarization at ingest time.** Druid optionally supports data summarization at ingestion time. This
 summarization partially pre-aggregates your data, and can lead to big costs savings and performance boosts.
 
-## When should I use Druid?
+# When should I use Druid?<a id="when-to-use-druid"></a>
 
 Druid is likely a good choice if your use case fits a few of the following descriptors:
 
@@ -67,28 +67,28 @@ background batch jobs).
 - You are building an offline reporting system where query latency is not very important.
 - You want to do "big" joins (joining one big fact table to another big fact table).
 
-## Architecture
+# Architecture
 
 Druid has a multi-process, distributed architecture that is designed to be cloud-friendly and easy to operate. Each
-Druid process type can be configured and scaled independently, giving your maximum flexibility over your cluster. This
+Druid process type can be configured and scaled independently, giving you maximum flexibility over your cluster. This
 design also provides enhanced fault tolerance: an outage of one component will not immediately affect other components.
 
 Druid's process types are:
 
-* [**Historical**](#historical) processes are the workhorses that handle storage and querying on "historical" data
+* [**Historical**](../design/historical.html) processes are the workhorses that handle storage and querying on "historical" data
 (including any streaming data that has been in the system long enough to be committed). Historical processes
 download segments from deep storage and respond to queries about these segments. They don't accept writes.
-* [**MiddleManager**](#middlemanager) processes handle ingestion of new data into the cluster. They are responsible
+* [**MiddleManager**](../design/middlemanager.html) processes handle ingestion of new data into the cluster. They are responsible
 for reading from external data sources and publishing new Druid segments.
-* [**Broker**](#broker) processes receive queries from external clients and forward those queries to Historicals and
+* [**Broker**](../design/broker.html) processes receive queries from external clients and forward those queries to Historicals and
 MiddleManagers. When Brokers receive results from those subqueries, they merge those results and return them to the
 caller. End users typically query Brokers rather than querying Historicals or MiddleManagers directly.
-* [**Coordinator**](#coordinator) processes watch over the Historical processes. They are responsible for assigning
+* [**Coordinator**](../design/coordinator.html) processes watch over the Historical processes. They are responsible for assigning
 segments to specific servers, and for ensuring segments are well-balanced across Historicals.
-* [**Overlord**](#overlord) processes watch over the MiddleManager processes and are the controllers of data ingestion
+* [**Overlord**](../design/overlord.html) processes watch over the MiddleManager processes and are the controllers of data ingestion
 into Druid. They are responsible for assigning ingestion tasks to MiddleManagers and for coordinating segment
 publishing.
-* [**Router**](#router) processes are _optional_ processes that provide a unified API gateway in front of Druid Brokers,
+* [**Router**](../development/router.html) processes are _optional_ processes that provide a unified API gateway in front of Druid Brokers,
 Overlords, and Coordinators. They are optional since you can also simply contact the Druid Brokers, Overlords, and
 Coordinators directly.
 
@@ -105,7 +105,7 @@ leverage existing infrastructure, where present.
 * [**Deep storage**](#deep-storage), shared file storage accessible by every Druid server. This is typically going to
 be a distributed object store like S3 or HDFS, or a network mounted filesystem. Druid uses this to store any data that
 has been ingested into the system.
-* [**Metadata store**](#metadata-store), shared metadata storage. This is typically going to be a traditional RDBMS
+* [**Metadata store**](#metadata-storage), shared metadata storage. This is typically going to be a traditional RDBMS
 like PostgreSQL or MySQL.
 * [**ZooKeeper**](#zookeeper) is used for internal service discovery, coordination, and leader election.
 
@@ -118,7 +118,7 @@ The following diagram shows how queries and data flow through this architecture:
 
 <img src="../../img/druid-architecture.png" width="800"/>
 
-## Datasources and segments
+# Datasources and segments
 
 Druid data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is
 partitioned by time and, optionally, further partitioned by other attributes. Each time range is called a "chunk" (for
@@ -140,14 +140,14 @@ queries:
     - Bitmap compression for bitmap indexes
     - Type-aware compression for all columns
 
-Periodically, segments are committed and published. At this point, they are written to [deep storage](#deep-storage),
-become immutable, and move from MiddleManagers to the Historical processes (see [Architecture](#architecture) below
-for details). An entry about the segment is also written to the [metadata store](#metadata-store). This entry is a self-
-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its
+Periodically, segments are committed and published. At this point, they are written to [deep storage](#deep-storage), 
+become immutable, and move from MiddleManagers to the Historical processes (see [Architecture](#architecture) above
+for details). An entry about the segment is also written to the [metadata store](#metadata-storage). This entry is a
+self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its
 location on deep storage. These entries are what the Coordinator uses to know what data *should* be available on the
 cluster.
 
-## Query processing
+# Query processing
 
 Queries first enter the Broker, where the Broker will identify which segments have data that may pertain to that query.
 The list of segments is always pruned by time, and may also be pruned by other attributes depending on how your
@@ -169,9 +169,9 @@ So Druid uses three different techniques to maximize query performance:
 - Within each segment, only reading the specific rows and columns that are relevant to a particular query.
 
 
-## External Dependencies
+# External Dependencies
 
-### Deep storage
+## Deep storage
 
 Druid uses deep storage only as a backup of your data and as a way to transfer data in the background between
 Druid processes. To respond to queries, Historical processes do not read from deep storage, but instead read pre-fetched
@@ -181,13 +181,13 @@ both in deep storage and across your Historical processes for the data you plan 
 
 For more details, please see [Deep storage dependency](../dependencies/deep-storage.html).
 
-### Metadata storage
+## Metadata storage
 
 The metadata storage holds various system metadata such as segment availability information and task information.
 
 For more details, please see [Metadata storage dependency](..dependencies/metadata-storage.html)
 
-### Zookeeper
+## Zookeeper
 
 Druid uses [ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state.
 

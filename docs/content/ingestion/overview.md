@@ -30,11 +30,11 @@ queries:
 
 Periodically, segments are published (committed). At this point, they are written to deep storage, become immutable, and
 move from MiddleManagers to the Historical processes. An entry about the segment is also written to the metadata store.
-This entry is a self- describing bit of metadata about the segment, including things like the schema of the segment, its
+This entry is a self-describing bit of metadata about the segment, including things like the schema of the segment, its
 size, and its location on deep storage. These entries are what the Coordinator uses to know what data *should* be
 available on the cluster.
 
-For details on the segment file format, please see [segment files](../design/segments.html)
+For details on the segment file format, please see [segment files](../design/segments.html).
 
 #### Segment identifiers
 
@@ -88,13 +88,13 @@ Putting these together, there are five basic states that a segment can be in:
 - **Published, available, and used:** These segments are published in deep storage and the metadata store, and they are
 served by Historical processes. They are the majority of active data in a Druid cluster (they include everything except
 in-flight realtime data).
-- **Published, available, and unused:** These segments are being served by Historicals, but won't be for very long. They
-are may be segments that have recently been overwritten (see [Segment versioning](#segment-versioning)) or dropped for
+- **Published, available, and unused:** These segments are being served by Historicals, but won't be for very long. They 
+may be segments that have recently been overwritten (see [Segment versioning](#segment-versioning)) or dropped for
 other reasons (like drop rules, or being dropped manually).
 - **Published, unavailable, and used:** These segments are published in deep storage and the metadata store, and
 _should_ be served, but are not actually being served. If segments stay in this state for more than a few minutes, it's
-usually because something is wrong. Some of the more common causes include: failure of a large number of Historicals;
-Historicals being out of capacity to download more segments; and some issue with coordination that prevents the
+usually because something is wrong. Some of the more common causes include: failure of a large number of Historicals,
+Historicals being out of capacity to download more segments, and some issue with coordination that prevents the
 Coordinator from telling Historicals to load new segments.
 - **Published, unavailable, and unused:** These segments are published in deep storage and the metadata store, but
 are inactive (because they have been overwritten or dropped). They lie dormant, and can potentially be resurrected
@@ -146,14 +146,14 @@ ingestion methods additionally support _real-time queries_, meaning you can quer
 before it is finished being converted and written to deep storage. In general, a small amount of data will be in-flight
 on MiddleManager nodes relative to the larger amount of historical data being served from Historical nodes.
 
-See the [Design](design.html) page for more details on how Druid stores and manages your data.
+See the [Design](../design/index.html) page for more details on how Druid stores and manages your data.
 
 The table below lists Druid's most common data ingestion methods, along with comparisons to help you choose
 the best one for your situation.
 
 |Method|How it works|Can append and overwrite?|Can handle late data?|Exactly-once ingestion?|Real-time queries?|
 |------|------------|-------------------------|---------------------|-----------------------|------------------|
-|[Native batch](native_tasks.html)|Druid loads data directly from S3, HDFS, NFS, or other networked storage.|Append or overwrite|Yes|Yes|No|
+|[Native batch](native_tasks.html)|Druid loads data directly from S3, HTTP, NFS, or other networked storage.|Append or overwrite|Yes|Yes|No|
 |[Hadoop](hadoop.html)|Druid launches Hadoop Map/Reduce jobs to load data files.|Append or overwrite|Yes|Yes|No|
 |[Kafka indexing service](../development/extensions-core/kafka-ingestion.html)|Druid reads directly from Kafka.|Append only|Yes|Yes|Yes|
 |[Tranquility](stream-push.html)|You use Tranquility, a client side library, to push individual records into Druid.|Append only|No - late data is dropped|No - may drop or duplicate data|Yes|
@@ -162,7 +162,7 @@ the best one for your situation.
 
 Druid is a distributed data store, and it partitions your data in order to process it in parallel. Druid
 [datasources](../design/index.html) are always partitioned first by time based on the
-[segmentGranularity](specs.html#granularity) parameter of your ingestion spec. Each of these time partitions is called
+[segmentGranularity](../ingestion/index.html#granularityspec) parameter of your ingestion spec. Each of these time partitions is called
 a _time chunk_, and each time chunk contains one or more [segments](../design/segments.html). The segments within a
 particular time chunk may be partitioned further using options that vary based on the ingestion method you have chosen.
 
@@ -174,7 +174,7 @@ particular time chunk may be partitioned further using options that vary based o
  functionality of the Kafka producer.
  * With [Tranquility](stream-push.html), partitioning is done by default on a hash of all dimension columns in order
  to maximize rollup. You can also provide a custom Partitioner class; see the
- [Tranquility documentation(https://github.com/druid-io/tranquility/blob/master/docs/overview.md#partitioning-and-replication)
+ [Tranquility documentation](https://github.com/druid-io/tranquility/blob/master/docs/overview.md#partitioning-and-replication)
  for details.
 
 All Druid datasources are partitioned by time. Each data ingestion method must acquire a write lock on a particular
@@ -217,13 +217,13 @@ timestamp                 srcIP         dstIP          packets     bytes
 2018-01-01T01:01:00Z      1.1.1.1       2.2.2.2            600      6000
 2018-01-01T01:02:00Z      1.1.1.1       2.2.2.2            900      9000
 2018-01-01T01:03:00Z      1.1.1.1       2.2.2.2            600      6000
-2018-01-02T21:33:00Z      7.7.7.7       8.8.8.8            100      1000
-2018-01-02T21:33:00Z      7.7.7.7       8.8.8.8            500      5000
+2018-01-02T21:33:00Z      7.7.7.7       8.8.8.8            300      3000
+2018-01-02T21:35:00Z      7.7.7.7       8.8.8.8            300      3000
 ```
 
+Druid can roll up data as it is ingested to minimize the amount of raw data that needs to be stored.
 In practice, we see that rolling up data can dramatically reduce the size of data that needs to be stored (up to a factor of 100).
-Druid can roll up data as it is ingested to minimize the amount of raw data that needs to be stored. 
-This storage reduction does come at a cost; as we roll up data, we lose the ability to query individual events. 
+This storage reduction does come at a cost: as we roll up data, we lose the ability to query individual events. 
 
 The rollup granularity is the minimum granularity you will be able to explore data at and events are floored to this granularity. 
 Hence, Druid ingestion specs define this granularity as the `queryGranularity` of the data. The lowest supported `queryGranularity` is millisecond.
@@ -236,11 +236,11 @@ The following links may be helpful in further understanding dimensions and metri
 
 Druid supports two roll-up modes, i.e., _perfect roll-up_ and _best-effort roll-up_. In the perfect roll-up mode, Druid guarantees that input data are perfectly aggregated at ingestion time. Meanwhile, in the best-effort roll-up, input data might not be perfectly aggregated and thus there can be multiple segments holding the rows which should belong to the same segment with the perfect roll-up since they have the same dimension value and their timestamps fall into the same interval.
 
-The perfect roll-up mode encompasses an additional preprocessing step to determine intervals and shardSpecs before actual data ingestion if they are not specified in the ingestionSpec. This preprocessing step usually scans the entire input data which might increase the ingestion time. The [Hadoop indexing task](../ingestion/batch-ingestion.html) always runs with this perfect roll-up mode.
+The perfect roll-up mode encompasses an additional preprocessing step to determine intervals and shardSpecs before actual data ingestion if they are not specified in the ingestionSpec. This preprocessing step usually scans the entire input data which might increase the ingestion time. The [Hadoop indexing task](../ingestion/hadoop.html) always runs with this perfect roll-up mode.
 
 On the contrary, the best-effort roll-up mode doesn't require any preprocessing step, but the size of ingested data might be larger than that of the perfect roll-up. All types of [streaming indexing (e.g., kafka indexing service)](../ingestion/stream-ingestion.html) run with this mode.
 
-Finally, the [native index task](../ingestion/tasks.html) supports both modes and you can choose either one which fits to your application.
+Finally, the [native index task](../ingestion/native_tasks.html) supports both modes and you can choose either one which fits to your application.
 
 ## Data maintenance
 
@@ -256,7 +256,7 @@ Updates are described further at [update existing data](../ingestion/update-exis
 
 Compaction is a type of overwrite operation, which reads an existing set of segments, combines them into a new set with larger but fewer segments, and overwrites the original set with the new compacted set, without changing the data that is stored.
 
-For performance reasons, it is sometimes beneficial to compact a set of segments into a set of larger but fewer segments; there is some per-segment processing and memory overhead in both the ingestion and querying paths.
+For performance reasons, it is sometimes beneficial to compact a set of segments into a set of larger but fewer segments, as there is some per-segment processing and memory overhead in both the ingestion and querying paths.
 
 For compaction documentation, please see [tasks](../ingestion/tasks.html).
 
