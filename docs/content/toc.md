@@ -83,13 +83,13 @@ layout: toc
   * [Password Provider](/docs/VERSION/operations/password-provider.html)
 
 ## Configuration
-  * [Configuration Reference](/docs/VERSION/configuration/configuration-reference.html)
-  * [Common Configuration](/docs/VERSION/configuration/configuration-reference.html#common-configurations)
-  * [Coordinator](/docs/VERSION/configuration/configuration-reference.html#coordinator)
-  * [Overlord](/docs/VERSION/configuration/configuration-reference.html#overlord)
-  * [MiddleManager & Peons](/docs/VERSION/configuration/configuration-reference.html#middle-manager-and-peons)
-  * [Broker](/docs/VERSION/configuration/configuration-reference.html#broker)
-  * [Historical](/docs/VERSION/configuration/configuration-reference.html#historical)
+  * [Configuration Reference](/docs/VERSION/configuration/index.html)
+  * [Common Configuration](/docs/VERSION/configuration/index.html#common-configurations)
+  * [Coordinator](/docs/VERSION/configuration/index.html#coordinator)
+  * [Overlord](/docs/VERSION/configuration/index.html#overlord)
+  * [MiddleManager & Peons](/docs/VERSION/configuration/index.html#middle-manager-and-peons)
+  * [Broker](/docs/VERSION/configuration/index.html#broker)
+  * [Historical](/docs/VERSION/configuration/index.html#historical)
   * [Configuring Logging](/docs/VERSION/configuration/logging.html)
   
 ## Development
