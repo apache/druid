@@ -5,6 +5,10 @@ layout: doc_page
 Real-time Node
 ==============
 
+<div class="note info">
+NOTE: Realtime nodes are deprecated.
+</div>
+
 For Real-time Node Configuration, see [Realtime Configuration](../configuration/realtime.html).
 
 For Real-time Ingestion, see [Realtime Ingestion](../ingestion/stream-ingestion.html).
@@ -55,3 +59,4 @@ The real-time node exposes several HTTP endpoints for interactions.
 * `/status`
 
 Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+
