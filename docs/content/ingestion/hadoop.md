@@ -5,7 +5,16 @@ layout: doc_page
 # Hadoop-based Batch Ingestion
 
 Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running
-instance of a Druid [overlord](../design/indexing-service.html). A sample task is shown below:
+instance of a Druid [overlord](../design/indexing-service.html). 
+
+## Command Line Hadoop Indexer
+
+If you don't want to use a full indexing service to use Hadoop to get data into Druid, you can also use the standalone command line Hadoop indexer. 
+See [here](../ingestion/command-line-hadoop-indexer.html) for more info.
+
+## Task syntax
+
+A sample task is shown below:
 
 ```json
 {
@@ -328,3 +337,4 @@ Druid works out of the box with many Hadoop distributions.
 If you are having dependency conflicts between Druid and your version of Hadoop, you can try
 searching for a solution in the [Druid user groups](https://groups.google.com/forum/#!forum/druid-
 user), or reading the Druid [Different Hadoop Versions](../operations/other-hadoop.html) documentation.
+
