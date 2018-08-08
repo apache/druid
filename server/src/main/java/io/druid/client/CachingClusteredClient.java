@@ -32,7 +32,6 @@ import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CachePopulator;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
-import io.druid.collections.SerializablePair;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Intervals;
@@ -82,6 +81,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Spliterators;
@@ -166,7 +166,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     return runAndMergeWithTimelineChange(
         query,
         // No change, but Function.identity() doesn't work here for some reason
-        stringServerSelectorTimelineLookup -> stringServerSelectorTimelineLookup
+        identity -> identity
     );
   }
 
@@ -238,31 +238,21 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
-    return runAndMergeWithTimelineChange(
-        query,
-        timeline -> {
-          final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
-              new VersionedIntervalTimeline<>(Ordering.natural());
-          for (SegmentDescriptor spec : specs) {
-            final PartitionHolder<ServerSelector> entry = timeline.findEntry(
-                spec.getInterval(),
-                spec.getVersion()
-            );
-            if (entry != null) {
-              final PartitionChunk<ServerSelector> chunk = entry.getChunk(
-                  spec.getPartitionNumber());
-              if (chunk != null) {
-                timeline2.add(
-                    spec.getInterval(),
-                    spec.getVersion(),
-                    chunk
-                );
-              }
-            }
+    return runAndMergeWithTimelineChange(query, timeline -> {
+      final VersionedIntervalTimeline<String, ServerSelector> timeline2 = new VersionedIntervalTimeline<>(
+          Ordering.natural()
+      );
+      for (SegmentDescriptor spec : specs) {
+        final PartitionHolder<ServerSelector> entry = timeline.findEntry(spec.getInterval(), spec.getVersion());
+        if (entry != null) {
+          final PartitionChunk<ServerSelector> chunk = entry.getChunk(spec.getPartitionNumber());
+          if (chunk != null) {
+            timeline2.add(spec.getInterval(), spec.getVersion(), chunk);
           }
-          return timeline2;
         }
-    );
+      }
+      return timeline2;
+    });
   }
 
   /**
@@ -335,7 +325,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final byte[] queryCacheKey = computeQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
         // Materialize then re-stream
-        List<ServerToSegment> materializedSegments = segments.collect(Collectors.toList());
+        final List<ServerToSegment> materializedSegments = segments.collect(Collectors.toList());
         segments = materializedSegments.stream();
 
         @Nullable
@@ -353,7 +343,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // 2. Group the segment information by server
       // 3. Per server (including the ALREADY_CACHED_SERVER) create the appropriate Sequence results - cached results
       // are handled in their own merge
-      final Stream<SerializablePair<ServerToSegment, Optional<T>>> cacheResolvedResults = deserializeFromCache(
+      final Stream<Pair<ServerToSegment, Optional<T>>> cacheResolvedResults = deserializeFromCache(
           maybeFetchCacheResults(
               queryCacheKey,
               segments
@@ -388,11 +378,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           .stream()
           .map(chunk -> new ServerToSegment(
               chunk.getObject(),
-              new SegmentDescriptor(
-                  holder.getInterval(),
-                  holder.getVersion(),
-                  chunk.getChunkNumber()
-              )
+              new SegmentDescriptor(holder.getInterval(), holder.getVersion(), chunk.getChunkNumber())
           ));
     }
 
@@ -485,8 +471,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private SerializablePair<ServerToSegment, Optional<byte[]>> lookupInCache(
-        SerializablePair<ServerToSegment, Cache.NamedKey> key,
+    private Pair<ServerToSegment, Optional<byte[]>> lookupInCache(
+        Pair<ServerToSegment, Cache.NamedKey> key,
         Map<Cache.NamedKey, Optional<byte[]>> cache
     )
     {
@@ -503,7 +489,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
         addCachePopulatorKey(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
       }
-      return new SerializablePair<>(segment, cachedValue);
+      return Pair.of(segment, cachedValue);
     }
 
     /**
@@ -515,23 +501,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
      * @return A stream of the server and segment combinations as well as an optional that is present
      * if a cached value was found
      */
-    private Stream<SerializablePair<ServerToSegment, Optional<byte[]>>> maybeFetchCacheResults(
+    private Stream<Pair<ServerToSegment, Optional<byte[]>>> maybeFetchCacheResults(
         final byte[] queryCacheKey,
         final Stream<ServerToSegment> segments
     )
     {
       if (queryCacheKey == null) {
-        return segments.map(s -> new SerializablePair<>(s, Optional.empty()));
+        return segments.map(s -> Pair.of(s, Optional.empty()));
       }
       // We materialize the stream here in order to have the bulk cache fetching work as expected
-      final List<SerializablePair<ServerToSegment, Cache.NamedKey>> materializedKeyList = computePerSegmentCacheKeys(
+      final List<Pair<ServerToSegment, Cache.NamedKey>> materializedKeyList = computePerSegmentCacheKeys(
           segments,
           queryCacheKey
       ).collect(Collectors.toList());
 
       // Do bulk fetch
       final Map<Cache.NamedKey, Optional<byte[]>> cachedValues = computeCachedValues(materializedKeyList.stream())
-          .collect(SerializablePair.mapCollector());
+          .collect(Pair.mapCollector());
 
       // A limitation of the cache system is that the cached values are returned without passing through the original
       // objects. This hash join is a way to get the ServerToSegment and Optional<byte[]> matched up again
@@ -540,30 +526,29 @@ public class CachingClusteredClient implements QuerySegmentWalker
           .map(serializedPairSegmentAndKey -> lookupInCache(serializedPairSegmentAndKey, cachedValues));
     }
 
-    private Stream<SerializablePair<ServerToSegment, Cache.NamedKey>> computePerSegmentCacheKeys(
+    private Stream<Pair<ServerToSegment, Cache.NamedKey>> computePerSegmentCacheKeys(
         Stream<ServerToSegment> segments,
         byte[] queryCacheKey
     )
     {
-      return segments.map(
-          serverToSegment -> {
+      return segments
+          .map(serverToSegment -> {
             // cacheKeys map must preserve segment ordering, in order for shards to always be combined in the same order
             final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
                 serverToSegment.getServer().getSegment().getIdentifier(),
                 serverToSegment.getSegmentDescriptor(),
                 queryCacheKey
             );
-            return new SerializablePair<>(serverToSegment, segmentCacheKey);
-          }
-      );
+            return Pair.of(serverToSegment, segmentCacheKey);
+          });
     }
 
-    private Stream<SerializablePair<Cache.NamedKey, Optional<byte[]>>> computeCachedValues(
-        Stream<SerializablePair<ServerToSegment, Cache.NamedKey>> cacheKeys
+    private Stream<Pair<Cache.NamedKey, Optional<byte[]>>> computeCachedValues(
+        Stream<Pair<ServerToSegment, Cache.NamedKey>> cacheKeys
     )
     {
       if (useCache) {
-        return cache.getBulk(cacheKeys.limit(cacheConfig.getCacheBulkMergeLimit()).map(SerializablePair::getRhs));
+        return cache.getBulk(cacheKeys.limit(cacheConfig.getCacheBulkMergeLimit()).map(Pair::getRhs));
       } else {
         return Stream.empty();
       }
@@ -580,10 +565,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         Interval segmentQueryInterval
     )
     {
-      cachePopulatorKeyMap.put(
-          cacheKey(segmentIdentifier, segmentQueryInterval),
-          segmentCacheKey
-      );
+      cachePopulatorKeyMap.put(cacheKey(segmentIdentifier, segmentQueryInterval), segmentCacheKey);
     }
 
     @Nullable
@@ -607,8 +589,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final List<SegmentDescriptor> segmentsOfServer = segmentOrResult
           .stream()
           .map(ServerMaybeSegmentMaybeCache::getSegmentDescriptor)
-          .filter(Optional::isPresent)
-          .map(Optional::get)
+          .filter(Objects::nonNull)
           .collect(Collectors.toList());
 
       // We should only ever have cache or queries to run, not both. So if we have no segments, try caches
@@ -621,8 +602,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
             segmentOrResult
                 .stream()
                 .map(ServerMaybeSegmentMaybeCache::getCachedValue)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+                .filter(Objects::nonNull)
                 .map(Collections::singletonList)
                 .map(Sequences::simple)
         ));
@@ -649,11 +629,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return serverResults;
     }
 
-    private ServerMaybeSegmentMaybeCache<T> pickServer(SerializablePair<ServerToSegment, Optional<T>> tuple)
+    private ServerMaybeSegmentMaybeCache<T> pickServer(Pair<ServerToSegment, Optional<T>> tuple)
     {
       final Optional<T> maybeResult = tuple.getRhs();
       if (maybeResult.isPresent()) {
-        return new ServerMaybeSegmentMaybeCache<T>(ALREADY_CACHED_SERVER, Optional.empty(), maybeResult);
+        return new ServerMaybeSegmentMaybeCache<>(ALREADY_CACHED_SERVER, null, maybeResult.get());
       }
       final ServerToSegment serverToSegment = tuple.getLhs();
       final QueryableDruidServer queryableDruidServer = serverToSegment.getServer().pick();
@@ -663,17 +643,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
             serverToSegment.getSegmentDescriptor(),
             query.getDataSource()
         ).emit();
-        return new ServerMaybeSegmentMaybeCache<T>(
-            ALREADY_CACHED_SERVER,
-            Optional.empty(),
-            Optional.empty()
-        );
+        return new ServerMaybeSegmentMaybeCache<>(ALREADY_CACHED_SERVER, null, null);
       }
       final DruidServer server = queryableDruidServer.getServer();
-      return new ServerMaybeSegmentMaybeCache<T>(
+      return new ServerMaybeSegmentMaybeCache<>(
           server,
-          Optional.ofNullable(serverToSegment.getSegmentDescriptor()),
-          Optional.empty()
+          serverToSegment.getSegmentDescriptor(),
+          null
       );
     }
 
@@ -689,7 +665,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
      */
 
     private Stream<List<ServerMaybeSegmentMaybeCache<T>>> groupCachedResultsByServer(
-        Stream<SerializablePair<ServerToSegment, Optional<T>>> cacheResolvedStream
+        Stream<Pair<ServerToSegment, Optional<T>>> cacheResolvedStream
     )
     {
       return cacheResolvedStream
@@ -704,42 +680,36 @@ public class CachingClusteredClient implements QuerySegmentWalker
           .stream()
           .filter(l -> !l.isEmpty())
           // Get rid of any alerted conditions missing queryableDruidServer
-          .filter(l -> l.get(0).getCachedValue().isPresent() || l.get(0).getSegmentDescriptor().isPresent());
+          .filter(l -> l.get(0).getCachedValue() != null || l.get(0).getSegmentDescriptor() != null);
     }
 
-    private Stream<SerializablePair<ServerToSegment, Optional<T>>> deserializeFromCache(
-        final Stream<SerializablePair<ServerToSegment, Optional<byte[]>>> cachedResults
+    private Stream<Pair<ServerToSegment, Optional<T>>> deserializeFromCache(
+        final Stream<Pair<ServerToSegment, Optional<byte[]>>> cachedResults
     )
     {
       if (strategy == null) {
-        return cachedResults.map(s -> new SerializablePair<>(s.getLhs(), Optional.empty()));
+        return cachedResults.map(s -> Pair.of(s.getLhs(), Optional.empty()));
       }
       final Function<Object, T> pullFromCacheFunction = strategy.pullFromSegmentLevelCache()::apply;
       final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
       return cachedResults.flatMap(cachedResultPair -> {
         if (!cachedResultPair.getRhs().isPresent()) {
-          return Stream.of(new SerializablePair<>(cachedResultPair.getLhs(), Optional.empty()));
+          return Stream.of(Pair.of(cachedResultPair.getLhs(), Optional.empty()));
         }
         final byte[] cachedResult = cachedResultPair.getRhs().get();
         try {
           if (cachedResult.length == 0) {
-            return Stream.of(new SerializablePair<>(cachedResultPair.getLhs(), Optional.empty()));
+            return Stream.of(Pair.of(cachedResultPair.getLhs(), Optional.empty()));
           }
-          // Query granularity in a segment may be higher fidelity than the segment as a file, so this might have multiple results
-          return StreamSupport.stream(
-              Spliterators.spliteratorUnknownSize(
-                  objectMapper.readValues(
-                      objectMapper.getFactory().createParser(cachedResult),
-                      cacheObjectClazz
-                  ),
+          // Query granularity in a segment may be higher fidelity than the segment as a file,
+          // so this might have multiple results
+          return StreamSupport
+              .stream(Spliterators.spliteratorUnknownSize(
+                  objectMapper.readValues(objectMapper.getFactory().createParser(cachedResult), cacheObjectClazz),
                   0
-              ),
-              false
-          ).map(
-              pullFromCacheFunction
-          ).map(
-              obj -> new SerializablePair<>(cachedResultPair.getLhs(), Optional.ofNullable(obj))
-          );
+              ), false)
+              .map(pullFromCacheFunction)
+              .map(obj -> Pair.of(cachedResultPair.getLhs(), Optional.ofNullable(obj)));
         }
         catch (IOException e) {
           throw new RuntimeException(e);
@@ -757,11 +727,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
           .run(queryPlus.withQuerySegmentSpec(segmentsOfServerSpec), responseContext);
       // bySegment results need to be de-serialized, see DirectDruidClient.run()
       return (Sequence<T>) resultsBySegments
-          .map(result -> result.map(
-              resultsOfSegment -> resultsOfSegment.mapResults(
+          .map(result -> result
+              .map(resultsOfSegment -> resultsOfSegment.mapResults(
                   toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing())::apply
-              )
-          ));
+              ))
+          );
     }
 
     @SuppressWarnings("unchecked")
@@ -816,28 +786,30 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private static class ServerMaybeSegmentMaybeCache<T>
   {
     private final DruidServer server;
-    private final Optional<SegmentDescriptor> segmentDescriptor;
-    private final Optional<T> cachedValue;
+    private final SegmentDescriptor segmentDescriptor;
+    private final T cachedValue;
 
     public DruidServer getServer()
     {
       return server;
     }
 
-    public Optional<SegmentDescriptor> getSegmentDescriptor()
+    @Nullable
+    public SegmentDescriptor getSegmentDescriptor()
     {
       return segmentDescriptor;
     }
 
-    public Optional<T> getCachedValue()
+    @Nullable
+    public T getCachedValue()
     {
       return cachedValue;
     }
 
     private ServerMaybeSegmentMaybeCache(
         DruidServer server,
-        Optional<SegmentDescriptor> segmentDescriptor,
-        Optional<T> cachedValue
+        @Nullable SegmentDescriptor segmentDescriptor,
+        @Nullable T cachedValue
     )
     {
       this.server = server;
@@ -855,12 +827,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     ServerSelector getServer()
     {
-      return lhs;
+      return super.getLhs();
     }
 
     SegmentDescriptor getSegmentDescriptor()
     {
-      return rhs;
+      return super.getRhs();
     }
   }
 }

@@ -29,8 +29,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.collections.ResourceHolder;
-import io.druid.collections.SerializablePair;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
@@ -572,31 +572,26 @@ public class MemcachedCache implements Cache
   }
 
   @Override
-  public Stream<SerializablePair<NamedKey, Optional<byte[]>>> getBulk(Stream<NamedKey> keys)
+  public Stream<Pair<NamedKey, Optional<byte[]>>> getBulk(Stream<NamedKey> keys)
   {
-    final List<SerializablePair<NamedKey, String>> materializedKeys = keys.map(
-        k -> new SerializablePair<>(k, computeKeyHash(memcachedPrefix, k))
+    final List<Pair<NamedKey, String>> materializedKeys = keys.map(
+        k -> Pair.of(k, computeKeyHash(memcachedPrefix, k))
     ).collect(
         Collectors.toList()
     );
     final Map<String, Object> some = getCacheMap(
-        materializedKeys.stream(
-        ).map(
-            SerializablePair::getRhs
-        ).collect(
-            Collectors.toList()
-        )
+        materializedKeys
+            .stream()
+            .map(Pair::getRhs)
+            .collect(Collectors.toList())
     );
     return materializedKeys.stream().map(k -> {
       final NamedKey key = k.getLhs();
       final String cacheKey = k.getRhs();
-      return new SerializablePair<>(
+      return Pair.of(
           key,
-          Optional.ofNullable(
-              some.get(cacheKey)
-          ).map(
-              val -> deserializeValue(key, (byte[]) val)
-          )
+          Optional.ofNullable(some.get(cacheKey))
+                  .map(val -> deserializeValue(key, (byte[]) val))
       );
     });
   }
@@ -604,11 +599,9 @@ public class MemcachedCache implements Cache
   @Override
   public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
   {
-    return getBulk(
-        StreamSupport.stream(keys.spliterator(), false)
-    ).filter(s -> s.getRhs().isPresent()).collect(
-        Collectors.toMap(SerializablePair::getLhs, s -> s.getRhs().get())
-    );
+    return getBulk(StreamSupport.stream(keys.spliterator(), false))
+        .filter(s -> s.getRhs().isPresent())
+        .collect(Collectors.toMap(Pair::getLhs, s -> s.getRhs().get()));
   }
 
   @Override

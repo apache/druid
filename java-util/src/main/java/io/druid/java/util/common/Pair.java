@@ -20,7 +20,10 @@
 package io.druid.java.util.common;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -30,6 +33,14 @@ public class Pair<T1, T2>
   public static <T1, T2> Pair<T1, T2> of(@Nullable T1 lhs, @Nullable T2 rhs)
   {
     return new Pair<>(lhs, rhs);
+  }
+
+  public static <T1, T2> Collector<Pair<T1, T2>, ?, Map<T1, T2>> mapCollector()
+  {
+    return Collectors.toMap(
+        Pair<T1, T2>::getLhs,
+        Pair<T1, T2>::getRhs
+    );
   }
 
   @Nullable
@@ -45,6 +56,18 @@ public class Pair<T1, T2>
   {
     this.lhs = lhs;
     this.rhs = rhs;
+  }
+
+  @Nullable
+  public T1 getLhs()
+  {
+    return lhs;
+  }
+
+  @Nullable
+  public T2 getRhs()
+  {
+    return rhs;
   }
 
   @Override

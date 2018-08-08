@@ -20,7 +20,7 @@
 package io.druid.client.cache;
 
 import com.google.common.base.Preconditions;
-import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 
@@ -56,9 +56,9 @@ public interface Cache
    *
    * @return
    */
-  default Stream<SerializablePair<NamedKey, Optional<byte[]>>> getBulk(Stream<NamedKey> keys)
+  default Stream<Pair<NamedKey, Optional<byte[]>>> getBulk(Stream<NamedKey> keys)
   {
-    return keys.map(key -> new SerializablePair<>(key, Optional.ofNullable(get(key))));
+    return keys.map(key -> new Pair<>(key, Optional.ofNullable(get(key))));
   }
 
   void close(String namespace);

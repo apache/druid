@@ -35,14 +35,14 @@ import java.util.stream.Stream;
  */
 public class MergeSequenceTest
 {
-  public static <T extends Comparable> Supplier<Sequence<T>> naturalMergeSupplier(
+  public static <T extends Comparable<? super T>> Supplier<Sequence<T>> naturalMergeSupplier(
       Supplier<Stream<? extends Sequence<? extends T>>> stream
   )
   {
     return () -> naturalMerge(stream.get());
   }
 
-  public static <T extends Comparable> Sequence<T> naturalMerge(Stream<? extends Sequence<? extends T>> stream)
+  public static <T extends Comparable<? super T>> Sequence<T> naturalMerge(Stream<? extends Sequence<? extends T>> stream)
   {
     return new MergeSequence<>(
         Ordering.natural(),

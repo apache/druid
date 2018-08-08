@@ -153,10 +153,9 @@ public class JodaUtils
   public static long timeoutForDeadline(DateTime deadline) throws TimeoutException
   {
     final DateTime now = DateTimes.nowUtc();
-    final long diff = deadline.getMillis() - now.getMillis();
-    if (now.isAfter(deadline) || diff == 0) {
+    if (now.isAfter(deadline) || now.isEqual(deadline)) {
       throw new TimeoutException(StringUtils.format("Deadline passed: [%s]", deadline));
     }
-    return diff;
+    return deadline.getMillis() - now.getMillis();
   }
 }

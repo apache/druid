@@ -25,7 +25,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -109,10 +109,10 @@ public class CaffeineCache implements io.druid.client.cache.Cache
   }
 
   @Override
-  public Stream<SerializablePair<NamedKey, Optional<byte[]>>> getBulk(Stream<NamedKey> keys)
+  public Stream<Pair<NamedKey, Optional<byte[]>>> getBulk(Stream<NamedKey> keys)
   {
     return keys.map(
-        k -> new SerializablePair<>(
+        k -> Pair.of(
             k,
             Optional.ofNullable(
                 cache.getIfPresent(k)
