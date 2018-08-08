@@ -1,0 +1,3 @@
+{
+  "query":"SELECT channel, SUM(added) FROM wikipedia WHERE \"__time\" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY channel ORDER BY SUM(added) DESC LIMIT 5"
+}
