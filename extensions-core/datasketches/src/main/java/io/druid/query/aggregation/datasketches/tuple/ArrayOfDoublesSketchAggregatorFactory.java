@@ -185,14 +185,14 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
           .setNumberOfValues(numberOfValues).buildUnion();
 
       @Override
-      public void reset(ColumnValueSelector selector)
+      public void reset(final ColumnValueSelector selector)
       {
         union.reset();
         fold(selector);
       }
 
       @Override
-      public void fold(ColumnValueSelector selector)
+      public void fold(final ColumnValueSelector selector)
       {
         final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) selector.getObject();
         union.update(sketch);
