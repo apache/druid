@@ -30,8 +30,14 @@ import java.util.List;
 })
 public interface SupervisorSpec
 {
+  /**
+   * Return an unique id of {@link Supervisor}.
+   */
   String getId();
 
+  /**
+   * Create a new {@link Supervisor} instance.
+   */
   Supervisor createSupervisor();
 
   List<String> getDataSources();

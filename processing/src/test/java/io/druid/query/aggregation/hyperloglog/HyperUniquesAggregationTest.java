@@ -36,6 +36,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -65,7 +66,7 @@ public class HyperUniquesAggregationTest
   public void testIngestAndQuery() throws Exception
   {
     AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Lists.newArrayList(new AggregatorsModule()),
+        Collections.singletonList(new AggregatorsModule()),
         config,
         tempFolder
     );
@@ -126,7 +127,7 @@ public class HyperUniquesAggregationTest
   public void testIngestAndQueryPrecomputedHll() throws Exception
   {
     AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-            Lists.newArrayList(new AggregatorsModule()),
+            Collections.singletonList(new AggregatorsModule()),
             config,
             tempFolder
     );

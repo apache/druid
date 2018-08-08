@@ -171,7 +171,6 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use java.lang.Primitive.BYTES instead."/>
     </module>
-
     <!-- This regex should be replaced with an IntelliJ inspection when teamcity.jetbrains.com updates to at least IntelliJ 2018.1 (currently it uses 2017.2) -->
     <module name="Regexp">
       <property name="format" value='[a-z][a-zA-Z0-9_]*\.equals\((\"|[A-Z_]+\))'/>
@@ -183,6 +182,16 @@
       <property name="format" value="toArray\([\s\n]*new [a-zA-Z0-9_]+\[[^0]"/>
       <property name="illegalPattern" value="true"/>
       <property name="message" value='Use toArray(new Object[0]) instead'/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="Strings.emptyToNull"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use io.druid.common.config.NullHandling.emptyToNullIfNeeded instead"/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="Strings.nullToEmpty"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use io.druid.common.config.NullHandling.nullToEmptyIfNeeded instead"/>
     </module>
   </module>
 </module>

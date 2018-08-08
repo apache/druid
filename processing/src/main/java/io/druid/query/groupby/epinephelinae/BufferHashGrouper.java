@@ -83,7 +83,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     for (int i = 0; i < aggregatorFactories.length; i++) {
       aggregators[i] = aggregatorFactories[i].factorizeBuffered(columnSelectorFactory);
       aggregatorOffsets[i] = offset;
-      offset += aggregatorFactories[i].getMaxIntermediateSize();
+      offset += aggregatorFactories[i].getMaxIntermediateSizeWithNulls();
     }
 
     this.bucketSize = offset;

@@ -22,6 +22,7 @@ package io.druid.query.search;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -64,6 +65,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -166,10 +168,10 @@ public class SearchQueryRunnerTest
           )
           {
             final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-01-12/2011-02-28")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-01-12/2011-02-28")))
             );
             final QueryPlus<Result<SearchResultValue>> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-03-01/2011-04-15")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-03-01/2011-04-15")))
             );
             return Sequences.concat(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext));
           }
@@ -751,7 +753,7 @@ public class SearchQueryRunnerTest
     QueryRunner runner = factory.createRunner(new QueryableIndexSegment("asdf", TestIndex.persistRealtimeAndLoadMMapped(index)));
     List<SearchHit> expectedHits = Lists.newLinkedList();
     expectedHits.add(new SearchHit("table", "table", 1));
-    expectedHits.add(new SearchHit("table", "", 1));
+    expectedHits.add(new SearchHit("table", NullHandling.defaultStringValue(), 1));
     checkSearchQuery(searchQuery, runner, expectedHits);
   }
 

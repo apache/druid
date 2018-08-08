@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -55,6 +54,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,7 +101,7 @@ public class MaterializedViewSupervisorTest
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     spec = new MaterializedViewSupervisorSpec(
         "base",
-        new DimensionsSpec(Lists.newArrayList(new StringDimensionSchema("dim")), null, null),
+        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim")), null, null),
         new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
         HadoopTuningConfig.makeDefaultTuningConfig(),
         null,
@@ -157,16 +157,16 @@ public class MaterializedViewSupervisorTest
     Map<Interval, List<DataSegment>> expectedSegments = Maps.newHashMap();
     expectedSegments.put(
         Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), 
-        Lists.newArrayList(
+        Collections.singletonList(
             new DataSegment(
-                "base", 
-                Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), 
-                "2015-01-02", 
+                "base",
+                Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+                "2015-01-02",
                 ImmutableMap.of(),
-                ImmutableList.of("dim1", "dim2"), 
-                ImmutableList.of("m1"), 
+                ImmutableList.of("dim1", "dim2"),
+                ImmutableList.of("m1"),
                 new HashBasedNumberedShardSpec(0, 1, null, null),
-                9, 
+                9,
                 1024
             )
         )

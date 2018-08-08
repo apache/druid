@@ -25,5 +25,5 @@ public enum RunnerTaskState
   WAITING,
   PENDING,
   RUNNING,
-  NONE; // is used for a completed task
+  NONE // is used for a completed task
 }

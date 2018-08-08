@@ -466,12 +466,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("dimA", null)
-        ))
-        .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory("metA", "metA"))
-        )
+        .setDimensions(new DefaultDimensionSpec("dimA", null))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("metA", "metA"))
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.DESCENDING)),
@@ -556,12 +552,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.newArrayList(
-            new DefaultDimensionSpec("dimA", null)
-        ))
-        .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory("metA", "metA"))
-        )
+        .setDimensions(new DefaultDimensionSpec("dimA", null))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("metA", "metA"))
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(

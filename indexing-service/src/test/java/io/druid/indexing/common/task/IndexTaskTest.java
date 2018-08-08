@@ -1514,6 +1514,7 @@ public class IndexTaskTest
         indexIO,
         null,
         null,
+        null,
         indexMergerV9,
         null,
         null,

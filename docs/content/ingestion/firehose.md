@@ -20,6 +20,8 @@ For additional firehoses, please see our [extensions list](../development/extens
 
 This Firehose can be used to read the data from files on local disk.
 It can be used for POCs to ingest data on disk.
+This firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
+Since each split represents a file in this firehose, each worker task of `index_parallel` will read a file.
 A sample local firehose spec is shown below:
 
 ```json
@@ -39,6 +41,8 @@ A sample local firehose spec is shown below:
 #### HttpFirehose
 
 This Firehose can be used to read the data from remote sites via HTTP.
+This firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
+Since each split represents a file in this firehose, each worker task of `index_parallel` will read a file.
 A sample http firehose spec is shown below:
 
 ```json

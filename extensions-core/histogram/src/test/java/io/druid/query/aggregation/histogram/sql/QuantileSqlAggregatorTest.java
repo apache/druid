@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Druids;
 import io.druid.query.QueryDataSource;
@@ -312,9 +313,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
       // Verify results
       final List<Object[]> results = plannerResult.run().toList();
-      final List<Object[]> expectedResults = ImmutableList.of(
-          new Object[]{7.0, 8.26386833190918}
-      );
+      final List<Object[]> expectedResults;
+      if (NullHandling.replaceWithDefault()) {
+        expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
+      } else {
+        expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
+      }
       Assert.assertEquals(expectedResults.size(), results.size());
       for (int i = 0; i < expectedResults.size(); i++) {
         Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
@@ -329,7 +333,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                           .setDataSource(CalciteTests.DATASOURCE1)
                                           .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                                           .setGranularity(Granularities.ALL)
-                                          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dim2", "d0")))
+                                          .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
                                           .setAggregatorSpecs(
                                               ImmutableList.of(
                                                   new DoubleSumAggregatorFactory("a0", "m1")
@@ -341,11 +345,15 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                       )
                       .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                       .setGranularity(Granularities.ALL)
-                      .setAggregatorSpecs(ImmutableList.of(
-                          new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                          new CountAggregatorFactory("_a0:count"),
-                          new ApproximateHistogramAggregatorFactory("_a1:agg", "a0", null, null, null, null)
-                      ))
+                      .setAggregatorSpecs(new DoubleSumAggregatorFactory("_a0:sum", "a0"),
+                                          new CountAggregatorFactory("_a0:count"),
+                                          new ApproximateHistogramAggregatorFactory("_a1:agg",
+                                                                                    "a0",
+                                                                                    null,
+                                                                                    null,
+                                                                                    null,
+                                                                                    null
+                                          ))
                       .setPostAggregatorSpecs(
                           ImmutableList.of(
                               new ArithmeticPostAggregator(

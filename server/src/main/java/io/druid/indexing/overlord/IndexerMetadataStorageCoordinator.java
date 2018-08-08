@@ -25,6 +25,7 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -42,7 +43,10 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @throws IOException
    */
-  List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval);
+  default List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
+  {
+    return getUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval));
+  }
 
   /**
    * Get all used segments and the created_date of these segments in a given datasource and interval

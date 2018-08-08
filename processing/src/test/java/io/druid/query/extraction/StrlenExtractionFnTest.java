@@ -20,6 +20,7 @@
 package io.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,7 +30,7 @@ public class StrlenExtractionFnTest
   @Test
   public void testApply()
   {
-    Assert.assertEquals("0", StrlenExtractionFn.instance().apply(null));
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? "0" : null, StrlenExtractionFn.instance().apply(null));
     Assert.assertEquals("0", StrlenExtractionFn.instance().apply(""));
     Assert.assertEquals("1", StrlenExtractionFn.instance().apply("x"));
     Assert.assertEquals("3", StrlenExtractionFn.instance().apply("foo"));

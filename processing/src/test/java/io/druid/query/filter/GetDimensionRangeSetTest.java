@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.Intervals;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.IdentityExtractionFn;
@@ -60,7 +61,8 @@ public class GetDimensionRangeSetTest
   );
   private final DimFilter other1 = new RegexDimFilter("someDim", "pattern", null);
   private final DimFilter other2 = new JavaScriptDimFilter("someOtherDim", "function(x) { return x }", null,
-                                                           JavaScriptConfig.getEnabledInstance());
+                                                           JavaScriptConfig.getEnabledInstance()
+  );
   private final DimFilter other3 = new SearchQueryDimFilter("dim", new ContainsSearchQuerySpec("a", true), null);
 
   private final DimFilter interval1 = new IntervalDimFilter(
@@ -91,13 +93,13 @@ public class GetDimensionRangeSetTest
     Assert.assertEquals(expected1, selector1.getDimensionRangeSet("dim1"));
     Assert.assertNull(selector1.getDimensionRangeSet("dim2"));
 
-    RangeSet expected2 = rangeSet(point(""));
+    RangeSet expected2 = rangeSet(point(null));
     Assert.assertEquals(expected2, selector5.getDimensionRangeSet("dim1"));
 
     RangeSet expected3 = rangeSet(ImmutableList.of(point("testing"), point("this"), point("filter"), point("tillend")));
     Assert.assertEquals(expected3, in1.getDimensionRangeSet("dim1"));
 
-    RangeSet expected4 = rangeSet(ImmutableList.of(point("null"), point("")));
+    RangeSet expected4 = rangeSet(ImmutableList.of(point("null"), point(null)));
     Assert.assertEquals(expected4, in3.getDimensionRangeSet("dim1"));
 
     RangeSet expected5 = ImmutableRangeSet.of(Range.closed("from", "to"));
@@ -146,12 +148,13 @@ public class GetDimensionRangeSetTest
   public void testOrFilter()
   {
     DimFilter or1 = new OrDimFilter(ImmutableList.of(selector1, selector2, selector5));
-    RangeSet expected1 = rangeSet(ImmutableList.of(point(""), point("a"), point("z")));
+    RangeSet expected1 = rangeSet(ImmutableList.of(point(null), point("a"), point("z")));
     Assert.assertEquals(expected1, or1.getDimensionRangeSet("dim1"));
 
     DimFilter or2 = new OrDimFilter(ImmutableList.of(selector5, in1, in3));
     RangeSet expected2 = rangeSet(ImmutableList.of(point("testing"), point("this"), point("filter"), point("tillend"),
-                                                   point("null"), point("")));
+                                                   point("null"), point(null)
+    ));
     Assert.assertEquals(expected2, or2.getDimensionRangeSet("dim1"));
 
     DimFilter or3 = new OrDimFilter(ImmutableList.of(bound1, bound2, bound3));
@@ -162,10 +165,12 @@ public class GetDimensionRangeSetTest
     Assert.assertNull(or4.getDimensionRangeSet("dim2"));
 
     DimFilter or5 = new OrDimFilter(ImmutableList.of(or1, or2, bound1));
-    RangeSet expected5 = rangeSet(ImmutableList.of(point(""), point("a"), point("filter"), Range.closed("from", "to"),
-                                                   point("z")));
+    RangeSet expected5 = rangeSet(ImmutableList.of(point(null), point("a"), point("filter"), Range.closed("from", "to"),
+                                                   point("z")
+    ));
     Assert.assertEquals(expected5, or5.getDimensionRangeSet("dim1"));
   }
+
 
   @Test
   public void testNotFilter()
@@ -176,15 +181,28 @@ public class GetDimensionRangeSetTest
     Assert.assertNull(not1.getDimensionRangeSet("dim2"));
 
     DimFilter not2 = new NotDimFilter(in3);
-    RangeSet expected2 = rangeSet(ImmutableList.of(Range.lessThan(""), Range.open("", "null"), Range.greaterThan("null")));
-    Assert.assertEquals(expected2, not2.getDimensionRangeSet("dim1"));
+    if (NullHandling.sqlCompatible()) {
+      // Empty string is included when != null for SQL Compatible case
+      RangeSet expected2 = rangeSet(ImmutableList.of(
+          Range.closedOpen("", "null"),
+          Range.greaterThan("null")
+      ));
+      Assert.assertEquals(expected2, not2.getDimensionRangeSet("dim1"));
+    } else {
+      RangeSet expected2 = rangeSet(ImmutableList.of(
+          Range.lessThan(""),
+          Range.open("", "null"),
+          Range.greaterThan("null")
+      ));
+      Assert.assertEquals(expected2, not2.getDimensionRangeSet("dim1"));
+    }
 
     DimFilter not3 = new NotDimFilter(bound1);
     RangeSet expected3 = rangeSet(ImmutableList.of(Range.lessThan("from"), Range.greaterThan("to")));
     Assert.assertEquals(expected3, not3.getDimensionRangeSet("dim1"));
 
     DimFilter not4 = new NotDimFilter(not2);
-    RangeSet expected4 = rangeSet(ImmutableList.of(point(""), point("null")));
+    RangeSet expected4 = rangeSet(ImmutableList.of(point(null), point("null")));
     Assert.assertEquals(expected4, not4.getDimensionRangeSet("dim1"));
 
     DimFilter or1 = new OrDimFilter(ImmutableList.of(selector1, selector2, bound1, bound3));
@@ -203,7 +221,8 @@ public class GetDimensionRangeSetTest
     DimFilter and1 = new AndDimFilter(ImmutableList.of(in1, bound1, bound2));
     DimFilter not7 = new NotDimFilter(and1);
     RangeSet expected7 = rangeSet(ImmutableList.of(Range.lessThan("testing"), Range.open("testing", "this"),
-                                                   Range.open("this", "tillend"), Range.greaterThan("tillend")));
+                                                   Range.open("this", "tillend"), Range.greaterThan("tillend")
+    ));
     Assert.assertEquals(expected7, not7.getDimensionRangeSet("dim1"));
     Assert.assertNull(not7.getDimensionRangeSet("dim2"));
 
@@ -216,6 +235,15 @@ public class GetDimensionRangeSetTest
 
   private static Range<String> point(String s)
   {
+    if (s == null) {
+      if (NullHandling.sqlCompatible()) {
+        // Range.singleton(null) is invalid
+        return Range.lessThan("");
+      } else {
+        // For non-sql compatible case, null and "" are equivalent
+        return Range.singleton("");
+      }
+    }
     return Range.singleton(s);
   }
 

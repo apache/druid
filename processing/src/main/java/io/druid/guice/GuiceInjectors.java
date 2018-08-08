@@ -41,6 +41,7 @@ public class GuiceInjectors
         new JacksonModule(),
         new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
         new ConfigModule(),
+        new NullHandlingModule(),
         binder -> {
           binder.bind(DruidSecondaryModule.class);
           JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);

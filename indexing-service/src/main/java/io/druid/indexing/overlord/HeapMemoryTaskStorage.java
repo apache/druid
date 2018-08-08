@@ -35,7 +35,6 @@ import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
@@ -150,6 +149,32 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
+  @Nullable
+  @Override
+  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskId, "taskId");
+      final TaskStuff taskStuff = tasks.get(taskId);
+      if (taskStuff != null) {
+        return new TaskInfo<>(
+            taskStuff.getTask().getId(),
+            taskStuff.getCreatedDate(),
+            taskStuff.getStatus(),
+            taskStuff.getDataSource(),
+            taskStuff.getTask()
+        );
+      } else {
+        return null;
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
   @Override
   public List<Task> getActiveTasks()
   {
@@ -170,12 +195,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
     giant.lock();
 
     try {
-      final ImmutableList.Builder<TaskInfo<Task>> listBuilder = ImmutableList.builder();
+      final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : tasks.values()) {
         if (taskStuff.getStatus().isRunnable()) {
           TaskInfo t = new TaskInfo(
@@ -196,7 +221,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
+  public List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses, @Nullable Duration duration, @Nullable String datasource
   )
   {
@@ -224,7 +249,10 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
-  private List<TaskInfo<Task>> getRecentlyFinishedTaskInfoSince(DateTime start, Ordering<TaskStuff> createdDateDesc)
+  private List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfoSince(
+      DateTime start,
+      Ordering<TaskStuff> createdDateDesc
+  )
   {
     giant.lock();
 
@@ -234,7 +262,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
           .stream()
           .filter(taskStuff -> taskStuff.getStatus().isComplete())
           .collect(Collectors.toList());
-      final ImmutableList.Builder<TaskInfo<Task>> listBuilder = ImmutableList.builder();
+      final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : list) {
         String id = taskStuff.getTask().getId();
         TaskInfo t = new TaskInfo(
@@ -253,7 +281,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
-  private List<TaskInfo<Task>> getNRecentlyFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
+  private List<TaskInfo<Task, TaskStatus>> getNRecentlyFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
   {
     giant.lock();
 
@@ -263,10 +291,10 @@ public class HeapMemoryTaskStorage implements TaskStorage
           .stream()
           .limit(n)
           .collect(Collectors.toList());
-      final ImmutableList.Builder<TaskInfo<Task>> listBuilder = ImmutableList.builder();
+      final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : list) {
         String id = taskStuff.getTask().getId();
-        TaskInfo t = new TaskInfo(
+        TaskInfo t = new TaskInfo<>(
             id,
             taskStuff.getCreatedDate(),
             taskStuff.getStatus(),
@@ -276,21 +304,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
         listBuilder.add(t);
       }
       return listBuilder.build();
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  @Nullable
-  @Override
-  public Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId)
-  {
-    giant.lock();
-
-    try {
-      final TaskStuff taskStuff = tasks.get(taskId);
-      return taskStuff == null ? null : Pair.of(taskStuff.getCreatedDate(), taskStuff.getDataSource());
     }
     finally {
       giant.unlock();

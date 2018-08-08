@@ -99,6 +99,7 @@ public class SingleTaskBackgroundRunnerTest
         utils.getTestIndexIO(),
         null,
         null,
+        null,
         utils.getTestIndexMergerV9(),
         null,
         node,

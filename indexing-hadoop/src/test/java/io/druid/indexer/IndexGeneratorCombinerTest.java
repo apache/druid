@@ -127,7 +127,7 @@ public class IndexGeneratorCombinerTest
     BytesWritable key = new BytesWritable(StringUtils.toUtf8("dummy_key"));
     BytesWritable val = new BytesWritable(StringUtils.toUtf8("dummy_row"));
 
-    combiner.reduce(key, Lists.newArrayList(val), context);
+    combiner.reduce(key, Collections.singletonList(val), context);
 
     Assert.assertTrue(captureKey.getValue() == key);
     Assert.assertTrue(captureVal.getValue() == val);

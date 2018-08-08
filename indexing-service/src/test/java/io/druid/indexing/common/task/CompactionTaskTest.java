@@ -711,6 +711,7 @@ public class CompactionTaskTest
           indexIO,
           null,
           null,
+          null,
           new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance()),
           null,
           null,

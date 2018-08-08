@@ -31,13 +31,12 @@ import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
-import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.common.task.Tasks;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import io.druid.indexing.overlord.TaskLockbox;
@@ -81,7 +80,6 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -233,12 +231,6 @@ public class OverlordTest
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("task", taskId_0), response.getEntity());
 
-    final Map<String, Object> context = task_0.getContext();
-    Assert.assertEquals(1, context.size());
-    final Integer priority = (Integer) context.get(Tasks.PRIORITY_KEY);
-    Assert.assertNotNull(priority);
-    Assert.assertEquals(Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY, priority.intValue());
-
     // Duplicate task - should fail
     response = overlordResource.taskPost(task_0, req);
     Assert.assertEquals(400, response.getStatus());
@@ -256,7 +248,7 @@ public class OverlordTest
     Assert.assertEquals(taskId_0, ((TaskStatusResponse) response.getEntity()).getTask());
     Assert.assertEquals(
         TaskStatus.running(taskId_0).getStatusCode(),
-        ((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode()
+        ((TaskStatusResponse) response.getEntity()).getStatus().getState()
     );
 
     // Simulate completion of task_0
@@ -304,7 +296,7 @@ public class OverlordTest
   {
     while (true) {
       Response response = overlordResource.getTaskStatus(taskId);
-      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode())) {
+      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getState())) {
         break;
       }
       Thread.sleep(10);

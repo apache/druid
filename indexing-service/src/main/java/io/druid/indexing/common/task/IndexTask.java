@@ -50,6 +50,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.stats.RowIngestionMeters;
@@ -85,6 +86,7 @@ import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthorizerMapper;
@@ -203,7 +205,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  IndexTask(
+  public IndexTask(
       String id,
       String groupId,
       TaskResource resource,
@@ -240,9 +242,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   }
 
   @Override
-  public int getDefaultPriority()
+  public int getPriority()
   {
-    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 
   @Override
@@ -418,10 +420,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
-      if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-        // pass toolbox to Firehose
-        ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
-      }
+      setFirehoseFactoryToolbox(firehoseFactory, toolbox);
 
       final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
       // Firehose temporary directory is automatically removed when this IndexTask completes.
@@ -473,6 +472,25 @@ public class IndexTask extends AbstractTask implements ChatHandler
     finally {
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
+      }
+    }
+  }
+
+  // pass toolbox to any IngestSegmentFirehoseFactory
+  private void setFirehoseFactoryToolbox(FirehoseFactory firehoseFactory, TaskToolbox toolbox)
+  {
+    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
+      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
+      return;
+    }
+
+    if (firehoseFactory instanceof CombiningFirehoseFactory) {
+      for (FirehoseFactory delegateFactory : ((CombiningFirehoseFactory) firehoseFactory).getDelegateFactoryList()) {
+        if (delegateFactory instanceof IngestSegmentFirehoseFactory) {
+          ((IngestSegmentFirehoseFactory) delegateFactory).setTaskToolbox(toolbox);
+        } else if (delegateFactory instanceof CombiningFirehoseFactory) {
+          setFirehoseFactoryToolbox(delegateFactory, toolbox);
+        }
       }
     }
   }
@@ -783,8 +801,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           }
 
           determinePartitionsMeters.incrementUnparseable();
-          if (determinePartitionsMeters.getUnparseable() > ingestionSchema.getTuningConfig()
-                                                                          .getMaxParseExceptions()) {
+          if (determinePartitionsMeters.getUnparseable() > ingestionSchema.getTuningConfig().getMaxParseExceptions()) {
             throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
           }
         }
@@ -837,7 +854,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final TaskToolbox toolbox,
       final DataSchema dataSchema,
       final ShardSpecs shardSpecs,
-      Map<Interval, String> versions,
+      final Map<Interval, String> versions,
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir
   ) throws IOException, InterruptedException
@@ -891,7 +908,19 @@ public class IndexTask extends AbstractTask implements ChatHandler
       segmentAllocator = (row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> lookup.get(sequenceName);
     } else if (ioConfig.isAppendToExisting()) {
       // Append mode: Allocate segments as needed using Overlord APIs.
-      segmentAllocator = new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema);
+      segmentAllocator = new ActionBasedSegmentAllocator(
+          toolbox.getTaskActionClient(),
+          dataSchema,
+          (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SegmentAllocateAction(
+              schema.getDataSource(),
+              row.getTimestamp(),
+              schema.getGranularitySpec().getQueryGranularity(),
+              schema.getGranularitySpec().getSegmentGranularity(),
+              sequenceName,
+              previousSegmentId,
+              skipSegmentLineageCheck
+          )
+      );
     } else {
       // Overwrite mode, non-guaranteed rollup: We can make up our own segment ids but we don't know them in advance.
       final Map<Interval, AtomicInteger> counters = new HashMap<>();

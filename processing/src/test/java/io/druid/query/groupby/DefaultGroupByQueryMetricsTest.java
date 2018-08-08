@@ -20,10 +20,9 @@
 package io.druid.query.groupby;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.CachingEmitter;
 import io.druid.query.DefaultQueryMetricsTest;
 import io.druid.query.DruidMetrics;
@@ -39,7 +38,6 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
@@ -59,31 +57,17 @@ public class DefaultGroupByQueryMetricsTest
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setInterval("2011-04-02/2011-04-04")
-        .setDimensions(
-            Lists.newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new LookupExtractionFn(
-                        new MapLookupExtractor(
-                            ImmutableMap.of(
-                                "mezzanine",
-                                "mezzanine0"
-                            ),
-                            false
-                        ), false, null, true,
-                        false
-                    )
-                )
+        .setInterval("2011-04-02/2011-04-04").setDimensions(new ExtractionDimensionSpec(
+            "quality",
+            "alias",
+            new LookupExtractionFn(
+                new MapLookupExtractor(ImmutableMap.of("mezzanine", "mezzanine0"), false),
+                false,
+                null,
+                true,
+                false
             )
-        )
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.of("bySegment", true));

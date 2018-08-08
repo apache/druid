@@ -26,7 +26,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ContiguousSet;
 import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
@@ -36,6 +35,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -93,9 +93,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
         dim1
     );
 
-    selectorList = Lists.newArrayList(
-        (DimensionSelector) dim1
-    );
+    selectorList = Collections.singletonList((DimensionSelector) dim1);
 
     dimInfos = new ColumnSelectorPlus[] {dimInfo1};
 
@@ -103,11 +101,11 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
     CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.newArrayList(new DefaultDimensionSpec("dim1", "dim1")),
+        Collections.singletonList(new DefaultDimensionSpec("dim1", "dim1")),
         byRow
     );
 
-    int maxSize = factory.getMaxIntermediateSize();
+    int maxSize = factory.getMaxIntermediateSizeWithNulls();
     buf = ByteBuffer.allocate(maxSize + 64);
     pos = 10;
     buf.limit(pos + maxSize);

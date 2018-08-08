@@ -28,6 +28,7 @@ import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -294,7 +295,11 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
             for (int i : rightKeys) {
               final Object value = row[i];
-              final String stringValue = value != null ? String.valueOf(value) : "";
+              if (value == null) {
+                // NULLs are not supposed to match NULLs in a join. So ignore them.
+                continue;
+              }
+              final String stringValue = DimensionHandlerUtils.convertObjectToString(value);
               values.add(stringValue);
               if (values.size() > maxSemiJoinRowsInMemory) {
                 throw new ResourceLimitExceededException(
@@ -308,16 +313,18 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
               for (int i = 0; i < values.size(); i++) {
                 final String value = values.get(i);
-                subConditions.add(
-                    getCluster().getRexBuilder().makeCall(
-                        SqlStdOperatorTable.EQUALS,
-                        leftExpressions.get(i),
-                        getCluster().getRexBuilder().makeLiteral(value)
-                    )
-                );
+                // NULLs are not supposed to match NULLs in a join. So ignore them.
+                if (value != null) {
+                  subConditions.add(
+                      getCluster().getRexBuilder().makeCall(
+                          SqlStdOperatorTable.EQUALS,
+                          leftExpressions.get(i),
+                          getCluster().getRexBuilder().makeLiteral(value)
+                      )
+                  );
+                }
+                theConditions.add(makeAnd(subConditions));
               }
-
-              theConditions.add(makeAnd(subConditions));
             }
             return theConditions;
           }

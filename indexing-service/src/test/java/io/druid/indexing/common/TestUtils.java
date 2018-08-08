@@ -23,6 +23,9 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMap;
+import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.client.indexing.NoopIndexingServiceClient;
 import io.druid.guice.ServerModule;
 import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -81,7 +84,7 @@ public class TestUtils
 
     jsonMapper.setInjectableValues(
         new InjectableValues.Std()
-            .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
+            .addValue(ExprMacroTable.class, LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
             .addValue(ObjectMapper.class, jsonMapper)
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
@@ -89,6 +92,8 @@ public class TestUtils
             .addValue(AuthorizerMapper.class, null)
             .addValue(RowIngestionMetersFactory.class, rowIngestionMetersFactory)
             .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
+            .addValue(IndexingServiceClient.class, new NoopIndexingServiceClient())
+            .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
     );
   }
 

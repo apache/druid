@@ -153,8 +153,8 @@ public class MultiValuedDimensionTest
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("tags", "tags")))
-        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
+        .setDimensions(new DefaultDimensionSpec("tags", "tags"))
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
@@ -187,8 +187,8 @@ public class MultiValuedDimensionTest
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
-        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("tags", "tags")))
-        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
+        .setDimensions(new DefaultDimensionSpec("tags", "tags"))
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setDimFilter(new SelectorDimFilter("tags", "t3", null))
         .build();
 
@@ -219,15 +219,8 @@ public class MultiValuedDimensionTest
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
-        .setDimensions(
-            Lists.newArrayList(
-                new RegexFilteredDimensionSpec(
-                    new DefaultDimensionSpec("tags", "tags"),
-                    "t3"
-                )
-            )
-        )
-        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
+        .setDimensions(new RegexFilteredDimensionSpec(new DefaultDimensionSpec("tags", "tags"), "t3"))
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setDimFilter(new SelectorDimFilter("tags", "t3", null))
         .build();
 

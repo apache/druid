@@ -22,7 +22,9 @@ package io.druid.query.aggregation.last;
 import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -70,7 +72,7 @@ public class LongLastAggregationTest
   @Test
   public void testLongLastAggregator()
   {
-    LongLastAggregator agg = (LongLastAggregator) longLastAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = longLastAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -88,10 +90,10 @@ public class LongLastAggregationTest
   @Test
   public void testLongLastBufferAggregator()
   {
-    LongLastBufferAggregator agg = (LongLastBufferAggregator) longLastAggFactory.factorizeBuffered(
+    BufferAggregator agg = longLastAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[longLastAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[longLastAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -118,7 +120,7 @@ public class LongLastAggregationTest
   @Test
   public void testLongLastCombiningAggregator()
   {
-    LongLastAggregator agg = (LongLastAggregator) combiningAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -137,10 +139,10 @@ public class LongLastAggregationTest
   @Test
   public void testLongLastCombiningBufferAggregator()
   {
-    LongLastBufferAggregator agg = (LongLastBufferAggregator) combiningAggFactory.factorizeBuffered(
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[longLastAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[longLastAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -167,7 +169,7 @@ public class LongLastAggregationTest
   }
 
   private void aggregate(
-      LongLastAggregator agg
+      Aggregator agg
   )
   {
     agg.aggregate();
@@ -177,7 +179,7 @@ public class LongLastAggregationTest
   }
 
   private void aggregate(
-      LongLastBufferAggregator agg,
+      BufferAggregator agg,
       ByteBuffer buff,
       int position
   )

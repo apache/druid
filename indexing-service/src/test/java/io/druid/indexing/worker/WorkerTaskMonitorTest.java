@@ -187,6 +187,7 @@ public class WorkerTaskMonitorTest
                 indexIO,
                 null,
                 null,
+                null,
                 indexMergerV9,
                 null,
                 null,
