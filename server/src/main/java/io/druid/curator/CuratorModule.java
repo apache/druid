@@ -91,6 +91,11 @@ public class CuratorModule implements Module
         .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
         .build();
 
+    framework.getUnhandledErrorListenable().addListener((message, e) -> {
+      log.error(e, "Stopping Druid due to unhandled exception in Curator");
+      lifecycle.stop();
+    });
+
     lifecycle.addHandler(
         new Lifecycle.Handler()
         {
