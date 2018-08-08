@@ -37,9 +37,10 @@ Each Druid query can accept a list of virtual columns as a parameter. The follow
 }
 ```
 
-## Expression virtual column
 
-Druid currently has one type of virtual column, the expression virtual column.
+## Virtual Column Types
+
+### Expression virtual column
 
 The expression virtual column has the following syntax:
 
