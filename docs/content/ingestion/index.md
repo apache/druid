@@ -247,7 +247,7 @@ for the `comment` column.
 ```
 
 ## metricsSpec
- The `metricsSpec` is a list of [aggregators](../querying/aggregations.html). If `rollup` is false in the granularity spec, the metrics spec can be an empty list and all columns can be defined in the dimensionsSpec instead.
+ The `metricsSpec` is a list of [aggregators](../querying/aggregations.html). If `rollup` is false in the granularity spec, the metrics spec should be an empty list and all columns should be defined in the `dimensionsSpec` instead (without rollup, there isn't a real distinction between dimensions and metrics at ingestion time). This is optional, however.
  
 ## GranularitySpec
 

@@ -55,6 +55,16 @@ An expression transform has the following syntax:
 |name|The output field name of the expression transform.|yes|
 |expression|An [expression](../misc/math-expr.html) that will be applied to input rows to produce a value for the transform's output field.|no|
 
+For example, the following expression transform prepends "foo" to the values of a `page` column in the input data, and creates a `fooPage` column.
+
+```
+    {
+      "type": "expression",
+      "name": "fooPage",
+      "expression": "concat('foo' + page)"
+    }
+```
+
 ## Filtering
 
 The transformSpec allows Druid to filter out input rows during ingestion. A row that fails to pass the filter will not be ingested.
@@ -62,3 +72,13 @@ The transformSpec allows Druid to filter out input rows during ingestion. A row 
 Any of Druid's standard [filters](../querying/filters.html) can be used.
 
 Note that the filtering takes place after the transforms, so filters will operate on transformed rows and not the raw input data if transforms are present.
+
+For example, the following filter would ingest only input rows where a `country` column has the value "United States":
+
+```
+"filter": {
+  "type": "selector",
+  "dimension": "country",
+  "value": "United States"
+}
+```
