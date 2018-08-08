@@ -53,7 +53,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
-import io.druid.java.util.common.granularity.GranularityType;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -243,15 +243,21 @@ public class CompactionTask extends AbstractTask
       log.warn("Interval[%s] has no segments, nothing to do.", interval);
       return TaskStatus.failure(getId());
     } else {
-      log.info("Generated [%d] compaction task specs: ", indexTaskSpecs.size());
+      log.info("Generated [%d] compaction task specs", indexTaskSpecs.size());
 
       for (IndexTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         log.info("Running indexSpec: " + json);
 
-        final TaskStatus eachResult = eachSpec.run(toolbox);
-        if (!eachResult.isSuccess()) {
-          log.warn("Running indexSpec failed. Trying to the next indexSpec.");
+        try {
+          final TaskStatus eachResult = eachSpec.run(toolbox);
+          if (!eachResult.isSuccess()) {
+            log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
+          }
+        }
+        catch (Exception e)
+        {
+          log.warn(e, "Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
         }
       }
 
@@ -262,7 +268,7 @@ public class CompactionTask extends AbstractTask
   /**
    * Generate {@link IndexIngestionSpec} from input segments.
    *
-   * @return null if input segments don't exist. Otherwise, a generated ingestionSpec.
+   * @return an empty list if input segments don't exist. Otherwise, a generated ingestionSpec.
    */
   @VisibleForTesting
   static List<IndexIngestionSpec> createIngestionSchema(
@@ -404,7 +410,7 @@ public class CompactionTask extends AbstractTask
     });
 
     final GranularitySpec granularitySpec = new ArbitraryGranularitySpec(
-        GranularityType.NONE.getDefaultGranularity(),
+        Granularities.NONE,
         rollup,
         Collections.singletonList(totalInterval)
     );
