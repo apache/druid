@@ -1,0 +1,3 @@
+{
+  "query":"select * from \"ingestion-tutorial\""
+}

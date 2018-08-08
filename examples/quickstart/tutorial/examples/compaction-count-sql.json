@@ -1,0 +1,3 @@
+{
+  "query":"select count(*) from \"compaction-tutorial\""
+}

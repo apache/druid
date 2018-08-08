@@ -3,12 +3,20 @@ layout: toc
 ---
 
 ## Getting Started
-  * [Concepts](/docs/VERSION/design/)
-  * [Quickstart](/docs/VERSION/tutorials/quickstart.html)
-  * [Loading Data](/docs/VERSION/tutorials/ingestion.html)
-    * [Loading from Files](/docs/VERSION/tutorials/tutorial-batch.html)
-    * [Loading from Streams](/docs/VERSION/tutorials/tutorial-streams.html)
-    * [Loading from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
+  * [Concepts](/docs/VERSION/design/)    
+  * [Quickstart](/docs/VERSION/tutorials/index.html)
+    * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
+    * [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
+    * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
+    * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
+    * [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html)
+  * [Further tutorials](/docs/VERSION/tutorials/advanced.html)
+    * [Tutorial: Rollup](/docs/VERSION/tutorials/rollup.html)
+    * [Tutorial: Configuring retention](/docs/VERSION/tutorials/tutorial-retention.html)
+    * [Tutorial: Updating existing data](/docs/VERSION/tutorials/tutorial-update-data.html)
+    * [Tutorial: Compacting segments](/docs/VERSION/tutorials/tutorial-compaction.html)
+    * [Tutorial: Deleting data](/docs/VERSION/tutorials/tutorial-delete-data.html)
+    * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/tutorial-ingestion-spec.html)
   * [Clustering](/docs/VERSION/tutorials/cluster.html)
 
 ## Data Ingestion

@@ -1,0 +1,3 @@
+{
+  "query":"SELECT user, page FROM wikipedia WHERE \"__time\" BETWEEN TIMESTAMP '2015-09-12 02:00:00' AND TIMESTAMP '2015-09-12 03:00:00' LIMIT 5"
+}

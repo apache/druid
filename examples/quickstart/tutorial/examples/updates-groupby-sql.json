@@ -1,0 +1,3 @@
+{
+  "query":"select __time, animal, SUM(\"count\"), SUM(\"number\") from \"updates-tutorial\" group by __time, animal"
+}
