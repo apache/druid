@@ -119,7 +119,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   int getRowCount(SegmentIdentifier identifier);
 
   /**
-   * Returns the number of total rows in this appenderator.
+   * Returns the number of total rows in this appenderator of all segments pending push.
    *
    * @return total number of rows
    */

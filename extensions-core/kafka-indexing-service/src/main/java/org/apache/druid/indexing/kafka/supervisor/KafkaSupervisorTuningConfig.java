@@ -43,6 +43,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
+      @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
@@ -69,6 +70,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
+        maxTotalRows,
         intermediatePersistPeriod,
         basePersistDirectory,
         maxPendingPersists,
@@ -134,6 +136,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
     return "KafkaSupervisorTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
+           ", maxTotalRows=" + getMaxTotalRows() +
            ", maxBytesInMemory=" + TuningConfigs.getMaxBytesInMemoryOrDefault(getMaxBytesInMemory()) +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +

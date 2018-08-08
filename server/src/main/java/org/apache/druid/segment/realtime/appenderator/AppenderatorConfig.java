@@ -30,12 +30,48 @@ public interface AppenderatorConfig
 {
   boolean isReportParseExceptions();
 
+  /**
+   * Maximum number of rows in memory before persisting to local storage
+   *
+   * @return
+   */
   int getMaxRowsInMemory();
 
+  /**
+   * Maximum number of bytes (estimated) to store in memory before persisting to local storage
+   *
+   * @return
+   */
   long getMaxBytesInMemory();
+
 
   int getMaxPendingPersists();
 
+  /**
+   * Maximum number of rows in a single segment before pushing to deep storage
+   *
+   * @return
+   */
+  default int getMaxRowsPerSegment()
+  {
+    return Integer.MAX_VALUE;
+  }
+
+  /**
+   * Maximum number of rows across all segments before pushing to deep storage
+   *
+   * @return
+   */
+  @Nullable
+  default Long getMaxTotalRows()
+  {
+    return null;
+  }
+
+  /**
+   * Period that sets frequency to persist to local storage if no other thresholds are met
+   * @return
+   */
   Period getIntermediatePersistPeriod();
 
   IndexSpec getIndexSpec();

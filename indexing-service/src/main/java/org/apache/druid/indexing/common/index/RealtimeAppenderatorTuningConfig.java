@@ -53,8 +53,9 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   }
 
   private final int maxRowsInMemory;
-  private final int maxRowsPerSegment;
   private final long maxBytesInMemory;
+  private final int maxRowsPerSegment;
+  private final Long maxTotalRows;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   private final int maxPendingPersists;
@@ -73,8 +74,9 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   @JsonCreator
   public RealtimeAppenderatorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
@@ -94,6 +96,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     // initializing this to 0, it will be lazily intialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.maxTotalRows = maxTotalRows;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
@@ -105,8 +108,8 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
                                  ? defaultReportParseExceptions
                                  : reportParseExceptions;
     this.publishAndHandoffTimeout = publishAndHandoffTimeout == null
-                                   ? defaultPublishAndHandoffTimeout
-                                   : publishAndHandoffTimeout;
+                                    ? defaultPublishAndHandoffTimeout
+                                    : publishAndHandoffTimeout;
     Preconditions.checkArgument(this.publishAndHandoffTimeout >= 0, "publishAndHandoffTimeout must be >= 0");
 
     this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
@@ -117,12 +120,16 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       this.maxParseExceptions = 0;
       this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
     } else {
-      this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+      this.maxParseExceptions = maxParseExceptions == null
+                                ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+                                : maxParseExceptions;
       this.maxSavedParseExceptions = maxSavedParseExceptions == null
                                      ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
                                      : maxSavedParseExceptions;
     }
-    this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
+    this.logParseExceptions = logParseExceptions == null
+                              ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
+                              : logParseExceptions;
   }
 
   @Override
@@ -138,10 +145,18 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return maxBytesInMemory;
   }
 
+  @Override
   @JsonProperty
   public int getMaxRowsPerSegment()
   {
     return maxRowsPerSegment;
+  }
+
+  @Override
+  @JsonProperty
+  public Long getMaxTotalRows()
+  {
+    return maxTotalRows;
   }
 
   @Override
@@ -227,8 +242,9 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   {
     return new RealtimeAppenderatorTuningConfig(
         maxRowsInMemory,
-        maxRowsPerSegment,
         maxBytesInMemory,
+        maxRowsPerSegment,
+        maxTotalRows,
         intermediatePersistPeriod,
         dir,
         maxPendingPersists,

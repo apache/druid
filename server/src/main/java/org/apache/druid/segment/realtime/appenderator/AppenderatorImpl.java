@@ -83,7 +83,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -91,11 +90,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -264,8 +261,8 @@ public class AppenderatorImpl implements Appenderator
 
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
-    totalRows.addAndGet(numAddedRows);
     bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
+    totalRows.addAndGet(numAddedRows);
 
     boolean isPersistRequired = false;
     boolean persist = false;
@@ -438,20 +435,15 @@ public class AppenderatorImpl implements Appenderator
 
       if (persistExecutor != null) {
         final ListenableFuture<?> uncommitFuture = persistExecutor.submit(
-            new Callable<Object>()
-            {
-              @Override
-              public Object call() throws Exception
-              {
-                try {
-                  commitLock.lock();
-                  objectMapper.writeValue(computeCommitFile(), Committed.nil());
-                }
-                finally {
-                  commitLock.unlock();
-                }
-                return null;
+            () -> {
+              try {
+                commitLock.lock();
+                objectMapper.writeValue(computeCommitFile(), Committed.nil());
               }
+              finally {
+                commitLock.unlock();
+              }
+              return null;
             }
         );
 
@@ -611,6 +603,7 @@ public class AppenderatorImpl implements Appenderator
       }
       theSinks.put(identifier, sink);
       sink.finishWriting();
+      totalRows.addAndGet(-sink.getNumRows());
     }
 
     return Futures.transform(
@@ -656,8 +649,8 @@ public class AppenderatorImpl implements Appenderator
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted. Must only
    * be run in the single-threaded pushExecutor.
    *
-   * @param identifier sink identifier
-   * @param sink       sink to push
+   * @param identifier    sink identifier
+   * @param sink          sink to push
    * @param useUniquePath true if the segment should be written to a path with a unique identifier
    *
    * @return segment descriptor, or null if the sink is no longer valid
@@ -986,6 +979,8 @@ public class AppenderatorImpl implements Appenderator
       commitLock.unlock();
     }
 
+    int rowsSoFar = 0;
+
     log.info("Loading sinks from[%s]: %s", baseDir, committed.getHydrants().keySet());
 
     for (File sinkDir : files) {
@@ -1011,26 +1006,12 @@ public class AppenderatorImpl implements Appenderator
 
         // To avoid reading and listing of "merged" dir and other special files
         final File[] sinkFiles = sinkDir.listFiles(
-            new FilenameFilter()
-            {
-              @Override
-              public boolean accept(File dir, String fileName)
-              {
-                return !(Ints.tryParse(fileName) == null);
-              }
-            }
+            (dir, fileName) -> !(Ints.tryParse(fileName) == null)
         );
 
         Arrays.sort(
             sinkFiles,
-            new Comparator<File>()
-            {
-              @Override
-              public int compare(File o1, File o2)
-              {
-                return Ints.compare(Integer.parseInt(o1.getName()), Integer.parseInt(o2.getName()));
-              }
-            }
+            (o1, o2) -> Ints.compare(Integer.parseInt(o1.getName()), Integer.parseInt(o2.getName()))
         );
 
         List<FireHydrant> hydrants = Lists.newArrayList();
@@ -1074,6 +1055,7 @@ public class AppenderatorImpl implements Appenderator
             null,
             hydrants
         );
+        rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);
         sinkTimeline.add(
             currSink.getInterval(),
@@ -1094,14 +1076,7 @@ public class AppenderatorImpl implements Appenderator
     final Set<String> loadedSinks = Sets.newHashSet(
         Iterables.transform(
             sinks.keySet(),
-            new Function<SegmentIdentifier, String>()
-            {
-              @Override
-              public String apply(SegmentIdentifier input)
-              {
-                return input.getIdentifierAsString();
-              }
-            }
+            input -> input.getIdentifierAsString()
         )
     );
     final Set<String> missingSinks = Sets.difference(committed.getHydrants().keySet(), loadedSinks);
@@ -1109,6 +1084,7 @@ public class AppenderatorImpl implements Appenderator
       throw new ISE("Missing committed sinks [%s]", Joiner.on(", ").join(missingSinks));
     }
 
+    totalRows.set(rowsSoFar);
     return committed.getMetadata();
   }
 
@@ -1118,16 +1094,18 @@ public class AppenderatorImpl implements Appenderator
       final boolean removeOnDiskData
   )
   {
+    if (sink.isWritable()) {
+      // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
+      rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
+      bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
+      totalRows.addAndGet(-sink.getNumRows());
+    }
     // Ensure no future writes will be made to this sink.
     sink.finishWriting();
 
     // Mark this identifier as dropping, so no future push tasks will pick it up.
     droppingSinks.add(identifier);
 
-    // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
-    rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
-    totalRows.addAndGet(-sink.getNumRows());
-    bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
