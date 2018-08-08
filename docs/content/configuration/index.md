@@ -8,6 +8,7 @@ This page documents all of the configuration properties for each Druid service t
 
 ## Table of Contents
   * [Common configurations](#common-configurations)
+    * [JVM Configuration Best Practices](#jvm-configuration-best-practices)
     * [Extensions](#extensions)
     * [Modules](#modules)
     * [Zookeeper](#zookeper)
@@ -41,7 +42,7 @@ This page documents all of the configuration properties for each Druid service t
     * [Dynamic Configuration](#overlord-dynamic-configuration)
         * [Worker Select Strategy](#worker-select-strategy)
         * [Autoscaler](#autoscaler)
-  * [MiddleManager & Peons](#middle-manager-and-peons)
+  * [MiddleManager & Peons](#middlemanager-and-peons)
     * [Node Config](#middlemanager-node-config)
     * [MiddleManger Configuration](#middlemanager-configuration)
     * [Peon Processing](#peon-processing)
@@ -61,6 +62,7 @@ This page documents all of the configuration properties for each Druid service t
     * [Caching](#historical-caching)
   * [Caching](#cache-configuration)
   * [General Query Configuration](#general-query-configuration)
+  * [Realtime nodes (Deprecated)](#realtime-nodes)
 
 ## Common Configurations
 
@@ -591,6 +593,7 @@ Using 64-bit representation for double column will lead to avoid precesion loss 
 To keep the old format set the system-wide property `druid.indexing.doubleStorage=float`.
 You can also use floatSum, floatMin and floatMax to use 32-bit float representation.
 Support for 64-bit floating point columns was released in Druid 0.11.0, so if you use this feature then older versions of Druid will not be able to read your data segments.
+
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexing.doubleStorage`|Set to "float" to use 32-bit double representation for double columns.|double|
@@ -854,7 +857,7 @@ A sample worker config spec is shown below:
         "minInstances": 1,
         "maxInstances": 1,
         "securityGroupIds": ["${IDs}"],
-        "keyName": ${KEY_NAME}
+        "keyName": "${KEY_NAME}"
       },
       "userData": {
         "impl": "string",
@@ -1413,7 +1416,7 @@ This section describes configurations that control behavior of Druid's query typ
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.topN.minTopNThreshold`|See [TopN Aliasing](../qurying/topn.html#aliasing) for details.|1000|
+|`druid.query.topN.minTopNThreshold`|See [TopN Aliasing](../querying/topnquery.html#aliasing) for details.|1000|
 
 ### Search Query Config
 
@@ -1431,7 +1434,7 @@ This section describes configurations that control behavior of Druid's query typ
 
 ### GroupBy Query Config
 
-This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on broker, historical, and MiddleManager nodes. You can set the query context parameters through the [query context](query-context.html).
+This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on broker, historical, and MiddleManager nodes. You can set the query context parameters through the [query context](../querying/query-context.html).
   
 #### Configurations for groupBy v2
 
@@ -1510,3 +1513,8 @@ Supported query contexts:
 |`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|None|
 |`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|None|
 |`useOffheap`|Set to true to store aggregations off-heap when merging results.|false|
+
+
+## Realtime nodes
+
+Configuration for the deprecated realtime node can be found [here](../configuration/realtime.html).

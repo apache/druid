@@ -90,6 +90,8 @@ layout: toc
   * [MiddleManager & Peons](/docs/VERSION/configuration/index.html#middle-manager-and-peons)
   * [Broker](/docs/VERSION/configuration/index.html#broker)
   * [Historical](/docs/VERSION/configuration/index.html#historical)
+  * [Caching](/docs/VERSION/configuration/index.html#cache-configuration)
+  * [General Query Configuration](/docs/VERSION/configuration/index.html#general-query-configuration)
   * [Configuring Logging](/docs/VERSION/configuration/logging.html)
   
 ## Development
