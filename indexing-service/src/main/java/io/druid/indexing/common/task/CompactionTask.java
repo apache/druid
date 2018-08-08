@@ -255,8 +255,7 @@ public class CompactionTask extends AbstractTask
             log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
           }
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
           log.warn(e, "Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
         }
       }
