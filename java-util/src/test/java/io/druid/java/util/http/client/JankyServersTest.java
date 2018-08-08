@@ -338,15 +338,10 @@ public class JankyServersTest
               new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
-      Throwable e = null;
-      try {
-        response.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-      }
+      expectedException.expect(ExecutionException.class);
+      expectedException.expectMessage("org.jboss.netty.channel.ChannelException: Faulty channel in resource pool");
 
-      Assert.assertNotNull("ChannelException thrown by 'get'", e);
+      response.get();
     }
     finally {
       lifecycle.stop();
