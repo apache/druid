@@ -21,12 +21,12 @@ package io.druid.collections.bitmap;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class RoaringBitmapFactoryTest
 {
@@ -58,7 +58,7 @@ public class RoaringBitmapFactoryTest
 
     ImmutableBitmap bitmap = factory.union(
         Iterables.transform(
-            Lists.newArrayList(new WrappedRoaringBitmap()),
+            Collections.singletonList(new WrappedRoaringBitmap()),
             new Function<WrappedRoaringBitmap, ImmutableBitmap>()
             {
               @Override

@@ -18,6 +18,7 @@
  */
 package io.druid.indexer;
 
+import com.google.common.base.Preconditions;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -25,11 +26,11 @@ import javax.annotation.Nullable;
 /**
  * This class is used to store task info from runner query and cache in OverlordResource
  */
-public class TaskInfo<EntryType>
+public class TaskInfo<EntryType, StatusType>
 {
   private final String id;
   private final DateTime createdTime;
-  private final TaskStatus status;
+  private final StatusType status;
   private final String dataSource;
   @Nullable
   private final EntryType task;
@@ -37,15 +38,15 @@ public class TaskInfo<EntryType>
   public TaskInfo(
       String id,
       DateTime createdTime,
-      TaskStatus status,
+      StatusType status,
       String dataSource,
       @Nullable EntryType task
   )
   {
-    this.id = id;
-    this.createdTime = createdTime;
-    this.status = status;
-    this.dataSource = dataSource;
+    this.id = Preconditions.checkNotNull(id, "id");
+    this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
+    this.status = Preconditions.checkNotNull(status, "status");
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.task = task;
   }
 
@@ -59,7 +60,7 @@ public class TaskInfo<EntryType>
     return createdTime;
   }
 
-  public TaskStatus getStatus()
+  public StatusType getStatus()
   {
     return status;
   }

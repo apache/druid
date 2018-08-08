@@ -20,7 +20,6 @@
 package io.druid.query;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids.TimeseriesQueryBuilder;
@@ -45,7 +44,7 @@ public class IntervalChunkingQueryRunnerTest
   {
     queryBuilder = Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")));
+              .aggregators(Collections.singletonList(new CountAggregatorFactory("count")));
   }
 
   @Before

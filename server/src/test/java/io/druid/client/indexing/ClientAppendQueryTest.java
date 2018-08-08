@@ -19,7 +19,6 @@
 
 package io.druid.client.indexing;
 
-import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -28,6 +27,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 public class ClientAppendQueryTest
@@ -35,9 +35,9 @@ public class ClientAppendQueryTest
   private ClientAppendQuery clientAppendQuery;
   private static final String DATA_SOURCE = "data_source";
   private final DateTime start = DateTimes.nowUtc();
-  private List<DataSegment> segments = Lists.newArrayList(
-      new DataSegment(DATA_SOURCE, new Interval(start, start.plus(1)), start.toString(), null,
-                      null, null, null, 0, 0));
+  private List<DataSegment> segments = Collections.singletonList(
+      new DataSegment(DATA_SOURCE, new Interval(start, start.plus(1)), start.toString(), null, null, null, null, 0, 0)
+  );
 
   @Before
   public void setUp()

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
@@ -73,6 +74,7 @@ public class FlushingPlumber extends RealtimePlumber
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
+      CachePopulatorStats cachePopulatorStats,
       ObjectMapper objectMapper
 
   )
@@ -92,6 +94,7 @@ public class FlushingPlumber extends RealtimePlumber
         indexIO,
         cache,
         cacheConfig,
+        cachePopulatorStats,
         objectMapper
     );
 

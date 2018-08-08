@@ -139,19 +139,4 @@ public class CustomStatementRewriterTest
         rewrite("UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE"));
 
   }
-
-  /**
-   *
-   * @see io.druid.metadata.SQLMetadataStorageActionHandler#getInactiveStatusesSince(org.joda.time.DateTime)
-   *
-   */
-  @Test
-  public void testSQLMetadataStorageActionHandlerGetInactiveStatusesSince()
-  {
-    Assert.assertEquals(
-        "SELECT id, status_payload FROM %s WHERE active = 0 AND created_date >= ? ORDER BY created_date DESC",
-        rewrite(
-            "SELECT id, status_payload FROM %s WHERE active = FALSE AND created_date >= :start ORDER BY created_date DESC"));
-  }
-
 }

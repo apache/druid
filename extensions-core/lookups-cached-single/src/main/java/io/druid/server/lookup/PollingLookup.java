@@ -20,11 +20,11 @@
 package io.druid.server.lookup;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
@@ -33,7 +33,8 @@ import io.druid.server.lookup.cache.polling.OnHeapPollingCache;
 import io.druid.server.lookup.cache.polling.PollingCache;
 import io.druid.server.lookup.cache.polling.PollingCacheFactory;
 
-import javax.validation.constraints.NotNull;
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -107,8 +108,15 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
-  public String apply(@NotNull String key)
+  @Nullable
+  public String apply(@Nullable String key)
   {
+    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
+    if (keyEquivalent == null) {
+      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+      return null;
+    }
     final CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
     if (cacheRefKeeper == null) {
       throw new ISE("Cache reference is null WTF");
@@ -117,9 +125,9 @@ public class PollingLookup extends LookupExtractor
     try {
       if (cache == null) {
         // it must've been closed after swapping while I was getting it.  Try again.
-        return this.apply(key);
+        return this.apply(keyEquivalent);
       }
-      return Strings.emptyToNull((String) cache.get(key));
+      return NullHandling.emptyToNullIfNeeded((String) cache.get(keyEquivalent));
     }
     finally {
       if (cacheRefKeeper != null && cache != null) {
@@ -129,8 +137,16 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<String> unapply(@Nullable final String value)
   {
+    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueEquivalent == null) {
+      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+      // null value maps to empty list when SQL Compatible
+      return Collections.emptyList();
+    }
+
     CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
     if (cacheRefKeeper == null) {
       throw new ISE("pollingLookup id [%s] is closed", id);
@@ -139,9 +155,9 @@ public class PollingLookup extends LookupExtractor
     try {
       if (cache == null) {
         // it must've been closed after swapping while I was getting it.  Try again.
-        return this.unapply(value);
+        return this.unapply(valueEquivalent);
       }
-      return cache.getKeys(value);
+      return cache.getKeys(valueEquivalent);
     }
     finally {
       if (cacheRefKeeper != null && cache != null) {

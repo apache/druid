@@ -92,6 +92,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
       endBuffer.flip();
       flattener.write(endBuffer);
       endBuffer.clear();
+      writer.setBuffer(endBuffer);
     }
 
     writer.write(value);

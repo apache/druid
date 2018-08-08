@@ -90,7 +90,7 @@ public class DruidExpression
 
   public static String nullLiteral()
   {
-    return "''";
+    return "null";
   }
 
   public static String functionCall(final String functionName, final List<DruidExpression> args)

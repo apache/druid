@@ -23,21 +23,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupExtractor;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @JsonTypeName("map")
 public class MapLookupExtractor extends LookupExtractor
@@ -64,22 +63,32 @@ public class MapLookupExtractor extends LookupExtractor
 
   @Nullable
   @Override
-  public String apply(@NotNull String val)
+  public String apply(@Nullable String key)
   {
-    return map.get(val);
+    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
+    if (keyEquivalent == null) {
+      // keyEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+      return null;
+    }
+    return NullHandling.emptyToNullIfNeeded(map.get(keyEquivalent));
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<String> unapply(@Nullable final String value)
   {
-    return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
-    {
-      @Override public boolean apply(@Nullable String key)
-      {
-        return map.get(key).equals(Strings.nullToEmpty(value));
-      }
-    }).keySet());
-
+    String valueToLookup = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueToLookup == null) {
+      // valueToLookup is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+      // null value maps to empty list when SQL Compatible
+      return Collections.emptyList();
+    }
+    return map.entrySet()
+              .stream()
+              .filter(entry -> entry.getValue().equals(valueToLookup))
+              .map(entry -> entry.getKey())
+              .collect(Collectors.toList());
   }
 
   @Override

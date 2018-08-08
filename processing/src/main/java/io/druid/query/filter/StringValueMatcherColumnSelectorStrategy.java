@@ -20,7 +20,6 @@
 package io.druid.query.filter;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -28,19 +27,11 @@ import io.druid.segment.filter.BooleanValueMatcher;
 public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<DimensionSelector>
 {
   private static final String[] NULL_VALUE = new String[]{null};
-  private static final ValueGetter NULL_VALUE_GETTER = new ValueGetter()
-  {
-    @Override
-    public String[] get()
-    {
-      return NULL_VALUE;
-    }
-  };
+  private static final ValueGetter NULL_VALUE_GETTER = () -> NULL_VALUE;
 
   @Override
   public ValueMatcher makeValueMatcher(final DimensionSelector selector, String value)
   {
-    value = Strings.emptyToNull(value);
     if (selector.getValueCardinality() == 0) {
       return BooleanValueMatcher.of(value == null);
     } else {
@@ -68,22 +59,17 @@ public class StringValueMatcherColumnSelectorStrategy implements ValueMatcherCol
     if (selector.getValueCardinality() == 0) {
       return NULL_VALUE_GETTER;
     } else {
-      return new ValueGetter()
-      {
-        @Override
-        public String[] get()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            return NULL_VALUE;
-          } else {
-            String[] values = new String[size];
-            for (int i = 0; i < size; ++i) {
-              values[i] = Strings.emptyToNull(selector.lookupName(row.get(i)));
-            }
-            return values;
+      return () -> {
+        final IndexedInts row = selector.getRow();
+        final int size = row.size();
+        if (size == 0) {
+          return NULL_VALUE;
+        } else {
+          String[] values = new String[size];
+          for (int i = 0; i < size; ++i) {
+            values[i] = selector.lookupName(row.get(i));
           }
+          return values;
         }
       };
     }

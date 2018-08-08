@@ -17,21 +17,31 @@
  * under the License.
  */
 
-package io.druid.guice.annotations;
+package io.druid.tests.indexer;
 
-import com.google.inject.BindingAnnotation;
+import io.druid.testing.guice.DruidTestModuleFactory;
+import org.testng.annotations.Guice;
+import org.testng.annotations.Test;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-/**
- *
- */
-@BindingAnnotation
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface BackgroundCaching
+@Guice(moduleFactory = DruidTestModuleFactory.class)
+public class ITParallelIndexTest extends AbstractITBatchIndexTest
 {
+  private static String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
+  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
+  private static String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
+
+  @Test
+  public void testIndexData() throws Exception
+  {
+    try {
+      doIndexTestTest(
+          INDEX_DATASOURCE,
+          INDEX_TASK,
+          INDEX_QUERIES_RESOURCE
+      );
+    }
+    finally {
+      unloadAndKillData(INDEX_DATASOURCE);
+    }
+  }
 }

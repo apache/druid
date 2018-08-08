@@ -240,7 +240,7 @@ public class IncrementalIndexTest
     }
 
     return new IncrementalIndex.Builder()
-        .setSimpleTestingIndexSchema(aggregatorFactories)
+        .setSimpleTestingIndexSchema(false, aggregatorFactories)
         .setMaxRowCount(1000000)
         .buildOnheap();
   }

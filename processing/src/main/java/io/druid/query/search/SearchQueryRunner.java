@@ -20,7 +20,6 @@
 package io.druid.query.search;
 
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -132,7 +131,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
           final String dimVal = selector.lookupName(row.get(i));
           if (searchQuerySpec.accept(dimVal)) {
-            set.addTo(new SearchHit(outputName, Strings.nullToEmpty(dimVal)), 1);
+            set.addTo(new SearchHit(outputName, dimVal), 1);
             if (set.size() >= limit) {
               return;
             }

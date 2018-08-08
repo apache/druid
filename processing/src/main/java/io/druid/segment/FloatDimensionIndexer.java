@@ -45,9 +45,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    Float ret = DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
-    // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
-    return ret == null ? DimensionHandlerUtils.ZERO_FLOAT : ret;
+    return DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
   }
 
   @Override

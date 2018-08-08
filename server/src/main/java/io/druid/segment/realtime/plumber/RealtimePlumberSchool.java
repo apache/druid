@@ -23,10 +23,11 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.guice.annotations.Processing;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -54,6 +55,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final IndexIO indexIO;
   private final Cache cache;
   private final CacheConfig cacheConfig;
+  private final CachePopulatorStats cachePopulatorStats;
   private final ObjectMapper objectMapper;
 
   @JsonCreator
@@ -69,6 +71,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject IndexIO indexIO,
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
+      @JacksonInject CachePopulatorStats cachePopulatorStats,
       @JacksonInject ObjectMapper objectMapper
   )
   {
@@ -84,6 +87,7 @@ public class RealtimePlumberSchool implements PlumberSchool
 
     this.cache = cache;
     this.cacheConfig = cacheConfig;
+    this.cachePopulatorStats = cachePopulatorStats;
     this.objectMapper = objectMapper;
   }
 
@@ -111,6 +115,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         indexIO,
         cache,
         cacheConfig,
+        cachePopulatorStats,
         objectMapper
     );
   }

@@ -68,7 +68,7 @@ public class BufferArrayGrouper implements IntGrouper
   {
     final int cardinalityWithMissingValue = cardinality + 1;
     final int recordSize = Arrays.stream(aggregatorFactories)
-                                 .mapToInt(AggregatorFactory::getMaxIntermediateSize)
+                                 .mapToInt(AggregatorFactory::getMaxIntermediateSizeWithNulls)
                                  .sum();
 
     return getUsedFlagBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
@@ -103,7 +103,7 @@ public class BufferArrayGrouper implements IntGrouper
     for (int i = 0; i < aggregatorFactories.length; i++) {
       aggregators[i] = aggregatorFactories[i].factorizeBuffered(columnSelectorFactory);
       aggregatorOffsets[i] = offset;
-      offset += aggregatorFactories[i].getMaxIntermediateSize();
+      offset += aggregatorFactories[i].getMaxIntermediateSizeWithNulls();
     }
     recordSize = offset;
   }

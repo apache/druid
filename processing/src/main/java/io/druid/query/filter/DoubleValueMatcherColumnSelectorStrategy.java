@@ -22,7 +22,6 @@ package io.druid.query.filter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.filter.BooleanValueMatcher;
 
 
 public class DoubleValueMatcherColumnSelectorStrategy
@@ -33,7 +32,7 @@ public class DoubleValueMatcherColumnSelectorStrategy
   {
     final Double matchVal = DimensionHandlerUtils.convertObjectToDouble(value);
     if (matchVal == null) {
-      return BooleanValueMatcher.of(false);
+      return ValueMatcher.nullValueMatcher(selector);
     }
 
     final long matchValLongBits = Double.doubleToLongBits(matchVal);
@@ -65,6 +64,9 @@ public class DoubleValueMatcherColumnSelectorStrategy
       @Override
       public boolean matches()
       {
+        if (selector.isNull()) {
+          return predicate.applyNull();
+        }
         return predicate.applyDouble(selector.getDouble());
       }
 
@@ -80,13 +82,11 @@ public class DoubleValueMatcherColumnSelectorStrategy
   @Override
   public ValueGetter makeValueGetter(final BaseDoubleColumnValueSelector selector)
   {
-    return new ValueGetter()
-    {
-      @Override
-      public String[] get()
-      {
-        return new String[]{Double.toString(selector.getDouble())};
+    return () -> {
+      if (selector.isNull()) {
+        return null;
       }
+      return new String[]{Double.toString(selector.getDouble())};
     };
   }
 }

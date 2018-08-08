@@ -353,8 +353,13 @@ You can enable caching of results at the broker, historical, or realtime level u
 |<code>druid.(broker&#124;historical&#124;realtime).cache.unCacheable</code>|All druid query types|All query types to not cache.|["groupBy", "select"]|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.useCache</code>|true, false|Whether to use cache for getting query results.|false|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.populateCache</code>|true, false|Whether to populate cache.|false|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.maxEntrySize</code>|positive integer or -1|Maximum size of an individual cache entry (processed results for one segment), in bytes, or -1 for unlimited.|`-1`|
 
 #### Local Cache
+
+<div class="note caution">
+DEPRECATED: Use caffeine instead
+</div>
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -362,7 +367,7 @@ You can enable caching of results at the broker, historical, or realtime level u
 |`druid.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
 |`druid.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
 
-#### Memcache
+#### Memcached
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -371,6 +376,22 @@ You can enable caching of results at the broker, historical, or realtime level u
 |`druid.cache.hosts`|Comma separated list of Memcached hosts `<host:port>`.|none|
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
+
+#### Caffeine Cache
+
+A highly performant local cache implementation for Druid based on [Caffeine](https://github.com/ben-manes/caffeine). Requires a JRE8u60 or higher if using `COMMON_FJP`.
+
+Below are the configuration options known to this module:
+
+|`runtime.properties`|Description|Default|
+|--------------------|-----------|-------|
+|`druid.cache.type`| Set this to `caffeine`|`local`|
+|`druid.cache.sizeInBytes`|The maximum size of the cache in bytes on heap.|None (unlimited)|
+|`druid.cache.expireAfter`|The time (in ms) after an access for which a cache entry may be expired|None (no time limit)|
+|`druid.cache.cacheExecutorFactory`|The executor factory to use for Caffeine maintenance. One of `COMMON_FJP`, `SINGLE_THREAD`, or `SAME_THREAD`|ForkJoinPool common pool (`COMMON_FJP`)|
+|`druid.cache.evictOnClose`|If a close of a namespace (ex: removing a segment from a node) should cause an eager eviction of associated cache values|`false`|
+
+See the [Caching documentation](caching.html) for more detail.
 
 ### Indexing Service Discovery
 

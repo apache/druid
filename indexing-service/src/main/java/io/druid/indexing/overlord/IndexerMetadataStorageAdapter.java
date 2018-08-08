@@ -21,6 +21,7 @@ package io.druid.indexing.overlord;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import io.druid.indexer.TaskInfo;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -47,13 +48,9 @@ public class IndexerMetadataStorageAdapter
   {
     // Check the given interval overlaps the interval(minCreatedDateOfActiveTasks, MAX)
     final Optional<DateTime> minCreatedDateOfActiveTasks = taskStorageQueryAdapter
-        .getActiveTasks()
+        .getActiveTaskInfo(dataSource)
         .stream()
-        .map(task -> Preconditions.checkNotNull(
-            taskStorageQueryAdapter.getCreatedTime(task.getId()),
-            "Can't find the createdTime for task[%s]",
-            task.getId()
-        ))
+        .map(TaskInfo::getCreatedTime)
         .min(Comparator.naturalOrder());
 
     final Interval activeTaskInterval = new Interval(

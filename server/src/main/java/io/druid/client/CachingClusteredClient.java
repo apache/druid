@@ -26,18 +26,13 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulator;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.collections.SerializablePair;
-import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Intervals;
@@ -90,8 +85,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Spliterators;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -121,8 +114,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final TimelineServerView serverView;
   private final Cache cache;
   private final ObjectMapper objectMapper;
+  private final CachePopulator cachePopulator;
   private final CacheConfig cacheConfig;
-  private final ListeningExecutorService backgroundExecutorService;
   private final ForkJoinPool mergeFjp;
 
   @Inject
@@ -132,9 +125,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       TimelineServerView serverView,
       Cache cache,
       @Smile ObjectMapper objectMapper,
-      @BackgroundCaching ExecutorService backgroundExecutorService,
-      CacheConfig cacheConfig,
-      @Processing ForkJoinPool mergeFjp
+      @Processing ForkJoinPool mergeFjp,
+      CachePopulator cachePopulator,
+      CacheConfig cacheConfig
   )
   {
     this.conglomerate = conglomerate;
@@ -142,13 +135,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.serverView = serverView;
     this.cache = cache;
     this.objectMapper = objectMapper;
+    this.cachePopulator = cachePopulator;
     this.cacheConfig = cacheConfig;
-    this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
     this.mergeFjp = mergeFjp;
-    if (cacheConfig.isQueryCacheable(Query.GROUP_BY)) {
+
+    if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
-          "Even though groupBy caching is enabled, v2 groupBys will not be cached. "
-          + "Consider disabling cache on your broker and enabling it on your data nodes to enable v2 groupBy caching."
+          "Even though groupBy caching is enabled in your configuration, v2 groupBys will not be cached on the broker. "
+          + "Consider enabling caching on your data nodes if it is not already enabled."
       );
     }
 
@@ -290,7 +284,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
     private final Query<T> downstreamQuery;
-    private final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
+    private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = Maps.newHashMap();
 
     SpecificQueryRunnable(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
     {
@@ -507,7 +501,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (!cachedValue.isPresent()) {
         // if populating cache, add segment to list of segments to cache if it is not cached
         final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
-        addCachePopulator(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
+        addCachePopulatorKey(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
       }
       return new SerializablePair<>(segment, cachedValue);
     }
@@ -575,22 +569,27 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private void addCachePopulator(
+    private String cacheKey(String segmentId, Interval segmentInterval)
+    {
+      return StringUtils.format("%s_%s", segmentId, segmentInterval);
+    }
+
+    private void addCachePopulatorKey(
         Cache.NamedKey segmentCacheKey,
         String segmentIdentifier,
         Interval segmentQueryInterval
     )
     {
-      cachePopulatorMap.put(
-          StringUtils.format("%s_%s", segmentIdentifier, segmentQueryInterval),
-          new CachePopulator(cache, objectMapper, segmentCacheKey)
+      cachePopulatorKeyMap.put(
+          cacheKey(segmentIdentifier, segmentQueryInterval),
+          segmentCacheKey
       );
     }
 
     @Nullable
-    private CachePopulator getCachePopulator(String segmentId, Interval segmentInterval)
+    private Cache.NamedKey getCachePopulatorKey(String segmentId, Interval segmentInterval)
     {
-      return cachePopulatorMap.get(StringUtils.format("%s_%s", segmentId, segmentInterval));
+      return cachePopulatorKeyMap.get(cacheKey(segmentId, segmentInterval));
     }
 
     /**
@@ -780,26 +779,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
     )
     {
       final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
-      final CachePopulator cachePopulator = getCachePopulator(
+      final Cache.NamedKey cachePopulatorKey = getCachePopulatorKey(
           resultsOfSegment.getSegmentId(),
           resultsOfSegment.getInterval()
       );
       Sequence<T> res = Sequences
-          .simple(resultsOfSegment.getResults())
-          .map(r -> {
-            if (cachePopulator != null) {
-              // only compute cache data if populating cache
-              cachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cachePrep.apply(r)));
-            }
-            return r;
-          })
-          .map(
-              toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
-          );
-      if (cachePopulator != null) {
-        res = res.withEffect(cachePopulator::populate, MoreExecutors.sameThreadExecutor());
+          .simple(resultsOfSegment.getResults());
+      if (cachePopulatorKey != null) {
+        res = cachePopulator.wrap(res, cachePrep, cache, cachePopulatorKey);
       }
-      return res;
+      return res.map(
+          toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
+      );
     }
 
     private Sequence<T> getAndCacheServerResults(
@@ -870,45 +861,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
     SegmentDescriptor getSegmentDescriptor()
     {
       return rhs;
-    }
-  }
-
-  private class CachePopulator
-  {
-    private final Cache cache;
-    private final ObjectMapper mapper;
-    private final Cache.NamedKey key;
-    private final ConcurrentLinkedQueue<ListenableFuture<Object>> cacheFutures = new ConcurrentLinkedQueue<>();
-
-    CachePopulator(Cache cache, ObjectMapper mapper, Cache.NamedKey key)
-    {
-      this.cache = cache;
-      this.mapper = mapper;
-      this.key = key;
-    }
-
-    public void populate()
-    {
-      Futures.addCallback(
-          Futures.allAsList(cacheFutures),
-          new FutureCallback<List<Object>>()
-          {
-            @Override
-            public void onSuccess(List<Object> cacheData)
-            {
-              CacheUtil.populate(cache, mapper, key, cacheData);
-              // Help out GC by making sure all references are gone
-              cacheFutures.clear();
-            }
-
-            @Override
-            public void onFailure(Throwable throwable)
-            {
-              log.error(throwable, "Background caching failed");
-            }
-          },
-          backgroundExecutorService
-      );
     }
   }
 }

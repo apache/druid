@@ -84,7 +84,10 @@ public class DruidRexExecutor implements RexExecutor
         if (sqlTypeName == SqlTypeName.BOOLEAN) {
           literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
         } else if (sqlTypeName == SqlTypeName.DATE) {
-          if (!constExp.getType().isNullable() && exprResult.isNull()) {
+          // It is possible for an expression to have a non-null String value but it can return null when parsed
+          // as a primitive long/float/double.
+          // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
+          if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
             throw new IAE("Illegal DATE constant: %s", constExp);
           }
 
@@ -95,7 +98,10 @@ public class DruidRexExecutor implements RexExecutor
               )
           );
         } else if (sqlTypeName == SqlTypeName.TIMESTAMP) {
-          if (!constExp.getType().isNullable() && exprResult.isNull()) {
+          // It is possible for an expression to have a non-null String value but it can return null when parsed
+          // as a primitive long/float/double.
+          // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
+          if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
             throw new IAE("Illegal TIMESTAMP constant: %s", constExp);
           }
 

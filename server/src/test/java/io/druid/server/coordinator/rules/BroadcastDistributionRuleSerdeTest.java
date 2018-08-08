@@ -31,6 +31,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -67,7 +68,7 @@ public class BroadcastDistributionRuleSerdeTest
   @Test
   public void testSerde() throws IOException
   {
-    final List<Rule> rules = Lists.newArrayList(testRule);
+    final List<Rule> rules = Collections.singletonList(testRule);
     final String json = MAPPER.writeValueAsString(rules);
     final List<Rule> fromJson = MAPPER.readValue(json, new TypeReference<List<Rule>>(){});
     assertEquals(rules, fromJson);

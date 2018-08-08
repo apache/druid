@@ -125,6 +125,7 @@ public class WorkerTaskManagerTest
                 indexIO,
                 null,
                 null,
+                null,
                 indexMergerV9,
                 null,
                 null,

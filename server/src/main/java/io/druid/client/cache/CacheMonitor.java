@@ -20,27 +20,24 @@
 package io.druid.client.cache;
 
 import com.google.inject.Inject;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.metrics.AbstractMonitor;
-import io.druid.java.util.common.StringUtils;
 
 public class CacheMonitor extends AbstractMonitor
 {
   // package private for tests
   volatile Cache cache;
 
+  private final CachePopulatorStats cachePopulatorStats;
   private volatile CacheStats prevCacheStats = null;
+  private volatile CachePopulatorStats.Snapshot prevCachePopulatorStats = null;
 
-  public CacheMonitor()
+  @Inject
+  public CacheMonitor(final CachePopulatorStats cachePopulatorStats)
   {
-  }
-
-  public CacheMonitor(
-      Cache cache
-  )
-  {
-    this.cache = cache;
+    this.cachePopulatorStats = cachePopulatorStats;
   }
 
   // make it possible to enable CacheMonitor even if cache is not bound
@@ -58,10 +55,16 @@ public class CacheMonitor extends AbstractMonitor
       final CacheStats currCacheStats = cache.getStats();
       final CacheStats deltaCacheStats = currCacheStats.delta(prevCacheStats);
 
-      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-      emitStats(emitter, "query/cache/delta", deltaCacheStats, builder);
-      emitStats(emitter, "query/cache/total", currCacheStats, builder);
+      final CachePopulatorStats.Snapshot currCachePopulatorStats = cachePopulatorStats.snapshot();
+      final CachePopulatorStats.Snapshot deltaCachePopulatorStats = currCachePopulatorStats.delta(
+          prevCachePopulatorStats
+      );
 
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      emitStats(emitter, "query/cache/delta", deltaCachePopulatorStats, deltaCacheStats, builder);
+      emitStats(emitter, "query/cache/total", currCachePopulatorStats, currCacheStats, builder);
+
+      prevCachePopulatorStats = currCachePopulatorStats;
       prevCacheStats = currCacheStats;
 
       // Any custom cache statistics that need monitoring
@@ -71,13 +74,15 @@ public class CacheMonitor extends AbstractMonitor
   }
 
   private void emitStats(
-      ServiceEmitter emitter,
+      final ServiceEmitter emitter,
       final String metricPrefix,
-      CacheStats cacheStats,
-      ServiceMetricEvent.Builder builder
+      final CachePopulatorStats.Snapshot cachePopulatorStats,
+      final CacheStats cacheStats,
+      final ServiceMetricEvent.Builder builder
   )
   {
     if (cache != null) {
+      // Cache stats.
       emitter.emit(builder.build(StringUtils.format("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
       emitter.emit(builder.build(StringUtils.format("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
       emitter.emit(builder.build(StringUtils.format("%s/hits", metricPrefix), cacheStats.getNumHits()));
@@ -87,6 +92,13 @@ public class CacheMonitor extends AbstractMonitor
       emitter.emit(builder.build(StringUtils.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
       emitter.emit(builder.build(StringUtils.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
       emitter.emit(builder.build(StringUtils.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
+
+      // Cache populator stats.
+      emitter.emit(builder.build(StringUtils.format("%s/put/ok", metricPrefix), cachePopulatorStats.getNumOk()));
+      emitter.emit(builder.build(StringUtils.format("%s/put/error", metricPrefix), cachePopulatorStats.getNumError()));
+      emitter.emit(
+          builder.build(StringUtils.format("%s/put/oversized", metricPrefix), cachePopulatorStats.getNumOversized())
+      );
     }
   }
 }

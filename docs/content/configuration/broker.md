@@ -113,8 +113,9 @@ You can optionally only configure caching to be enabled on the broker by setting
 |`druid.broker.cache.useResultLevelCache`|true, false|Enable result level caching on the broker.|false|
 |`druid.broker.cache.populateResultLevelCache`|true, false|Populate the result level cache on the broker.|false|
 |`druid.broker.cache.resultLevelCacheLimit`|positive integer|Maximum size of query response that can be cached.|`Integer.MAX_VALUE`|
-|`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`["groupBy", "select"]`|
+|`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`["select"]`|
 |`druid.broker.cache.cacheBulkMergeLimit`|positive integer or 0|Queries with more segments than this number will not attempt to fetch from cache at the broker level, leaving potential caching fetches (and cache result merging) to the historicals|`Integer.MAX_VALUE`|
+|`druid.broker.cache.maxEntrySize`|positive integer or -1|Maximum size of an individual cache entry (processed results for one segment), in bytes, or -1 for unlimited.|`1000000` (1MB)|
 
 See [cache configuration](caching.html) for how to configure cache settings.
 

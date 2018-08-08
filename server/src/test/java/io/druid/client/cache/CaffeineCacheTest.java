@@ -38,6 +38,7 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -166,7 +167,7 @@ public class CaffeineCacheTest
     Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
 
     Cache.NamedKey missingKey = new Cache.NamedKey("missing", HI);
-    result = cache.getBulk(Lists.newArrayList(missingKey));
+    result = cache.getBulk(Collections.singletonList(missingKey));
     Assert.assertEquals(result.size(), 0);
 
     result = cache.getBulk(Lists.newArrayList());

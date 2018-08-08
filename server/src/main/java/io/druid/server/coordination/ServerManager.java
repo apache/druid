@@ -26,7 +26,7 @@ import com.google.inject.Inject;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
-import io.druid.guice.annotations.BackgroundCaching;
+import io.druid.client.cache.CachePopulator;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
@@ -39,6 +39,8 @@ import io.druid.query.DataSource;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
+import io.druid.query.PerSegmentOptimizingQueryRunner;
+import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.query.Query;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
@@ -75,7 +77,7 @@ public class ServerManager implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ServiceEmitter emitter;
   private final ExecutorService exec;
-  private final ExecutorService cachingExec;
+  private final CachePopulator cachePopulator;
   private final Cache cache;
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
@@ -87,7 +89,7 @@ public class ServerManager implements QuerySegmentWalker
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
       @Processing ExecutorService exec,
-      @BackgroundCaching ExecutorService cachingExec,
+      CachePopulator cachePopulator,
       @Smile ObjectMapper objectMapper,
       Cache cache,
       CacheConfig cacheConfig,
@@ -99,7 +101,7 @@ public class ServerManager implements QuerySegmentWalker
     this.emitter = emitter;
 
     this.exec = exec;
-    this.cachingExec = cachingExec;
+    this.cachePopulator = cachePopulator;
     this.cache = cache;
     this.objectMapper = objectMapper;
 
@@ -280,38 +282,54 @@ public class ServerManager implements QuerySegmentWalker
   {
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     String segmentId = adapter.getIdentifier();
+
+    MetricsEmittingQueryRunner metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
+        emitter,
+        toolChest,
+        new ReferenceCountingSegmentQueryRunner<>(factory, adapter, segmentDescriptor),
+        QueryMetrics::reportSegmentTime,
+        queryMetrics -> queryMetrics.segment(segmentId)
+    );
+
+    CachingQueryRunner cachingQueryRunner = new CachingQueryRunner<>(
+        segmentId,
+        segmentDescriptor,
+        objectMapper,
+        cache,
+        toolChest,
+        metricsEmittingQueryRunnerInner,
+        cachePopulator,
+        cacheConfig
+    );
+
+    BySegmentQueryRunner bySegmentQueryRunner = new BySegmentQueryRunner<>(
+        segmentId,
+        adapter.getDataInterval().getStart(),
+        cachingQueryRunner
+    );
+
+    MetricsEmittingQueryRunner metricsEmittingQueryRunnerOuter = new MetricsEmittingQueryRunner<>(
+        emitter,
+        toolChest,
+        bySegmentQueryRunner,
+        QueryMetrics::reportSegmentAndCacheTime,
+        queryMetrics -> queryMetrics.segment(segmentId)
+    ).withWaitMeasuredFromNow();
+
+    SpecificSegmentQueryRunner specificSegmentQueryRunner = new SpecificSegmentQueryRunner<>(
+        metricsEmittingQueryRunnerOuter,
+        segmentSpec
+    );
+
+    PerSegmentOptimizingQueryRunner perSegmentOptimizingQueryRunner = new PerSegmentOptimizingQueryRunner<>(
+        specificSegmentQueryRunner,
+        new PerSegmentQueryOptimizationContext(segmentDescriptor)
+    );
+
     return new SetAndVerifyContextQueryRunner<>(
         serverConfig,
         CPUTimeMetricQueryRunner.safeBuild(
-            new SpecificSegmentQueryRunner<>(
-                new MetricsEmittingQueryRunner<>(
-                    emitter,
-                    toolChest,
-                    new BySegmentQueryRunner<>(
-                        segmentId,
-                        adapter.getDataInterval().getStart(),
-                        new CachingQueryRunner<>(
-                            segmentId,
-                            segmentDescriptor,
-                            objectMapper,
-                            cache,
-                            toolChest,
-                            new MetricsEmittingQueryRunner<>(
-                                emitter,
-                                toolChest,
-                                new ReferenceCountingSegmentQueryRunner<>(factory, adapter, segmentDescriptor),
-                                QueryMetrics::reportSegmentTime,
-                                queryMetrics -> queryMetrics.segment(segmentId)
-                            ),
-                            cachingExec,
-                            cacheConfig
-                        )
-                    ),
-                    QueryMetrics::reportSegmentAndCacheTime,
-                    queryMetrics -> queryMetrics.segment(segmentId)
-                ).withWaitMeasuredFromNow(),
-                segmentSpec
-            ),
+            perSegmentOptimizingQueryRunner,
             toolChest,
             emitter,
             cpuTimeAccumulator,
