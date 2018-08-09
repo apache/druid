@@ -1,6 +1,6 @@
 {
   "dataSources" : {
-    "metrics" : {
+    "wikipedia" : {
       "spec" : {
         "dataSchema" : {
           "dataSource" : "wikipedia",
@@ -25,23 +25,16 @@
                   "page",
                   "regionIsoCode",
                   "regionName",
-                  "user",
-                  "flags",
-                  "diffUrl"
+                  "user"
                 ]
               },
               "timestampSpec": {
-                "column": "timestamp",
+                "column": "time",
                 "format": "iso"
               }
             }
           },
           "metricsSpec" : [
-            {
-              "name" : "commentLength",
-              "type" : "longSum",
-              "fieldName" : "commentLength"
-            },
             {
               "name" : "added",
               "type" : "longSum",
@@ -54,11 +47,6 @@
             },
             {
               "name" : "delta",
-              "type" : "longSum",
-              "fieldName" : "delta"
-            },
-            {
-              "name" : "deltaBucket",
               "type" : "longSum",
               "fieldName" : "delta"
             }
@@ -77,7 +65,7 @@
         "tuningConfig" : {
           "type" : "realtime",
           "intermediatePersistPeriod" : "PT10M",
-          "windowPeriod" : "PT10M"
+          "windowPeriod" : "P3650D"
         }
       },
       "properties" : {
