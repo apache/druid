@@ -30,6 +30,7 @@ public class ClientCompactQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
+  private final boolean keepSegmentGranularity;
   private final ClientCompactQueryTuningConfig tuningConfig;
   private final Map<String, Object> context;
 
@@ -37,12 +38,14 @@ public class ClientCompactQuery
   public ClientCompactQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
+      @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     this.dataSource = dataSource;
     this.segments = segments;
+    this.keepSegmentGranularity = keepSegmentGranularity;
     this.tuningConfig = tuningConfig;
     this.context = context;
   }
@@ -63,6 +66,12 @@ public class ClientCompactQuery
   public List<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  public boolean isKeepSegmentGranularity()
+  {
+    return keepSegmentGranularity;
   }
 
   @JsonProperty

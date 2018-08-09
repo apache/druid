@@ -101,6 +101,10 @@ public class DimensionsSpec
     }
   }
 
+  public DimensionsSpec(List<DimensionSchema> dimensions)
+  {
+    this(dimensions, null, null);
+  }
 
   @JsonProperty
   public List<DimensionSchema> getDimensions()
