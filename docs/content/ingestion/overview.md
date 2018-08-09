@@ -17,7 +17,7 @@ organized into time chunks, it's sometimes helpful to think of segments as livin
 <img src="../../img/druid-timeline.png" width="800" />
 
 A datasource may have anywhere from just a few segments, up to hundreds of thousands and even millions of segments. Each
-segments starts life off being created on a MiddleManger, and at that point, is mutable and uncommitted. The segment
+segment starts life off being created on a MiddleManager, and at that point, is mutable and uncommitted. The segment
 building process includes the following steps, designed to produce a data file that is compact and supports fast
 queries:
 
