@@ -92,8 +92,13 @@ public class CuratorModule implements Module
         .build();
 
     framework.getUnhandledErrorListenable().addListener((message, e) -> {
-      log.error(e, "Stopping Druid due to unhandled exception in Curator");
-      lifecycle.stop();
+      log.error(e, "Unhandled error in Curator Framework");
+      try {
+        lifecycle.stop();
+      }
+      catch (Throwable t) {
+        log.warn(t, "Exception when stopping druid lifecycle");
+      }
     });
 
     lifecycle.addHandler(
