@@ -67,6 +67,13 @@ layout: toc
     * [ZooKeeper](/docs/VERSION/dependencies/zookeeper.html)
 
 ## Operations
+  * [API Reference](/docs/VERSION/operations/api-reference.html)
+    * [Coordinator](/docs/VERSION/operations/api-reference.html#coordinator)
+    * [Overlord](/docs/VERSION/operations/api-reference.html#overlord)
+    * [MiddleManager](/docs/VERSION/operations/api-reference.html#middlemanager)
+    * [Peon](/docs/VERSION/operations/api-reference.html#peon)
+    * [Broker](/docs/VERSION/operations/api-reference.html#broker)
+    * [Historical](/docs/VERSION/operations/api-reference.html#historical)
   * [Good Practices](/docs/VERSION/operations/recommendations.html)
   * [Including Extensions](/docs/VERSION/operations/including-extensions.html)
   * [Data Retention](/docs/VERSION/operations/rule-configuration.html)
