@@ -27,7 +27,7 @@ few seconds.
 3. **Massively parallel processing.** Druid can process a query in parallel across the entire cluster.
 4. **Realtime or batch ingestion.** Druid can ingest data either realtime (ingested data is immediately available for
 querying) or in batches.
-5. **Self-healing, self-balancing, easy to operate.** As an operator, to scale the cluster up or down, simply add or
+5. **Self-healing, self-balancing, easy to operate.** As an operator, to scale the cluster out or in, simply add or
 remove servers and the cluster will rebalance itself automatically, in the background, without any downtime. If any
 Druid servers fail, the system will automatically route around the damage until those servers can be replaced. Druid
 is designed to run 24/7 with no need for planned downtimes for any reason, including configuration changes and software
