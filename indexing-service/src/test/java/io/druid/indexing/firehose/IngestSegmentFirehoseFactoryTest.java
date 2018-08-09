@@ -41,6 +41,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.GuiceInjectors;
+import io.druid.indexing.common.Counters;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestUtils;
@@ -214,7 +215,14 @@ public class IngestSegmentFirehoseFactoryTest
     };
     final LocalTaskActionClientFactory tac = new LocalTaskActionClientFactory(
         TASK_STORAGE,
-        new TaskActionToolbox(TASK_LOCKBOX, mdc, newMockEmitter(), EasyMock.createMock(SupervisorManager.class))
+        new TaskActionToolbox(
+            TASK_LOCKBOX,
+            TASK_STORAGE,
+            mdc,
+            newMockEmitter(),
+            EasyMock.createMock(SupervisorManager.class),
+            new Counters()
+        )
     );
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);
@@ -305,6 +313,7 @@ public class IngestSegmentFirehoseFactoryTest
         ),
         MAPPER,
         INDEX_IO,
+        null,
         null,
         null,
         INDEX_MERGER_V9,

@@ -101,6 +101,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -243,10 +244,61 @@ public class OverlordResource
   @ResourceFilters(TaskResourceFilter.class)
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
-    final TaskStatusResponse response = new TaskStatusResponse(
-        taskid,
-        taskStorageQueryAdapter.getStatus(taskid).orNull()
-    );
+    final TaskInfo<Task, TaskStatus> taskInfo = taskStorageQueryAdapter.getTaskInfo(taskid);
+    TaskStatusResponse response = null;
+
+    if (taskInfo != null) {
+      if (taskMaster.getTaskRunner().isPresent()) {
+        final TaskRunner taskRunner = taskMaster.getTaskRunner().get();
+        final TaskRunnerWorkItem workItem = taskRunner
+            .getKnownTasks()
+            .stream()
+            .filter(item -> item.getTaskId().equals(taskid))
+            .findAny()
+            .orElse(null);
+        if (workItem != null) {
+          response = new TaskStatusResponse(
+              workItem.getTaskId(),
+              new TaskStatusPlus(
+                  taskInfo.getId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+                  taskInfo.getCreatedTime(),
+                  // Would be nice to include the real queue insertion time, but the
+                  // TaskStorage API doesn't yet allow it.
+                  DateTimes.EPOCH,
+                  taskInfo.getStatus().getStatusCode(),
+                  taskRunner.getRunnerTaskState(workItem.getTaskId()),
+                  taskInfo.getStatus().getDuration(),
+                  workItem.getLocation(),
+                  taskInfo.getDataSource(),
+                  taskInfo.getStatus().getErrorMsg()
+              )
+          );
+        }
+      }
+
+      if (response == null) {
+        response = new TaskStatusResponse(
+            taskid,
+            new TaskStatusPlus(
+                taskInfo.getId(),
+                taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+                taskInfo.getCreatedTime(),
+                // Would be nice to include the real queue insertion time, but the
+                // TaskStorage API doesn't yet allow it.
+                DateTimes.EPOCH,
+                taskInfo.getStatus().getStatusCode(),
+                RunnerTaskState.WAITING,
+                taskInfo.getStatus().getDuration(),
+                TaskLocation.unknown(),
+                taskInfo.getDataSource(),
+                taskInfo.getStatus().getErrorMsg()
+            )
+        );
+      }
+    } else {
+      response = new TaskStatusResponse(taskid, null);
+    }
 
     final Response.Status status = response.getStatus() == null
                                    ? Response.Status.NOT_FOUND
@@ -626,7 +678,9 @@ public class OverlordResource
       final List<TaskInfo<Task, TaskStatus>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
           maxCompletedTasks, duration, dataSource
       );
-      final List<TaskStatusPlus> completedTasks = Lists.transform(taskInfoList, completeTaskTransformFunc);
+      final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
+                                                              .map(completeTaskTransformFunc::apply)
+                                                              .collect(Collectors.toList());
       finalTaskList.addAll(completedTasks);
     }
 
@@ -651,17 +705,23 @@ public class OverlordResource
     }
     if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
       final List<AnyTask> waitingWorkItems = filterActiveTasks(RunnerTaskState.WAITING, allActiveTasks);
-      List<TaskStatusPlus> transformedWaitingList = Lists.transform(waitingWorkItems, activeTaskTransformFunc);
+      List<TaskStatusPlus> transformedWaitingList = waitingWorkItems.stream()
+                                                                    .map(activeTaskTransformFunc::apply)
+                                                                    .collect(Collectors.toList());
       finalTaskList.addAll(transformedWaitingList);
     }
     if (state == null || "pending".equals(StringUtils.toLowerCase(state))) {
       final List<AnyTask> pendingWorkItems = filterActiveTasks(RunnerTaskState.PENDING, allActiveTasks);
-      List<TaskStatusPlus> transformedPendingList = Lists.transform(pendingWorkItems, activeTaskTransformFunc);
+      List<TaskStatusPlus> transformedPendingList = pendingWorkItems.stream()
+                                                                    .map(activeTaskTransformFunc::apply)
+                                                                    .collect(Collectors.toList());
       finalTaskList.addAll(transformedPendingList);
     }
     if (state == null || "running".equals(StringUtils.toLowerCase(state))) {
       final List<AnyTask> runningWorkItems = filterActiveTasks(RunnerTaskState.RUNNING, allActiveTasks);
-      List<TaskStatusPlus> transformedRunningList = Lists.transform(runningWorkItems, activeTaskTransformFunc);
+      List<TaskStatusPlus> transformedRunningList = runningWorkItems.stream()
+                                                                    .map(activeTaskTransformFunc::apply)
+                                                                    .collect(Collectors.toList());
       finalTaskList.addAll(transformedRunningList);
     }
     final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
@@ -671,6 +731,24 @@ public class OverlordResource
         req
     );
     return Response.ok(authorizedList).build();
+  }
+
+  private static BiFunction<TaskInfo<Task, TaskStatus>, RunnerTaskState, TaskStatusPlus> newTaskInfo2TaskStatusPlusFn()
+  {
+    return (taskInfo, runnerTaskState) -> new TaskStatusPlus(
+        taskInfo.getId(),
+        taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
+        taskInfo.getCreatedTime(),
+        // Would be nice to include the real queue insertion time, but the
+        // TaskStorage API doesn't yet allow it.
+        DateTimes.EPOCH,
+        taskInfo.getStatus().getStatusCode(),
+        runnerTaskState,
+        taskInfo.getStatus().getDuration(),
+        TaskLocation.unknown(),
+        taskInfo.getDataSource(),
+        taskInfo.getStatus().getErrorMsg()
+    );
   }
 
   private List<AnyTask> filterActiveTasks(

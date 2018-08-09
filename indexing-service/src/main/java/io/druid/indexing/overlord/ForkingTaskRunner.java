@@ -42,6 +42,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
@@ -68,6 +69,7 @@ import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.io.IOException;
@@ -663,6 +665,24 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   {
     synchronized (tasks) {
       return Lists.newArrayList(tasks.values());
+    }
+  }
+
+  @Nullable
+  @Override
+  public RunnerTaskState getRunnerTaskState(String taskId)
+  {
+    final ForkingTaskRunnerWorkItem workItem = tasks.get(taskId);
+    if (workItem == null) {
+      return null;
+    } else {
+      if (workItem.processHolder == null) {
+        return RunnerTaskState.PENDING;
+      } else if (workItem.processHolder.process.isAlive()) {
+        return RunnerTaskState.RUNNING;
+      } else {
+        return RunnerTaskState.NONE;
+      }
     }
   }
 

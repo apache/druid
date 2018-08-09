@@ -26,8 +26,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
+import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
@@ -153,7 +154,7 @@ public class ServerManagerTest
         },
         new NoopServiceEmitter(),
         serverManagerExec,
-        MoreExecutors.sameThreadExecutor(),
+        new ForegroundCachePopulator(new DefaultObjectMapper(), new CachePopulatorStats(), -1),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig(),

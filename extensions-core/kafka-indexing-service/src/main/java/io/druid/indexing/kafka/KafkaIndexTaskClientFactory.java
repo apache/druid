@@ -21,13 +21,14 @@ package io.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import io.druid.java.util.http.client.HttpClient;
 import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.TaskInfoProvider;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
+import io.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-public class KafkaIndexTaskClientFactory
+public class KafkaIndexTaskClientFactory implements IndexTaskClientFactory<KafkaIndexTaskClient>
 {
   private HttpClient httpClient;
   private ObjectMapper mapper;
@@ -42,6 +43,7 @@ public class KafkaIndexTaskClientFactory
     this.mapper = mapper;
   }
 
+  @Override
   public KafkaIndexTaskClient build(
       TaskInfoProvider taskInfoProvider,
       String dataSource,

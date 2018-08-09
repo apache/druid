@@ -88,6 +88,9 @@ Available Metrics
 |`*/averageByte`|Average cache entry byte size.||Varies.|
 |`*/timeouts`|Number of cache timeouts.||0|
 |`*/errors`|Number of cache errors.||0|
+|`*/put/ok`|Number of new cache entries successfully cached.||Varies, but more than zero.|
+|`*/put/error`|Number of new cache entries that could not be cached due to errors.||Varies, but more than zero.|
+|`*/put/oversized`|Number of potential new cache entries that were skipped due to being too large (based on `druid.{broker,historical,realtime}.cache.maxEntrySize` properties).||Varies.|
 
 #### Memcached only metrics
 

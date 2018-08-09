@@ -341,6 +341,7 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getIndexIO(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
+        toolbox.getCachePopulatorStats(),
         toolbox.getObjectMapper()
     );
 

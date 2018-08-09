@@ -155,7 +155,7 @@ public class SegmentTransactionalInsertActionTest
     actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     thrown.expect(IllegalStateException.class);
-    thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));
+    thrown.expectMessage(CoreMatchers.containsString("are not covered by locks"));
     SegmentPublishResult result = action.perform(task, actionTestKit.getTaskActionToolbox());
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT3), true), result);
   }

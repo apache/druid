@@ -83,3 +83,11 @@ This product contains code adapted from Apache Hadoop
     * https://github.com/apache/hadoop/blob/trunk/LICENSE.txt (Apache License, Version 2.0)
   * HOMEPAGE:
     * http://hadoop.apache.org/
+
+This product contains modified versions of the Dockerfile and related configuration files from SequenceIQ's Hadoop Docker image:
+  * LICENSE:
+    * https://github.com/sequenceiq/hadoop-docker/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/sequenceiq/hadoop-docker/
+  * COMMIT TAG:
+    * update this when this patch is committed

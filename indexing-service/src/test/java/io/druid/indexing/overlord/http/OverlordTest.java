@@ -248,7 +248,7 @@ public class OverlordTest
     Assert.assertEquals(taskId_0, ((TaskStatusResponse) response.getEntity()).getTask());
     Assert.assertEquals(
         TaskStatus.running(taskId_0).getStatusCode(),
-        ((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode()
+        ((TaskStatusResponse) response.getEntity()).getStatus().getState()
     );
 
     // Simulate completion of task_0
@@ -296,7 +296,7 @@ public class OverlordTest
   {
     while (true) {
       Response response = overlordResource.getTaskStatus(taskId);
-      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode())) {
+      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getState())) {
         break;
       }
       Thread.sleep(10);

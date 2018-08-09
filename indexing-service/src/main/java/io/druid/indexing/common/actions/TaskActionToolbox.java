@@ -20,35 +20,48 @@
 package io.druid.indexing.common.actions;
 
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.indexing.common.Counters;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 
 public class TaskActionToolbox
 {
   private final TaskLockbox taskLockbox;
+  private final TaskStorage taskStorage;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
+  private final Counters counters;
 
   @Inject
   public TaskActionToolbox(
       TaskLockbox taskLockbox,
+      TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       ServiceEmitter emitter,
-      SupervisorManager supervisorManager
+      SupervisorManager supervisorManager,
+      Counters counters
   )
   {
     this.taskLockbox = taskLockbox;
+    this.taskStorage = taskStorage;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
     this.supervisorManager = supervisorManager;
+    this.counters = counters;
   }
 
   public TaskLockbox getTaskLockbox()
   {
     return taskLockbox;
+  }
+
+  public TaskStorage getTaskStorage()
+  {
+    return taskStorage;
   }
 
   public IndexerMetadataStorageCoordinator getIndexerMetadataStorageCoordinator()
@@ -64,5 +77,10 @@ public class TaskActionToolbox
   public SupervisorManager getSupervisorManager()
   {
     return supervisorManager;
+  }
+
+  public Counters getCounters()
+  {
+    return counters;
   }
 }

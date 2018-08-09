@@ -68,6 +68,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private final String logTable;
   private final String lockTable;
 
+  private final TaskInfoMapper<EntryType, StatusType> taskInfoMapper;
+
   public SQLMetadataStorageActionHandler(
       final SQLMetadataConnector connector,
       final ObjectMapper jsonMapper,
@@ -88,6 +90,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     this.entryTable = entryTable;
     this.logTable = logTable;
     this.lockTable = lockTable;
+    this.taskInfoMapper = new TaskInfoMapper<>(jsonMapper, entryType, statusType);
   }
 
   protected SQLMetadataConnector getConnector()
@@ -236,6 +239,22 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
+  @Nullable
+  public TaskInfo<EntryType, StatusType> getTaskInfo(String entryId)
+  {
+    return connector.retryWithHandle(handle -> {
+      final String query = StringUtils.format(
+          "SELECT id, status_payload, payload, datasource, created_date FROM %s WHERE id = :id",
+          entryTable
+      );
+      return handle.createQuery(query)
+                   .bind("id", entryId)
+                   .map(taskInfoMapper)
+                   .first();
+    });
+  }
+
+  @Override
   public List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
       DateTime timestamp,
       @Nullable Integer maxNumStatuses,
@@ -250,7 +269,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
               maxNumStatuses,
               dataSource
           );
-          return query.map(new TaskInfoMapper()).list();
+          return query.map(taskInfoMapper).list();
         }
     );
   }
@@ -264,7 +283,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
               handle,
               dataSource
           );
-          return query.map(new TaskInfoMapper()).list();
+          return query.map(taskInfoMapper).list();
         }
     );
   }
@@ -302,23 +321,35 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return sql;
   }
 
-  class TaskInfoMapper implements ResultSetMapper<TaskInfo<EntryType, StatusType>>
+  static class TaskInfoMapper<EntryType, StatusType> implements ResultSetMapper<TaskInfo<EntryType, StatusType>>
   {
+    private final ObjectMapper objectMapper;
+    private final TypeReference<EntryType> entryType;
+    private final TypeReference<StatusType> statusType;
+
+    TaskInfoMapper(ObjectMapper objectMapper, TypeReference<EntryType> entryType, TypeReference<StatusType> statusType)
+    {
+      this.objectMapper = objectMapper;
+      this.entryType = entryType;
+      this.statusType = statusType;
+    }
+
     @Override
-    public TaskInfo<EntryType, StatusType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
+    public TaskInfo<EntryType, StatusType> map(int index, ResultSet resultSet, StatementContext context)
+        throws SQLException
     {
       final TaskInfo<EntryType, StatusType> taskInfo;
       EntryType task;
       StatusType status;
       try {
-        task = getJsonMapper().readValue(resultSet.getBytes("payload"), getEntryType());
+        task = objectMapper.readValue(resultSet.getBytes("payload"), entryType);
       }
       catch (IOException e) {
         log.error(e, "Encountered exception while deserializing task payload, setting task to null");
         task = null;
       }
       try {
-        status = getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType());
+        status = objectMapper.readValue(resultSet.getBytes("status_payload"), statusType);
       }
       catch (IOException e) {
         log.error(e, "Encountered exception while deserializing task status_payload");

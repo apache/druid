@@ -77,6 +77,12 @@ public class TaskStorageQueryAdapter
     return storage.getStatus(taskid);
   }
 
+  @Nullable
+  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  {
+    return storage.getTaskInfo(taskId);
+  }
+
   /**
    * Returns all segments created by this task.
    *

@@ -84,7 +84,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     this.bufferPool = bufferPool;
 
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
-                                                   : new PlainFactsHolder(sortFacts);
+                                                   : new PlainFactsHolder(sortFacts, dimsComparator());
 
     //check that stupid pool gives buffers that can hold at least one row's aggregators
     ResourceHolder<ByteBuffer> bb = bufferPool.take();
