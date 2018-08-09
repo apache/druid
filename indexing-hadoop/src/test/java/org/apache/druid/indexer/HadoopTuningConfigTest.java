@@ -77,12 +77,16 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(true, actual.isCleanupOnFailure());
     Assert.assertEquals(true, actual.isOverwriteFiles());
     Assert.assertEquals(true, actual.isIgnoreInvalidRows());
-    Assert.assertEquals(ImmutableMap.<String, String>of(), actual.getJobProperties());
+    Assert.assertEquals(ImmutableMap.of(
+        HadoopTuningConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST,
+        HadoopTuningConfig.DEFAULT_MAPREDUCE_JOB_USER_CLASSPATH_FIRST
+    ), actual.getJobProperties());
     Assert.assertEquals(true, actual.isCombineText());
     Assert.assertEquals(true, actual.getUseCombiner());
     Assert.assertEquals(0, actual.getNumBackgroundPersistThreads());
     Assert.assertEquals(true, actual.isForceExtendableShardSpecs());
     Assert.assertEquals(true, actual.isUseExplicitVersion());
+    Assert.assertTrue(actual.isUserClassPathFirst());
   }
 
   public static <T> T jsonReadWriteRead(String s, Class<T> klass)

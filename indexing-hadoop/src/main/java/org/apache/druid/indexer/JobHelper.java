@@ -395,6 +395,8 @@ public class JobHelper
         try {
           Configuration conf = injectSystemProperties(new Configuration());
           config.addJobProperties(conf);
+          log.info("#################### mapreduce.job.user.classpath.first is set to " + conf.get(
+              "mapreduce.job.user.classpath.first") + " ####################");
           workingPath.getFileSystem(conf).delete(workingPath, true);
         }
         catch (IOException e) {
