@@ -4,7 +4,7 @@ layout: doc_page
 
 # Druid Quickstart
 
-In this quickstart, we will download Druid and set up it up on a single machine. The cluster will be ready to load data
+In this quickstart, we will download Druid and set it up on a single machine. The cluster will be ready to load data
 after completing this initial setup.
 
 Before beginning the quickstart, it is helpful to read the [general Druid overview](../design/index.html) and the
@@ -105,14 +105,10 @@ The sample data has the following columns, and an example event is shown below:
   * channel
   * cityName
   * comment
-  * commentLength
   * countryIsoCode
   * countryName
   * deleted
   * delta
-  * deltaBucket
-  * diffUrl
-  * flags
   * isAnonymous
   * isMinor
   * isNew
@@ -133,7 +129,6 @@ The sample data has the following columns, and an example event is shown below:
   "page":"Spider-Man's powers and equipment",
   "user":"foobar",
   "comment":"/* Artificial web-shooters */",
-  "diffUrl":"https://en.wikipedia.org/w/index.php?diff=7272621229&oldid=7262842388",
   "cityName":"New York",
   "regionName":"New York",
   "regionIsoCode":"NY",
@@ -144,11 +139,8 @@ The sample data has the following columns, and an example event is shown below:
   "isMinor":false,
   "isRobot":false,
   "isUnpatrolled":false,
-  "flags":"",
   "added":99,
-  "commentLength":29,
   "delta":99,
-  "deltaBucket":0.0,
   "deleted":0,
 }
 ```

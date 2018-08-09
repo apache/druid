@@ -6,8 +6,7 @@ layout: doc_page
 
 This tutorial shows you how to load data files into Druid using a remote Hadoop cluster.
 
-For this tutorial, we'll assume that you've already completed the previous [batch ingestion tutorial](tutorial-batch.html).
-using Druid's native batch ingestion system.
+For this tutorial, we'll assume that you've already completed the previous [batch ingestion tutorial](tutorial-batch.html) using Druid's native batch ingestion system.
 
 ## Install Docker
 
@@ -171,47 +170,33 @@ If the cluster is still running, CTRL-C to terminate the `bin/supervise` script,
 
 ## Load batch data
 
-We've included a sample of Wikipedia edits from June 27, 2016 to get you started.
+We've included a sample of Wikipedia edits from September 12, 2015 to get you started.
 
 To load this data into Druid, you can submit an *ingestion task* pointing to the file. We've included
-a task that loads the `wikiticker-2015-09-12-sampled.json.gz` file included in the archive. To submit
-this task, POST it to Druid in a new terminal window from the druid-#{DRUIDVERSION} directory:
+a task that loads the `wikiticker-2015-09-12-sampled.json.gz` file included in the archive.
 
-```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index-hadoop.json http://localhost:8090/druid/indexer/v1/task
+Let's submit the `wikipedia-index-hadoop-.json` task:
+
 ```
-
-Which will print the ID of the task if the submission was successful:
-
-```bash
-{"task":"index_hadoop_wikipedia-hadoop_2018-06-09T21:30:32.802Z"}
+bin/post-index-task --file quickstart/tutorial/wikipedia-index-hadoop.json 
 ```
-
-To view the status of your ingestion task, go to your overlord console:
-[http://localhost:8090/console.html](http://localhost:8090/console.html). You can refresh the console periodically, and after
-the task is successful, you should see a "SUCCESS" status for the task.
-
-After your ingestion task finishes, the data will be loaded by historical nodes and available for
-querying within a minute or two. You can monitor the progress of loading your data in the
-coordinator console, by checking whether there is a datasource "wikipedia" with a blue circle
-indicating "fully available": [http://localhost:8081/#/](http://localhost:8081/#/).
-
-![Coordinator console](../tutorials/img/tutorial-batch-01.png "Wikipedia 100% loaded")
 
 ## Querying your data
 
-Your data should become fully available within a minute or two after the task completes. You can monitor this process on 
-your Coordinator console at [http://localhost:8081/#/](http://localhost:8081/#/).
-
-Please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+After the data load is complete, please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 
-If you wish to go through any of the other ingestion tutorials, you will need to shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package, as the other tutorials will write to the same "wikipedia" datasource.
+This tutorial is only meant to be used together with the [query tutorial](../tutorial/tutorial-query.html). 
 
-After finishing this tutorial, if you plan on doing other tutorials, you will need to revert the deep storage and task storage config back to local types in `quickstart/tutorial/conf/druid/_common/common.runtime.properties` and then restart the cluster.
+If you wish to go through any of the other tutorials, you will need to:
+* Shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package.
+* Revert the deep storage and task storage config back to local types in `quickstart/tutorial/conf/druid/_common/common.runtime.properties`
+* Restart the cluster
 
-This is needed as later tutorials assume that the cluster is using local deep storage.
+This is necessary because the other ingestion tutorials will write to the same "wikipedia" datasource, and later tutorials expect the cluster to use local deep storage.
+
+Example reverted config:
 
 ```
 #

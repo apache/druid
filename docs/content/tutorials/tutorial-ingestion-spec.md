@@ -58,7 +58,7 @@ We will be making successive edits to this ingestion spec as we progress through
 
 ### Datasource name
 
-The datasource name is specified by the `dataSource` parameter in the `dataSchema.
+The datasource name is specified by the `dataSource` parameter in the `dataSchema`.
 
 ```json
 "dataSchema" : {

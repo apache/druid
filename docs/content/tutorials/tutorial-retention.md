@@ -89,4 +89,4 @@ If instead you want to retain data based on how old it is (e.g., retain data tha
 
 ## Further reading
 
-* [Load rules](/docs/VERSION/ingest/manage.html#rules)
+* [Load rules](/docs/VERSION/operations/rule-configuration.html)

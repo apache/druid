@@ -184,6 +184,8 @@ Retrieved 10 rows in 0.06s.
 
 #### Timeseries
 
+`SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY FLOOR(__time to HOUR);`
+
 ```
 dsql> SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY FLOOR(__time to HOUR);
 ┌──────────────────────────┬──────────────┐
@@ -219,6 +221,8 @@ Retrieved 24 rows in 0.08s.
 
 #### GroupBy
 
+`SELECT channel, SUM(added) FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY channel ORDER BY SUM(added) DESC LIMIT 5;`
+
 ```
 dsql> SELECT channel, SUM(added) FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY channel ORDER BY SUM(added) DESC LIMIT 5;
 ┌───────────────┬─────────┐
@@ -235,8 +239,10 @@ Retrieved 5 rows in 0.05s.
 
 #### Scan
 
+` SELECT user, page FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 02:00:00' AND TIMESTAMP '2015-09-12 03:00:00' LIMIT 5;`
+
 ```
- SELECT user, page FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 02:00:00' AND TIMESTAMP '2015-09-12 03:00:00' LIMIT 5;
+ dsql> SELECT user, page FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 02:00:00' AND TIMESTAMP '2015-09-12 03:00:00' LIMIT 5;
 ┌────────────────────────┬────────────────────────────────────────────────────────┐
 │ user                   │ page                                                   │
 ├────────────────────────┼────────────────────────────────────────────────────────┤
@@ -254,6 +260,8 @@ Retrieved 5 rows in 0.04s.
 By prepending `EXPLAIN PLAN FOR ` to a Druid SQL query, it is possible to see what native Druid queries a SQL query will plan into.
 
 Using the TopN query above as an example:
+
+`EXPLAIN PLAN FOR SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;`
 
 ```
 dsql> EXPLAIN PLAN FOR SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;

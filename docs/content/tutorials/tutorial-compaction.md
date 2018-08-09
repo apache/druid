@@ -6,6 +6,8 @@ layout: doc_page
 
 This tutorial demonstrates how to compact existing segments into fewer but larger segments.
 
+Because there is some per-segment memory and processing overhead, it can sometimes be beneficial to reduce the total number of segments.
+
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
@@ -27,7 +29,7 @@ There will be 24 segments for this datasource, one segment per hour in the input
 
 ![Original segments](../tutorials/img/tutorial-retention-01.png "Original segments")
 
-Running a COUNT(*) query on this datasource shows that there are 24,433 rows:
+Running a COUNT(*) query on this datasource shows that there are 39,244 rows:
 
 ```
 dsql> select count(*) from "compaction-tutorial";
@@ -41,7 +43,7 @@ Retrieved 1 row in 1.38s.
 
 ## Compact the data
 
-Let's now combine these 22 segments into one segment.
+Let's now combine these 24 segments into one segment.
 
 We have included a compaction task spec for this tutorial datasource at `quickstart/tutorial/compaction-final-index.json`:
 
@@ -100,4 +102,5 @@ After the coordinator has been running for at least 15 minutes, the http://local
 ## Further reading
 
 [Task documentation](../ingestion/tasks.html)
+
 [Segment optimization](../operations/segment-optimization.html)

@@ -82,4 +82,4 @@ If you wish to go through any of the other ingestion tutorials, you will need to
 
 ## Further reading
 
-For more information on loading data from Kafka streams, please see the [Druid Kafka indexing service documentation](http://druid.io/docs/{{druidVersion}}/development/extensions-core/kafka-ingestion.html)..
+For more information on loading data from Kafka streams, please see the [Druid Kafka indexing service documentation](http://druid.io/docs/{{druidVersion}}/development/extensions-core/kafka-ingestion.html).

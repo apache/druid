@@ -25,10 +25,6 @@
               "regionIsoCode",
               "regionName",
               "user",
-              { "name" : "commentLength", "type" : "long" },
-              { "name" : "deltaBucket", "type" : "long" },
-              "flags",
-              "diffUrl",
               { "name": "added", "type": "long" },
               { "name": "deleted", "type": "long" },
               { "name": "delta", "type": "long" }
