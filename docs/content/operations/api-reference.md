@@ -7,6 +7,7 @@ layout: doc_page
 This page documents all of the API endpoints for each Druid service type.
 
 ## Table of Contents
+  * [Common](#common)
   * [Coordinator](#coordinator)
   * [Overlord](#overlord)
   * [MiddleManager](#middlemanager)
@@ -18,36 +19,39 @@ This page documents all of the API endpoints for each Druid service type.
 
 The following endpoints are supported by all nodes.
 
-### GET
+### Node information
+
+#### GET
 
 * `/status`
 
 Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
 
-* `/health`
+* `/status/health`
 
 An endpoint that always returns a boolean "true" value with a 200 OK response, useful for automated health checks.
 
-* `/properties`
+* `/status/properties`
 
 Returns the current configuration properties of the node.
 
 ## Coordinator
 
-HTTP Endpoints
---------------
+### Leadership
 
-The coordinator node exposes several HTTP endpoints for interactions.
-
-### GET
-
-#### Coordinator information
+#### GET
 
 * `/druid/coordinator/v1/leader`
 
 Returns the current leader coordinator of the cluster.
 
 * `/druid/coordinator/v1/isLeader`
+
+Returns true if the coordinator receiving the request is the current leader.
+
+### Segment Loading
+
+#### GET
 
 Returns a JSON object with field "leader", either true or false, indicating if this server is the current leader
 coordinator of the cluster. In addition, returns HTTP 200 if the server is the current leader and HTTP 404 if not.
@@ -78,8 +82,9 @@ Returns the number of segments to load and drop, as well as the total segment lo
 
 Returns the serialized JSON of segments to load and drop for each historical node.
 
-#### Metadata store information
+### Metadata store information
 
+#### GET
 * `/druid/coordinator/v1/metadata/datasources`
 
 Returns a list of the names of enabled datasources in the cluster.
@@ -104,11 +109,13 @@ Returns a list of all segments for a datasource as stored in the metadata store.
 
 Returns a list of all segments for a datasource with the full segment metadata as stored in the metadata store.
 
-* POST `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
+#### POST
+
+* `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
 
 Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
 
-* POST `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
+* `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
 
 Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
 
@@ -116,7 +123,9 @@ Returns a list of all segments, overlapping with any of given intervals, for a d
 
 Returns full segment metadata for a specific segment as stored in the metadata store.
 
-#### Datasources information
+### Datasources
+
+#### GET
 
 * `/druid/coordinator/v1/datasources`
 
@@ -182,7 +191,36 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
-#### Rules
+#### POST
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}`
+
+Enables all segments of datasource which are not overshadowed by others.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
+
+Enables a segment of a datasource.
+
+#### DELETE
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}`
+
+Disables a datasource.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
+* `@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myISO8601Interval}`
+
+Runs a [Kill task](../ingestion/tasks.html) for a given interval and datasource.
+
+Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
+
+Disables a segment.
+
+### Retention Rules
+
+#### GET
 
 * `/druid/coordinator/v1/rules`
 
@@ -212,8 +250,23 @@ Returns all rules for a specified datasource and includes default datasource.
 * `/druid/coordinator/v1/rules/{dataSourceName}/history?count=<n>`
 
  Returns last <n> entries of audit history of rules for a specified datasource.
+ 
+#### POST
 
-#### Intervals
+* `/druid/coordinator/v1/rules/{dataSourceName}`
+
+POST with a list of rules in JSON form to update rules.
+
+Optional Header Parameters for auditing the config change can also be specified.
+
+|Header Param Name| Description | Default |
+|----------|-------------|---------|
+|`X-Druid-Author`| author making the config change|""|
+|`X-Druid-Comment`| comment describing the change being done|""|
+
+### Intervals
+
+#### GET
 
 Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
 
@@ -233,7 +286,9 @@ Returns total size and count for each interval within given isointerval.
 
 Returns total size and count for each datasource for each interval within given isointerval.
 
-#### Compaction Configs
+### Compaction Configuration
+
+#### GET
 
 * `/druid/coordinator/v1/config/compaction/`
 
@@ -243,7 +298,29 @@ Returns all compaction configs.
 
 Returns a compaction config of a dataSource.
 
-#### Servers
+#### POST
+
+* `/druid/coordinator/v1/config/compaction?slotRatio={someRatio}&maxSlots={someMaxSlots}`
+
+Update the capacity for compaction tasks. `slotRatio` and `maxSlots` are used to limit the max number of compaction tasks.
+They mean the ratio of the total task slots to the copmaction task slots and the maximum number of task slots for compaction tasks, respectively.
+The actual max number of compaction tasks is `min(maxSlots, slotRatio * total task slots)`.
+Note that `slotRatio` and `maxSlots` are optional and can be omitted. If they are omitted, default values (0.1 and unbounded)
+will be set for them.
+
+* `/druid/coordinator/v1/config/compaction/{dataSource}`
+
+Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/coordinator.html#compaction-configuration) for configuration details.
+
+#### DELETE
+
+* `/druid/coordinator/v1/config/compaction/{dataSource}`
+
+Removes the compaction config for a dataSource.
+
+### Server Information
+
+#### GET
 
 * `/druid/coordinator/v1/servers`
 
@@ -261,73 +338,11 @@ Returns a list of server data objects in which each object has the following key
 - `priority`
 - `tier`
 
-### POST
-
-#### Datasources
-
-* `/druid/coordinator/v1/datasources/{dataSourceName}`
-
-Enables all segments of datasource which are not overshadowed by others.
-
-* `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
-
-Enables a segment.
-
-#### Rules
-
-* `/druid/coordinator/v1/rules/{dataSourceName}`
-
-POST with a list of rules in JSON form to update rules.
-
-Optional Header Parameters for auditing the config change can also be specified.
-
-|Header Param Name| Description | Default |
-|----------|-------------|---------|
-|`X-Druid-Author`| author making the config change|""|
-|`X-Druid-Comment`| comment describing the change being done|""|
-
-#### Compaction Configs
-
-* `/druid/coordinator/v1/config/compaction?slotRatio={someRatio}&maxSlots={someMaxSlots}`
-
-Update the capacity for compaction tasks. `slotRatio` and `maxSlots` are used to limit the max number of compaction tasks.
-They mean the ratio of the total task slots to the copmaction task slots and the maximum number of task slots for compaction tasks, respectively.
-The actual max number of compaction tasks is `min(maxSlots, slotRatio * total task slots)`.
-Note that `slotRatio` and `maxSlots` are optional and can be omitted. If they are omitted, default values (0.1 and unbounded)
-will be set for them.
-
-* `/druid/coordinator/v1/config/compaction/{dataSource}`
-
-Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/coordinator.html#compaction-configuration) for configuration details.
-
-### DELETE
-
-#### Datasources
-
-* `/druid/coordinator/v1/datasources/{dataSourceName}`
-
-Disables a datasource.
-
-* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
-* `@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myISO8601Interval}`
-
-Runs a [Kill task](../ingestion/tasks.html) for a given interval and datasource.
-
-Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
-
-* `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
-
-Disables a segment.
-
-#### Compaction Configs
-
-* `/druid/coordinator/v1/config/compaction/{dataSource}`
-
-Removes the compaction config for a dataSource.
-
 ## Overlord
 
-### GET
+### Leadership
+
+#### GET
 
 * `/druid/indexer/v1/leader` 
 
@@ -339,6 +354,10 @@ This returns a JSON object with field "leader", either true or false. In additio
 server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you
 only want the active leader to be considered in-service at the load balancer.
 
+### Tasks
+
+#### GET
+
 * `/druid/indexer/v1/task/{taskId}/status`
 
 Retrieve the status of a task.
@@ -347,7 +366,7 @@ Retrieve the status of a task.
 
 Retrieve information about the segments of a task.
 
-### POST
+#### POST
 
 * `/druid/indexer/v1/task` 
 
@@ -368,7 +387,10 @@ The Peon does not have any API endpoints beyond the [common endpoints](#common).
 
 ## Broker
 
-### GET
+
+### Datasource Information
+
+#### GET
 
 * `/druid/v2/datasources`
 
@@ -394,12 +416,18 @@ Returns the metrics of the datasource.
 
 Returns segment information lists including server locations for the given datasource and intervals. If "numCandidates" is not specified, it will return all servers for each interval.
 
+### Load Status
+
+#### GET
+
 * `/druid/broker/v1/loadstatus`
 
 Returns a flag indicating if the broker knows about all segments in Zookeeper. This can be used to know when a broker node is ready to be queried after a restart.
 
 
-### POST
+### Queries
+
+#### POST
 
 * `/druid/v2/`
 
@@ -407,12 +435,14 @@ The endpoint for submitting queries. Accepts an option `?pretty` that pretty pri
 
 * `/druid/v2/candidates/`
 
-Returns segment information lists including server locations for the given query.
+Returns segment information lists including server locations for the given query..
 
 
 ## Historical
 
-### GET
+### Segment Loading
+
+#### GET
 
 * `/druid/historical/v1/loadstatus`
 

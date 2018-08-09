@@ -20,4 +20,4 @@ io.druid.cli.Main server middleManager
 HTTP Endpoints
 --------------
 
-For a list of API endpoints supported by the MiddleManager, please see the [API reference](../operations/api-reference.html#middle-manager).
+For a list of API endpoints supported by the MiddleManager, please see the [API reference](../operations/api-reference.html#middlemanager).
