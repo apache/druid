@@ -150,8 +150,11 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
       if (segmentsToCompact.size() > 1) {
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
+        // Currently set keepSegmentGranularity to false because it breaks the algorithm of CompactionSegmentIterator to
+        // find segments to be compacted.
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
+            false,
             config.getTaskPriority(),
             config.getTuningConfig(),
             config.getTaskContext()

@@ -257,6 +257,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         getIndexIO(),
         null,
         null,
+        null,
         getIndexMerger(),
         null,
         null,

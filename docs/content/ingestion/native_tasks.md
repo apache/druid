@@ -514,7 +514,7 @@ For Roaring bitmaps:
 
 While ingesting data using the Index task, it creates segments from the input data and pushes them. For segment pushing,
 the Index task supports two segment pushing modes, i.e., _bulk pushing mode_ and _incremental pushing mode_ for
-[perfect rollup and best-effort rollup](./design/index.html), respectively.
+[perfect rollup and best-effort rollup](../design/index.html), respectively.
 
 In the bulk pushing mode, every segment is pushed at the very end of the index task. Until then, created segments
 are stored in the memory and local storage of the node running the index task. As a result, this mode might cause a

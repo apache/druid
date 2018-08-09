@@ -64,6 +64,7 @@ public class DruidCoordinatorSegmentCompactorTest
     @Override
     public String compactSegments(
         List<DataSegment> segments,
+        boolean keepSegmentGranularity,
         int compactionTaskPriority,
         ClientCompactQueryTuningConfig tuningConfig,
         Map<String, Object> context
