@@ -41,7 +41,7 @@ Druid servers, replication ensures that queries are still possible while the sys
 searching across multiple columns.
 8. **Approximate algorithms.** Druid includes algorithms for approximate count-distinct, approximate ranking, and
 computation of approximate histograms and quantiles. These algorithms offer bounded memory usage and are often
-substantially faster than exact computations. For situations where exactness is more important than speed, Druid also
+substantially faster than exact computations. For situations where accuracy is more important than speed, Druid also
 offers exact count-distinct and exact ranking.
 9. **Automatic summarization at ingest time.** Druid optionally supports data summarization at ingestion time. This
 summarization partially pre-aggregates your data, and can lead to big costs savings and performance boosts.
