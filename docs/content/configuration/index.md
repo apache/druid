@@ -64,6 +64,45 @@ This page documents all of the configuration properties for each Druid service t
   * [General Query Configuration](#general-query-configuration)
   * [Realtime nodes (Deprecated)](#realtime-nodes)
 
+## Recommended Configuration File Organization
+
+A recommended way of organizing Druid configuration files can be seen in the `conf` directory in the Druid package root, shown below:
+
+```
+$ ls -R conf
+druid       tranquility
+
+conf/druid:
+_common       broker        coordinator   historical    middleManager overlord
+
+conf/druid/_common:
+common.runtime.properties log4j2.xml
+
+conf/druid/broker:
+jvm.config         runtime.properties
+
+conf/druid/coordinator:
+jvm.config         runtime.properties
+
+conf/druid/historical:
+jvm.config         runtime.properties
+
+conf/druid/middleManager:
+jvm.config         runtime.properties
+
+conf/druid/overlord:
+jvm.config         runtime.properties
+
+conf/tranquility:
+kafka.json  server.json
+```
+
+Each directory has a `runtime.properties` file containing configuration properties for the specific Druid service correponding to the directory (e.g., `historical`).
+
+The `jvm.config` files contain JVM flags such as heap sizing properties for each service.
+
+Common properties shared by all services are placed in `_common/common.runtime.properties`.
+
 ## Common Configurations
 
 The properties under this section are common configurations that should be shared across all Druid services in a cluster.
@@ -604,7 +643,7 @@ For general Coordinator Node information, see [here](../design/coordinator.html)
 
 ### Static Configuration
 
-The coordinator node uses several of the global configs in [Configuration](../configuration/index.html) and has the following set of configurations as well:
+These coordinator static configurations can be defined in the `coordinator/runtime.properties` file.
 
 #### Coordinator Node Config
 
@@ -762,7 +801,13 @@ For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some
 
 ## Overlord
 
-### Overlord Node Configs
+For general Overlord Node information, see [here](../design/indexing-service.html).
+
+### Overlord Static Configuration
+
+These overlord static configurations can be defined in the `overlord/runtime.properties` file.
+
+#### Overlord Node Configs
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -771,7 +816,7 @@ For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/overlord|
 
-### Overlord Static Configuration
+#### Overlord Operations
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -783,7 +828,7 @@ For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some
 |`druid.indexer.queue.restartDelay`|Sleep this long when overlord queue management throws an exception before trying again.|PT30S|
 |`druid.indexer.queue.storageSyncRate`|Sync overlord state this often with an underlying task persistence mechanism.|PT1M|
 
-The following configs only apply if the overlord is running in remote mode:
+The following configs only apply if the overlord is running in remote mode. For a description of local vs. remote mode, please see (../design/indexing-service.html#overlord-node).
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -969,6 +1014,8 @@ Amazon's EC2 is currently the only supported autoscaler.
 
 ## MiddleManager and Peons
 
+These MiddleManager and Peon configurations can be defined in the `middleManager/runtime.properties` file.
+
 ### MiddleManager Node Config
 
 |Property|Description|Default|
@@ -1099,6 +1146,8 @@ then the value from the configuration below is used:
 
 For general Broker Node information, see [here](../design/broker.html).
 
+These Broker configurations can be defined in the `broker/runtime.properties` file.
+
 ### Broker Node Configs
 
 |Property|Description|Default|
@@ -1221,6 +1270,8 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 ## Historical
 
 For general Historical Node information, see [here](../design/historical.html).
+
+These Historical configurations can be defined in the `historical/runtime.properties` file.
 
 ### Historical Node Configuration
 |Property|Description|Default|

@@ -84,6 +84,8 @@ layout: toc
 
 ## Configuration
   * [Configuration Reference](/docs/VERSION/configuration/index.html)
+  * [Recommended Configuration File Organization](/docs/VERSION/configuration/index.html#recommended-configuration-file-organization)
+  * [JVM Configuration Best Practices](/docs/VERSION/configuration/index.html#jvm-configuration-best-practices)
   * [Common Configuration](/docs/VERSION/configuration/index.html#common-configurations)
   * [Coordinator](/docs/VERSION/configuration/index.html#coordinator)
   * [Overlord](/docs/VERSION/configuration/index.html#overlord)
