@@ -484,7 +484,7 @@ This deep storage doesn't do anything. There are no configs.
 
 #### S3 Deep Storage
 
-This deep storage is used to interface with Amazon's S3.
+This deep storage is used to interface with Amazon's S3. Note that the `druid-s3-extensions` extension must be loaded.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -498,7 +498,7 @@ This deep storage is used to interface with Amazon's S3.
 
 #### HDFS Deep Storage
 
-This deep storage is used to interface with HDFS.
+This deep storage is used to interface with HDFS.  Note that the `druid-hdfs-storage` extension must be loaded.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -506,7 +506,7 @@ This deep storage is used to interface with HDFS.
 
 #### Cassandra Deep Storage
 
-This deep storage is used to interface with Cassandra.
+This deep storage is used to interface with Cassandra.  Note that the `druid-cassandra-storage` extension must be loaded.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -542,7 +542,7 @@ Store task logs in the local filesystem.
 
 #### S3 Task Logs
 
-Store task logs in S3.
+Store task logs in S3. Note that the `druid-s3-extensions` extension must be loaded.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -552,7 +552,7 @@ Store task logs in S3.
 #### Azure Blob Store Task Logs
 Store task logs in Azure Blob Store.
 
-Note: this uses the same storage account as the deep storage module for azure.
+Note: The `druid-azure-extensions` extension must be loaded, and this uses the same storage account as the deep storage module for azure.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -562,7 +562,7 @@ Note: this uses the same storage account as the deep storage module for azure.
 #### Google Cloud Storage Task Logs
 Store task logs in Google Cloud Storage.
 
-Note: this uses the same storage settings as the deep storage module for google.
+Note: The `druid-google-extensions` extension must be loaded, and this uses the same storage settings as the deep storage module for google.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -571,7 +571,7 @@ Note: this uses the same storage settings as the deep storage module for google.
 
 #### HDFS Task Logs
 
-Store task logs in HDFS.
+Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be loaded.
 
 |Property|Description|Default|
 |--------|-----------|-------|
