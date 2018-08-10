@@ -39,7 +39,7 @@ Run this command to create a Kafka topic called *wikipedia*, to which we'll send
 ## Enable Druid Kafka ingestion
 
 We will use Druid's Kafka indexing service to ingest messages from our newly created *wikipedia* topic. To start the
-service, we will need to submit a supervisor spec to the Druid overlord by running the following from the Imply directory:
+service, we will need to submit a supervisor spec to the Druid overlord by running the following from the Druid package root:
 
 ```bash
 curl -XPOST -H'Content-Type: application/json' -d @quickstart/tutorial/wikipedia-kafka-supervisor.json http://localhost:8090/druid/indexer/v1/supervisor
