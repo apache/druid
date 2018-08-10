@@ -112,6 +112,8 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
 
       final ChannelPipeline pipeline = connectFuture.getChannel().getPipeline();
       pipeline.addFirst("ssl", sslHandler);
+
+      final ChannelFuture handshakeFuture = Channels.future(connectFuture.getChannel());
       pipeline.addLast("connectionErrorHandler", new SimpleChannelUpstreamHandler()
       {
         @Override
@@ -120,15 +122,17 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
           final Channel channel = ctx.getChannel();
           if (channel == null) {
             // For the case where this pipeline is not attached yet.
+            handshakeFuture.setFailure(new ChannelException(
+                StringUtils.format("Channel is null. The context name is [%s]", ctx.getName())
+            ));
             return;
           }
+          handshakeFuture.setFailure(e.getCause());
           if (channel.isOpen()) {
             channel.close();
           }
         }
       });
-
-      final ChannelFuture handshakeFuture = Channels.future(connectFuture.getChannel());
       connectFuture.addListener(
           new ChannelFutureListener()
           {
