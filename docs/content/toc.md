@@ -94,14 +94,18 @@ layout: toc
   * [Password Provider](/docs/VERSION/operations/password-provider.html)
 
 ## Configuration
-  * [Common Configuration](/docs/VERSION/configuration/index.html)
-  * [Indexing Service](/docs/VERSION/configuration/indexing-service.html)
-  * [Coordinator](/docs/VERSION/configuration/coordinator.html)
-  * [Historical](/docs/VERSION/configuration/historical.html)
-  * [Broker](/docs/VERSION/configuration/broker.html)
-  * [Realtime](/docs/VERSION/configuration/realtime.html)
+  * [Configuration Reference](/docs/VERSION/configuration/index.html)
+  * [Recommended Configuration File Organization](/docs/VERSION/configuration/index.html#recommended-configuration-file-organization)
+  * [JVM Configuration Best Practices](/docs/VERSION/configuration/index.html#jvm-configuration-best-practices)
+  * [Common Configuration](/docs/VERSION/configuration/index.html#common-configurations)
+  * [Coordinator](/docs/VERSION/configuration/index.html#coordinator)
+  * [Overlord](/docs/VERSION/configuration/index.html#overlord)
+  * [MiddleManager & Peons](/docs/VERSION/configuration/index.html#middle-manager-and-peons)
+  * [Broker](/docs/VERSION/configuration/index.html#broker)
+  * [Historical](/docs/VERSION/configuration/index.html#historical)
+  * [Caching](/docs/VERSION/configuration/index.html#cache-configuration)
+  * [General Query Configuration](/docs/VERSION/configuration/index.html#general-query-configuration)
   * [Configuring Logging](/docs/VERSION/configuration/logging.html)
-  * [Configuring Authentication and Authorization](/docs/VERSION/configuration/auth.html)
   
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
