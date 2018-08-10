@@ -40,21 +40,5 @@ A historical can be configured to log and report metrics for every query it serv
 HTTP Endpoints
 --------------
 
-The historical node exposes several HTTP endpoints for interactions.
+For a list of API endpoints supported by the Historical, please see the [API reference](../operations/api-reference.html#historical).
 
-### GET
-
-* `/status`
-
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
-
-* `/druid/historical/v1/loadstatus`
-
-Returns JSON of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all
-segments in the local cache have been loaded. This can be used to know when a historical node is ready
-to be queried after a restart.
-
-* `/druid/historical/v1/readiness`
-
-Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with a flag, responses 200 OK if segments
-in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.

@@ -31,45 +31,5 @@ historical nodes. Once the historical nodes return their results, the broker wil
 HTTP Endpoints
 --------------
 
-The broker node exposes several HTTP endpoints for interactions.
+For a list of API endpoints supported by the Broker, please see the [API reference](../operations/api-reference.html#broker).
 
-### GET
-
-* `/status`
-
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
-
-* `/druid/v2/datasources`
-
-Returns a list of queryable datasources.
-
-* `/druid/v2/datasources/{dataSourceName}`
-
-Returns the dimensions and metrics of the datasource. Optionally, you can provide request parameter "full" to get list of served intervals with dimensions and metrics being served for those intervals. You can also provide request param "interval" explicitly to refer to a particular interval.
-
-If no interval is specified, a default interval spanning a configurable period before the current time will be used. The duration of this interval is specified in ISO8601 format via:
-
-druid.query.segmentMetadata.defaultHistory
-
-* `/druid/v2/datasources/{dataSourceName}/dimensions`
-
-Returns the dimensions of the datasource.
-
-* `/druid/v2/datasources/{dataSourceName}/metrics`
-
-Returns the metrics of the datasource.
-
-* `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals-in-ISO8601-format}&numCandidates={numCandidates}`
-
-Returns segment information lists including server locations for the given datasource and intervals. If "numCandidates" is not specified, it will return all servers for each interval.
-
-* `/druid/broker/v1/loadstatus`
-
-Returns a flag indicating if the broker knows about all segments in Zookeeper. This can be used to know when a broker node is ready to be queried after a restart.
-
-
-### POST
-
-* `/druid/v2/candidates/`
-
-Returns segment information lists including server locations for the given query.

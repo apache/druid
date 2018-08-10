@@ -33,52 +33,10 @@ In local mode overlord is also responsible for creating peons for executing task
 Local mode is typically used for simple workflows.  In remote mode, the overlord and middle manager are run in separate processes and you can run each on a different server.
 This mode is recommended if you intend to use the indexing service as the single endpoint for all Druid indexing.
 
-#### Leadership status
+#### HTTP Endpoints
 
-If you have multiple overlords, just one is leading at any given time. The others are on standby. To get the current
-leader overlord of the cluster, call:
+For a list of API endpoints supported by the Overlord, please see the [API reference](../operations/api-reference.html#overlord).
 
-
-```
-http://<OVERLORD_IP>:<port>/druid/indexer/v1/leader
-```
-
-To see if a given server is the current leader overlord of the cluster, call:
-
-```
-http://<OVERLORD_IP>:<port>/druid/indexer/v1/isLeader
-```
-
-This returns a JSON object with field "leader", either true or false. In addition, this call returns HTTP 200 if the
-server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you
-only want the active leader to be considered in-service at the load balancer.
-
-#### Submitting Tasks and Querying Task Status
-
-Tasks are submitted to the overlord node in the form of JSON objects. Tasks can be submitted via POST requests to:
-
-```
-http://<OVERLORD_IP>:<port>/druid/indexer/v1/task
-```
-this will return the taskId of the submitted task.
-
-Tasks can be shut down via POST requests to:
-
-```
-http://<OVERLORD_IP>:<port>/druid/indexer/v1/task/{taskId}/shutdown
-```
-
-Task statuses can be retrieved via GET requests to:
-
-```
-http://<OVERLORD_IP>:<port>/druid/indexer/v1/task/{taskId}/status
-```
-
-Task segments can be retrieved via GET requests to:
-
-```
-http://<OVERLORD_IP>:<port>/druid/indexer/v1/task/{taskId}/segments
-```
 
 #### Overlord Console
 
@@ -120,12 +78,3 @@ Tasks
 -----
 
 See [Tasks](../ingestion/tasks.html).
-
-HTTP Endpoints
---------------
-
-### GET
-
-* `/status`
-
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
