@@ -157,6 +157,9 @@ public class AggregatorUtil
     return new Pair<>(condensedAggs, condensedPostAggs);
   }
 
+  /**
+   * Only one of fieldName and fieldExpression should be non-null
+   */
   static BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
@@ -165,10 +168,12 @@ public class AggregatorUtil
       final float nullValue
   )
   {
-    if (fieldName != null && fieldExpression == null) {
-      return metricFactory.makeColumnValueSelector(fieldName);
+    if ((fieldName == null) == (fieldExpression == null)) {
+      throw new IllegalArgumentException("Only one of fieldName and fieldExpression should be non-null");
     }
-    if (fieldName == null && fieldExpression != null) {
+    if (fieldName != null) {
+      return metricFactory.makeColumnValueSelector(fieldName);
+    } else {
       final Expr expr = Parser.parse(fieldExpression, macroTable);
       final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionFloatColumnSelector implements FloatColumnSelector
@@ -197,9 +202,11 @@ public class AggregatorUtil
       }
       return new ExpressionFloatColumnSelector();
     }
-    throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
+  /**
+   * Only one of fieldName and fieldExpression should be non-null
+   */
   static BaseLongColumnValueSelector makeColumnValueSelectorWithLongDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
@@ -208,10 +215,12 @@ public class AggregatorUtil
       final long nullValue
   )
   {
-    if (fieldName != null && fieldExpression == null) {
-      return metricFactory.makeColumnValueSelector(fieldName);
+    if ((fieldName == null) == (fieldExpression == null)) {
+      throw new IllegalArgumentException("Only one of fieldName and fieldExpression should be non-null");
     }
-    if (fieldName == null && fieldExpression != null) {
+    if (fieldName != null) {
+      return metricFactory.makeColumnValueSelector(fieldName);
+    } else {
       final Expr expr = Parser.parse(fieldExpression, macroTable);
       final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionLongColumnSelector implements LongColumnSelector
@@ -238,9 +247,11 @@ public class AggregatorUtil
       }
       return new ExpressionLongColumnSelector();
     }
-    throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
+  /**
+   * Only one of fieldName and fieldExpression should be non-null
+   */
   static BaseDoubleColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
@@ -249,10 +260,12 @@ public class AggregatorUtil
       final double nullValue
   )
   {
-    if (fieldName != null && fieldExpression == null) {
-      return metricFactory.makeColumnValueSelector(fieldName);
+    if ((fieldName == null) == (fieldExpression == null)) {
+      throw new IllegalArgumentException("Only one of fieldName and fieldExpression should be non-null");
     }
-    if (fieldName == null && fieldExpression != null) {
+    if (fieldName != null) {
+      return metricFactory.makeColumnValueSelector(fieldName);
+    } else {
       final Expr expr = Parser.parse(fieldExpression, macroTable);
       final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, expr);
       class ExpressionDoubleColumnSelector implements DoubleColumnSelector
@@ -279,6 +292,5 @@ public class AggregatorUtil
       }
       return new ExpressionDoubleColumnSelector();
     }
-    throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 }

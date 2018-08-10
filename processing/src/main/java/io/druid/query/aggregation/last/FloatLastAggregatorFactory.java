@@ -102,7 +102,13 @@ public class FloatLastAggregatorFactory extends NullableAggregatorFactory<Column
     if (lhs == null) {
       return rhs;
     }
-    return FloatFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
+    Long leftTime = ((SerializablePair<Long, Float>) lhs).lhs;
+    Long rightTime = ((SerializablePair<Long, Float>) rhs).lhs;
+    if (leftTime >= rightTime) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   @Override

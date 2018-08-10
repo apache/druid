@@ -46,8 +46,8 @@ import java.util.Map;
 
 public class LongFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
-  public static final Comparator VALUE_COMPARATOR =
-      Comparator.comparingLong(o -> ((SerializablePair<Long, Long>) o).rhs);
+  public static final Comparator<SerializablePair<Long, Long>> VALUE_COMPARATOR =
+      Comparator.comparingLong(o -> o.rhs);
 
   private final String fieldName;
   private final String name;
@@ -102,7 +102,13 @@ public class LongFirstAggregatorFactory extends NullableAggregatorFactory<Column
     if (rhs == null) {
       return lhs;
     }
-    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) <= 0 ? lhs : rhs;
+    Long leftTime = ((SerializablePair<Long, Long>) lhs).lhs;
+    Long rightTime = ((SerializablePair<Long, Long>) rhs).lhs;
+    if (leftTime <= rightTime) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   @Override

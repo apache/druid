@@ -47,11 +47,8 @@ import java.util.Objects;
 
 public class FloatFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
-  public static final Comparator VALUE_COMPARATOR =
-      Comparator.comparingDouble(o -> ((SerializablePair<Long, Float>) o).rhs);
-
-  public static final Comparator TIME_COMPARATOR =
-      Comparator.comparingLong(o -> ((SerializablePair<Long, Object>) o).lhs);
+  public static final Comparator<SerializablePair<Long, Float>> VALUE_COMPARATOR =
+      Comparator.comparingDouble(o -> o.rhs);
 
   private final String fieldName;
   private final String name;
@@ -106,7 +103,13 @@ public class FloatFirstAggregatorFactory extends NullableAggregatorFactory<Colum
     if (lhs == null) {
       return rhs;
     }
-    return TIME_COMPARATOR.compare(lhs, rhs) <= 0 ? lhs : rhs;
+    Long leftTime = ((SerializablePair<Long, Float>) lhs).lhs;
+    Long rightTime = ((SerializablePair<Long, Float>) rhs).lhs;
+    if (leftTime <= rightTime) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   @Override

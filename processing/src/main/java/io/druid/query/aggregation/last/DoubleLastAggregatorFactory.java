@@ -104,7 +104,13 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory<Colum
     if (lhs == null) {
       return rhs;
     }
-    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
+    Long leftTime = ((SerializablePair<Long, Double>) lhs).lhs;
+    Long rightTime = ((SerializablePair<Long, Double>) rhs).lhs;
+    if (leftTime >= rightTime) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   @Override

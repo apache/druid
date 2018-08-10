@@ -31,7 +31,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.NullableAggregatorFactory;
-import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -79,10 +78,7 @@ public class LongLastAggregatorFactory extends NullableAggregatorFactory<ColumnV
   @Override
   protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    return new LongLastBufferAggregator(
-        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-        selector
-    );
+    return new LongLastBufferAggregator(metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME), selector);
   }
 
   @Override
@@ -101,7 +97,13 @@ public class LongLastAggregatorFactory extends NullableAggregatorFactory<ColumnV
     if (lhs == null) {
       return rhs;
     }
-    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
+    Long leftTime = ((SerializablePair<Long, Long>) lhs).lhs;
+    Long rightTime = ((SerializablePair<Long, Long>) rhs).lhs;
+    if (leftTime >= rightTime) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   @Override
