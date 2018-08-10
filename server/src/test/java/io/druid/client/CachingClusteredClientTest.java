@@ -303,7 +303,7 @@ public class CachingClusteredClientTest
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1));
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1));
 
     servers = new DruidServer[]{
         new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
@@ -398,7 +398,7 @@ public class CachingClusteredClientTest
     client = makeClient(
         new BackgroundCachePopulator(
             randomizingExecutorService,
-            jsonMapper,
+            JSON_MAPPER,
             new CachePopulatorStats(),
             -1
         )
@@ -559,7 +559,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1), cache, limit);
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, limit);
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     final DataSegment dataSegment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(dataSegment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
@@ -584,7 +584,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1), cache, 0);
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, 0);
     getDefaultQueryRunner().run(QueryPlus.wrap(query), context);
     EasyMock.verify(cache);
     EasyMock.verify(dataSegment);
