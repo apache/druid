@@ -27,14 +27,15 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -43,9 +44,12 @@ import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +60,26 @@ public class GroupByQueryRunnerFactoryTest
 {
   @Rule
   public CloserRule closerRule = new CloserRule(true);
+
+  private GroupByQueryRunnerFactory factory;
+  private Closer resourceCloser;
+
+  @Before
+  public void setup()
+  {
+    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+        new GroupByQueryConfig()
+    );
+
+    factory = factoryAndCloser.lhs;
+    resourceCloser = factoryAndCloser.rhs;
+  }
+
+  @After
+  public void teardown() throws IOException
+  {
+    resourceCloser.close();
+  }
 
   @Test
   public void testMergeRunnersEnsureGroupMerging()
@@ -68,8 +92,6 @@ public class GroupByQueryRunnerFactoryTest
         .setDimensions(new DefaultDimensionSpec("tags", "tags"))
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .build();
-
-    final QueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig());
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner()

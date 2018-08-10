@@ -22,8 +22,9 @@ package io.druid.query.topn;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -32,10 +33,12 @@ import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.segment.TestHelper;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,23 +49,28 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class TopNUnionQueryTest
 {
-  private final QueryRunner runner;
+  private static final Closer resourceCloser = Closer.create();
 
-  public TopNUnionQueryTest(
-      QueryRunner runner
-  )
+  @AfterClass
+  public static void teardown() throws IOException
   {
-    this.runner = runner;
+    resourceCloser.close();
   }
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
+    final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
+        "TopNQueryRunnerFactory-bufferPool",
+        () -> ByteBuffer.allocate(2000)
+    );
+
     return QueryRunnerTestHelper.cartesian(
         Iterables.concat(
             QueryRunnerTestHelper.makeUnionQueryRunners(
                 new TopNQueryRunnerFactory(
-                    TestQueryRunners.getPool(),
+                    defaultPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
@@ -72,10 +80,7 @@ public class TopNUnionQueryTest
             ),
             QueryRunnerTestHelper.makeUnionQueryRunners(
                 new TopNQueryRunnerFactory(
-                    new StupidPool<ByteBuffer>(
-                        "TopNQueryRunnerFactory-bufferPool",
-                        () -> ByteBuffer.allocate(2000)
-                    ),
+                    customPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
@@ -85,6 +90,15 @@ public class TopNUnionQueryTest
             )
         )
     );
+  }
+
+  private final QueryRunner runner;
+
+  public TopNUnionQueryTest(
+      QueryRunner runner
+  )
+  {
+    this.runner = runner;
   }
 
   @Test

@@ -42,6 +42,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -86,6 +87,12 @@ public class SketchAggregationTest
       constructors.add(new Object[]{config});
     }
     return constructors;
+  }
+
+  @After
+  public void teardown() throws IOException
+  {
+    helper.close();
   }
 
   @Test
