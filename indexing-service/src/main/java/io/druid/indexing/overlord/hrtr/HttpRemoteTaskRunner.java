@@ -41,6 +41,7 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.WorkerNodeService;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.Task;
@@ -1118,6 +1119,27 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 .stream()
                 .filter(item -> item.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE)
                 .collect(Collectors.toList());
+  }
+
+  @Nullable
+  @Override
+  public RunnerTaskState getRunnerTaskState(String taskId)
+  {
+    final HttpRemoteTaskRunnerWorkItem workItem = tasks.get(taskId);
+    if (workItem == null) {
+      return null;
+    } else {
+      switch (workItem.state) {
+        case PENDING:
+          return RunnerTaskState.PENDING;
+        case RUNNING:
+          return RunnerTaskState.RUNNING;
+        case COMPLETE:
+          return RunnerTaskState.NONE;
+        default:
+          throw new ISE("Unknown state[%s]", workItem.state);
+      }
+    }
   }
 
   public List<String> getBlacklistedWorkers()

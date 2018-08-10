@@ -23,8 +23,10 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskToolbox;
@@ -860,11 +862,17 @@ public class OverlordResourceTest
   public void testGetTaskStatus() throws Exception
   {
     expectAuthorizationTokenCheck();
-    EasyMock.expect(taskStorageQueryAdapter.getStatus("mytask"))
-            .andReturn(Optional.of(TaskStatus.success("mytask")));
+    final Task task = NoopTask.create("mytask", 0);
+    final TaskStatus status = TaskStatus.running("mytask");
 
-    EasyMock.expect(taskStorageQueryAdapter.getStatus("othertask"))
-            .andReturn(Optional.absent());
+    EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("mytask"))
+            .andReturn(new TaskInfo<>(task.getId(), DateTimes.of("2018-01-01"), status, task.getDataSource(), task));
+
+    EasyMock.expect(taskStorageQueryAdapter.getTaskInfo("othertask"))
+            .andReturn(null);
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks())
+        .andReturn(ImmutableList.of());
 
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
 
@@ -873,7 +881,24 @@ public class OverlordResourceTest
         TestHelper.makeJsonMapper().writeValueAsString(response1.getEntity()),
         TaskStatusResponse.class
     );
-    Assert.assertEquals(new TaskStatusResponse("mytask", TaskStatus.success("mytask")), taskStatusResponse1);
+    Assert.assertEquals(
+        new TaskStatusResponse(
+            "mytask",
+            new TaskStatusPlus(
+                "mytask",
+                "noop",
+                DateTimes.of("2018-01-01"),
+                DateTimes.EPOCH,
+                TaskState.RUNNING,
+                RunnerTaskState.RUNNING,
+                -1L,
+                TaskLocation.unknown(),
+                task.getDataSource(),
+                null
+            )
+        ),
+        taskStatusResponse1
+    );
 
     final Response response2 = overlordResource.getTaskStatus("othertask");
     final TaskStatusResponse taskStatusResponse2 = TestHelper.makeJsonMapper().readValue(

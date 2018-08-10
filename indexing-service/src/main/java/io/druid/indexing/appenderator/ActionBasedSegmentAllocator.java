@@ -20,7 +20,6 @@
 package io.druid.indexing.appenderator;
 
 import io.druid.data.input.InputRow;
-import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -32,14 +31,17 @@ public class ActionBasedSegmentAllocator implements SegmentAllocator
 {
   private final TaskActionClient taskActionClient;
   private final DataSchema dataSchema;
+  private final SegmentAllocateActionGenerator actionGenerator;
 
   public ActionBasedSegmentAllocator(
       TaskActionClient taskActionClient,
-      DataSchema dataSchema
+      DataSchema dataSchema,
+      SegmentAllocateActionGenerator actionGenerator
   )
   {
     this.taskActionClient = taskActionClient;
     this.dataSchema = dataSchema;
+    this.actionGenerator = actionGenerator;
   }
 
   @Override
@@ -51,15 +53,7 @@ public class ActionBasedSegmentAllocator implements SegmentAllocator
   ) throws IOException
   {
     return taskActionClient.submit(
-        new SegmentAllocateAction(
-            dataSchema.getDataSource(),
-            row.getTimestamp(),
-            dataSchema.getGranularitySpec().getQueryGranularity(),
-            dataSchema.getGranularitySpec().getSegmentGranularity(),
-            sequenceName,
-            previousSegmentId,
-            skipSegmentLineageCheck
-        )
+        actionGenerator.generate(dataSchema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck)
     );
   }
 }

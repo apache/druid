@@ -95,6 +95,9 @@ public interface TaskStorage
    */
   Optional<TaskStatus> getStatus(String taskid);
 
+  @Nullable
+  TaskInfo<Task, TaskStatus> getTaskInfo(String taskId);
+
   /**
    * Add an action taken by a task to the audit log.
    *
@@ -122,8 +125,8 @@ public interface TaskStorage
   List<Task> getActiveTasks();
 
   /**
-   * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No particular order
-   * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
+   * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No
+   * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
    * @param dataSource datasource
    *
@@ -132,9 +135,10 @@ public interface TaskStorage
   List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource);
 
   /**
-   * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage facility. No
-   * particular order is guaranteed, but implementations are encouraged to return tasks in descending order of creation.
-   * No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
+   * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage
+   * facility. No particular order is guaranteed, but implementations are encouraged to return tasks in descending order
+   * of creation. No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply
+   * return nothing.
    *
    * @param maxTaskStatuses maxTaskStatuses
    * @param duration        duration

@@ -22,10 +22,11 @@ package io.druid.server.coordinator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.client.indexing.NoopIndexingServiceClient;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -455,7 +456,7 @@ public class DruidCoordinatorSegmentMergerTest
     EasyMock.replay(configManager);
 
     final List<List<DataSegment>> retVal = Lists.newArrayList();
-    final IndexingServiceClient indexingServiceClient = new IndexingServiceClient(null, null)
+    final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
     {
       @Override
       public void mergeSegments(List<DataSegment> segmentsToMerge)

@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.net.HttpHeaders;
+import io.druid.data.input.FiniteFirehoseFactory;
+import io.druid.data.input.InputSplit;
+import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
@@ -34,6 +37,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -145,5 +149,23 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   protected Predicate<Throwable> getRetryCondition()
   {
     return e -> e instanceof IOException;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<StringInputRowParser, URI> withSplit(InputSplit<URI> split)
+  {
+    try {
+      return new HttpFirehoseFactory(
+          Collections.singletonList(split.get()),
+          getMaxCacheCapacityBytes(),
+          getMaxFetchCapacityBytes(),
+          getPrefetchTriggerBytes(),
+          getFetchTimeout(),
+          getMaxFetchRetry()
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

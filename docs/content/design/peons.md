@@ -21,3 +21,8 @@ io.druid.cli.Main internal peon <task_file> <status_file>
 
 The task file contains the task JSON object.
 The status file indicates where the task status will be output.
+
+HTTP Endpoints
+--------------
+
+For a list of API endpoints supported by the Peon, please see the [API reference](../operations/api-reference.html#peon).
