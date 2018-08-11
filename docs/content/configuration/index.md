@@ -7,6 +7,7 @@ layout: doc_page
 This page documents all of the configuration properties for each Druid service type.
 
 ## Table of Contents
+  * [Recommended Configuration File Organization](#recommended-configuration-file-organization)
   * [Common configurations](#common-configurations)
     * [JVM Configuration Best Practices](#jvm-configuration-best-practices)
     * [Extensions](#extensions)
