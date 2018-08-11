@@ -19,12 +19,11 @@
 
 package io.druid.segment.incremental;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
@@ -127,29 +126,49 @@ public class IncrementalIndexStorageAdapterTest
         )
     );
 
-    GroupByQueryEngine engine = makeGroupByQueryEngine();
 
-    final Sequence<Row> rows = engine.process(
-        GroupByQuery.builder()
-                    .setDataSource("test")
-                    .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                    .addDimension("billy")
-                    .addDimension("sally")
-                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                    .build(),
-        new IncrementalIndexStorageAdapter(index)
-    );
+    try (
+        CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
+            "GroupByQueryEngine-bufferPool",
+            () -> ByteBuffer.allocate(50000)
+        )
+    ) {
+      final GroupByQueryEngine engine = new GroupByQueryEngine(
+          Suppliers.ofInstance(
+              new GroupByQueryConfig()
+              {
+                @Override
+                public int getMaxIntermediateRows()
+                {
+                  return 5;
+                }
+              }
+          ),
+          pool
+      );
 
-    final List<Row> results = rows.toList();
+      final Sequence<Row> rows = engine.process(
+          GroupByQuery.builder()
+                      .setDataSource("test")
+                      .setGranularity(Granularities.ALL)
+                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                      .addDimension("billy")
+                      .addDimension("sally")
+                      .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                      .build(),
+          new IncrementalIndexStorageAdapter(index)
+      );
 
-    Assert.assertEquals(2, results.size());
+      final List<Row> results = rows.toList();
 
-    MapBasedRow row = (MapBasedRow) results.get(0);
-    Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1L), row.getEvent());
+      Assert.assertEquals(2, results.size());
 
-    row = (MapBasedRow) results.get(1);
-    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+      MapBasedRow row = (MapBasedRow) results.get(0);
+      Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1L), row.getEvent());
+
+      row = (MapBasedRow) results.get(1);
+      Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+    }
   }
 
   @Test
@@ -174,68 +193,63 @@ public class IncrementalIndexStorageAdapterTest
         )
     );
 
-    GroupByQueryEngine engine = makeGroupByQueryEngine();
-
-    final Sequence<Row> rows = engine.process(
-        GroupByQuery.builder()
-                    .setDataSource("test")
-                    .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                    .addDimension("billy")
-                    .addDimension("sally")
-                    .addAggregator(
-                        new LongSumAggregatorFactory("cnt", "cnt")
-                    )
-                    .addAggregator(
-                        new JavaScriptAggregatorFactory(
-                            "fieldLength",
-                            Arrays.asList("sally", "billy"),
-                            "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
-                            "function() { return 0; }",
-                            "function(a,b) { return a + b; }",
-                            JavaScriptConfig.getEnabledInstance()
-                        )
-                    )
-                    .build(),
-        new IncrementalIndexStorageAdapter(index)
-    );
-
-    final List<Row> results = rows.toList();
-
-    Assert.assertEquals(2, results.size());
-
-    MapBasedRow row = (MapBasedRow) results.get(0);
-    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L, "fieldLength", 2.0), row.getEvent());
-
-    row = (MapBasedRow) results.get(1);
-    Assert.assertEquals(ImmutableMap.of("billy", "hip", "sally", "hop", "cnt", 1L, "fieldLength", 6.0), row.getEvent());
-  }
-
-  private static GroupByQueryEngine makeGroupByQueryEngine()
-  {
-    return new GroupByQueryEngine(
-        Suppliers.ofInstance(
-            new GroupByQueryConfig()
-            {
-              @Override
-              public int getMaxIntermediateRows()
-              {
-                return 5;
-              }
-            }
-        ),
-        new StupidPool(
+    try (
+        CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
-            new Supplier<ByteBuffer>()
-            {
-              @Override
-              public ByteBuffer get()
-              {
-                return ByteBuffer.allocate(50000);
-              }
-            }
+            () -> ByteBuffer.allocate(50000)
         )
-    );
+    ) {
+      final GroupByQueryEngine engine = new GroupByQueryEngine(
+          Suppliers.ofInstance(
+              new GroupByQueryConfig()
+              {
+                @Override
+                public int getMaxIntermediateRows()
+                {
+                  return 5;
+                }
+              }
+          ),
+          pool
+      );
+
+      final Sequence<Row> rows = engine.process(
+          GroupByQuery.builder()
+                      .setDataSource("test")
+                      .setGranularity(Granularities.ALL)
+                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                      .addDimension("billy")
+                      .addDimension("sally")
+                      .addAggregator(
+                          new LongSumAggregatorFactory("cnt", "cnt")
+                      )
+                      .addAggregator(
+                          new JavaScriptAggregatorFactory(
+                              "fieldLength",
+                              Arrays.asList("sally", "billy"),
+                              "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
+                              "function() { return 0; }",
+                              "function(a,b) { return a + b; }",
+                              JavaScriptConfig.getEnabledInstance()
+                          )
+                      )
+                      .build(),
+          new IncrementalIndexStorageAdapter(index)
+      );
+
+      final List<Row> results = rows.toList();
+
+      Assert.assertEquals(2, results.size());
+
+      MapBasedRow row = (MapBasedRow) results.get(0);
+      Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L, "fieldLength", 2.0), row.getEvent());
+
+      row = (MapBasedRow) results.get(1);
+      Assert.assertEquals(
+          ImmutableMap.of("billy", "hip", "sally", "hop", "cnt", 1L, "fieldLength", 6.0),
+          row.getEvent()
+      );
+    }
   }
 
   @Test
@@ -312,38 +326,33 @@ public class IncrementalIndexStorageAdapterTest
         )
     );
 
-    TopNQueryEngine engine = new TopNQueryEngine(
-        new StupidPool<ByteBuffer>(
+    try (
+        CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "TopNQueryEngine-bufferPool",
-            new Supplier<ByteBuffer>()
-            {
-              @Override
-              public ByteBuffer get()
-              {
-                return ByteBuffer.allocate(50000);
-              }
-            }
+            () -> ByteBuffer.allocate(50000)
         )
-    );
+    ) {
+      TopNQueryEngine engine = new TopNQueryEngine(pool);
 
-    final Iterable<Result<TopNResultValue>> results = engine
-        .query(
-            new TopNQueryBuilder()
-                .dataSource("test")
-                .granularity(Granularities.ALL)
-                .intervals(Collections.singletonList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
-                .dimension("sally")
-                .metric("cnt")
-                .threshold(10)
-                .aggregators(Collections.singletonList(new LongSumAggregatorFactory("cnt", "cnt")))
-                .build(),
-            new IncrementalIndexStorageAdapter(index),
-            null
-        )
-        .toList();
+      final Iterable<Result<TopNResultValue>> results = engine
+          .query(
+              new TopNQueryBuilder()
+                  .dataSource("test")
+                  .granularity(Granularities.ALL)
+                  .intervals(Collections.singletonList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
+                  .dimension("sally")
+                  .metric("cnt")
+                  .threshold(10)
+                  .aggregators(Collections.singletonList(new LongSumAggregatorFactory("cnt", "cnt")))
+                  .build(),
+              new IncrementalIndexStorageAdapter(index),
+              null
+          )
+          .toList();
 
-    Assert.assertEquals(1, Iterables.size(results));
-    Assert.assertEquals(1, results.iterator().next().getValue().getValue().size());
+      Assert.assertEquals(1, Iterables.size(results));
+      Assert.assertEquals(1, results.iterator().next().getValue().getValue().size());
+    }
   }
 
   @Test
@@ -365,27 +374,46 @@ public class IncrementalIndexStorageAdapterTest
         )
     );
 
-    GroupByQueryEngine engine = makeGroupByQueryEngine();
+    try (
+        CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
+            "GroupByQueryEngine-bufferPool",
+            () -> ByteBuffer.allocate(50000)
+        )
+    ) {
+      final GroupByQueryEngine engine = new GroupByQueryEngine(
+          Suppliers.ofInstance(
+              new GroupByQueryConfig()
+              {
+                @Override
+                public int getMaxIntermediateRows()
+                {
+                  return 5;
+                }
+              }
+          ),
+          pool
+      );
 
-    final Sequence<Row> rows = engine.process(
-        GroupByQuery.builder()
-                    .setDataSource("test")
-                    .setGranularity(Granularities.ALL)
-                    .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                    .addDimension("billy")
-                    .addDimension("sally")
-                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                    .setDimFilter(DimFilters.dimEquals("sally", (String) null))
-                    .build(),
-        new IncrementalIndexStorageAdapter(index)
-    );
+      final Sequence<Row> rows = engine.process(
+          GroupByQuery.builder()
+                      .setDataSource("test")
+                      .setGranularity(Granularities.ALL)
+                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                      .addDimension("billy")
+                      .addDimension("sally")
+                      .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                      .setDimFilter(DimFilters.dimEquals("sally", (String) null))
+                      .build(),
+          new IncrementalIndexStorageAdapter(index)
+      );
 
-    final List<Row> results = rows.toList();
+      final List<Row> results = rows.toList();
 
-    Assert.assertEquals(1, results.size());
+      Assert.assertEquals(1, results.size());
 
-    MapBasedRow row = (MapBasedRow) results.get(0);
-    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+      MapBasedRow row = (MapBasedRow) results.get(0);
+      Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+    }
   }
 
   @Test

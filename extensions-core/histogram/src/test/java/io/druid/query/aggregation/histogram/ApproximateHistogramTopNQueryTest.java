@@ -22,8 +22,9 @@ package io.druid.query.aggregation.histogram;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -38,10 +39,12 @@ import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNQueryRunnerFactory;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.TestHelper;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -52,14 +55,30 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class ApproximateHistogramTopNQueryTest
 {
+  private static final Closer resourceCloser = Closer.create();
+
+  @AfterClass
+  public static void teardown() throws IOException
+  {
+    resourceCloser.close();
+  }
+
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
+    final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
+        "TopNQueryRunnerFactory-bufferPool",
+        () -> ByteBuffer.allocate(2000)
+    );
+    resourceCloser.register(defaultPool);
+    resourceCloser.register(customPool);
+
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         Iterables.concat(
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
-                    TestQueryRunners.getPool(),
+                    defaultPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
@@ -69,10 +88,7 @@ public class ApproximateHistogramTopNQueryTest
             ),
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
-                    new StupidPool<ByteBuffer>(
-                        "TopNQueryRunnerFactory-bufferPool",
-                        () -> ByteBuffer.allocate(2000)
-                    ),
+                    customPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()

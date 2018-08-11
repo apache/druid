@@ -26,10 +26,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.DefaultBlockingPool;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.CloseableDefaultBlockingPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DruidProcessingConfig;
@@ -42,6 +41,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -59,7 +59,7 @@ import static org.junit.Assert.assertEquals;
 public class GroupByQueryMergeBufferTest
 {
   private static final long TIMEOUT = 5000;
-  private static class TestBlockingPool extends DefaultBlockingPool<ByteBuffer>
+  private static class TestBlockingPool extends CloseableDefaultBlockingPool<ByteBuffer>
   {
     private int minRemainBufferNum;
 
@@ -136,17 +136,7 @@ public class GroupByQueryMergeBufferTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
-        "GroupByQueryEngine-bufferPool",
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
-          }
-        }
-    );
+
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
@@ -174,6 +164,18 @@ public class GroupByQueryMergeBufferTest
     );
   }
 
+  private static final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
+      "GroupByQueryEngine-bufferPool",
+      new Supplier<ByteBuffer>()
+      {
+        @Override
+        public ByteBuffer get()
+        {
+          return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
+        }
+      }
+  );
+
   private static final TestBlockingPool mergeBufferPool = new TestBlockingPool(
       new Supplier<ByteBuffer>()
       {
@@ -199,6 +201,13 @@ public class GroupByQueryMergeBufferTest
   );
 
   private QueryRunner<Row> runner;
+
+  @AfterClass
+  public static void teardownClass()
+  {
+    bufferPool.close();
+    mergeBufferPool.close();
+  }
 
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()

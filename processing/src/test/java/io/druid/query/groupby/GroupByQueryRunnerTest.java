@@ -31,16 +31,15 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.BlockingPool;
-import io.druid.collections.DefaultBlockingPool;
-import io.druid.collections.NonBlockingPool;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableDefaultBlockingPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.common.config.NullHandling;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.DurationGranularity;
 import io.druid.java.util.common.granularity.Granularities;
@@ -48,6 +47,7 @@ import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.io.Closer;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
@@ -127,6 +127,7 @@ import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -135,6 +136,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -152,7 +154,7 @@ import java.util.concurrent.Executors;
 public class GroupByQueryRunnerTest
 {
   public static final ObjectMapper DEFAULT_MAPPER = TestHelper.makeSmileMapper();
-  public static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
+  private static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {
     @Override
     public String getFormatString()
@@ -181,9 +183,11 @@ public class GroupByQueryRunnerTest
     }
   };
 
+  private static final Closer resourceCloser = Closer.create();
+
   private final QueryRunner<Row> runner;
-  private GroupByQueryRunnerFactory factory;
-  private GroupByQueryConfig config;
+  private final GroupByQueryRunnerFactory factory;
+  private final GroupByQueryConfig config;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -324,14 +328,14 @@ public class GroupByQueryRunnerTest
     );
   }
 
-  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+  public static Pair<GroupByQueryRunnerFactory, Closer> makeQueryRunnerFactory(
       final GroupByQueryConfig config
   )
   {
     return makeQueryRunnerFactory(DEFAULT_MAPPER, config, DEFAULT_PROCESSING_CONFIG);
   }
 
-  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+  public static Pair<GroupByQueryRunnerFactory, Closer> makeQueryRunnerFactory(
       final ObjectMapper mapper,
       final GroupByQueryConfig config
   )
@@ -339,14 +343,14 @@ public class GroupByQueryRunnerTest
     return makeQueryRunnerFactory(mapper, config, DEFAULT_PROCESSING_CONFIG);
   }
 
-  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+  public static Pair<GroupByQueryRunnerFactory, Closer> makeQueryRunnerFactory(
       final ObjectMapper mapper,
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
+    final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
         "GroupByQueryEngine-bufferPool",
         new Supplier<ByteBuffer>()
         {
@@ -357,7 +361,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
+    final CloseableDefaultBlockingPool<ByteBuffer> mergeBufferPool = new CloseableDefaultBlockingPool<>(
         new Supplier<ByteBuffer>()
         {
           @Override
@@ -389,9 +393,15 @@ public class GroupByQueryRunnerTest
         strategySelector,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     );
-    return new GroupByQueryRunnerFactory(
-        strategySelector,
-        toolChest
+    final Closer closer = Closer.create();
+    closer.register(bufferPool);
+    closer.register(mergeBufferPool);
+    return Pair.of(
+        new GroupByQueryRunnerFactory(
+            strategySelector,
+            toolChest
+        ),
+        closer
     );
   }
 
@@ -400,7 +410,9 @@ public class GroupByQueryRunnerTest
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : testConfigs()) {
-      final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config);
+      final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = makeQueryRunnerFactory(config);
+      final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
+      resourceCloser.register(factoryAndCloser.rhs);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
@@ -414,8 +426,17 @@ public class GroupByQueryRunnerTest
     return constructors;
   }
 
+  @AfterClass
+  public static void teardown() throws IOException
+  {
+    resourceCloser.close();
+  }
+
   public GroupByQueryRunnerTest(
-      String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
   )
   {
     this.config = config;
@@ -661,6 +682,9 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSortDimsFirst()
   {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      return;
+    }
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -668,7 +692,7 @@ public class GroupByQueryRunnerTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
-        .setContext(ImmutableMap.of("sortByDimsFirst", true, "groupByStrategy", "v2"))
+        .setContext(ImmutableMap.of("sortByDimsFirst", true))
         .build();
 
     List<Row> expectedResults = Arrays.asList(
@@ -7526,7 +7550,6 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    System.out.println(results);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 

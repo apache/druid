@@ -41,7 +41,9 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
 {
   private static final TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
 
-  private final ArrayDeque<T> objects;
+  @VisibleForTesting
+  final ArrayDeque<T> objects;
+
   private final ReentrantLock lock;
   private final Condition notEnough;
   private final int maxSize;

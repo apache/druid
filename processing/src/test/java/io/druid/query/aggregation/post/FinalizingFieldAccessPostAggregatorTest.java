@@ -188,64 +188,67 @@ public class FinalizingFieldAccessPostAggregatorTest
   @Test
   public void testIngestAndQueryWithArithmeticPostAggregator() throws Exception
   {
-    AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Collections.singletonList(new AggregatorsModule()),
-        GroupByQueryRunnerTest.testConfigs().get(0),
-        tempFoler
-    );
+    try (
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+            Collections.singletonList(new AggregatorsModule()),
+            GroupByQueryRunnerTest.testConfigs().get(0),
+            tempFoler
+        )
+    ) {
 
-    String metricSpec = "[{\"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"market\"},"
-                        + "{\"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"quality\"}]";
+      String metricSpec = "[{\"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"market\"},"
+                          + "{\"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"quality\"}]";
 
-    String parseSpec = "{"
-                       + "\"type\" : \"string\","
-                       + "\"parseSpec\" : {"
-                       + "    \"format\" : \"tsv\","
-                       + "    \"timestampSpec\" : {"
-                       + "        \"column\" : \"timestamp\","
-                       + "        \"format\" : \"auto\""
-                       + "},"
-                       + "    \"dimensionsSpec\" : {"
-                       + "        \"dimensions\": [],"
-                       + "        \"dimensionExclusions\" : [],"
-                       + "        \"spatialDimensions\" : []"
-                       + "    },"
-                       + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                       + "  }"
-                       + "}";
+      String parseSpec = "{"
+                         + "\"type\" : \"string\","
+                         + "\"parseSpec\" : {"
+                         + "    \"format\" : \"tsv\","
+                         + "    \"timestampSpec\" : {"
+                         + "        \"column\" : \"timestamp\","
+                         + "        \"format\" : \"auto\""
+                         + "},"
+                         + "    \"dimensionsSpec\" : {"
+                         + "        \"dimensions\": [],"
+                         + "        \"dimensionExclusions\" : [],"
+                         + "        \"spatialDimensions\" : []"
+                         + "    },"
+                         + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
+                         + "  }"
+                         + "}";
 
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"aggregations\": ["
-                   + "  { \"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"hll_market\" },"
-                   + "  { \"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"hll_quality\" }"
-                   + "],"
-                   + "\"postAggregations\": ["
-                   + "  { \"type\": \"arithmetic\", \"name\": \"uniq_add\", \"fn\": \"+\", \"fields\":["
-                   + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_market\", \"fieldName\": \"hll_market\" },"
-                   + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_quality\", \"fieldName\": \"hll_quality\" }]"
-                   + "  }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
+      String query = "{"
+                     + "\"queryType\": \"groupBy\","
+                     + "\"dataSource\": \"test_datasource\","
+                     + "\"granularity\": \"ALL\","
+                     + "\"dimensions\": [],"
+                     + "\"aggregations\": ["
+                     + "  { \"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"hll_market\" },"
+                     + "  { \"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"hll_quality\" }"
+                     + "],"
+                     + "\"postAggregations\": ["
+                     + "  { \"type\": \"arithmetic\", \"name\": \"uniq_add\", \"fn\": \"+\", \"fields\":["
+                     + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_market\", \"fieldName\": \"hll_market\" },"
+                     + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_quality\", \"fieldName\": \"hll_quality\" }]"
+                     + "  }"
+                     + "],"
+                     + "\"intervals\": [ \"1970/2050\" ]"
+                     + "}";
 
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
-        new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
-        parseSpec,
-        metricSpec,
-        0,
-        Granularities.NONE,
-        50000,
-        query
-    );
+      Sequence seq = helper.createIndexAndRunQueryOnSegment(
+          new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
+          parseSpec,
+          metricSpec,
+          0,
+          Granularities.NONE,
+          50000,
+          query
+      );
 
-    MapBasedRow row = (MapBasedRow) seq.toList().get(0);
-    Assert.assertEquals(3.0, row.getMetric("hll_market").floatValue(), 0.1);
-    Assert.assertEquals(9.0, row.getMetric("hll_quality").floatValue(), 0.1);
-    Assert.assertEquals(12.0, row.getMetric("uniq_add").floatValue(), 0.1);
+      MapBasedRow row = (MapBasedRow) seq.toList().get(0);
+      Assert.assertEquals(3.0, row.getMetric("hll_market").floatValue(), 0.1);
+      Assert.assertEquals(9.0, row.getMetric("hll_quality").floatValue(), 0.1);
+      Assert.assertEquals(12.0, row.getMetric("uniq_add").floatValue(), 0.1);
+    }
   }
 
   @Test

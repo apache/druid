@@ -49,6 +49,13 @@
         <!-- Tests -->
         <dependency>
             <groupId>io.druid</groupId>
+            <artifactId>druid-common</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>test</scope>
+            <type>test-jar</type>
+        </dependency>
+        <dependency>
+            <groupId>io.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>

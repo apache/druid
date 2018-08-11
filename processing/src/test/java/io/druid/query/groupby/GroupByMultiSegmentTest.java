@@ -28,10 +28,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.collections.BlockingPool;
-import io.druid.collections.DefaultBlockingPool;
-import io.druid.collections.NonBlockingPool;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableDefaultBlockingPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
@@ -43,6 +41,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.BySegmentQueryRunner;
@@ -93,14 +92,17 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class GroupByMultiSegmentTest
 {
+  public static final ObjectMapper JSON_MAPPER;
+
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
-  public static final ObjectMapper JSON_MAPPER;
+
   private File tmpDir;
   private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
   private List<IncrementalIndex> incrementalIndices = Lists.newArrayList();
   private List<QueryableIndex> groupByIndices = Lists.newArrayList();
   private ExecutorService executorService;
+  private Closer resourceCloser;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -200,6 +202,7 @@ public class GroupByMultiSegmentTest
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
 
     groupByIndices = Arrays.asList(qindexA, qindexB);
+    resourceCloser = Closer.create();
     setupGroupByFactory();
   }
 
@@ -207,7 +210,7 @@ public class GroupByMultiSegmentTest
   {
     executorService = Execs.multiThreaded(2, "GroupByThreadPool[%d]");
 
-    NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
+    final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
         "GroupByBenchmark-computeBufferPool",
         new OffheapBufferGenerator("compute", 10_000_000),
         0,
@@ -215,10 +218,13 @@ public class GroupByMultiSegmentTest
     );
 
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    BlockingPool<ByteBuffer> mergePool = new DefaultBlockingPool<>(
+    final CloseableDefaultBlockingPool<ByteBuffer> mergePool = new CloseableDefaultBlockingPool<>(
         new OffheapBufferGenerator("merge", 10_000_000),
         2
     );
+
+    resourceCloser.register(bufferPool);
+    resourceCloser.register(mergePool);
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
       @Override
@@ -297,6 +303,8 @@ public class GroupByMultiSegmentTest
     for (QueryableIndex queryableIndex : groupByIndices) {
       queryableIndex.close();
     }
+
+    resourceCloser.close();
 
     if (tmpDir != null) {
       FileUtils.deleteDirectory(tmpDir);

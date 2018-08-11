@@ -19,14 +19,13 @@
 
 package io.druid.query;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.collections.NonBlockingPool;
-import io.druid.collections.StupidPool;
+import io.druid.query.search.SearchQueryConfig;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
 import io.druid.query.search.SearchStrategySelector;
-import io.druid.query.search.SearchQueryConfig;
 import io.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -42,27 +41,17 @@ import java.nio.ByteBuffer;
  */
 public class TestQueryRunners
 {
-  public static final NonBlockingPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
-      "TestQueryRunners-bufferPool",
-      new Supplier<ByteBuffer>()
-      {
-        @Override
-        public ByteBuffer get()
-        {
-          return ByteBuffer.allocate(1024 * 1024 * 10);
-        }
-      }
-  );
-  public static final TopNQueryConfig topNConfig = new TopNQueryConfig();
+  private static final TopNQueryConfig topNConfig = new TopNQueryConfig();
 
-  public static NonBlockingPool<ByteBuffer> getPool()
+  public static CloseableStupidPool<ByteBuffer> createDefaultNonBlockingPool()
   {
-    return pool;
+    return new CloseableStupidPool<>(
+        "TestQueryRunners-bufferPool",
+        () -> ByteBuffer.allocate(1024 * 1024 * 10)
+    );
   }
 
-  public static <T> QueryRunner<T> makeTopNQueryRunner(
-      Segment adapter
-  )
+  public static <T> QueryRunner<T> makeTopNQueryRunner(Segment adapter, NonBlockingPool<ByteBuffer> pool)
   {
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
         pool,
@@ -78,9 +67,7 @@ public class TestQueryRunners
     );
   }
 
-  public static <T> QueryRunner<T> makeTimeSeriesQueryRunner(
-      Segment adapter
-  )
+  public static <T> QueryRunner<T> makeTimeSeriesQueryRunner(Segment adapter)
   {
     QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(
@@ -95,9 +82,7 @@ public class TestQueryRunners
     );
   }
 
-  public static <T> QueryRunner<T> makeSearchQueryRunner(
-      Segment adapter
-  )
+  public static <T> QueryRunner<T> makeSearchQueryRunner(Segment adapter)
   {
     final SearchQueryConfig config = new SearchQueryConfig();
     QueryRunnerFactory factory = new SearchQueryRunnerFactory(
@@ -114,9 +99,7 @@ public class TestQueryRunners
     );
   }
 
-  public static <T> QueryRunner<T> makeTimeBoundaryQueryRunner(
-      Segment adapter
-  )
+  public static <T> QueryRunner<T> makeTimeBoundaryQueryRunner(Segment adapter)
   {
     QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER);
     return new FinalizeResultsQueryRunner<T>(
