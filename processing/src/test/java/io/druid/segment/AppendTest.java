@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
@@ -63,6 +64,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -355,9 +357,11 @@ public class AppendTest
     );
 
     TopNQuery query = makeTopNQuery();
-    QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
+      HashMap<String, Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    }
   }
 
   @Test
@@ -401,9 +405,11 @@ public class AppendTest
     );
 
     TopNQuery query = makeTopNQuery();
-    QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2, pool);
+      HashMap<String, Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    }
   }
 
   @Test
@@ -429,9 +435,11 @@ public class AppendTest
     );
 
     TopNQuery query = makeFilteredTopNQuery();
-    QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
+      HashMap<String, Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    }
   }
 
   @Test
@@ -447,9 +455,11 @@ public class AppendTest
     );
 
     TopNQuery query = makeFilteredTopNQuery();
-    QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment2, pool);
+      HashMap<String, Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    }
   }
 
   @Test

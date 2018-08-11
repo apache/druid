@@ -28,8 +28,10 @@ import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.io.Closer;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.AuthConfig;
@@ -48,8 +50,10 @@ import io.druid.sql.http.SqlResource;
 import org.apache.calcite.tools.ValidationException;
 import org.easymock.EasyMock;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -58,12 +62,31 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 public class SqlResourceTest extends CalciteTestBase
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+
+  private static QueryRunnerFactoryConglomerate conglomerate;
+  private static Closer resourceCloser;
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
+        .createQueryRunnerFactoryConglomerate();
+    conglomerate = conglomerateCloserPair.lhs;
+    resourceCloser = conglomerateCloserPair.rhs;
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    resourceCloser.close();
+  }
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -77,14 +100,13 @@ public class SqlResourceTest extends CalciteTestBase
 
   private HttpServletRequest req;
 
-
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     req = EasyMock.createStrictMock(HttpServletRequest.class);
@@ -106,7 +128,7 @@ public class SqlResourceTest extends CalciteTestBase
         JSON_MAPPER,
         new PlannerFactory(
             druidSchema,
-            CalciteTests.createMockQueryLifecycleFactory(walker),
+            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,
             macroTable,
             plannerConfig,

@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -60,6 +61,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -232,9 +234,11 @@ public class SchemalessTestSimpleTest
         )
     );
 
-    QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
+      HashMap<String, Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
+    }
   }
 
   @Test

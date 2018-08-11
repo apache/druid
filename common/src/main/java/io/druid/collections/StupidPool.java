@@ -39,9 +39,6 @@ public class StupidPool<T> implements NonBlockingPool<T>
 {
   private static final Logger log = new Logger(StupidPool.class);
 
-  private final String name;
-  private final Supplier<T> generator;
-
   /**
    * StupidPool Implementation Note
    * It is assumed that StupidPools are never reclaimed by the GC, either stored in static fields or global singleton
@@ -50,13 +47,20 @@ public class StupidPool<T> implements NonBlockingPool<T>
    * and registered in the global lifecycle), in this close() method all {@link ObjectResourceHolder}s should be drained
    * from the {@code objects} queue, and notifier.disable() called for them.
    */
-  private final Queue<ObjectResourceHolder> objects = new ConcurrentLinkedQueue<>();
+  @VisibleForTesting
+  final Queue<ObjectResourceHolder> objects = new ConcurrentLinkedQueue<>();
+
   /**
    * {@link ConcurrentLinkedQueue}'s size() is O(n) queue traversal apparently for the sake of being 100%
    * wait-free, that is not required by {@code StupidPool}. In {@code poolSize} we account the queue size
    * ourselves, to avoid traversal of {@link #objects} in {@link #tryReturnToPool}.
    */
-  private final AtomicLong poolSize = new AtomicLong(0);
+  @VisibleForTesting
+  final AtomicLong poolSize = new AtomicLong(0);
+
+  private final String name;
+  private final Supplier<T> generator;
+
   private final AtomicLong leakedObjectsCounter = new AtomicLong(0);
 
   //note that this is just the max entries in the cache, pool can still create as many buffers as needed.

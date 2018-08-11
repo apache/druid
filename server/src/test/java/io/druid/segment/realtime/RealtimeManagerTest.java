@@ -41,7 +41,9 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.BaseQuery;
 import io.druid.query.Query;
@@ -82,6 +84,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -89,6 +92,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -101,6 +105,7 @@ import java.util.concurrent.TimeUnit;
 public class RealtimeManagerTest
 {
   private static QueryRunnerFactory factory;
+  private static Closer resourceCloser;
   private static QueryRunnerFactoryConglomerate conglomerate;
 
   private static final List<TestInputRowHolder> rows = Arrays.asList(
@@ -124,7 +129,9 @@ public class RealtimeManagerTest
   @BeforeClass
   public static void setupStatic()
   {
-    factory = initFactory();
+    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = initFactory();
+    factory = factoryAndCloser.lhs;
+    resourceCloser = factoryAndCloser.rhs;
     conglomerate = new QueryRunnerFactoryConglomerate()
     {
       @Override
@@ -133,6 +140,12 @@ public class RealtimeManagerTest
         return factory;
       }
     };
+  }
+
+  @AfterClass
+  public static void teardownStatic() throws IOException
+  {
+    resourceCloser.close();
   }
 
   @Before
@@ -742,7 +755,7 @@ public class RealtimeManagerTest
 
   }
 
-  private static GroupByQueryRunnerFactory initFactory()
+  private static Pair<GroupByQueryRunnerFactory, Closer> initFactory()
   {
     final GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
