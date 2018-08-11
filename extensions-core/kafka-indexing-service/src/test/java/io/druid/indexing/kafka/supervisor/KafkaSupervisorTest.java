@@ -70,8 +70,8 @@ import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
-import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.metrics.ExceptionCapturingServiceEmitter;
+import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -2183,7 +2183,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertNotNull(serviceEmitter.getStackTrace());
+    while (serviceEmitter.getStackTrace() == null) {
+      Thread.sleep(100);
+    }
+
+    Assert.assertTrue(serviceEmitter.getStackTrace().startsWith("io.druid.java.util.common.ISE: WTH?! cannot find"));
     Assert.assertEquals(
         "WTH?! cannot find taskGroup [0] among all taskGroups [{}]",
         serviceEmitter.getExceptionMessage()
