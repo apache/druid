@@ -11,7 +11,7 @@ Because there is some per-segment memory and processing overhead, it can sometim
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) and [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html) and [Tutorial: Querying data](../tutorials/tutorial-query.html).
 
 ## Load the initial data
 
@@ -19,7 +19,7 @@ For this tutorial, we'll be using the Wikipedia edits sample data, with an inges
 
 The ingestion spec can be found at `examples/compaction-init-index.json`. Let's submit that spec, which will create a datasource called `compaction-tutorial`:
 
-```
+```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/compaction-init-index.json http://localhost:8090/druid/indexer/v1/task
 ```
 
@@ -35,7 +35,7 @@ Running a COUNT(*) query on this datasource shows that there are 39,244 rows:
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/compaction-count-sql.json http://localhost:8082/druid/v2/sql
 ```
 
-```
+```json
 [{"EXPR$0":39244}]
 ```
 
@@ -45,7 +45,7 @@ Let's now combine these 24 segments into one segment.
 
 We have included a compaction task spec for this tutorial datasource at `examples/compaction-final-index.json`:
 
-```
+```json
 {
   "type": "compact",
   "dataSource": "compaction-tutorial",
@@ -67,7 +67,7 @@ In this tutorial example, only one compacted segment will be created, as the 392
 
 Let's submit this task now:
 
-```
+```json
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/compaction-final-index.json http://localhost:8090/druid/indexer/v1/task
 ```
 
@@ -88,7 +88,7 @@ Let's try running a COUNT(*) on `compaction-tutorial` again, where the row count
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/compaction-count-sql.json http://localhost:8082/druid/v2/sql
 ```
 
-```
+```json
 [{"EXPR$0":39244}]
 ```
 

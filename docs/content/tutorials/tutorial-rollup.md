@@ -11,13 +11,13 @@ This tutorial will demonstrate the effects of roll-up on an example dataset.
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine.
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) and [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html) and [Tutorial: Querying data](../tutorials/tutorial-query.html).
 
 ## Example data
 
 For this tutorial, we'll use a small sample of network flow event data, representing packet and byte counts for traffic from a source to a destination IP address that occurred within a particular second.
 
-```
+```json
 {"timestamp":"2018-01-01T01:01:35Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":20,"bytes":9024}
 {"timestamp":"2018-01-01T01:01:51Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":255,"bytes":21133}
 {"timestamp":"2018-01-01T01:01:59Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":11,"bytes":5780}
@@ -33,7 +33,7 @@ A file containing this sample input data is located at `examples/rollup-data.jso
 
 We'll ingest this data using the following ingestion task spec, located at `examples/rollup-index.json`.
 
-```
+```json
 {
   "type" : "index",
   "spec" : {
@@ -95,9 +95,9 @@ We will see how these definitions are used after we load this data.
 
 ## Load the example data
 
-From the druid-${DRUIDVERSION} package root, run the following command:
+From the druid-#{DRUIDVERSION} package root, run the following command:
 
-```
+```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/rollup-index.json http://localhost:8090/druid/indexer/v1/task
 ```
 
@@ -113,7 +113,7 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/rollup-select-sql
 
 The following results will be returned:
 
-```
+```json
 [
   {
     "__time": "2018-01-01T01:01:00.000Z",
@@ -160,7 +160,7 @@ The following results will be returned:
 
 Let's look at the three events in the original input data that occurred during `2018-01-01T01:01`:
 
-```
+```json
 {"timestamp":"2018-01-01T01:01:35Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":20,"bytes":9024}
 {"timestamp":"2018-01-01T01:01:51Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":255,"bytes":21133}
 {"timestamp":"2018-01-01T01:01:59Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":11,"bytes":5780}
@@ -168,7 +168,7 @@ Let's look at the three events in the original input data that occurred during `
 
 These three rows have been "rolled up" into the following row:
 
-```
+```json
   {
     "__time": "2018-01-01T01:01:00.000Z",
     "bytes": 35937,
@@ -185,12 +185,12 @@ Before the grouping occurs, the timestamps of the original input data are bucket
 
 Likewise, these two events that occurred during `2018-01-01T01:02` have been rolled up:
 
-```
+```json
 {"timestamp":"2018-01-01T01:02:14Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":38,"bytes":6289}
 {"timestamp":"2018-01-01T01:02:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":377,"bytes":359971}
 ```
 
-```
+```json
   {
     "__time": "2018-01-01T01:02:00.000Z",
     "bytes": 366260,
@@ -203,11 +203,11 @@ Likewise, these two events that occurred during `2018-01-01T01:02` have been rol
 
 For the last event recording traffic between 1.1.1.1 and 2.2.2.2, no roll-up took place, because this was the only event that occurred during `2018-01-01T01:03`:
 
-```
+```json
 {"timestamp":"2018-01-01T01:03:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":49,"bytes":10204}
 ```
 
-```
+```json
   {
     "__time": "2018-01-01T01:03:00.000Z",
     "bytes": 10204,

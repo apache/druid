@@ -9,7 +9,7 @@ This tutorial demonstrates how to delete existing data.
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
-Completing [Tutorial: Configuring retention](/docs/VERSION/tutorials/tutorial-retention.html) first is highly recommended, as we will be using retention rules in this tutorial.
+Completing [Tutorial: Configuring retention](../tutorials/tutorial-retention.html) first is highly recommended, as we will be using retention rules in this tutorial.
 
 ## Load initial data
 
@@ -17,7 +17,7 @@ In this tutorial, we will use the Wikipedia edits data, with an indexing spec th
 
 Let's load this initial data:
 
-```
+```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/deletion-index.json http://localhost:8090/druid/indexer/v1/task
 ```
 
@@ -48,9 +48,9 @@ In the `rule #2` box at the bottom, click `Drop` and `Forever`.
 
 This will cause the first 12 segments of `deletion-tutorial` to be dropped. However, these dropped segments are not removed from deep storage.
 
-You can see that all 24 segments are still present in deep storage by listing the contents of `druid-{DRUIDVERSION}/var/druid/segments/deletion-tutorial`:
+You can see that all 24 segments are still present in deep storage by listing the contents of `var/druid/segments/deletion-tutorial`:
 
-```
+```bash
 $ ls -l1 var/druid/segments/deletion-tutorial/
 2015-09-12T00:00:00.000Z_2015-09-12T01:00:00.000Z
 2015-09-12T01:00:00.000Z_2015-09-12T02:00:00.000Z
@@ -90,7 +90,7 @@ The top of the info box shows the full segment ID, e.g. `deletion-tutorial_2016-
 
 Let's disable the hour 14 segment by sending the following DELETE request to the coordinator, where {SEGMENT-ID} is the full segment ID shown in the info box:
 
-```
+```bash
 curl -XDELETE http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/segments/{SEGMENT-ID}
 ```
 
@@ -100,7 +100,7 @@ After that command completes, you should see that the segment for hour 14 has be
 
 Note that the hour 14 segment is still in deep storage:
 
-```
+```bash
 $ ls -l1 var/druid/segments/deletion-tutorial/
 2015-09-12T00:00:00.000Z_2015-09-12T01:00:00.000Z
 2015-09-12T01:00:00.000Z_2015-09-12T02:00:00.000Z
@@ -134,13 +134,13 @@ Now that we have disabled some segments, we can submit a Kill Task, which will d
 
 A Kill Task spec has been provided at `examples/deletion-kill.json`. Submit this task to the Overlord with the following command:
 
-```
+```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/deletion-kill.json http://localhost:8090/druid/indexer/v1/task
 ```
 
 After this task completes, you can see that the disabled segments have now been removed from deep storage:
 
-```
+```bash
 $ ls -l1 var/druid/segments/deletion-tutorial/
 2015-09-12T12:00:00.000Z_2015-09-12T13:00:00.000Z
 2015-09-12T13:00:00.000Z_2015-09-12T14:00:00.000Z

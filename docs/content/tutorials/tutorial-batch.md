@@ -19,7 +19,7 @@ A data load is initiated by submitting an *ingestion task* spec to the Druid ove
 We have provided an ingestion spec at `examples/wikipedia-index.json`, shown here for convenience,
 which has been configured to read the `quickstart/wikiticker-2015-09-12-sampled.json.gz` input file:
 
-```
+```json
 {
   "type" : "index",
   "spec" : {
@@ -121,11 +121,11 @@ indicating "fully available": [http://localhost:8081/#/](http://localhost:8081/#
 Your data should become fully available within a minute or two. You can monitor this process on 
 your Coordinator console at [http://localhost:8081/#/](http://localhost:8081/#/).
 
-Once the data is loaded, please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+Once the data is loaded, please follow the [query tutorial](../tutorials/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 
-If you wish to go through any of the other ingestion tutorials, you will need to reset the cluster and follow these [reset instructions](index.html#resetting-the-cluster), as the other tutorials will write to the same "wikipedia" datasource.
+If you wish to go through any of the other ingestion tutorials, you will need to reset the cluster and follow these [reset instructions](index.html#resetting-cluster-state), as the other tutorials will write to the same "wikipedia" datasource.
 
 ## Further reading
 

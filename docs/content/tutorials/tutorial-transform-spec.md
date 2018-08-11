@@ -9,13 +9,13 @@ This tutorial will demonstrate how to use transform specs to filter and transfor
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine.
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) and [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html) and [Tutorial: Querying data](../tutorials/tutorial-query.html).
 
 ## Sample data
 
 We've included sample data for this tutorial at `examples/transform-data.json`, reproduced here for convenience:
 
-```
+```json
 {"timestamp":"2018-01-01T07:01:35Z","animal":"octopus",  "location":1, "number":100}
 {"timestamp":"2018-01-01T05:01:35Z","animal":"mongoose", "location":2,"number":200}
 {"timestamp":"2018-01-01T06:01:35Z","animal":"snake", "location":3, "number":300}
@@ -26,7 +26,7 @@ We've included sample data for this tutorial at `examples/transform-data.json`, 
 
 We will ingest the sample data using the following spec, which demonstrates the use of transform specs:
 
-```
+```json
 {
   "type" : "index",
   "spec" : {
@@ -113,9 +113,9 @@ Additionally, we have an OR filter with three clauses:
 
 This filter selects the first 3 rows, and it will exclude the final "lion" row in the input data. Note that the filter is applied after the transformation.
 
-Let's submit this task now, which has been included at `quickstart/tutorial/transform-index.json`:
+Let's submit this task now, which has been included at `examples/transform-index.json`:
 
-```
+```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/transform-index.json http://localhost:8090/druid/indexer/v1/task
 ```
 
@@ -123,11 +123,11 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/transform-index.j
 
 Let's a `select * from "transform-tutorial";` query to see what was ingested:
 
-```
+```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/transform-select-sql.json http://localhost:8082/druid/v2/sql
 ```
 
-```
+```json
 [
   {
     "__time": "2018-01-01T05:01:00.000Z",

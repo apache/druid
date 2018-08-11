@@ -9,7 +9,7 @@ This tutorial will guide the reader through the process of defining an ingestion
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html), [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html), and [Tutorial: Rollup](/docs/VERSION/tutorials/tutorial-rollup.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html), [Tutorial: Querying data](../tutorials/tutorial-query.html), and [Tutorial: Rollup](../tutorials/tutorial-rollup.html).
 
 ## Example data
 
@@ -24,7 +24,7 @@ Suppose we have the following network flow data:
 * `bytes`: number of bytes transmitted
 * `cost`: the cost of sending the traffic
 
-```
+```json
 {"ts":"2018-01-01T01:01:35Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2", "srcPort":2000, "dstPort":3000, "protocol": 6, "packets":10, "bytes":1000, "cost": 1.4}
 {"ts":"2018-01-01T01:01:51Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2", "srcPort":2000, "dstPort":3000, "protocol": 6, "packets":20, "bytes":2000, "cost": 3.1}
 {"ts":"2018-01-01T01:01:59Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2", "srcPort":2000, "dstPort":3000, "protocol": 6, "packets":30, "bytes":3000, "cost": 0.4}
@@ -74,7 +74,7 @@ A `dataSchema` has a `parser` field, which defines the parser that Druid will us
 
 Since our input data is represented as JSON strings, we'll use a `string` parser with `json` format:
 
-```
+```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
   "parser" : {
@@ -92,7 +92,7 @@ The `parser` needs to know how to extract the main timestamp field from the inpu
 
 The timestamp column in our input data is named "ts", containing ISO 8601 timestamps, so let's add a `timestampSpec` with that information to the `parseSpec`:
 
-```
+```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
   "parser" : {
@@ -128,7 +128,7 @@ For this tutorial, let's enable rollup. This is specified with a `granularitySpe
 
 Note that the `granularitySpec` lies outside of the `parser`. We will revist the `parser` soon when we define our dimensions and metrics.
 
-```
+```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
   "parser" : {
@@ -163,7 +163,7 @@ Let's look at how to define these dimensions and metrics within the ingestion sp
 
 Dimensions are specified with a `dimensionsSpec` inside the `parseSpec`.
 
-```
+```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
   "parser" : {
@@ -255,7 +255,7 @@ Note that we have also defined a `count` aggregator. The count aggregator will t
 
 If we were not using rollup, all columns would be specified in the `dimensionsSpec`, e.g.:
 
-```
+```json
       "dimensionsSpec" : {
         "dimensions": [
           "srcIP",
@@ -284,7 +284,7 @@ There are some additional properties we need to set in the `granularitySpec`:
 
 Segment granularity is configured by the `segmentGranularity` property in the `granularitySpec`. For this tutorial, we'll create hourly segments:
 
-```
+```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
   "parser" : {
@@ -326,7 +326,7 @@ Our input data has events from two separate hours, so this task will generate tw
 
 The query granularity is configured by the `queryGranularity` property in the `granularitySpec`. For this tutorial, let's use minute granularity:
 
-```
+```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
   "parser" : {
@@ -365,13 +365,13 @@ The query granularity is configured by the `queryGranularity` property in the `g
 
 To see the effect of the query granularity, let's look at this row from the raw input data:
 
-```
+```json
 {"ts":"2018-01-01T01:03:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2", "srcPort":5000, "dstPort":7000, "protocol": 6, "packets":60, "bytes":6000, "cost": 4.3}
 ```
 
 When this row is ingested with minute queryGranularity, Druid will floor the row's timestamp to minute buckets:
 
-```
+```json
 {"ts":"2018-01-01T01:03:00Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2", "srcPort":5000, "dstPort":7000, "protocol": 6, "packets":60, "bytes":6000, "cost": 4.3}
 ```
 
@@ -381,7 +381,7 @@ For batch tasks, it is necessary to define a time interval. Input rows with time
 
 The interval is also specified in the `granularitySpec`:
 
-```
+```json
 "dataSchema" : {
   "dataSource" : "ingestion-tutorial",
   "parser" : {
@@ -425,7 +425,7 @@ We've now finished defining our `dataSchema`. The remaining steps are to place t
 
 The `dataSchema` is shared across all task types, but each task type has its own specification format. For this tutorial, we will use the native batch ingestion task:
 
-```
+```json
 {
   "type" : "index",
   "spec" : {
@@ -473,7 +473,7 @@ The `dataSchema` is shared across all task types, but each task type has its own
 Now let's define our input source, which is specified in an `ioConfig` object. Each task type has its own type of `ioConfig`. The native batch task uses "firehoses" to read input data, so let's configure a "local" firehose to read the example netflow data we saved earlier:
 
 
-```
+```json
     "ioConfig" : {
       "type" : "index",
       "firehose" : {
@@ -484,7 +484,7 @@ Now let's define our input source, which is specified in an `ioConfig` object. E
     }
 ```
 
-```
+```json
 {
   "type" : "index",
   "spec" : {
@@ -541,7 +541,7 @@ Each ingestion task has a `tuningConfig` section that allows users to tune vario
 
 As an example, let's add a `tuningConfig` that sets a target segment size for the native batch ingestion task:
 
-```
+```json
     "tuningConfig" : {
       "type" : "index",
       "targetPartitionSize" : 5000000
@@ -554,7 +554,7 @@ Note that each ingestion task has its own type of `tuningConfig`.
 
 We've finished defining the ingestion spec, it should now look like the following:
 
-```
+```json
 {
   "type" : "index",
   "spec" : {
@@ -611,9 +611,9 @@ We've finished defining the ingestion spec, it should now look like the followin
 
 ## Submit the task and query the data
 
-From the druid-${DRUIDVERSION} package root, run the following command:
+From the druid-#{DRUIDVERSION} package root, run the following command:
 
-```
+```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/ingestion-tutorial-index.json http://localhost:8090/druid/indexer/v1/task
 ```
 
@@ -625,7 +625,7 @@ Let's issue a `select * from "ingestion-tutorial";` query to see what data was i
 curl -X 'POST' -H 'Content-Type:application/json' -d @examples/ingestion-tutorial-select-sql.json http://localhost:8082/druid/v2/sql
 ```
 
-```
+```json
 [
   {
     "__time": "2018-01-01T01:01:00.000Z",
