@@ -20,8 +20,8 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -57,7 +57,6 @@ import io.druid.client.selector.ServerSelector;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.hll.HyperLogLogCollector;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
@@ -72,16 +71,15 @@ import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.TrinaryFn;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
@@ -101,8 +99,6 @@ import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
-import io.druid.query.groupby.GroupByQueryConfig;
-import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchHit;
@@ -119,7 +115,6 @@ import io.druid.query.select.SelectResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
-import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -145,6 +140,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -152,6 +148,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -172,19 +169,15 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of(
+  private static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of(
       "finalize", false,
 
       // GroupBy v2 won't cache on the broker, so test with v1.
       "groupByStrategy", GroupByStrategySelector.STRATEGY_V1
   );
-  public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.of());
-  public static final String DATA_SOURCE = "test";
-  static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
-
-  static {
-    jsonMapper.getFactory().setCodec(jsonMapper);
-  }
+  private static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.of());
+  private static final String DATA_SOURCE = "test";
+  private static final ObjectMapper JSON_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
 
   /**
    * We want a deterministic test, but we'd also like a bit of randomness for the distribution of segments
@@ -260,52 +253,22 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimes.inferTzfromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
-
-  private static final Supplier<SelectQueryConfig> selectConfigSupplier = Suppliers.ofInstance(new SelectQueryConfig(true));
-
-  static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
-      ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                  .put(
-                      TimeseriesQuery.class,
-                      new TimeseriesQueryQueryToolChest(
-                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                      )
-                  )
-                  .put(
-                      TopNQuery.class, new TopNQueryQueryToolChest(
-                          new TopNQueryConfig(),
-                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                      )
-                  )
-                  .put(
-                      SearchQuery.class, new SearchQueryQueryToolChest(
-                          new SearchQueryConfig(),
-                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                      )
-                  )
-                  .put(
-                      SelectQuery.class,
-                      new SelectQueryQueryToolChest(
-                          jsonMapper,
-                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
-                          selectConfigSupplier
-                      )
-                  )
-                  .put(
-                      GroupByQuery.class,
-                      GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig()).getToolchest()
-                  )
-                  .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
-                  .build()
+  private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
+      new SelectQueryConfig(true)
   );
-  private final Random random;
-  public CachingClusteredClient client;
-  private Runnable queryCompletedCallback;
+  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER = CachingClusteredClientTestUtils
+      .createWarehouse(JSON_MAPPER, SELECT_CONFIG_SUPPLIER);
+  private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
+  private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
 
-  protected VersionedIntervalTimeline<String, ServerSelector> timeline;
-  protected TimelineServerView serverView;
-  protected Cache cache;
-  DruidServer[] servers;
+  private final Random random;
+
+  private CachingClusteredClient client;
+  private Runnable queryCompletedCallback;
+  private TimelineServerView serverView;
+  private VersionedIntervalTimeline<String, ServerSelector> timeline;
+  private Cache cache;
+  private DruidServer[] servers;
 
   public CachingClusteredClientTest(int randomSeed)
   {
@@ -328,13 +291,19 @@ public class CachingClusteredClientTest
     );
   }
 
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    RESOURCE_CLOSER.close();
+  }
+
   @Before
   public void setUp()
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1));
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1));
 
     servers = new DruidServer[]{
         new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
@@ -429,7 +398,7 @@ public class CachingClusteredClientTest
     client = makeClient(
         new BackgroundCachePopulator(
             randomizingExecutorService,
-            jsonMapper,
+            JSON_MAPPER,
             new CachePopulatorStats(),
             -1
         )
@@ -590,7 +559,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1), cache, limit);
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, limit);
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     final DataSegment dataSegment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(dataSegment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
@@ -615,7 +584,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1), cache, 0);
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, 0);
     getDefaultQueryRunner().run(QueryPlus.wrap(query), context);
     EasyMock.verify(cache);
     EasyMock.verify(dataSegment);
@@ -1337,9 +1306,9 @@ public class CachingClusteredClientTest
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(),
         new SelectQueryQueryToolChest(
-            jsonMapper,
+            JSON_MAPPER,
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
-            selectConfigSupplier
+            SELECT_CONFIG_SUPPLIER
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -1410,9 +1379,9 @@ public class CachingClusteredClientTest
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(),
         new SelectQueryQueryToolChest(
-            jsonMapper,
+            JSON_MAPPER,
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
-            selectConfigSupplier
+            SELECT_CONFIG_SUPPLIER
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -1482,9 +1451,11 @@ public class CachingClusteredClientTest
     collector.add(hashFn.hashString("abc123", StandardCharsets.UTF_8).asBytes());
     collector.add(hashFn.hashString("123abc", StandardCharsets.UTF_8).asBytes());
 
+    final GroupByQuery query = builder.build();
+
     testQueryCaching(
         getDefaultQueryRunner(),
-        builder.build(),
+        query,
         Intervals.of("2011-01-01/2011-01-02"),
         makeGroupByResults(
             DateTimes.of("2011-01-01"),
@@ -1528,7 +1499,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(),
-        GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig()).getToolchest()
+        WAREHOUSE.getToolChest(query)
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedObjects(
@@ -2686,7 +2657,7 @@ public class CachingClusteredClientTest
           }
         },
         cache,
-        jsonMapper,
+        JSON_MAPPER,
         cachePopulator,
         new CacheConfig()
         {
@@ -2988,9 +2959,10 @@ public class CachingClusteredClientTest
         .setAggregatorSpecs(AGGS)
         .setContext(CONTEXT);
 
+    final GroupByQuery query1 = builder.build();
     testQueryCaching(
         getDefaultQueryRunner(),
-        builder.build(),
+        query1,
         Intervals.of("2011-01-01/2011-01-02"),
         makeGroupByResults(
             DateTimes.of("2011-01-01"),
@@ -3024,7 +2996,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(),
-        GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig()).getToolchest()
+        WAREHOUSE.getToolChest(query1)
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedObjects(
@@ -3044,7 +3016,7 @@ public class CachingClusteredClientTest
         ""
     );
 
-    GroupByQuery query = builder
+    final GroupByQuery query2 = builder
         .setInterval("2011-01-05/2011-01-10").setDimensions(new DefaultDimensionSpec("a", "output2"))
         .setAggregatorSpecs(RENAMED_AGGS)
         .build();
@@ -3061,7 +3033,7 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09T"), ImmutableMap.of("output2", "g", "rows", 7, "imps", 7, "impers2", 7),
             DateTimes.of("2011-01-09T01"), ImmutableMap.of("output2", "g", "rows", 7, "imps", 7, "impers2", 7)
         ),
-        runner.run(QueryPlus.wrap(query), context),
+        runner.run(QueryPlus.wrap(query2), context),
         "renamed aggregators test"
     );
   }

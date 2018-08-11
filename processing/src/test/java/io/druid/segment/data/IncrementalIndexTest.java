@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,7 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -39,6 +38,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryPlus;
@@ -64,15 +64,18 @@ import io.druid.segment.CloserRule;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndex.Builder;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.Interval;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -99,14 +102,20 @@ public class IncrementalIndexTest
     IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
   }
 
+  private static final Closer resourceCloser = Closer.create();
+
+  @AfterClass
+  public static void teardown() throws IOException
+  {
+    resourceCloser.close();
+  }
+
   private final IndexCreator indexCreator;
 
   @Rule
-  public final CloserRule closer = new CloserRule(false);
+  public final CloserRule closerRule = new CloserRule(false);
 
-  public IncrementalIndexTest(
-      IndexCreator indexCreator
-  )
+  public IncrementalIndexTest(IndexCreator indexCreator)
   {
     this.indexCreator = indexCreator;
   }
@@ -114,86 +123,42 @@ public class IncrementalIndexTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return IncrementalIndexTest.createIndex(factories);
-                  }
-                }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setSimpleTestingIndexSchema(factories)
-                        .setMaxRowCount(1000000)
-                        .buildOffheap(
-                            new StupidPool<ByteBuffer>(
-                                "OffheapIncrementalIndex-bufferPool",
-                                new Supplier<ByteBuffer>()
-                                {
-                                  @Override
-                                  public ByteBuffer get()
-                                  {
-                                    return ByteBuffer.allocate(256 * 1024);
-                                  }
-                                }
-                            )
-                        );
-                  }
-                }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return IncrementalIndexTest.createNoRollupIndex(factories);
-                  }
-                }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setIndexSchema(
-                            new IncrementalIndexSchema.Builder()
-                                .withMetrics(factories)
-                                .withRollup(false)
-                                .build()
-                        )
-                        .setMaxRowCount(1000000)
-                        .buildOffheap(
-                            new StupidPool<ByteBuffer>(
-                                "OffheapIncrementalIndex-bufferPool",
-                                new Supplier<ByteBuffer>()
-                                {
-                                  @Override
-                                  public ByteBuffer get()
-                                  {
-                                    return ByteBuffer.allocate(256 * 1024);
-                                  }
-                                }
-                            )
-                        );
-                  }
-                }
-            }
-
+    final List<Object[]> params = new ArrayList<>();
+    params.add(new Object[] {(IndexCreator) IncrementalIndexTest::createIndex});
+    final CloseableStupidPool<ByteBuffer> pool1 = new CloseableStupidPool<>(
+        "OffheapIncrementalIndex-bufferPool",
+        () -> ByteBuffer.allocate(256 * 1024)
+    );
+    resourceCloser.register(pool1);
+    params.add(
+        new Object[] {
+            (IndexCreator) factories -> new Builder()
+                .setSimpleTestingIndexSchema(factories)
+                .setMaxRowCount(1000000)
+                .buildOffheap(pool1)
         }
     );
+    params.add(new Object[] {(IndexCreator) IncrementalIndexTest::createNoRollupIndex});
+    final CloseableStupidPool<ByteBuffer> pool2 = new CloseableStupidPool<>(
+        "OffheapIncrementalIndex-bufferPool",
+        () -> ByteBuffer.allocate(256 * 1024)
+    );
+    resourceCloser.register(pool2);
+    params.add(
+        new Object[] {
+            (IndexCreator) factories -> new Builder()
+                .setIndexSchema(
+                    new IncrementalIndexSchema.Builder()
+                        .withMetrics(factories)
+                        .withRollup(false)
+                        .build()
+                )
+                .setMaxRowCount(1000000)
+                .buildOffheap(pool2)
+        }
+    );
+
+    return params;
   }
 
   public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
@@ -302,7 +267,7 @@ public class IncrementalIndexTest
   public void testCaseSensitivity() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = closer.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
 
     populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
@@ -324,7 +289,7 @@ public class IncrementalIndexTest
   public void testFilteredAggregators() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = closer.closeLater(
+    IncrementalIndex index = closerRule.closeLater(
         indexCreator.createIndex(new AggregatorFactory[]{
             new CountAggregatorFactory("count"),
             new FilteredAggregatorFactory(
@@ -420,7 +385,7 @@ public class IncrementalIndexTest
       );
     }
 
-    final IncrementalIndex index = closer.closeLater(
+    final IncrementalIndex index = closerRule.closeLater(
         indexCreator.createIndex(
             ingestAggregatorFactories.toArray(
                 new AggregatorFactory[0]
@@ -535,7 +500,7 @@ public class IncrementalIndexTest
     }
 
 
-    final IncrementalIndex index = closer.closeLater(
+    final IncrementalIndex index = closerRule.closeLater(
         indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[0]))
     );
     final int concurrentThreads = 2;
@@ -717,7 +682,7 @@ public class IncrementalIndexTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = closer.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+    final IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;
@@ -778,7 +743,7 @@ public class IncrementalIndexTest
         )
         .setMaxRowCount(1000000)
         .buildOnheap();
-    closer.closeLater(incrementalIndex);
+    closerRule.closeLater(incrementalIndex);
 
     Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
   }
@@ -790,7 +755,7 @@ public class IncrementalIndexTest
         .setSimpleTestingIndexSchema(/* empty */)
         .setMaxRowCount(10)
         .buildOnheap();
-    closer.closeLater(index);
+    closerRule.closeLater(index);
     index.add(
         new MapBasedInputRow(
             1481871600000L,

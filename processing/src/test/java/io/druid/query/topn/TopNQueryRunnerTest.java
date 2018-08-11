@@ -28,7 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
@@ -37,6 +37,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.io.Closer;
 import io.druid.js.JavaScriptConfig;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.BySegmentResultValue;
@@ -90,6 +91,7 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -97,6 +99,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -111,6 +114,14 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class TopNQueryRunnerTest
 {
+  private static final Closer resourceCloser = Closer.create();
+
+  @AfterClass
+  public static void teardown() throws IOException
+  {
+    resourceCloser.close();
+  }
+
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
@@ -137,11 +148,17 @@ public class TopNQueryRunnerTest
 
   public static List<QueryRunner<Result<TopNResultValue>>> queryRunners()
   {
+    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
+    final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
+        "TopNQueryRunnerFactory-bufferPool",
+        () -> ByteBuffer.allocate(20000)
+    );
+
     List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();
     retVal.addAll(
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
-                TestQueryRunners.getPool(),
+                defaultPool,
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
                     QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
@@ -153,10 +170,7 @@ public class TopNQueryRunnerTest
     retVal.addAll(
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
-                new StupidPool<ByteBuffer>(
-                    "TopNQueryRunnerFactory-bufferPool",
-                    () -> ByteBuffer.allocate(20000)
-                ),
+                customPool,
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
                     QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
