@@ -80,7 +80,7 @@ public class SegmentGranularityRejectionPolicyFactory implements RejectionPolicy
             }
           }
           // throw away if timestamp too much ahead current time
-          if (segmentEnd > 0 && timestamp > segmentEnd) {
+          if (segmentEnd > 0 && timestamp >= segmentEnd) {
             return false;
           }
           // if timestamp is little ahead current time, threat it as current time
