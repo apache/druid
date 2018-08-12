@@ -56,7 +56,7 @@ public class GraphiteEmitter implements Emitter
   private final List<Emitter> requestLogEmitters;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<GraphiteEvent> eventsQueue;
-  private static final long FLUSH_TIMEOUT = 60000; // default flush wait 1 min
+  private static final long FLUSH_TIMEOUT = TimeUnit.MINUTES.toMillis(1); // default flush wait 1 min
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
       .setDaemon(true)
       .setNameFormat("GraphiteEmitter-%s")

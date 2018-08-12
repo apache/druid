@@ -28,11 +28,12 @@ import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
 {
-  private static final long SHUTDOWN_WAIT_TIMEOUT = 60000;
+  private static final long SHUTDOWN_WAIT_TIMEOUT = TimeUnit.MINUTES.toMillis(1);
 
   private final SynchronizedStateHolder state = new SynchronizedStateHolder(State.INITIALIZED);
   private final Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>();

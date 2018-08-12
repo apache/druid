@@ -73,7 +73,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 {
   private static final String DATA_SOURCE = "foo";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final long PUBLISH_TIMEOUT = 5000;
+  private static final long PUBLISH_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
 
   private static final List<InputRow> ROWS = ImmutableList.of(
       new MapBasedInputRow(

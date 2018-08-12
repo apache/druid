@@ -61,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -149,7 +150,7 @@ public class TestKafkaExtractionCluster
           @Override
           public long nanoseconds()
           {
-            return milliseconds() * 1_000_000;
+            return TimeUnit.MILLISECONDS.toNanos(milliseconds());
           }
 
           @Override

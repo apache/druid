@@ -31,12 +31,13 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.lang.annotation.Annotation;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
 public class JettyHttpClientModule implements Module
 {
-  private static final long CLIENT_CONNECT_TIMEOUT = 500;
+  private static final long CLIENT_CONNECT_TIMEOUT = TimeUnit.MILLISECONDS.toMillis(500);
 
   public static JettyHttpClientModule global()
   {

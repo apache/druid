@@ -70,8 +70,8 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
-  private static final long PUBLISH_TIMEOUT = 10000;
-  private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
+  private static final long PUBLISH_TIMEOUT = TimeUnit.SECONDS.toMillis(10);
+  private static final long HANDOFF_CONDITION_TIMEOUT = TimeUnit.SECONDS.toMillis(1);
 
   private static final List<InputRow> ROWS = Arrays.asList(
       new MapBasedInputRow(

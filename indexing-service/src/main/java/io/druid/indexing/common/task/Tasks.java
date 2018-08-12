@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 public class Tasks
 {
@@ -42,7 +43,7 @@ public class Tasks
   public static final int DEFAULT_BATCH_INDEX_TASK_PRIORITY = 50;
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
   public static final int DEFAULT_TASK_PRIORITY = 0;
-  public static final long DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 min
+  public static final long DEFAULT_LOCK_TIMEOUT = TimeUnit.MINUTES.toMillis(5);
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";

@@ -54,6 +54,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -290,7 +291,7 @@ public class TaskQueue
         }
         // awaitNanos because management may become necessary without this condition signalling,
         // due to e.g. tasks becoming ready when other folks mess with the TaskLockbox.
-        managementMayBeNecessary.awaitNanos(60000000000L /* 60 seconds */);
+        managementMayBeNecessary.awaitNanos(TimeUnit.SECONDS.toNanos(60));
       }
       finally {
         giant.unlock();

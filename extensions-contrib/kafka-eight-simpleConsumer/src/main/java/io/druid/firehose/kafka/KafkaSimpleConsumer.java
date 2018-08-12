@@ -49,6 +49,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * refer @{link https://cwiki.apache.org/confluence/display/KAFKA/0.8.0+SimpleConsumer+Example}
@@ -74,10 +75,10 @@ public class KafkaSimpleConsumer
   private List<HostAndPort> replicaBrokers;
   private SimpleConsumer consumer = null;
 
-  private static final int SO_TIMEOUT = 30000;
+  private static final int SO_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(30);
   private static final int BUFFER_SIZE = 65536;
-  private static final long RETRY_INTERVAL = 1000L;
-  private static final int FETCH_SIZE = 100000000;
+  private static final long RETRY_INTERVAL = TimeUnit.MINUTES.toMillis(1);
+  private static final int FETCH_SIZE = 100_000_000;
 
   public KafkaSimpleConsumer(String topic, int partitionId, String clientId, List<String> brokers, boolean earliest)
   {
