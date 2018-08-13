@@ -2261,9 +2261,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskClient.setEndOffsetsAsync(anyString(), EasyMock.eq(ImmutableMap.of(0, 10L)), anyBoolean()))
         .andReturn(Futures.immediateFuture(true))
         .anyTimes();
-//    taskQueue.shutdown("id1");
-//    taskQueue.shutdown("id2");
-//    taskQueue.shutdown("id3");
 
     replayAll();
 
@@ -2285,17 +2282,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     verifyAll();
-
-//    while (serviceEmitter.getStackTrace() == null) {
-//      Thread.sleep(100);
-//    }
-
-//    Assert.assertTrue(serviceEmitter.getStackTrace().startsWith("io.druid.java.util.common.ISE: WTH?! cannot find"));
-//    Assert.assertEquals(
-//        "WTH?! cannot find taskGroup [0] among all taskGroups [{}]",
-//        serviceEmitter.getExceptionMessage()
-//    );
-//    Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
   }
 
   private void addSomeEvents(int numEventsPerPartition) throws Exception
