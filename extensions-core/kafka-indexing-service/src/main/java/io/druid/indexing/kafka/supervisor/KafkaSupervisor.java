@@ -509,23 +509,38 @@ public class KafkaSupervisor implements Supervisor
   }
 
   @Override
-  public void checkpoint(int taskGroupId, DataSourceMetadata previousCheckpoint, DataSourceMetadata currentCheckpoint)
+  public void checkpoint(
+      String taskId,
+      @Nullable Integer nullableTaskGroupId,
+      DataSourceMetadata previousCheckPoint,
+      DataSourceMetadata currentCheckPoint
+  )
   {
-    Preconditions.checkNotNull(previousCheckpoint, "previousCheckpoint");
-    Preconditions.checkNotNull(currentCheckpoint, "current checkpoint cannot be null");
+    Preconditions.checkNotNull(previousCheckPoint, "previousCheckpoint");
+    Preconditions.checkNotNull(currentCheckPoint, "current checkpoint cannot be null");
     Preconditions.checkArgument(
-        ioConfig.getTopic().equals(((KafkaDataSourceMetadata) currentCheckpoint).getKafkaPartitions().getTopic()),
+        ioConfig.getTopic().equals(((KafkaDataSourceMetadata) currentCheckPoint).getKafkaPartitions().getTopic()),
         "Supervisor topic [%s] and topic in checkpoint [%s] does not match",
         ioConfig.getTopic(),
-        ((KafkaDataSourceMetadata) currentCheckpoint).getKafkaPartitions().getTopic()
+        ((KafkaDataSourceMetadata) currentCheckPoint).getKafkaPartitions().getTopic()
     );
 
-    log.info("Checkpointing [%s] for taskGroup [%s]", currentCheckpoint, taskGroupId);
+    final int taskGroupId;
+    if (nullableTaskGroupId == null) {
+      taskGroupId = taskGroups.entrySet().stream().filter(entry -> {
+        final TaskGroup taskGroup = entry.getValue();
+        return taskGroup.taskIds().contains(taskId);
+      }).findAny().orElseThrow(() -> new ISE("Cannot find taskGroup for taskId[%s]", taskId)).getKey();
+    } else {
+      taskGroupId = nullableTaskGroupId;
+    }
+
+    log.info("Checkpointing [%s] for taskGroup [%s]", currentCheckPoint, taskGroupId);
     notices.add(
         new CheckpointNotice(
             taskGroupId,
-            (KafkaDataSourceMetadata) previousCheckpoint,
-            (KafkaDataSourceMetadata) currentCheckpoint
+            (KafkaDataSourceMetadata) previousCheckPoint,
+            (KafkaDataSourceMetadata) currentCheckPoint
         )
     );
   }

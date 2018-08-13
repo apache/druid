@@ -2060,7 +2060,8 @@ public class KafkaIndexTaskTest
           @Override
           public boolean checkPointDataSourceMetadata(
               String supervisorId,
-              int taskGroupId,
+              String taskId,
+              @Nullable Integer taskGroupId,
               @Nullable DataSourceMetadata previousDataSourceMetadata,
               @Nullable DataSourceMetadata currentDataSourceMetadata
           )
