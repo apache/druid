@@ -47,7 +47,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(ITUnionQueryTest.class);
   private static final String UNION_TASK_RESOURCE = "/indexer/wikipedia_union_index_task.json";
   private static final String EVENT_RECEIVER_SERVICE_PREFIX = "eventReceiverServiceName";
-  private static final String UNION_DATA_FILE = "/indexer/wikipedia_index_data.json";
+  private static final String UNION_DATA_FILE = "/data/union_query/wikipedia_index_data.json";
   private static final String UNION_QUERIES_RESOURCE = "/indexer/union_queries.json";
   private static final String UNION_DATASOURCE = "wikipedia_index_test";
 
@@ -91,7 +91,9 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       RetryUtil.retryUntil(
           () -> {
             for (int i = 0; i < numTasks; i++) {
-              if (queryHelper.countRows(UNION_DATASOURCE + i, "2013-08-31/2013-09-01") < 5) {
+              final int countRows = queryHelper.countRows(UNION_DATASOURCE + i, "2013-08-31/2013-09-01");
+              if (countRows < 5) {
+                LOG.warn("%d events have been ingested to %s so far", countRows, UNION_DATASOURCE + i);
                 return false;
               }
             }

@@ -31,7 +31,7 @@ import org.junit.Test;
 public class StupidPoolTest
 {
   private Supplier<String> generator;
-  private StupidPool<String> poolOfString;
+  private CloseableStupidPool<String> poolOfString;
   private ResourceHolder<String> resourceHolderObj;
   private String defaultString = new String("test");
 
@@ -41,7 +41,7 @@ public class StupidPoolTest
     generator = EasyMock.createMock(Supplier.class);
     EasyMock.expect(generator.get()).andReturn(defaultString).anyTimes();
     EasyMock.replay(generator);
-    poolOfString = new StupidPool<>("poolOfString", generator);
+    poolOfString = new CloseableStupidPool<>("poolOfString", generator);
     resourceHolderObj = poolOfString.take();
   }
 
@@ -51,6 +51,7 @@ public class StupidPoolTest
     if (resourceHolderObj != null) {
       resourceHolderObj.close();
     }
+    poolOfString.close();
   }
 
   @Test

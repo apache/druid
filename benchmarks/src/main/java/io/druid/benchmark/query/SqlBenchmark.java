@@ -27,8 +27,10 @@ import io.druid.benchmark.datagen.SegmentGenerator;
 import io.druid.data.input.Row;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -88,6 +90,7 @@ public class SqlBenchmark
   private PlannerFactory plannerFactory;
   private GroupByQuery groupByQuery;
   private String sqlQuery;
+  private Closer resourceCloser;
 
   @Setup(Level.Trial)
   public void setup()
@@ -107,15 +110,17 @@ public class SqlBenchmark
     this.segmentGenerator = new SegmentGenerator();
 
     final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
-    final QueryRunnerFactoryConglomerate conglomerate = CalciteTests.queryRunnerFactoryConglomerate();
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
+        .createQueryRunnerFactoryConglomerate();
+    final QueryRunnerFactoryConglomerate conglomerate = conglomerateCloserPair.lhs;
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
 
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
     plannerFactory = new PlannerFactory(
-        CalciteTests.createMockSchema(walker, plannerConfig),
+        CalciteTests.createMockSchema(conglomerate, walker, plannerConfig),
         new TestServerInventoryView(walker.getSegments()),
-        CalciteTests.createMockQueryLifecycleFactory(walker),
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -152,6 +157,10 @@ public class SqlBenchmark
     if (segmentGenerator != null) {
       segmentGenerator.close();
       segmentGenerator = null;
+    }
+
+    if (resourceCloser != null) {
+      resourceCloser.close();
     }
 
     if (tmpDir != null) {

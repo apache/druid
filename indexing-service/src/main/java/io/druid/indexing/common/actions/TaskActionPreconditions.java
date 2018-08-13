@@ -42,7 +42,12 @@ public class TaskActionPreconditions
   )
   {
     if (!isLockCoversSegments(task, taskLockbox, segments)) {
-      throw new ISE("Segments not covered by locks for task: %s", task.getId());
+      throw new ISE(
+          "Segments[%s] are not covered by locks[%s] for task[%s]",
+          segments,
+          taskLockbox.findLocksForTask(task),
+          task.getId()
+      );
     }
   }
 

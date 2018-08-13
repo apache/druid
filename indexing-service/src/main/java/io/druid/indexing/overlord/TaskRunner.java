@@ -22,11 +22,13 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.guice.annotations.PublicApi;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.java.util.common.Pair;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -93,6 +95,12 @@ public interface TaskRunner
   Collection<? extends TaskRunnerWorkItem> getPendingTasks();
 
   Collection<? extends TaskRunnerWorkItem> getKnownTasks();
+
+  @Nullable
+  default RunnerTaskState getRunnerTaskState(String taskId)
+  {
+    return null;
+  }
 
   /**
    * Some runners are able to scale up and down their capacity in a dynamic manner. This returns stats on those activities

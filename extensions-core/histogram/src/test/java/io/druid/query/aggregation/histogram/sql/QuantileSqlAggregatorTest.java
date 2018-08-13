@@ -26,9 +26,12 @@ import com.google.common.collect.Iterables;
 import io.druid.client.TimelineServerView;
 import io.druid.common.config.NullHandling;
 import io.druid.discovery.DruidLeaderClient;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Druids;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
@@ -68,17 +71,38 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.List;
 
 public class QuantileSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
+
+  private static QueryRunnerFactoryConglomerate conglomerate;
+  private static Closer resourceCloser;
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
+        .createQueryRunnerFactoryConglomerate();
+    conglomerate = conglomerateCloserPair.lhs;
+    resourceCloser = conglomerateCloserPair.rhs;
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    resourceCloser.close();
+  }
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -118,7 +142,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                              .rows(CalciteTests.ROWS1)
                                              .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(CalciteTests.queryRunnerFactoryConglomerate()).add(
+    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())
@@ -129,9 +153,9 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
     final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
     final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(new QuantileSqlAggregator()),
         ImmutableSet.of()
@@ -140,7 +164,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
     plannerFactory = new PlannerFactory(
         druidSchema,
         serverView,
-        CalciteTests.createMockQueryLifecycleFactory(walker),
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         CalciteTests.createExprMacroTable(),
         plannerConfig,

@@ -25,7 +25,10 @@ import io.druid.client.TimelineServerView;
 import io.druid.common.config.NullHandling;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.io.Closer;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -41,12 +44,15 @@ import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.easymock.EasyMock;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.List;
 
 public class DruidStatementTest extends CalciteTestBase
@@ -57,26 +63,41 @@ public class DruidStatementTest extends CalciteTestBase
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
+  private static QueryRunnerFactoryConglomerate conglomerate;
+  private static Closer resourceCloser;
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
+        .createQueryRunnerFactoryConglomerate();
+    conglomerate = conglomerateCloserPair.lhs;
+    resourceCloser = conglomerateCloserPair.rhs;
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    resourceCloser.close();
+  }
+
   private SpecificSegmentsQuerySegmentWalker walker;
   private PlannerFactory plannerFactory;
 
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(
-        walker,
-        plannerConfig
-    );
     final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
     plannerFactory = new PlannerFactory(
         druidSchema,
         serverView,
-        CalciteTests.createMockQueryLifecycleFactory(walker),
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,

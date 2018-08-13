@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.base.Strings;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.indexer.HadoopIOConfig;
@@ -102,10 +103,9 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
       @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
-    this.baseDataSource = Preconditions.checkNotNull(
-                            baseDataSource, 
-                            "baseDataSource cannot be null. Please provide a baseDataSource."
-                          );
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(baseDataSource), "baseDataSource cannot be null or empty. Please provide a baseDataSource.");
+    this.baseDataSource = baseDataSource;
+
     this.dimensionsSpec = Preconditions.checkNotNull(
                             dimensionsSpec, 
                             "dimensionsSpec cannot be null. Please provide a dimensionsSpec"

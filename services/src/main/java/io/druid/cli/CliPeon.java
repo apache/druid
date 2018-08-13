@@ -28,6 +28,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
@@ -36,6 +37,8 @@ import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.coordinator.CoordinatorClient;
+import io.druid.client.indexing.HttpIndexingServiceClient;
+import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.guice.Binders;
 import io.druid.guice.CacheModule;
 import io.druid.guice.DruidProcessingModule;
@@ -64,12 +67,15 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClient;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
-import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -196,6 +202,11 @@ public class CliPeon extends GuiceRunnable
             JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
             configureTaskActionClient(binder);
+            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
+
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
+                  .to(ParallelIndexTaskClientFactory.class)
+                  .in(LazySingleton.class);
 
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 

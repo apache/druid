@@ -24,6 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.io.Closer;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -48,13 +51,16 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -62,17 +68,35 @@ public class DruidSchemaTest extends CalciteTestBase
 {
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
 
-  public static final List<InputRow> ROWS1 = ImmutableList.of(
+  private static final List<InputRow> ROWS1 = ImmutableList.of(
       CalciteTests.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
       CalciteTests.createRow(ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "dim1", "10.1")),
       CalciteTests.createRow(ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "dim1", "2"))
   );
 
-  public static final List<InputRow> ROWS2 = ImmutableList.of(
+  private static final List<InputRow> ROWS2 = ImmutableList.of(
       CalciteTests.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "dim2", ImmutableList.of("a"))),
       CalciteTests.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "dim2", ImmutableList.of("abc"))),
       CalciteTests.createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0"))
   );
+
+  private static QueryRunnerFactoryConglomerate conglomerate;
+  private static Closer resourceCloser;
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
+        .createQueryRunnerFactoryConglomerate();
+    conglomerate = conglomerateCloserPair.lhs;
+    resourceCloser = conglomerateCloserPair.rhs;
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    resourceCloser.close();
+  }
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -112,7 +136,7 @@ public class DruidSchemaTest extends CalciteTestBase
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(CalciteTests.queryRunnerFactoryConglomerate()).add(
+    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(Intervals.of("2000/P1Y"))
@@ -140,7 +164,7 @@ public class DruidSchemaTest extends CalciteTestBase
 
 
     schema = new DruidSchema(
-        CalciteTests.createMockQueryLifecycleFactory(walker),
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments()),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),

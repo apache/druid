@@ -172,4 +172,20 @@ public class TaskStatusPlus
         getErrorMsg()
     );
   }
+
+  @Override
+  public String toString()
+  {
+    return "TaskStatusPlus{" +
+           "id='" + id + '\'' +
+           ", type='" + type + '\'' +
+           ", createdTime=" + createdTime +
+           ", queueInsertionTime=" + queueInsertionTime +
+           ", state=" + state +
+           ", duration=" + duration +
+           ", location=" + location +
+           ", dataSource='" + dataSource + '\'' +
+           ", errorMsg='" + errorMsg + '\'' +
+           '}';
+  }
 }

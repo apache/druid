@@ -133,9 +133,9 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   }
 
   @Override
-  public int getDefaultPriority()
+  public int getPriority()
   {
-    return Tasks.DEFAULT_MERGE_TASK_PRIORITY;
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
   }
 
   @Override

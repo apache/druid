@@ -20,8 +20,4 @@ io.druid.cli.Main server middleManager
 HTTP Endpoints
 --------------
 
-### GET
-
-* `/status`
-
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+For a list of API endpoints supported by the MiddleManager, please see the [API reference](../operations/api-reference.html#middlemanager).

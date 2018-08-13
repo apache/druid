@@ -30,6 +30,7 @@ import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,6 +39,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -71,6 +73,12 @@ public class DoublesSketchAggregatorTest
       constructors.add(new Object[]{config});
     }
     return constructors;
+  }
+
+  @After
+  public void teardown() throws IOException
+  {
+    helper.close();
   }
 
   // this is to test Json properties and equals

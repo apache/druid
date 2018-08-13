@@ -22,7 +22,7 @@ package io.druid.query.aggregation.distinctcount;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
@@ -38,6 +38,8 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.DateTime;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -48,23 +50,34 @@ import java.util.Map;
 
 public class DistinctCountTopNQueryTest
 {
+  private CloseableStupidPool<ByteBuffer> pool;
+
+  @Before
+  public void setup()
+  {
+    pool = new CloseableStupidPool<>(
+        "TopNQueryEngine-bufferPool",
+        new Supplier<ByteBuffer>()
+        {
+          @Override
+          public ByteBuffer get()
+          {
+            return ByteBuffer.allocate(1024 * 1024);
+          }
+        }
+    );
+  }
+
+  @After
+  public void teardown()
+  {
+    pool.close();
+  }
 
   @Test
   public void testTopNWithDistinctCountAgg() throws Exception
   {
-    TopNQueryEngine engine = new TopNQueryEngine(
-        new StupidPool<ByteBuffer>(
-            "TopNQueryEngine-bufferPool",
-            new Supplier<ByteBuffer>()
-            {
-              @Override
-              public ByteBuffer get()
-              {
-                return ByteBuffer.allocate(1024 * 1024);
-              }
-            }
-        )
-    );
+    TopNQueryEngine engine = new TopNQueryEngine(pool);
 
     IncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(
