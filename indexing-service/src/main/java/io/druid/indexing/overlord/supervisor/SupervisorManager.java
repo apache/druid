@@ -165,8 +165,8 @@ public class SupervisorManager
 
   public boolean checkPointDataSourceMetadata(
       String supervisorId,
-      @Nullable String taskId,
-      Integer taskGroupId,
+      String taskId,
+      @Nullable Integer taskGroupId,
       DataSourceMetadata previousDataSourceMetadata,
       DataSourceMetadata currentDataSourceMetadata
   )
