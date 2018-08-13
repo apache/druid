@@ -48,7 +48,7 @@ curl -XPOST -H'Content-Type: application/json' -d @examples/wikipedia-kafka-supe
 If the supervisor was successfully created, you will get a response containing the ID of the supervisor; in our case we should see `{"id":"wikipedia-kafka"}`.
 
 For more details about what's going on here, check out the
-[Druid Kafka indexing service documentation](http://druid.io/docs/{{druidVersion}}/development/extensions-core/kafka-ingestion.html).
+[Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.html).
 
 ## Load data
 
@@ -67,12 +67,12 @@ The previous command posted sample events to the *wikipedia* Kafka topic which w
 
 After data is sent to the Kafka stream, it is immediately available for querying.
 
-Please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+Please follow the [query tutorial](../tutorials/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 
-If you wish to go through any of the other ingestion tutorials, you will need to reset the cluster and follow these [reset instructions](index.html#resetting-the-cluster), as the other tutorials will write to the same "wikipedia" datasource.
+If you wish to go through any of the other ingestion tutorials, you will need to reset the cluster and follow these [reset instructions](index.html#resetting-cluster-state), as the other tutorials will write to the same "wikipedia" datasource.
 
 ## Further reading
 
-For more information on loading data from Kafka streams, please see the [Druid Kafka indexing service documentation](http://druid.io/docs/{{druidVersion}}/development/extensions-core/kafka-ingestion.html).
+For more information on loading data from Kafka streams, please see the [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.html).

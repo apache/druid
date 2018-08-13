@@ -18,7 +18,7 @@ don't need to have loaded any data yet.
 
 In the Druid package root, run the following commands:
 
-```
+```bash
 curl http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.2.tgz -o tranquility-distribution-0.8.2.tgz
 tar -xzf tranquility-distribution-0.8.2.tgz
 cd tranquility-distribution-0.8.2
@@ -28,7 +28,7 @@ cd tranquility-distribution-0.8.2
 
 Run the following command:
 
-```
+```bash
 bin/tranquility server -configFile ../examples/conf/tranquility/wikipedia-server.json -Ddruid.extensions.loadList=[]
 ```
 
@@ -36,13 +36,13 @@ bin/tranquility server -configFile ../examples/conf/tranquility/wikipedia-server
 
 Let's send the sample Wikipedia edits data to Tranquility:
 
-```
+```bash
 curl -XPOST -H'Content-Type: application/json' --data-binary @quickstart/wikiticker-2015-09-12-sampled.json http://localhost:8200/v1/post/wikipedia
 ```
 
 Which will print something like:
 
-```
+```json
 {"result":{"received":39244,"sent":39244}}
 ```
 
@@ -56,20 +56,17 @@ Once the data is sent to Druid, you can immediately query it.
 
 If you see a `sent` count of 0, retry the send command until the `sent` count also shows 39244:
 
-```
+```json
 {"result":{"received":39244,"sent":0}}
 ```
 
 ## Querying your data
 
-Please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+Please follow the [query tutorial](../tutorials/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 
-If you wish to go through any of the other ingestion tutorials, you will need to reset the cluster and follow these [reset instructions](index.html#resetting-the-cluster), as the other tutorials will write to the same "wikipedia" datasource.
-
-When cleaning up after running this Tranquility tutorial, it is also necessary to recomment the `tranquility-server` line in `quickstart/tutorial/conf/tutorial-cluster.conf` before restarting the cluster.
-
+If you wish to go through any of the other ingestion tutorials, you will need to reset the cluster and follow these [reset instructions](index.html#resetting-cluster-state), as the other tutorials will write to the same "wikipedia" datasource.
 
 ## Further reading
 

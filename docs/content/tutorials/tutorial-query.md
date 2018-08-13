@@ -8,10 +8,10 @@ This tutorial will demonstrate how to query data in Druid, with examples for Dru
 
 The tutorial assumes that you've already completed one of the 4 ingestion tutorials, as we will be querying the sample Wikipedia edits data.
 
-* [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
-* [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
-* [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
-* [Tutorial: Loading stream data using Tranquility](/docs/VERSION/tutorials/tutorial-tranquility.html)
+* [Tutorial: Loading a file](../tutorials/tutorial-batch.html)
+* [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.html)
+* [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.html)
+* [Tutorial: Loading stream data using Tranquility](../tutorials/tutorial-tranquility.html)
 
 ## Native JSON queries
 
@@ -102,7 +102,7 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/wikipedia-top-pag
 
 The following results should be returned:
 
-```
+```json
 [
   {
     "page": "Wikipedia:Vandalismusmeldung",
@@ -165,7 +165,7 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/wikipedia-timeser
 
 The following results should be returned:
 
-```
+```json
 [
   {
     "HourTime": "2015-09-12T00:00:00.000Z",
@@ -275,7 +275,7 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/wikipedia-groupby
 
 The following results should be returned:
 
-```
+```json
 [
   {
     "channel": "#en.wikipedia",
@@ -347,7 +347,8 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/wikipedia-explain
 ```
 
 This will return the following plan:
-```
+
+```json
 [
   {
     "PLAN": "DruidQueryRel(query=[{\"queryType\":\"topN\",\"dataSource\":{\"type\":\"table\",\"name\":\"wikipedia\"},\"virtualColumns\":[],\"dimension\":{\"type\":\"default\",\"dimension\":\"page\",\"outputName\":\"d0\",\"outputType\":\"STRING\"},\"metric\":{\"type\":\"numeric\",\"metric\":\"a0\"},\"threshold\":10,\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"2015-09-12T00:00:00.000Z/2015-09-13T00:00:00.001Z\"]},\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"context\":{},\"descending\":false}], signature=[{d0:STRING, a0:LONG}])\n"
@@ -357,6 +358,6 @@ This will return the following plan:
 
 ## Further reading
 
-The [Queries documentation](/docs/VERSION/querying/querying.html) has more information on Druid's native JSON queries.
+The [Queries documentation](../querying/querying.html) has more information on Druid's native JSON queries.
 
-The [Druid SQL documentation](/docs/VERSION/querying/sql.html) has more information on using Druid SQL queries.
+The [Druid SQL documentation](../querying/sql.html) has more information on using Druid SQL queries.
