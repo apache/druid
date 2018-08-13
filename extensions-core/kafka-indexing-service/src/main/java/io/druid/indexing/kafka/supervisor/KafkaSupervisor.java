@@ -92,6 +92,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
@@ -511,7 +512,7 @@ public class KafkaSupervisor implements Supervisor
   @Override
   public void checkpoint(
       String taskId,
-      @Nullable Integer nullableTaskGroupId,
+      @Nullable Integer taskGroupId,
       DataSourceMetadata previousCheckPoint,
       DataSourceMetadata currentCheckPoint
   )
@@ -525,19 +526,10 @@ public class KafkaSupervisor implements Supervisor
         ((KafkaDataSourceMetadata) currentCheckPoint).getKafkaPartitions().getTopic()
     );
 
-    final int taskGroupId;
-    if (nullableTaskGroupId == null) {
-      taskGroupId = taskGroups.entrySet().stream().filter(entry -> {
-        final TaskGroup taskGroup = entry.getValue();
-        return taskGroup.taskIds().contains(taskId);
-      }).findAny().orElseThrow(() -> new ISE("Cannot find taskGroup for taskId[%s]", taskId)).getKey();
-    } else {
-      taskGroupId = nullableTaskGroupId;
-    }
-
     log.info("Checkpointing [%s] for taskGroup [%s]", currentCheckPoint, taskGroupId);
     notices.add(
         new CheckpointNotice(
+            taskId,
             taskGroupId,
             (KafkaDataSourceMetadata) previousCheckPoint,
             (KafkaDataSourceMetadata) currentCheckPoint
@@ -644,17 +636,20 @@ public class KafkaSupervisor implements Supervisor
 
   private class CheckpointNotice implements Notice
   {
-    final int taskGroupId;
-    final KafkaDataSourceMetadata previousCheckpoint;
-    final KafkaDataSourceMetadata currentCheckpoint;
+    private final String taskId;
+    @Nullable private final Integer nullableTaskGroupId;
+    private final KafkaDataSourceMetadata previousCheckpoint;
+    private final KafkaDataSourceMetadata currentCheckpoint;
 
     CheckpointNotice(
-        int taskGroupId,
+        String taskId,
+        @Nullable Integer nullableTaskGroupId,
         KafkaDataSourceMetadata previousCheckpoint,
         KafkaDataSourceMetadata currentCheckpoint
     )
     {
-      this.taskGroupId = taskGroupId;
+      this.taskId = taskId;
+      this.nullableTaskGroupId = nullableTaskGroupId;
       this.previousCheckpoint = previousCheckpoint;
       this.currentCheckpoint = currentCheckpoint;
     }
@@ -662,12 +657,44 @@ public class KafkaSupervisor implements Supervisor
     @Override
     public void handle() throws ExecutionException, InterruptedException
     {
+      // Find taskGroupId using taskId if it's null. It can be null while rolling update.
+      final int taskGroupId;
+      if (nullableTaskGroupId == null) {
+        // We search taskId in taskGroups and pendingCompletionTaskGroups sequentially. This should be fine because
+        // 1) a taskGroup can be moved from taskGroups to pendingCompletionTaskGroups in RunNotice
+        //    (see checkTaskDuration()).
+        // 2) Notices are proceesed by a single thread. So, CheckpointNotice and RunNotice cannot be processed at the
+        //    same time.
+        final java.util.Optional<Integer> maybeGroupId = taskGroups
+            .entrySet()
+            .stream()
+            .filter(entry -> {
+              final TaskGroup taskGroup = entry.getValue();
+              return taskGroup.taskIds().contains(taskId);
+            })
+            .findAny()
+            .map(Entry::getKey);
+        taskGroupId = maybeGroupId.orElse(
+            pendingCompletionTaskGroups
+                .entrySet()
+                .stream()
+                .filter(entry -> {
+                  final List<TaskGroup> taskGroups = entry.getValue();
+                  return taskGroups.stream().anyMatch(group -> group.taskIds().contains(taskId));
+                })
+                .findAny()
+                .orElseThrow(() -> new ISE("Cannot find taskGroup for taskId[%s]", taskId))
+                .getKey()
+        );
+      } else {
+        taskGroupId = nullableTaskGroupId;
+      }
+
       // check for consistency
       // if already received request for this sequenceName and dataSourceMetadata combination then return
-
       final TaskGroup taskGroup = taskGroups.get(taskGroupId);
 
-      if (isValidTaskGroup(taskGroup)) {
+      if (isValidTaskGroup(taskGroupId, taskGroup)) {
         final TreeMap<Integer, Map<Integer, Long>> checkpoints = taskGroup.sequenceOffsets;
 
         // check validity of previousCheckpoint
@@ -689,20 +716,13 @@ public class KafkaSupervisor implements Supervisor
           log.info("Already checkpointed with offsets [%s]", checkpoints.lastEntry().getValue());
           return;
         }
-        final int taskGroupId = getTaskGroupIdForPartition(
-            currentCheckpoint.getKafkaPartitions()
-                             .getPartitionOffsetMap()
-                             .keySet()
-                             .iterator()
-                             .next()
-        );
         final Map<Integer, Long> newCheckpoint = checkpointTaskGroup(taskGroupId, false).get();
         taskGroups.get(taskGroupId).addNewCheckpoint(newCheckpoint);
         log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
       }
     }
 
-    private boolean isValidTaskGroup(@Nullable TaskGroup taskGroup)
+    private boolean isValidTaskGroup(int taskGroupId, @Nullable TaskGroup taskGroup)
     {
       if (taskGroup == null) {
         // taskGroup might be in pendingCompletionTaskGroups or partitionGroups
