@@ -323,6 +323,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 final TransactionStatus transactionStatus
             ) throws Exception
             {
+              // Set definitelyNotUpdated back to false upon retrying.
               definitelyNotUpdated.set(false);
 
               final Set<DataSegment> inserted = Sets.newHashSet();
