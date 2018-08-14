@@ -69,6 +69,8 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class TaskQueue
 {
+  private final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
+
   private final List<Task> tasks = Lists.newArrayList();
   private final Map<String, ListenableFuture<TaskStatus>> taskFutures = Maps.newHashMap();
 
@@ -291,7 +293,7 @@ public class TaskQueue
         }
         // awaitNanos because management may become necessary without this condition signalling,
         // due to e.g. tasks becoming ready when other folks mess with the TaskLockbox.
-        managementMayBeNecessary.awaitNanos(TimeUnit.SECONDS.toNanos(60));
+        managementMayBeNecessary.awaitNanos(MANAGEMENT_WAIT_TIMEOUT_NANOS);
       }
       finally {
         giant.unlock();

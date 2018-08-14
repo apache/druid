@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
 {
-  private static final long SHUTDOWN_WAIT_TIMEOUT = TimeUnit.MINUTES.toMillis(1);
+  private static final long SHUTDOWN_WAIT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
   private final SynchronizedStateHolder state = new SynchronizedStateHolder(State.INITIALIZED);
   private final Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>();
@@ -101,7 +101,7 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
   public void stop()
   {
     if (!state.compareAndSet(State.STARTED, State.STOPPING)) {
-      State current = state.waitForTransition(State.STOPPING, State.STOPPED, SHUTDOWN_WAIT_TIMEOUT);
+      State current = state.waitForTransition(State.STOPPING, State.STOPPED, SHUTDOWN_WAIT_TIMEOUT_MILLIS);
       if (current != State.STOPPED) {
         throw new ISE("Expected state [%s] found [%s]", State.STARTED, current);
       }

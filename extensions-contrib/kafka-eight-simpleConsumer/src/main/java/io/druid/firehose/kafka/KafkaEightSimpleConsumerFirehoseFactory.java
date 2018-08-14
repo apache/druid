@@ -73,7 +73,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 
   private final List<PartitionConsumerWorker> consumerWorkers = new CopyOnWriteArrayList<>();
   private static final int DEFAULT_QUEUE_BUFFER_LENGTH = 20000;
-  private static final int CONSUMER_FETCH_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(10);
+  private static final int CONSUMER_FETCH_TIMEOUT_MILLIS = (int) TimeUnit.SECONDS.toMillis(10);
 
   @JsonCreator
   public KafkaEightSimpleConsumerFirehoseFactory(
@@ -308,7 +308,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
           try {
             while (!stopped.get()) {
               try {
-                Iterable<BytesMessageWithOffset> msgs = consumer.fetch(offset, CONSUMER_FETCH_TIMEOUT);
+                Iterable<BytesMessageWithOffset> msgs = consumer.fetch(offset, CONSUMER_FETCH_TIMEOUT_MILLIS);
                 int count = 0;
                 for (BytesMessageWithOffset msgWithOffset : msgs) {
                   offset = msgWithOffset.offset();

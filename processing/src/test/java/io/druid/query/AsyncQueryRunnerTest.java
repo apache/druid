@@ -38,7 +38,7 @@ import java.util.concurrent.TimeoutException;
 public class AsyncQueryRunnerTest
 {
 
-  private static final long TEST_TIMEOUT = 60_000;
+  private static final long TEST_TIMEOUT_MILLIS = 60_000;
   
   private final ExecutorService executor;
   private final Query query;
@@ -53,7 +53,7 @@ public class AsyncQueryRunnerTest
               .build();
   }
   
-  @Test(timeout = TEST_TIMEOUT)
+  @Test(timeout = TEST_TIMEOUT_MILLIS)
   public void testAsyncNature()
   {
     final CountDownLatch latch = new CountDownLatch(1);
@@ -83,7 +83,7 @@ public class AsyncQueryRunnerTest
     Assert.assertEquals(Collections.singletonList(1), lazy.toList());
   }
   
-  @Test(timeout = TEST_TIMEOUT)
+  @Test(timeout = TEST_TIMEOUT_MILLIS)
   public void testQueryTimeoutHonored()
   {
     QueryRunner baseRunner = new QueryRunner()

@@ -84,7 +84,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTask.class);
   private static final String TYPE = "index_kafka";
   private static final Random RANDOM = new Random();
-  static final long POLL_TIMEOUT = TimeUnit.MILLISECONDS.toMillis(100);
+  static final long POLL_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(100);
   static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
 
   private final DataSchema dataSchema;

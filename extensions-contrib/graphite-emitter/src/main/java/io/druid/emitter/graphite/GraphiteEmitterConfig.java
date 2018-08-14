@@ -32,8 +32,8 @@ public class GraphiteEmitterConfig
   public static final String PLAINTEXT_PROTOCOL = "plaintext";
   public static final String PICKLE_PROTOCOL = "pickle";
   private static final int DEFAULT_BATCH_SIZE = 100;
-  private static final Long DEFAULT_FLUSH_PERIOD = TimeUnit.MINUTES.toMillis(1); // flush every one minute
-  private static final long DEFAULT_GET_TIMEOUT = TimeUnit.SECONDS.toMillis(1); // default wait for get operations on the queue 1 sec
+  private static final Long DEFAULT_FLUSH_PERIOD_MILLIS = TimeUnit.MINUTES.toMillis(1); // flush every one minute
+  private static final long DEFAULT_GET_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1); // default wait for get operations on the queue 1 sec
 
   @JsonProperty
   private final String hostname;
@@ -142,7 +142,7 @@ public class GraphiteEmitterConfig
       @JsonProperty("waitForEventTime") Long waitForEventTime
   )
   {
-    this.waitForEventTime = waitForEventTime == null ? DEFAULT_GET_TIMEOUT : waitForEventTime;
+    this.waitForEventTime = waitForEventTime == null ? DEFAULT_GET_TIMEOUT_MILLIS : waitForEventTime;
     this.emitWaitTime = emitWaitTime == null ? 0 : emitWaitTime;
     this.alertEmitters = alertEmitters == null ? Collections.emptyList() : alertEmitters;
     this.requestLogEmitters = requestLogEmitters == null ? Collections.emptyList() : requestLogEmitters;
@@ -150,7 +150,7 @@ public class GraphiteEmitterConfig
         druidToGraphiteEventConverter,
         "Event converter can not ne null dude"
     );
-    this.flushPeriod = flushPeriod == null ? DEFAULT_FLUSH_PERIOD : flushPeriod;
+    this.flushPeriod = flushPeriod == null ? DEFAULT_FLUSH_PERIOD_MILLIS : flushPeriod;
     this.maxQueueSize = maxQueueSize == null ? Integer.MAX_VALUE : maxQueueSize;
     this.hostname = Preconditions.checkNotNull(hostname, "hostname can not be null");
     this.port = Preconditions.checkNotNull(port, "port can not be null");

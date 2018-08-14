@@ -327,7 +327,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
               indexerSchema.getDataSchema().getGranularitySpec().bucketIntervals().get()
           )
       );
-      final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+      final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT_MILLIS);
       // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
       final TaskLock lock = Preconditions.checkNotNull(
           toolbox.getTaskActionClient().submit(
