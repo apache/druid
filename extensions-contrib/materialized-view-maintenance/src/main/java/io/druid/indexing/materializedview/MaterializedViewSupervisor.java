@@ -241,8 +241,8 @@ public class MaterializedViewSupervisor implements Supervisor
 
   @Override
   public void checkpoint(
-      String taskId,
       @Nullable Integer taskGroupId,
+      String baseSequenceName,
       DataSourceMetadata previousCheckPoint,
       DataSourceMetadata currentCheckPoint
   )

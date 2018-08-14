@@ -144,7 +144,7 @@ public class KafkaSupervisor implements Supervisor
    * time, there should only be up to a maximum of [taskCount] actively-reading task groups (tracked in the [taskGroups]
    * map) + zero or more pending-completion task groups (tracked in [pendingCompletionTaskGroups]).
    */
-  private static class TaskGroup
+  private class TaskGroup
   {
     // This specifies the partitions and starting offsets for this task group. It is set on group creation from the data
     // in [partitionGroups] and never changes during the lifetime of this task group, which will live until a task in
@@ -158,6 +158,7 @@ public class KafkaSupervisor implements Supervisor
     final Optional<DateTime> maximumMessageTime;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
     final TreeMap<Integer, Map<Integer, Long>> sequenceOffsets = new TreeMap<>();
+    final String baseSequenceName;
 
     TaskGroup(
         ImmutableMap<Integer, Long> partitionOffsets,
@@ -169,6 +170,7 @@ public class KafkaSupervisor implements Supervisor
       this.minimumMessageTime = minimumMessageTime;
       this.maximumMessageTime = maximumMessageTime;
       this.sequenceOffsets.put(0, partitionOffsets);
+      this.baseSequenceName = generateSequenceName(partitionOffsets, minimumMessageTime, maximumMessageTime);
     }
 
     int addNewCheckpoint(Map<Integer, Long> checkpoint)
@@ -511,8 +513,8 @@ public class KafkaSupervisor implements Supervisor
 
   @Override
   public void checkpoint(
-      String taskId,
       @Nullable Integer taskGroupId,
+      String baseSequenceName,
       DataSourceMetadata previousCheckPoint,
       DataSourceMetadata currentCheckPoint
   )
@@ -529,8 +531,8 @@ public class KafkaSupervisor implements Supervisor
     log.info("Checkpointing [%s] for taskGroup [%s]", currentCheckPoint, taskGroupId);
     notices.add(
         new CheckpointNotice(
-            taskId,
             taskGroupId,
+            baseSequenceName,
             (KafkaDataSourceMetadata) previousCheckPoint,
             (KafkaDataSourceMetadata) currentCheckPoint
         )
@@ -636,19 +638,19 @@ public class KafkaSupervisor implements Supervisor
 
   private class CheckpointNotice implements Notice
   {
-    private final String taskId;
+    private final String baseSequenceName;
     @Nullable private final Integer nullableTaskGroupId;
     private final KafkaDataSourceMetadata previousCheckpoint;
     private final KafkaDataSourceMetadata currentCheckpoint;
 
     CheckpointNotice(
-        String taskId,
         @Nullable Integer nullableTaskGroupId,
+        String baseSequenceName,
         KafkaDataSourceMetadata previousCheckpoint,
         KafkaDataSourceMetadata currentCheckpoint
     )
     {
-      this.taskId = taskId;
+      this.baseSequenceName = baseSequenceName;
       this.nullableTaskGroupId = nullableTaskGroupId;
       this.previousCheckpoint = previousCheckpoint;
       this.currentCheckpoint = currentCheckpoint;
@@ -670,7 +672,7 @@ public class KafkaSupervisor implements Supervisor
             .stream()
             .filter(entry -> {
               final TaskGroup taskGroup = entry.getValue();
-              return taskGroup.taskIds().contains(taskId);
+              return taskGroup.baseSequenceName.equals(baseSequenceName);
             })
             .findAny()
             .map(Entry::getKey);
@@ -680,10 +682,10 @@ public class KafkaSupervisor implements Supervisor
                 .stream()
                 .filter(entry -> {
                   final List<TaskGroup> taskGroups = entry.getValue();
-                  return taskGroups.stream().anyMatch(group -> group.taskIds().contains(taskId));
+                  return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
                 })
                 .findAny()
-                .orElseThrow(() -> new ISE("Cannot find taskGroup for taskId[%s]", taskId))
+                .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
                 .getKey()
         );
       } else {
@@ -919,17 +921,6 @@ public class KafkaSupervisor implements Supervisor
                                  .substring(0, 15);
 
     return Joiner.on("_").join("index_kafka", dataSource, hashCode);
-  }
-
-  @VisibleForTesting
-  String generateSequenceName(TaskGroup taskGroup)
-  {
-    Preconditions.checkNotNull(taskGroup, "taskGroup cannot be null");
-    return generateSequenceName(
-        taskGroup.partitionOffsets,
-        taskGroup.minimumMessageTime,
-        taskGroup.maximumMessageTime
-    );
   }
 
   private static String getRandomId()
@@ -1809,7 +1800,6 @@ public class KafkaSupervisor implements Supervisor
       endPartitions.put(partition, Long.MAX_VALUE);
     }
     TaskGroup group = taskGroups.get(groupId);
-    String sequenceName = generateSequenceName(group);
 
     Map<String, String> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
     DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
@@ -1817,7 +1807,7 @@ public class KafkaSupervisor implements Supervisor
 
     KafkaIOConfig kafkaIOConfig = new KafkaIOConfig(
         groupId,
-        sequenceName,
+        group.baseSequenceName,
         new KafkaPartitions(ioConfig.getTopic(), startPartitions),
         new KafkaPartitions(ioConfig.getTopic(), endPartitions),
         consumerProperties,
@@ -1838,10 +1828,10 @@ public class KafkaSupervisor implements Supervisor
                                             .putAll(spec.getContext())
                                             .build();
     for (int i = 0; i < replicas; i++) {
-      String taskId = Joiner.on("_").join(sequenceName, getRandomId());
+      String taskId = Joiner.on("_").join(group.baseSequenceName, getRandomId());
       KafkaIndexTask indexTask = new KafkaIndexTask(
           taskId,
-          new TaskResource(sequenceName, 1),
+          new TaskResource(group.baseSequenceName, 1),
           spec.getDataSchema(),
           taskTuningConfig,
           kafkaIOConfig,
@@ -1971,7 +1961,10 @@ public class KafkaSupervisor implements Supervisor
 
     String taskSequenceName = ((KafkaIndexTask) taskOptional.get()).getIOConfig().getBaseSequenceName();
     if (taskGroups.get(taskGroupId) != null) {
-      return generateSequenceName(taskGroups.get(taskGroupId)).equals(taskSequenceName);
+      return Preconditions
+          .checkNotNull(taskGroups.get(taskGroupId), "null taskGroup for taskId[%s]", taskGroupId)
+          .baseSequenceName
+          .equals(taskSequenceName);
     } else {
       return generateSequenceName(
           ((KafkaIndexTask) taskOptional.get()).getIOConfig()

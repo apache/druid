@@ -52,14 +52,14 @@ public interface Supervisor
    * for example - Kafka Supervisor uses this to merge and handoff segments containing at least the data
    * represented by {@param currentCheckpoint} DataSourceMetadata
    *
-   * @param taskId             task identifier
    * @param taskGroupId        unique Identifier to figure out for which sequence to do checkpointing
+   * @param baseSequenceName   baseSequenceName
    * @param previousCheckPoint DataSourceMetadata checkpointed in previous call
    * @param currentCheckPoint  current DataSourceMetadata to be checkpointed
    */
   void checkpoint(
-      String taskId,
       @Nullable Integer taskGroupId,
+      String baseSequenceName,
       DataSourceMetadata previousCheckPoint,
       DataSourceMetadata currentCheckPoint
   );

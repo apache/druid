@@ -2103,8 +2103,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final Map<Integer, Long> fakeCheckpoints = Collections.emptyMap();
     supervisor.moveTaskGroupToPendingCompletion(0);
     supervisor.checkpoint(
-        id1.getId(), // should be fine with any taskId because taskGroupId is not null
         0,
+        ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoints.get(0))),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, fakeCheckpoints))
     );
@@ -2173,8 +2173,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
 
     supervisor.checkpoint(
-        id1.getId(), // should be fine with any taskId because taskGroupId is not null
         0,
+        ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, Collections.emptyMap())),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, Collections.emptyMap()))
     );
@@ -2271,8 +2271,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TreeMap<Integer, Map<Integer, Long>> newCheckpoints = new TreeMap<>();
     newCheckpoints.put(0, ImmutableMap.of(0, 10L));
     supervisor.checkpoint(
-        id1.getId(),
         null,
+        ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoints.get(0))),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, newCheckpoints.get(0)))
     );
