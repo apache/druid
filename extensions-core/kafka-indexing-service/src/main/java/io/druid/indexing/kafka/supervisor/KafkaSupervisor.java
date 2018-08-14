@@ -514,7 +514,7 @@ public class KafkaSupervisor implements Supervisor
   @Override
   public void checkpoint(
       @Nullable Integer taskGroupId,
-      String baseSequenceName,
+      @Deprecated String baseSequenceName,
       DataSourceMetadata previousCheckPoint,
       DataSourceMetadata currentCheckPoint
   )
@@ -638,14 +638,14 @@ public class KafkaSupervisor implements Supervisor
 
   private class CheckpointNotice implements Notice
   {
-    private final String baseSequenceName;
     @Nullable private final Integer nullableTaskGroupId;
+    @Deprecated private final String baseSequenceName;
     private final KafkaDataSourceMetadata previousCheckpoint;
     private final KafkaDataSourceMetadata currentCheckpoint;
 
     CheckpointNotice(
         @Nullable Integer nullableTaskGroupId,
-        String baseSequenceName,
+        @Deprecated String baseSequenceName,
         KafkaDataSourceMetadata previousCheckpoint,
         KafkaDataSourceMetadata currentCheckpoint
     )

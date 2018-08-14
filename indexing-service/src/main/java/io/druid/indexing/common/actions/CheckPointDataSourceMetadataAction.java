@@ -32,6 +32,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   private final String supervisorId;
   @Nullable
   private final Integer taskGroupId;
+  @Deprecated
   private final String baseSequenceName;
   private final DataSourceMetadata previousCheckPoint;
   private final DataSourceMetadata currentCheckPoint;
@@ -39,7 +40,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   public CheckPointDataSourceMetadataAction(
       @JsonProperty("supervisorId") String supervisorId,
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // nullable for backward compatibility,
-      @JsonProperty("sequenceName") String baseSequenceName, // old version would use this
+      @JsonProperty("sequenceName") @Deprecated String baseSequenceName, // old version would use this
       @JsonProperty("previousCheckPoint") DataSourceMetadata previousCheckPoint,
       @JsonProperty("currentCheckPoint") DataSourceMetadata currentCheckPoint
   )
@@ -57,6 +58,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
     return supervisorId;
   }
 
+  @Deprecated
   @JsonProperty("sequenceName")
   public String getBaseSequenceName()
   {

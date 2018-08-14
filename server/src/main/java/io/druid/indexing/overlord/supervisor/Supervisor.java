@@ -59,7 +59,7 @@ public interface Supervisor
    */
   void checkpoint(
       @Nullable Integer taskGroupId,
-      String baseSequenceName,
+      @Deprecated String baseSequenceName,
       DataSourceMetadata previousCheckPoint,
       DataSourceMetadata currentCheckPoint
   );
