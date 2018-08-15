@@ -50,13 +50,14 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Get all used segments and the created_date of these segments in a given datasource and interval
-   * 
+   *
    * @param dataSource The datasource to query
    * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive, end is exclusive
+   *
    * @return The DataSegments and the related created_date of segments which include data in the requested interval
    */
   List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
-  
+
   /**
    * Get all segments which may include any data in the interval and are flagged as used.
    *
@@ -134,9 +135,12 @@ public interface IndexerMetadataStorageCoordinator
    *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                      involve a metadata transaction
    *
-   * @return segment publish result indicating transaction success or failure, and set of segments actually published
+   * @return segment publish result indicating transaction success or failure, and set of segments actually published.
+   * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
+   * it must throw an exception instead.
    *
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
+   * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
   SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
@@ -177,7 +181,7 @@ public interface IndexerMetadataStorageCoordinator
    * @return true if the entry was inserted, false otherwise
    */
   boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
-  
+
   void updateSegmentMetadata(Set<DataSegment> segments);
 
   void deleteSegments(Set<DataSegment> segments);

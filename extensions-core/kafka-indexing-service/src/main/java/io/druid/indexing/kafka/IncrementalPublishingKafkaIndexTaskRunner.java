@@ -1749,7 +1749,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
 
         log.info("Publishing with isTransaction[%s].", useTransaction);
 
-        return toolbox.getTaskActionClient().submit(action).isSuccess();
+        return toolbox.getTaskActionClient().submit(action);
       };
     }
   }
