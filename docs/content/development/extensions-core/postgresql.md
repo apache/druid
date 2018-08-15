@@ -47,3 +47,19 @@ Make sure to [include](../../operations/including-extensions.html) `postgresql-m
   druid.metadata.storage.connector.user=druid
   druid.metadata.storage.connector.password=diurd
   ```
+
+## Configuration
+In most cases, the configuration options map directly to the [postgres jdbc connection options](https://jdbc.postgresql.org/documentation/head/connect.html).
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+| useSSL | Enables SSL | `false` | no |
+| sslPassword | The [Password Provider](../../operations/password-provider.html) or String password for the client's key. | none | no |
+| sslFactory | The class name to as as the `SSLSocketFactory` | none | no |
+| sslFactoryArg | An optional argument passed to the sslFactory's constructor | none | no |
+| sslMode | The sslMode. Possible values are "disable", "require", "verify-ca", "verify-full", "allow" and "prefer"| none | no |
+| sslCert | The full path to the certificate file. | none | no |
+| sslKey | The full path to the key file. | none | no |
+| sslRootCert | The full path to the root certificate. | none | no |
+| sslHostNameVerifier | The classname of the hostname verifier. | none | no |
+| sslPasswordCallback | The classname of the SSL password provider. | none | no |
