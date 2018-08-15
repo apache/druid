@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -159,6 +160,16 @@ public class StringUtils
       }
     }
     return s;
+  }
+
+  public static String urlEncode(String s)
+  {
+    try {
+      return URLEncoder.encode(s, "UTF-8");
+    }
+    catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static String removeChar(String s, char c, int firstOccurranceIndex)

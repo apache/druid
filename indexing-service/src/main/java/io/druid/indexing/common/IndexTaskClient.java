@@ -231,7 +231,7 @@ public abstract class IndexTaskClient implements AutoCloseable
       FullResponseHolder response = null;
       Request request = null;
       TaskLocation location = TaskLocation.unknown();
-      String path = StringUtils.format("%s/%s/%s", BASE_PATH, taskId, pathSuffix);
+      String path = StringUtils.format("%s/%s/%s", BASE_PATH, StringUtils.urlEncode(taskId), pathSuffix);
 
       Optional<TaskStatus> status = taskInfoProvider.getTaskStatus(taskId);
       if (!status.isPresent() || !status.get().isRunnable()) {

@@ -22,12 +22,11 @@ package io.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
+import io.druid.indexing.overlord.TaskRunnerUtils;
 import io.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
@@ -47,7 +46,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -116,7 +114,7 @@ public class WorkerHolder
         smileMapper,
         httpClient,
         workersSyncExec,
-        makeWorkerURL(worker, "/"),
+        TaskRunnerUtils.makeWorkerURL(worker, "/"),
         "/druid-internal/v1/worker",
         WORKER_SYNC_RESP_TYPE_REF,
         config.getSyncRequestTimeout().toStandardDuration().getMillis(),
@@ -211,18 +209,6 @@ public class WorkerHolder
     this.continuouslyFailedTasksCount.incrementAndGet();
   }
 
-  public static URL makeWorkerURL(Worker worker, String path)
-  {
-    Preconditions.checkArgument(path.startsWith("/"), "path must start with '/': %s", path);
-
-    try {
-      return new URL(StringUtils.format("%s://%s%s", worker.getScheme(), worker.getHost(), path));
-    }
-    catch (MalformedURLException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
   public boolean assignTask(Task task)
   {
     if (disabled.get()) {
@@ -234,7 +220,7 @@ public class WorkerHolder
       return false;
     }
 
-    URL url = makeWorkerURL(worker, "/druid-internal/v1/worker/assignTask");
+    URL url = TaskRunnerUtils.makeWorkerURL(worker, "/druid-internal/v1/worker/assignTask");
     int numTries = config.getAssignRequestMaxRetries();
 
     try {
@@ -282,7 +268,7 @@ public class WorkerHolder
 
   public void shutdownTask(String taskId)
   {
-    URL url = makeWorkerURL(worker, StringUtils.format("/druid/worker/v1/task/%s/shutdown", taskId));
+    URL url = TaskRunnerUtils.makeWorkerURL(worker, "/druid/worker/v1/task/%s/shutdown", StringUtils.urlEncode(taskId));
 
     try {
       RetryUtils.retry(
