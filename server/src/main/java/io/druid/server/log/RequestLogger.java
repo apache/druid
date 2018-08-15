@@ -28,4 +28,8 @@ import java.io.IOException;
 public interface RequestLogger
 {
   void log(RequestLogLine requestLogLine) throws IOException;
+
+  default void start() throws Exception {}
+
+  default void stop() {}
 }
