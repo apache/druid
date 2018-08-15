@@ -93,7 +93,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   )
   {
     int rowNum = 0;
-    for (IncrementalIndexRow row : index.getFacts().persistIterable()) {
+    for (IncrementalIndexRow row : index.persistIterable()) {
       final Object[] dims = row.getDims();
 
       for (IncrementalIndex.DimensionDesc dimension : dimensions) {
