@@ -122,5 +122,6 @@
   {"source": "tutorials/tutorial-loading-batch-data.html", "target": "tutorial-batch.html"},
   {"source": "tutorials/tutorial-loading-streaming-data.html", "target": "tutorial-streams.html"},
   {"source": "tutorials/tutorial-the-druid-cluster.html", "target": "cluster.html"},
-  {"source": "development/extensions-core/caffeine-cache.html", "target":"../../configuration/caching.html"}
+  {"source": "development/extensions-core/caffeine-cache.html", "target":"../../configuration/caching.html"},
+  {"source": "development/extensions-core/approximate-histograms.html", "target":"histograms.html"}
 ]

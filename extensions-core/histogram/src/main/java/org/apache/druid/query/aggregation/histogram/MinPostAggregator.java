@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
@@ -68,8 +69,15 @@ public class MinPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
-    return ah.getMin();
+    Object val = values.get(fieldName);
+    if (val instanceof ApproximateHistogram) {
+      final ApproximateHistogram ah = (ApproximateHistogram) val;
+      return ah.getMin();
+    } else if (val instanceof FixedBucketsHistogram) {
+      final FixedBucketsHistogram fbh = (FixedBucketsHistogram) val;
+      return fbh.getMin();
+    }
+    throw new ISE("Unknown value type: " + val.getClass());
   }
 
   @Override

@@ -92,3 +92,9 @@ This product contains modified versions of the Dockerfile and related configurat
     * https://github.com/sequenceiq/hadoop-docker/
   * COMMIT TAG:
     * update this when this patch is committed
+
+This product contains fixed bins histogram percentile computation code adapted from Netflix Spectator:
+  * LICENSE:
+    * https://github.com/Netflix/spectator/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/Netflix/spectator
