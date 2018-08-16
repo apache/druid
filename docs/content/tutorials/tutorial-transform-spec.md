@@ -9,13 +9,13 @@ This tutorial will demonstrate how to use transform specs to filter and transfor
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine.
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) and [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html) and [Tutorial: Querying data](../tutorials/tutorial-query.html).
 
 ## Sample data
 
 We've included sample data for this tutorial at `quickstart/tutorial/transform-data.json`, reproduced here for convenience:
 
-```
+```json
 {"timestamp":"2018-01-01T07:01:35Z","animal":"octopus",  "location":1, "number":100}
 {"timestamp":"2018-01-01T05:01:35Z","animal":"mongoose", "location":2,"number":200}
 {"timestamp":"2018-01-01T06:01:35Z","animal":"snake", "location":3, "number":300}
@@ -26,7 +26,7 @@ We've included sample data for this tutorial at `quickstart/tutorial/transform-d
 
 We will ingest the sample data using the following spec, which demonstrates the use of transform specs:
 
-```
+```json
 {
   "type" : "index",
   "spec" : {
@@ -115,7 +115,7 @@ This filter selects the first 3 rows, and it will exclude the final "lion" row i
 
 Let's submit this task now, which has been included at `quickstart/tutorial/transform-index.json`:
 
-```
+```bash
 bin/post-index-task --file quickstart/tutorial/transform-index.json
 ```
 
@@ -123,7 +123,7 @@ bin/post-index-task --file quickstart/tutorial/transform-index.json
 
 Let's run `bin/dsql` and issue a `select * from "transform-tutorial";` query to see what was ingested:
 
-```
+```bash
 dsql> select * from "transform-tutorial";
 ┌──────────────────────────┬────────────────┬───────┬──────────┬────────┬───────────────┐
 │ __time                   │ animal         │ count │ location │ number │ triple-number │

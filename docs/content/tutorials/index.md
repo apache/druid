@@ -72,7 +72,7 @@ bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf
 
 This will bring up instances of Zookeeper and the Druid services, all running on the local machine, e.g.:
 
-```
+```bash
 bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf
 [Thu Jul 26 12:16:23 2018] Running command[zk], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk quickstart/tutorial/conf
 [Thu Jul 26 12:16:23 2018] Running command[coordinator], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/coordinator.log]: bin/run-druid coordinator quickstart/tutorial/conf
@@ -121,7 +121,7 @@ The sample data has the following columns, and an example event is shown below:
   * regionName
   * user
  
-```
+```json
 {
   "timestamp":"2015-09-12T20:03:45.018Z",
   "channel":"#en.wikipedia",
@@ -151,18 +151,18 @@ The following tutorials demonstrate various methods of loading data into Druid, 
 
 This tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
 
-### [Tutorial: Loading stream data from Kafka](../tutorial-kafka.html)
+### [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html)
 
 This tutorial demonstrates how to load streaming data from a Kafka topic.
 
-### [Tutorial: Loading a file using Hadoop](../tutorial-batch-hadoop.html)
+### [Tutorial: Loading a file using Hadoop](./tutorial-batch-hadoop.html)
 
 This tutorial demonstrates how to perform a batch file load, using a remote Hadoop cluster.
 
-### [Tutorial: Loading data using Tranquility](../tutorial-tranquility.html)
+### [Tutorial: Loading data using Tranquility](./tutorial-tranquility.html)
 
 This tutorial demonstrates how to load streaming data by pushing events to Druid using the Tranquility service.
 
-### [Tutorial: Writing your own ingestion spec](../tutorial-ingestion-spec.html)
+### [Tutorial: Writing your own ingestion spec](./tutorial-ingestion-spec.html)
 
 This tutorial demonstrates how to write a new ingestion spec and use it to load data.

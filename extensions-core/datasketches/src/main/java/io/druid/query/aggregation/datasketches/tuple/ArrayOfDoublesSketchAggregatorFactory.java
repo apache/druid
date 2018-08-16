@@ -32,15 +32,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.NilColumnValueSelector;
@@ -173,6 +176,42 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return union.getResult();
   }
 
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new ObjectAggregateCombiner<ArrayOfDoublesSketch>()
+    {
+      private final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
+          .setNumberOfValues(numberOfValues).buildUnion();
+
+      @Override
+      public void reset(final ColumnValueSelector selector)
+      {
+        union.reset();
+        fold(selector);
+      }
+
+      @Override
+      public void fold(final ColumnValueSelector selector)
+      {
+        final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) selector.getObject();
+        union.update(sketch);
+      }
+
+      @Override
+      public ArrayOfDoublesSketch getObject()
+      {
+        return union.getResult();
+      }
+
+      @Override
+      public Class<ArrayOfDoublesSketch> classOfObject()
+      {
+        return ArrayOfDoublesSketch.class;
+      }
+    };
+  }
+  
   @Override
   @JsonProperty
   public String getName()

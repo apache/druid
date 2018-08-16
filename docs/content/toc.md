@@ -17,13 +17,14 @@ layout: toc
     * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
     * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
     * [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html)
-  * [Further tutorials](/docs/VERSION/tutorials/advanced.html)
-    * [Tutorial: Rollup](/docs/VERSION/tutorials/rollup.html)
+  * Further tutorials
+    * [Tutorial: Rollup](/docs/VERSION/tutorials/tutorial-rollup.html)
     * [Tutorial: Configuring retention](/docs/VERSION/tutorials/tutorial-retention.html)
     * [Tutorial: Updating existing data](/docs/VERSION/tutorials/tutorial-update-data.html)
     * [Tutorial: Compacting segments](/docs/VERSION/tutorials/tutorial-compaction.html)
     * [Tutorial: Deleting data](/docs/VERSION/tutorials/tutorial-delete-data.html)
     * [Tutorial: Writing your own ingestion specs](/docs/VERSION/tutorials/tutorial-ingestion-spec.html)
+    * [Tutorial: Transforming input data](/docs/VERSION/tutorials/tutorial-transform-spec.html)
   * [Clustering](/docs/VERSION/tutorials/cluster.html)
 
 ## Data Ingestion
@@ -33,8 +34,8 @@ layout: toc
   * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
   * [Schema Changes](/docs/VERSION/ingestion/schema-changes.html)
   * [Batch File Ingestion](/docs/VERSION/ingestion/batch-ingestion.html)
-    * [Native Batch Ingestion](docs/VERSION/ingestion/native_tasks.html)
-    * [Hadoop Batch Ingestion](docs/VERSION/ingestion/hadoop.html)
+    * [Native Batch Ingestion](/docs/VERSION/ingestion/native_tasks.html)
+    * [Hadoop Batch Ingestion](/docs/VERSION/ingestion/hadoop.html)
   * [Stream Ingestion](/docs/VERSION/ingestion/stream-ingestion.html)
     * [Stream Push](/docs/VERSION/ingestion/stream-push.html)
     * [Stream Pull](/docs/VERSION/ingestion/stream-pull.html)
