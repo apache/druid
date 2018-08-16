@@ -59,6 +59,7 @@ public class MetadataStorageConnectorConfig
     return port;
   }
 
+  @JsonProperty
   public String getConnectURI()
   {
     if (connectURI == null) {
