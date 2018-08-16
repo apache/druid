@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 public class AmbariMetricsEmitterConfig
 {
   private static final int DEFAULT_BATCH_SIZE = 100;
-  private static final Long DEFAULT_FLUSH_PERIOD_MILLIS = TimeUnit.MINUTES.toMillis(1); // flush every one minute
+  private static final long DEFAULT_FLUSH_PERIOD_MILLIS = TimeUnit.MINUTES.toMillis(1); // flush every one minute
   private static final long DEFAULT_GET_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1); // default wait for get operations on the queue 1 sec
   private static final String DEFAULT_PROTOCOL = "http";
 
