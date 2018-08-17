@@ -169,6 +169,9 @@ public class CompressionUtils
             DEFAULT_RETRY_COUNT
         );
       }
+      catch (IOException e) {
+        throw e;
+      }
       catch (Exception e) {
         throw Throwables.propagate(e);
       }
