@@ -602,8 +602,9 @@ public class AppenderatorImpl implements Appenderator
         throw new ISE("No sink for identifier: %s", identifier);
       }
       theSinks.put(identifier, sink);
-      sink.finishWriting();
-      totalRows.addAndGet(-sink.getNumRows());
+      if (sink.finishWriting()) {
+        totalRows.addAndGet(-sink.getNumRows());
+      }
     }
 
     return Futures.transform(
@@ -1094,14 +1095,13 @@ public class AppenderatorImpl implements Appenderator
       final boolean removeOnDiskData
   )
   {
-    if (sink.isWritable()) {
+    // Ensure no future writes will be made to this sink.
+    if (sink.finishWriting()) {
       // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
       totalRows.addAndGet(-sink.getNumRows());
     }
-    // Ensure no future writes will be made to this sink.
-    sink.finishWriting();
 
     // Mark this identifier as dropping, so no future push tasks will pick it up.
     droppingSinks.add(identifier);
