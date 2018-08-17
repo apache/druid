@@ -349,11 +349,9 @@ public class OverlordResource
           @Override
           public Response apply(TaskQueue taskQueue)
           {
-            final List<Task> tasks = taskStorageQueryAdapter.getActiveTasks();
-            for (final Task task : tasks) {
-              if (task.getDataSource().equals(dataSource)) {
-                taskQueue.shutdown(task.getId());
-              }
+            final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
+            for (final TaskInfo<Task, TaskStatus> task : tasks) {
+              taskQueue.shutdown(task.getId());
             }
             return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
           }
