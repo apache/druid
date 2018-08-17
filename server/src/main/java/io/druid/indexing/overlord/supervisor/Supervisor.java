@@ -22,6 +22,7 @@ package io.druid.indexing.overlord.supervisor;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.overlord.DataSourceMetadata;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public interface Supervisor
@@ -52,8 +53,14 @@ public interface Supervisor
    * represented by {@param currentCheckpoint} DataSourceMetadata
    *
    * @param taskGroupId        unique Identifier to figure out for which sequence to do checkpointing
+   * @param baseSequenceName   baseSequenceName
    * @param previousCheckPoint DataSourceMetadata checkpointed in previous call
    * @param currentCheckPoint  current DataSourceMetadata to be checkpointed
    */
-  void checkpoint(int taskGroupId, DataSourceMetadata previousCheckPoint, DataSourceMetadata currentCheckPoint);
+  void checkpoint(
+      @Nullable Integer taskGroupId,
+      @Deprecated String baseSequenceName,
+      DataSourceMetadata previousCheckPoint,
+      DataSourceMetadata currentCheckPoint
+  );
 }

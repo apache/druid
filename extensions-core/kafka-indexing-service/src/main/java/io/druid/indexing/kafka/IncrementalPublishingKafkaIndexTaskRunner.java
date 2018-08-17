@@ -603,6 +603,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
             final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
                 task.getDataSource(),
                 ioConfig.getTaskGroupId(),
+                task.getIOConfig().getBaseSequenceName(),
                 new KafkaDataSourceMetadata(new KafkaPartitions(topic, sequenceToCheckpoint.getStartOffsets())),
                 new KafkaDataSourceMetadata(new KafkaPartitions(topic, nextOffsets))
             );
