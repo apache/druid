@@ -18,6 +18,9 @@
  */
 package io.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -31,8 +34,10 @@ import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.DataSource;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
@@ -40,7 +45,9 @@ import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.select.SelectQueryConfig;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -49,10 +56,12 @@ import io.druid.timeline.partition.SingleElementPartitionChunk;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -66,12 +75,25 @@ import java.util.concurrent.ForkJoinPool;
  */
 public class CachingClusteredClientFunctionalityTest
 {
+  private static final ObjectMapper OBJECT_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
+  private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
+      new SelectQueryConfig(true)
+  );
+  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER = CachingClusteredClientTestUtils
+      .createWarehouse(OBJECT_MAPPER, SELECT_CONFIG_SUPPLIER);
+  private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
+  private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
 
-  public CachingClusteredClient client;
+  private CachingClusteredClient client;
+  private VersionedIntervalTimeline<String, ServerSelector> timeline;
+  private TimelineServerView serverView;
+  private Cache cache;
 
-  protected VersionedIntervalTimeline<String, ServerSelector> timeline;
-  protected TimelineServerView serverView;
-  protected Cache cache;
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    RESOURCE_CLOSER.close();
+  }
 
   @Before
   public void setUp()
@@ -95,7 +117,7 @@ public class CachingClusteredClientFunctionalityTest
     EasyMock.replay(serverView, emptyQueryRunner);
     cache = MapCache.create(100000);
     client = makeClient(
-        new ForegroundCachePopulator(CachingClusteredClientTest.jsonMapper, new CachePopulatorStats(), -1)
+        new ForegroundCachePopulator(OBJECT_MAPPER, new CachePopulatorStats(), -1)
     );
   }
 
@@ -236,7 +258,7 @@ public class CachingClusteredClientFunctionalityTest
         new DefaultQueryRunnerFactoryConglomerate(
             QueryRunnerTestHelper.DEFAULT_CONGLOMERATE_MAP
         ),
-        CachingClusteredClientTest.WAREHOUSE,
+        WAREHOUSE,
         new TimelineServerView()
         {
           @Override
@@ -269,7 +291,7 @@ public class CachingClusteredClientFunctionalityTest
           }
         },
         cache,
-        CachingClusteredClientTest.jsonMapper,
+        OBJECT_MAPPER,
         ForkJoinPool.commonPool(),
         cachePopulator,
         new CacheConfig()

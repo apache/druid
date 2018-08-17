@@ -2,6 +2,12 @@
 layout: doc_page
 ---
 
+# Druid Expressions
+
+<div class="note info">
+This feature is still experimental. It has not been optimized for performance yet, and its implementation is known to have significant inefficiencies.
+</div>
+ 
 This expression language supports the following operators (listed in decreasing order of precedence).
 
 |Operators|Description|

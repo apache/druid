@@ -397,7 +397,7 @@ public class QueryRunnerTestHelper
                   return 3;
                 }
               }
-          )
+          ).getLhs()
       )
       .build();
 

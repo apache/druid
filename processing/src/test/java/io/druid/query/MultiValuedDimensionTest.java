@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -67,6 +68,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -143,6 +146,12 @@ public class MultiValuedDimensionTest
               .persist(incrementalIndex, persistedSegmentDir, new IndexSpec(), null);
 
     queryableIndex = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(persistedSegmentDir);
+  }
+
+  @After
+  public void teardown() throws IOException
+  {
+    helper.close();
   }
 
   @Test
@@ -256,35 +265,37 @@ public class MultiValuedDimensionTest
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null)).build();
 
-    QueryRunnerFactory factory = new TopNQueryRunnerFactory(
-        TestQueryRunners.getPool(),
-        new TopNQueryQueryToolChest(
-            new TopNQueryConfig(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
-    );
-    QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
-        factory,
-        new QueryableIndexSegment("sid1", queryableIndex),
-        null
-    );
-    Map<String, Object> context = Maps.newHashMap();
-    Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
-    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
-            DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
-                Collections.<Map<String, Object>>singletonList(
-                    ImmutableMap.of(
-                        "tags", "t3",
-                        "count", 2L
-                    )
-                )
-            )
-        )
-    );
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunnerFactory factory = new TopNQueryRunnerFactory(
+          pool,
+          new TopNQueryQueryToolChest(
+              new TopNQueryConfig(),
+              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+          ),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+      QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
+          factory,
+          new QueryableIndexSegment("sid1", queryableIndex),
+          null
+      );
+      Map<String, Object> context = Maps.newHashMap();
+      Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
+      List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+          new Result<TopNResultValue>(
+              DateTimes.of("2011-01-12T00:00:00.000Z"),
+              new TopNResultValue(
+                  Collections.<Map<String, Object>>singletonList(
+                      ImmutableMap.of(
+                          "tags", "t3",
+                          "count", 2L
+                      )
+                  )
+              )
+          )
+      );
+      TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+    }
   }
 
   @After

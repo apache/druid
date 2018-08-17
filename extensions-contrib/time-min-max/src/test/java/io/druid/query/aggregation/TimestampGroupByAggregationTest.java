@@ -31,6 +31,7 @@ import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -40,6 +41,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.zip.ZipFile;
@@ -112,7 +114,12 @@ public class TimestampGroupByAggregationTest
     selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(selectorFactory.makeColumnValueSelector("test")).andReturn(selector);
     EasyMock.replay(selectorFactory);
+  }
 
+  @After
+  public void teardown() throws IOException
+  {
+    helper.close();
   }
 
   @Test

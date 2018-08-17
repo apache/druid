@@ -297,7 +297,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
       final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
         final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
-        return toolbox.getTaskActionClient().submit(action).isSuccess();
+        return toolbox.getTaskActionClient().submit(action);
       };
 
       // Skip connecting firehose if we've been stopped before we got started.
@@ -322,7 +322,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {
-              if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
+              if (addResult.getNumRowsInSegment() >= tuningConfig.getMaxRowsPerSegment()) {
                 publishSegments(driver, publisher, committerSupplier, sequenceName);
 
                 sequenceNumber++;

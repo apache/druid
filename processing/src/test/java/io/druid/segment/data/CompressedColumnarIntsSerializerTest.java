@@ -32,11 +32,12 @@ import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.writeout.WriteOutBytes;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -60,6 +61,9 @@ public class CompressedColumnarIntsSerializerTest
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private int[] vals;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public CompressedColumnarIntsSerializerTest(
       CompressionStrategy compressionStrategy,
@@ -112,7 +116,7 @@ public class CompressedColumnarIntsSerializerTest
 
   private void checkSerializedSizeAndData(int chunkFactor) throws Exception
   {
-    FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
+    FileSmoosher smoosher = new FileSmoosher(temporaryFolder.newFolder());
 
     CompressedColumnarIntsSerializer writer = new CompressedColumnarIntsSerializer(
         segmentWriteOutMedium, "test", chunkFactor, byteOrder, compressionStrategy

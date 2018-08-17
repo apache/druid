@@ -62,7 +62,12 @@ public class VarianceGroupByQueryTest
     return GroupByQueryRunnerTest.constructorFeeder();
   }
 
-  public VarianceGroupByQueryTest(String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public VarianceGroupByQueryTest(
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
+  )
   {
     this.testName = testName;
     this.config = config;

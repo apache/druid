@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
@@ -50,6 +51,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -66,11 +68,6 @@ public class TopNQueryQueryToolChestTest
     doTestCacheStrategy(ValueType.FLOAT, 2.1f);
     doTestCacheStrategy(ValueType.DOUBLE, 2.1d);
     doTestCacheStrategy(ValueType.LONG, 2L);
-  }
-
-  @Test
-  public void testCacheStrategyWithFloatDimension() throws Exception
-  {
   }
 
   @Test
@@ -140,46 +137,48 @@ public class TopNQueryQueryToolChestTest
         config,
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    QueryRunnerFactory factory = new TopNQueryRunnerFactory(
-        TestQueryRunners.getPool(),
-        chest,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
-    );
-    QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
-        factory,
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId),
-        null
-    );
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunnerFactory factory = new TopNQueryRunnerFactory(
+          pool,
+          chest,
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+      QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
+          factory,
+          new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId),
+          null
+      );
 
-    Map<String, Object> context = Maps.newHashMap();
-    context.put("minTopNThreshold", 500);
+      Map<String, Object> context = Maps.newHashMap();
+      context.put("minTopNThreshold", 500);
 
-    TopNQueryBuilder builder = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.placementishDimension)
-        .metric(QueryRunnerTestHelper.indexMetric)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
+      TopNQueryBuilder builder = new TopNQueryBuilder()
+          .dataSource(QueryRunnerTestHelper.dataSource)
+          .granularity(QueryRunnerTestHelper.allGran)
+          .dimension(QueryRunnerTestHelper.placementishDimension)
+          .metric(QueryRunnerTestHelper.indexMetric)
+          .intervals(QueryRunnerTestHelper.fullOnInterval)
+          .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
 
-    TopNQuery query1 = builder.threshold(10).context(null).build();
-    MockQueryRunner mockRunner = new MockQueryRunner(runner);
-    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
-        QueryPlus.wrap(query1),
-        ImmutableMap.of()
-    );
-    Assert.assertEquals(1000, mockRunner.query.getThreshold());
+      TopNQuery query1 = builder.threshold(10).context(null).build();
+      MockQueryRunner mockRunner = new MockQueryRunner(runner);
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
+          QueryPlus.wrap(query1),
+          ImmutableMap.of()
+      );
+      Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
-    TopNQuery query2 = builder.threshold(10).context(context).build();
+      TopNQuery query2 = builder.threshold(10).context(context).build();
 
-    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(QueryPlus.wrap(query2), ImmutableMap.of());
-    Assert.assertEquals(500, mockRunner.query.getThreshold());
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
+          .run(QueryPlus.wrap(query2), ImmutableMap.of());
+      Assert.assertEquals(500, mockRunner.query.getThreshold());
 
-    TopNQuery query3 = builder.threshold(2000).context(context).build();
-    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(QueryPlus.wrap(query3), ImmutableMap.of());
-    Assert.assertEquals(2000, mockRunner.query.getThreshold());
+      TopNQuery query3 = builder.threshold(2000).context(context).build();
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
+          .run(QueryPlus.wrap(query3), ImmutableMap.of());
+      Assert.assertEquals(2000, mockRunner.query.getThreshold());
+    }
   }
 
   private void doTestCacheStrategy(final ValueType valueType, final Object dimValue) throws IOException

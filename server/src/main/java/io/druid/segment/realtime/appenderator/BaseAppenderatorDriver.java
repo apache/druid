@@ -555,38 +555,33 @@ public abstract class BaseAppenderatorDriver implements Closeable
               final boolean published = publisher.publishSegments(
                   ImmutableSet.copyOf(segmentsAndMetadata.getSegments()),
                   metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
-              );
+              ).isSuccess();
 
               if (published) {
                 log.info("Published segments.");
               } else {
-                log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
+                log.info("Transaction failure while publishing segments, removing them from deep storage "
+                         + "and checking if someone else beat us to publishing.");
+
+                segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+
                 final Set<SegmentIdentifier> segmentsIdentifiers = segmentsAndMetadata
                     .getSegments()
                     .stream()
                     .map(SegmentIdentifier::fromDataSegment)
                     .collect(Collectors.toSet());
+
                 if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
                                       .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
-                  log.info(
-                      "Removing our segments from deep storage because someone else already published them: %s",
-                      segmentsAndMetadata.getSegments()
-                  );
-                  segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
-
                   log.info("Our segments really do exist, awaiting handoff.");
                 } else {
-                  throw new ISE("Failed to publish segments[%s]", segmentsAndMetadata.getSegments());
+                  throw new ISE("Failed to publish segments.");
                 }
               }
             }
             catch (Exception e) {
-              log.warn(
-                  "Removing segments from deep storage after failed publish: %s",
-                  segmentsAndMetadata.getSegments()
-              );
-              segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
-
+              // Must not remove segments here, we aren't sure if our transaction succeeded or not.
+              log.warn(e, "Failed publish, not removing segments: %s", segmentsAndMetadata.getSegments());
               throw Throwables.propagate(e);
             }
           }

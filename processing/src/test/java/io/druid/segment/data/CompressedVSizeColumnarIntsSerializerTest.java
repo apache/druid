@@ -32,11 +32,12 @@ import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.writeout.WriteOutBytes;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -58,6 +59,10 @@ public class CompressedVSizeColumnarIntsSerializerTest
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private int[] vals;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   public CompressedVSizeColumnarIntsSerializerTest(
       CompressionStrategy compressionStrategy,
       ByteOrder byteOrder
@@ -109,7 +114,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
 
   private void checkSerializedSizeAndData(int chunkSize) throws Exception
   {
-    FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
+    FileSmoosher smoosher = new FileSmoosher(temporaryFolder.newFolder());
 
     CompressedVSizeColumnarIntsSerializer writer = new CompressedVSizeColumnarIntsSerializer(
         segmentWriteOutMedium,
@@ -181,7 +186,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
 
   private void checkV2SerializedSizeAndData(int chunkSize) throws Exception
   {
-    File tmpDirectory = FileUtils.getTempDirectory();
+    File tmpDirectory = temporaryFolder.newFolder();
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
 
     GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(

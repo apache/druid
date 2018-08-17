@@ -34,9 +34,10 @@ import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
-import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -46,6 +47,9 @@ public class LargeColumnSupportedComplexColumnSerializerTest
 {
 
   private final HashFunction fn = Hashing.murmur3_128();
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
   public void testSanity() throws IOException
@@ -63,7 +67,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
 
     for (int columnSize : columnSizes) {
       for (int aCase : cases) {
-        File tmpFile = FileUtils.getTempDirectory();
+        File tmpFile = temporaryFolder.newFolder();
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
         try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
              FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
