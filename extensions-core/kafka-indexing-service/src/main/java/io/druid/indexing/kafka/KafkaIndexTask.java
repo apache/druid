@@ -705,6 +705,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
                 getDataSource(),
                 ioConfig.getTaskGroupId(),
+                getIOConfig().getBaseSequenceName(),
                 new KafkaDataSourceMetadata(new KafkaPartitions(topic, sequenceToCheckpoint.getStartOffsets())),
                 new KafkaDataSourceMetadata(new KafkaPartitions(topic, nextOffsets))
             );

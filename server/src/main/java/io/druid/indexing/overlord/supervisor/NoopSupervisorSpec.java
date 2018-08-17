@@ -83,7 +83,8 @@ public class NoopSupervisorSpec implements SupervisorSpec
 
       @Override
       public void checkpoint(
-          int taskGroupId,
+          @Nullable Integer taskGroupId,
+          String baseSequenceName,
           DataSourceMetadata previousCheckPoint,
           DataSourceMetadata currentCheckPoint
       )

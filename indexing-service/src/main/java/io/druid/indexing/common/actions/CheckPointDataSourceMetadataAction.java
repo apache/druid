@@ -26,23 +26,29 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.DataSourceMetadata;
 
 import java.io.IOException;
+import javax.annotation.Nullable;
 
 public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
 {
   private final String supervisorId;
-  private final int taskGroupId;
+  @Nullable
+  private final Integer taskGroupId;
+  @Deprecated
+  private final String baseSequenceName;
   private final DataSourceMetadata previousCheckPoint;
   private final DataSourceMetadata currentCheckPoint;
 
   public CheckPointDataSourceMetadataAction(
       @JsonProperty("supervisorId") String supervisorId,
-      @JsonProperty("taskGroupId") Integer taskGroupId,
+      @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // nullable for backward compatibility,
+      @JsonProperty("sequenceName") @Deprecated String baseSequenceName, // old version would use this
       @JsonProperty("previousCheckPoint") DataSourceMetadata previousCheckPoint,
       @JsonProperty("currentCheckPoint") DataSourceMetadata currentCheckPoint
   )
   {
     this.supervisorId = Preconditions.checkNotNull(supervisorId, "supervisorId");
-    this.taskGroupId = Preconditions.checkNotNull(taskGroupId, "taskGroupId");
+    this.taskGroupId = taskGroupId;
+    this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "sequenceName");
     this.previousCheckPoint = Preconditions.checkNotNull(previousCheckPoint, "previousCheckPoint");
     this.currentCheckPoint = Preconditions.checkNotNull(currentCheckPoint, "currentCheckPoint");
   }
@@ -53,8 +59,16 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
     return supervisorId;
   }
 
+  @Deprecated
+  @JsonProperty("sequenceName")
+  public String getBaseSequenceName()
+  {
+    return baseSequenceName;
+  }
+
+  @Nullable
   @JsonProperty
-  public int getTaskGroupId()
+  public Integer getTaskGroupId()
   {
     return taskGroupId;
   }
@@ -87,6 +101,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
     return toolbox.getSupervisorManager().checkPointDataSourceMetadata(
         supervisorId,
         taskGroupId,
+        baseSequenceName,
         previousCheckPoint,
         currentCheckPoint
     );
@@ -103,6 +118,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   {
     return "CheckPointDataSourceMetadataAction{" +
            "supervisorId='" + supervisorId + '\'' +
+           ", baseSequenceName='" + baseSequenceName + '\'' +
            ", taskGroupId='" + taskGroupId + '\'' +
            ", previousCheckPoint=" + previousCheckPoint +
            ", currentCheckPoint=" + currentCheckPoint +
