@@ -625,8 +625,15 @@ public class AppenderatorImpl implements Appenderator
     try {
       if (descriptorFile.exists()) {
         // Already pushed.
-        log.info("Segment[%s] already pushed.", identifier);
-        return objectMapper.readValue(descriptorFile, DataSegment.class);
+
+        if (useUniquePath) {
+          // Don't reuse the descriptor, because the caller asked for a unique path. Leave the old one as-is, since
+          // it might serve some unknown purpose.
+          log.info("Pushing segment[%s] again with new unique path.", identifier);
+        } else {
+          log.info("Segment[%s] already pushed.", identifier);
+          return objectMapper.readValue(descriptorFile, DataSegment.class);
+        }
       }
 
       log.info("Pushing merged index for segment[%s].", identifier);

@@ -122,9 +122,12 @@ public interface IndexerMetadataStorageCoordinator
    *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                      involve a metadata transaction
    *
-   * @return segment publish result indicating transaction success or failure, and set of segments actually published
+   * @return segment publish result indicating transaction success or failure, and set of segments actually published.
+   * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
+   * it must throw an exception instead.
    *
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
+   * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
   SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,

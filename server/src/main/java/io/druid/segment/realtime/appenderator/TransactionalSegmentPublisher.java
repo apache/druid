@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.appenderator;
 
+import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -30,11 +31,14 @@ public interface TransactionalSegmentPublisher
   /**
    * Publish segments, along with some commit metadata, in a single transaction.
    *
-   * @return true if segments were published, false if they were not published due to txn failure with the metadata
+   * @return publish result that indicates if segments were published or not. If it is unclear
+   * if the segments were published or not, this method must throw an exception. The behavior is similar to
+   * IndexerSQLMetadataStorageCoordinator's announceHistoricalSegments.
    *
    * @throws IOException if there was an I/O error when publishing
+   * @throws RuntimeException if we cannot tell if the segments were published or not, for some other reason
    */
-  boolean publishSegments(
+  SegmentPublishResult publishSegments(
       Set<DataSegment> segments,
       @Nullable Object commitMetadata
   ) throws IOException;
