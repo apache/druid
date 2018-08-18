@@ -28,7 +28,7 @@ import java.util.List;
 
 public class CSVParser extends AbstractFlatTextFormatParser
 {
-  private final au.com.bytecode.opencsv.CSVParser parser = new au.com.bytecode.opencsv.CSVParser();
+  private final com.opencsv.CSVParser parser = new com.opencsv.CSVParser();
 
   public CSVParser(
       @Nullable final String listDelimiter,
