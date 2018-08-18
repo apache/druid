@@ -1126,7 +1126,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
         log.info("Publishing with isTransaction[%s].", ioConfig.isUseTransaction());
 
-        return toolbox.getTaskActionClient().submit(action).isSuccess();
+        return toolbox.getTaskActionClient().submit(action);
       };
 
       // Supervised kafka tasks are killed by KafkaSupervisor if they are stuck during publishing segments or waiting
@@ -2332,7 +2332,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
         log.info("Publishing with isTransaction[%s].", useTransaction);
 
-        return toolbox.getTaskActionClient().submit(action).isSuccess();
+        return toolbox.getTaskActionClient().submit(action);
       };
     }
   }
