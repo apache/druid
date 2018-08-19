@@ -95,7 +95,6 @@ layout: toc
     * [Peon](/docs/VERSION/operations/api-reference.html#peon)
     * [Broker](/docs/VERSION/operations/api-reference.html#broker)
     * [Historical](/docs/VERSION/operations/api-reference.html#historical)
-  * [Good Practices](/docs/VERSION/operations/recommendations.html)
   * [Including Extensions](/docs/VERSION/operations/including-extensions.html)
   * [Data Retention](/docs/VERSION/operations/rule-configuration.html)
   * [Metrics and Monitoring](/docs/VERSION/operations/metrics.html)
