@@ -125,7 +125,7 @@ public class CompressionUtils
     long totalSize = 0;
     for (File file : directory.listFiles()) {
       log.info("Adding file[%s] with size[%,d].  Total size so far[%,d]", file, file.length(), totalSize);
-      if (file.length() >= Integer.MAX_VALUE) {
+      if (file.length() > Integer.MAX_VALUE) {
         zipOut.finish();
         throw new IOE("file[%s] too large [%,d]", file, file.length());
       }
@@ -168,6 +168,9 @@ public class CompressionUtils
             shouldRetry,
             DEFAULT_RETRY_COUNT
         );
+      }
+      catch (IOException e) {
+        throw e;
       }
       catch (Exception e) {
         throw Throwables.propagate(e);

@@ -338,6 +338,28 @@ public class OverlordResource
   }
 
   @POST
+  @Path("/task/{dataSource}/shutdownAllTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response shutdownTasksForDataSource(@PathParam("dataSource") final String dataSource)
+  {
+    return asLeaderWith(
+        taskMaster.getTaskQueue(),
+        new Function<TaskQueue, Response>()
+        {
+          @Override
+          public Response apply(TaskQueue taskQueue)
+          {
+            final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
+            for (final TaskInfo<Task, TaskStatus> task : tasks) {
+              taskQueue.shutdown(task.getId());
+            }
+            return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
+          }
+        }
+    );
+  }
+
+  @POST
   @Path("/taskStatus")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)

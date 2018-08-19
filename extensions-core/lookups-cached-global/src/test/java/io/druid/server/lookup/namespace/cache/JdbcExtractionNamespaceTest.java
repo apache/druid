@@ -26,14 +26,16 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.common.config.NullHandling;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.lookup.namespace.CacheGenerator;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
+import io.druid.server.ServerTestHelper;
 import io.druid.server.lookup.namespace.JdbcCacheGenerator;
 import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -225,7 +227,11 @@ public class JdbcExtractionNamespaceTest
                       }
                     }
                 ),
-                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
+                new OnHeapNamespaceExtractionCacheManager(
+                    lifecycle,
+                    noopServiceEmitter,
+                    new NamespaceExtractionConfig()
+                )
             );
             try {
               lifecycle.start();
@@ -382,7 +388,11 @@ public class JdbcExtractionNamespaceTest
         String key = e.getKey();
         String[] val = e.getValue();
         String field = val[0];
-        Assert.assertEquals("non-null check", NullHandling.emptyToNullIfNeeded(field), NullHandling.emptyToNullIfNeeded(map.get(key)));
+        Assert.assertEquals(
+            "non-null check",
+            NullHandling.emptyToNullIfNeeded(field),
+            NullHandling.emptyToNullIfNeeded(map.get(key))
+        );
       }
       Assert.assertEquals("null check", null, map.get("baz"));
     }
@@ -412,7 +422,11 @@ public class JdbcExtractionNamespaceTest
         String filterVal = val[1];
 
         if ("1".equals(filterVal)) {
-          Assert.assertEquals("non-null check", NullHandling.emptyToNullIfNeeded(field), NullHandling.emptyToNullIfNeeded(map.get(key)));
+          Assert.assertEquals(
+              "non-null check",
+              NullHandling.emptyToNullIfNeeded(field),
+              NullHandling.emptyToNullIfNeeded(map.get(key))
+          );
         } else {
           Assert.assertEquals("non-null check", null, NullHandling.emptyToNullIfNeeded(map.get(key)));
         }
@@ -455,6 +469,27 @@ public class JdbcExtractionNamespaceTest
       Set set = entry.getCache().keySet();
       Assert.assertFalse(set.contains("fooz"));
     }
+  }
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        tableName,
+        keyName,
+        valName,
+        tsColumn,
+        "some filter",
+        new Period(10)
+    );
+
+    final ExtractionNamespace extractionNamespace2 = ServerTestHelper.MAPPER.readValue(
+        ServerTestHelper.MAPPER.writeValueAsBytes(extractionNamespace),
+        ExtractionNamespace.class
+    );
+
+    Assert.assertEquals(extractionNamespace, extractionNamespace2);
   }
 
   private CacheScheduler.Entry ensureEntry()
