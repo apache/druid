@@ -27,8 +27,11 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.util.Timer;
 
@@ -111,6 +114,25 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
       pipeline.addFirst("ssl", sslHandler);
 
       final ChannelFuture handshakeFuture = Channels.future(connectFuture.getChannel());
+      pipeline.addLast("connectionErrorHandler", new SimpleChannelUpstreamHandler()
+      {
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+        {
+          final Channel channel = ctx.getChannel();
+          if (channel == null) {
+            // For the case where this pipeline is not attached yet.
+            handshakeFuture.setFailure(new ChannelException(
+                StringUtils.format("Channel is null. The context name is [%s]", ctx.getName())
+            ));
+            return;
+          }
+          handshakeFuture.setFailure(e.getCause());
+          if (channel.isOpen()) {
+            channel.close();
+          }
+        }
+      });
       connectFuture.addListener(
           new ChannelFutureListener()
           {

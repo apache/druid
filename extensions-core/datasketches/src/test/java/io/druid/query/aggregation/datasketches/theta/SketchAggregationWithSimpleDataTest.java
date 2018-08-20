@@ -85,122 +85,127 @@ public class SketchAggregationWithSimpleDataTest
   {
     sm = new SketchModule();
     sm.configure(null);
-    AggregationTestHelper toolchest = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        sm.getJacksonModules(),
-        config,
-        tempFolder
-    );
+    try (
+        final AggregationTestHelper toolchest = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+            sm.getJacksonModules(),
+            config,
+            tempFolder
+        )
+    ) {
 
-    s1 = tempFolder.newFolder();
-    toolchest.createIndex(
-        new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("simple_test_data_record_parser.json"),
-        readFileFromClasspathAsString("simple_test_data_aggregators.json"),
-        s1,
-        0,
-        Granularities.NONE,
-        5000
-    );
+      s1 = tempFolder.newFolder();
+      toolchest.createIndex(
+          new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
+          readFileFromClasspathAsString("simple_test_data_record_parser.json"),
+          readFileFromClasspathAsString("simple_test_data_aggregators.json"),
+          s1,
+          0,
+          Granularities.NONE,
+          5000
+      );
 
-    s2 = tempFolder.newFolder();
-    toolchest.createIndex(
-        new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-        readFileFromClasspathAsString("simple_test_data_record_parser.json"),
-        readFileFromClasspathAsString("simple_test_data_aggregators.json"),
-        s2,
-        0,
-        Granularities.NONE,
-        5000
-    );
+      s2 = tempFolder.newFolder();
+      toolchest.createIndex(
+          new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
+          readFileFromClasspathAsString("simple_test_data_record_parser.json"),
+          readFileFromClasspathAsString("simple_test_data_aggregators.json"),
+          s2,
+          0,
+          Granularities.NONE,
+          5000
+      );
+    }
   }
-
 
   @Test
   public void testSimpleDataIngestAndGpByQuery() throws Exception
   {
-    AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        sm.getJacksonModules(),
-        config,
-        tempFolder
-    );
+    try (
+        final AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+            sm.getJacksonModules(),
+            config,
+            tempFolder
+        )
+    ) {
 
-    Sequence seq = gpByQueryAggregationTestHelper.runQueryOnSegments(
-        ImmutableList.of(s1, s2),
-        readFileFromClasspathAsString("simple_test_data_group_by_query.json")
-    );
+      Sequence seq = gpByQueryAggregationTestHelper.runQueryOnSegments(
+          ImmutableList.of(s1, s2),
+          readFileFromClasspathAsString("simple_test_data_group_by_query.json")
+      );
 
-    List<Row> results = seq.toList();
-    Assert.assertEquals(5, results.size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new MapBasedRow(
-                DateTimes.of("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_3")
-                    .put("sketch_count", 38.0)
-                    .put("sketchEstimatePostAgg", 38.0)
-                    .put("sketchUnionPostAggEstimate", 38.0)
-                    .put("sketchIntersectionPostAggEstimate", 38.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            ),
-            new MapBasedRow(
-                DateTimes.of("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_1")
-                    .put("sketch_count", 42.0)
-                    .put("sketchEstimatePostAgg", 42.0)
-                    .put("sketchUnionPostAggEstimate", 42.0)
-                    .put("sketchIntersectionPostAggEstimate", 42.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            ),
-            new MapBasedRow(
-                DateTimes.of("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_2")
-                    .put("sketch_count", 42.0)
-                    .put("sketchEstimatePostAgg", 42.0)
-                    .put("sketchUnionPostAggEstimate", 42.0)
-                    .put("sketchIntersectionPostAggEstimate", 42.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            ),
-            new MapBasedRow(
-                DateTimes.of("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_4")
-                    .put("sketch_count", 42.0)
-                    .put("sketchEstimatePostAgg", 42.0)
-                    .put("sketchUnionPostAggEstimate", 42.0)
-                    .put("sketchIntersectionPostAggEstimate", 42.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            ),
-            new MapBasedRow(
-                DateTimes.of("2014-10-19T00:00:00.000Z"),
-                ImmutableMap
-                    .<String, Object>builder()
-                    .put("product", "product_5")
-                    .put("sketch_count", 42.0)
-                    .put("sketchEstimatePostAgg", 42.0)
-                    .put("sketchUnionPostAggEstimate", 42.0)
-                    .put("sketchIntersectionPostAggEstimate", 42.0)
-                    .put("sketchAnotBPostAggEstimate", 0.0)
-                    .put("non_existing_col_validation", 0.0)
-                    .build()
-            )
-        ),
-        results
-    );
+      List<Row> results = seq.toList();
+      Assert.assertEquals(5, results.size());
+      Assert.assertEquals(
+          ImmutableList.of(
+              new MapBasedRow(
+                  DateTimes.of("2014-10-19T00:00:00.000Z"),
+                  ImmutableMap
+                      .<String, Object>builder()
+                      .put("product", "product_3")
+                      .put("sketch_count", 38.0)
+                      .put("sketchEstimatePostAgg", 38.0)
+                      .put("sketchUnionPostAggEstimate", 38.0)
+                      .put("sketchIntersectionPostAggEstimate", 38.0)
+                      .put("sketchAnotBPostAggEstimate", 0.0)
+                      .put("non_existing_col_validation", 0.0)
+                      .build()
+              ),
+              new MapBasedRow(
+                  DateTimes.of("2014-10-19T00:00:00.000Z"),
+                  ImmutableMap
+                      .<String, Object>builder()
+                      .put("product", "product_1")
+                      .put("sketch_count", 42.0)
+                      .put("sketchEstimatePostAgg", 42.0)
+                      .put("sketchUnionPostAggEstimate", 42.0)
+                      .put("sketchIntersectionPostAggEstimate", 42.0)
+                      .put("sketchAnotBPostAggEstimate", 0.0)
+                      .put("non_existing_col_validation", 0.0)
+                      .build()
+              ),
+              new MapBasedRow(
+                  DateTimes.of("2014-10-19T00:00:00.000Z"),
+                  ImmutableMap
+                      .<String, Object>builder()
+                      .put("product", "product_2")
+                      .put("sketch_count", 42.0)
+                      .put("sketchEstimatePostAgg", 42.0)
+                      .put("sketchUnionPostAggEstimate", 42.0)
+                      .put("sketchIntersectionPostAggEstimate", 42.0)
+                      .put("sketchAnotBPostAggEstimate", 0.0)
+                      .put("non_existing_col_validation", 0.0)
+                      .build()
+              ),
+              new MapBasedRow(
+                  DateTimes.of("2014-10-19T00:00:00.000Z"),
+                  ImmutableMap
+                      .<String, Object>builder()
+                      .put("product", "product_4")
+                      .put("sketch_count", 42.0)
+                      .put("sketchEstimatePostAgg", 42.0)
+                      .put("sketchUnionPostAggEstimate", 42.0)
+                      .put("sketchIntersectionPostAggEstimate", 42.0)
+                      .put("sketchAnotBPostAggEstimate", 0.0)
+                      .put("non_existing_col_validation", 0.0)
+                      .build()
+              ),
+              new MapBasedRow(
+                  DateTimes.of("2014-10-19T00:00:00.000Z"),
+                  ImmutableMap
+                      .<String, Object>builder()
+                      .put("product", "product_5")
+                      .put("sketch_count", 42.0)
+                      .put("sketchEstimatePostAgg", 42.0)
+                      .put("sketchUnionPostAggEstimate", 42.0)
+                      .put("sketchIntersectionPostAggEstimate", 42.0)
+                      .put("sketchAnotBPostAggEstimate", 0.0)
+                      .put("non_existing_col_validation", 0.0)
+                      .build()
+              )
+          ),
+          results
+      );
+    }
   }
 
   @Test

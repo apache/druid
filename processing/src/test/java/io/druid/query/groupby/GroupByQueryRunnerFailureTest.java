@@ -26,11 +26,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.BlockingPool;
-import io.druid.collections.DefaultBlockingPool;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.CloseableDefaultBlockingPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DruidProcessingConfig;
@@ -47,6 +45,7 @@ import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.hamcrest.CoreMatchers;
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -100,17 +99,7 @@ public class GroupByQueryRunnerFailureTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
-        "GroupByQueryEngine-bufferPool",
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocateDirect(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes());
-          }
-        }
-    );
+
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
@@ -138,7 +127,18 @@ public class GroupByQueryRunnerFailureTest
     );
   }
 
-  private static final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
+  private static final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
+      "GroupByQueryEngine-bufferPool",
+      new Supplier<ByteBuffer>()
+      {
+        @Override
+        public ByteBuffer get()
+        {
+          return ByteBuffer.allocateDirect(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes());
+        }
+      }
+  );
+  private static final CloseableDefaultBlockingPool<ByteBuffer> mergeBufferPool = new CloseableDefaultBlockingPool<>(
       new Supplier<ByteBuffer>()
       {
         @Override
@@ -163,6 +163,13 @@ public class GroupByQueryRunnerFailureTest
   );
 
   private QueryRunner<Row> runner;
+
+  @AfterClass
+  public static void teardownClass()
+  {
+    bufferPool.close();
+    mergeBufferPool.close();
+  }
 
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()

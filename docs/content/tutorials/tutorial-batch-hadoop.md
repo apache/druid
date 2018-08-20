@@ -20,9 +20,9 @@ For this tutorial, we've provided a Dockerfile for a Hadoop 2.8.3 cluster, which
 
 This Dockerfile and related files are located at `quickstart/tutorial/hadoop/docker`.
 
-From the druid-${DRUIDVERSION} package root, run the following commands to build a Docker image named "druid-hadoop-demo" with version tag "2.8.3":
+From the druid-#{DRUIDVERSION} package root, run the following commands to build a Docker image named "druid-hadoop-demo" with version tag "2.8.3":
 
-```
+```bash
 cd quickstart/tutorial/hadoop/docker
 docker build -t druid-hadoop-demo:2.8.3 .
 ```
@@ -37,7 +37,7 @@ We'll need a shared folder between the host and the Hadoop container for transfe
 
 Let's create some folders under `/tmp`, we will use these later when starting the Hadoop container:
 
-```
+```bash
 mkdir -p /tmp/shared
 mkdir -p /tmp/shared/hadoop_xml
 ```
@@ -54,13 +54,13 @@ On the host machine, add the following entry to `/etc/hosts`:
 
 Once the `/tmp/shared` folder has been created and the `etc/hosts` entry has been added, run the following command to start the Hadoop container.
 
-```
+```bash
 docker run -it  -h druid-hadoop-demo -p 50010:50010 -p 50020:50020 -p 50075:50075 -p 50090:50090 -p 8020:8020 -p 10020:10020 -p 19888:19888 -p 8030:8030 -p 8031:8031 -p 8032:8032 -p 8033:8033 -p 8040:8040 -p 8042:8042 -p 8088:8088 -p 8443:8443 -p 2049:2049 -p 9000:9000 -p 49707:49707 -p 2122:2122  -p 34455:34455 -v /tmp/shared:/shared druid-hadoop-demo:2.8.3 /etc/bootstrap.sh -bash
 ```
 
 Once the container is started, your terminal will attach to a bash shell running inside the container:
 
-```
+```bash
 Starting sshd:                                             [  OK  ]
 18/07/26 17:27:15 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
 Starting namenodes on [druid-hadoop-demo]
@@ -80,9 +80,9 @@ The `Unable to load native-hadoop library for your platform... using builtin-jav
 
 ### Copy input data to the Hadoop container
 
-From the druid-${DRUIDVERSION} package root on the host, copy the `quickstart/wikiticker-2015-09-12-sampled.json.gz` sample data to the shared folder:
+From the druid-#{DRUIDVERSION} package root on the host, copy the `quickstart/wikiticker-2015-09-12-sampled.json.gz` sample data to the shared folder:
 
-```
+```bash
 cp quickstart/wikiticker-2015-09-12-sampled.json.gz /tmp/shared/wikiticker-2015-09-12-sampled.json.gz
 ```
 
@@ -90,7 +90,7 @@ cp quickstart/wikiticker-2015-09-12-sampled.json.gz /tmp/shared/wikiticker-2015-
 
 In the Hadoop container's shell, run the following commands to setup the HDFS directories needed by this tutorial and copy the input data to HDFS.
 
-```
+```bash
 cd /usr/local/hadoop/bin
 ./hadoop fs -mkdir /druid
 ./hadoop fs -mkdir /druid/segments
@@ -113,13 +113,13 @@ Some additional steps are needed to configure the Druid cluster for Hadoop batch
 
 From the Hadoop container's shell, run the following command to copy the Hadoop .xml configuration files to the shared folder:
 
-```
+```bash
 cp /usr/local/hadoop/etc/hadoop/*.xml /shared/hadoop_xml
 ```
 
 From the host machine, run the following, where {PATH_TO_DRUID} is replaced by the path to the Druid package.
 
-```
+```bash
 mkdir -p {PATH_TO_DRUID}/quickstart/tutorial/conf/druid/_common/hadoop-xml
 cp /tmp/shared/hadoop_xml/*.xml {PATH_TO_DRUID}/quickstart/tutorial/conf/druid/_common/hadoop-xml/
 ```
@@ -177,17 +177,17 @@ a task that loads the `wikiticker-2015-09-12-sampled.json.gz` file included in t
 
 Let's submit the `wikipedia-index-hadoop-.json` task:
 
-```
+```bash
 bin/post-index-task --file quickstart/tutorial/wikipedia-index-hadoop.json 
 ```
 
 ## Querying your data
 
-After the data load is complete, please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+After the data load is complete, please follow the [query tutorial](../tutorials/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 
-This tutorial is only meant to be used together with the [query tutorial](../tutorial/tutorial-query.html). 
+This tutorial is only meant to be used together with the [query tutorial](../tutorials/tutorial-query.html). 
 
 If you wish to go through any of the other tutorials, you will need to:
 * Shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package.

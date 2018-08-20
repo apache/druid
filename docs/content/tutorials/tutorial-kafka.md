@@ -39,7 +39,7 @@ Run this command to create a Kafka topic called *wikipedia*, to which we'll send
 ## Enable Druid Kafka ingestion
 
 We will use Druid's Kafka indexing service to ingest messages from our newly created *wikipedia* topic. To start the
-service, we will need to submit a supervisor spec to the Druid overlord by running the following from the Imply directory:
+service, we will need to submit a supervisor spec to the Druid overlord by running the following from the Druid package root:
 
 ```bash
 curl -XPOST -H'Content-Type: application/json' -d @quickstart/tutorial/wikipedia-kafka-supervisor.json http://localhost:8090/druid/indexer/v1/supervisor
@@ -48,7 +48,7 @@ curl -XPOST -H'Content-Type: application/json' -d @quickstart/tutorial/wikipedia
 If the supervisor was successfully created, you will get a response containing the ID of the supervisor; in our case we should see `{"id":"wikipedia-kafka"}`.
 
 For more details about what's going on here, check out the
-[Druid Kafka indexing service documentation](http://druid.io/docs/{{druidVersion}}/development/extensions-core/kafka-ingestion.html).
+[Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.html).
 
 ## Load data
 
@@ -56,7 +56,7 @@ Let's launch a console producer for our topic and send some data!
 
 In your Druid directory, run the following command:
 
-```
+```bash
 cd quickstart
 gunzip -k wikipedia-2015-09-12-sampled.json.gz
 ```
@@ -74,7 +74,7 @@ The previous command posted sample events to the *wikipedia* Kafka topic which w
 
 After data is sent to the Kafka stream, it is immediately available for querying.
 
-Please follow the [query tutorial](../tutorial/tutorial-query.html) to run some example queries on the newly loaded data.
+Please follow the [query tutorial](../tutorials/tutorial-query.html) to run some example queries on the newly loaded data.
 
 ## Cleanup
 
@@ -82,4 +82,4 @@ If you wish to go through any of the other ingestion tutorials, you will need to
 
 ## Further reading
 
-For more information on loading data from Kafka streams, please see the [Druid Kafka indexing service documentation](http://druid.io/docs/{{druidVersion}}/development/extensions-core/kafka-ingestion.html).
+For more information on loading data from Kafka streams, please see the [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.html).

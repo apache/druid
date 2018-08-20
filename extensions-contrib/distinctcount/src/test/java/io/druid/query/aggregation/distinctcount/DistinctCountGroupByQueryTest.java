@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -39,22 +41,41 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 public class DistinctCountGroupByQueryTest
 {
+  private GroupByQueryRunnerFactory factory;
+  private Closer resourceCloser;
+
+  @Before
+  public void setup()
+  {
+    final GroupByQueryConfig config = new GroupByQueryConfig();
+    config.setMaxIntermediateRows(10000);
+    final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+        config
+    );
+    factory = factoryCloserPair.lhs;
+    resourceCloser = factoryCloserPair.rhs;
+  }
+
+  @After
+  public void teardown() throws IOException
+  {
+    resourceCloser.close();
+  }
 
   @Test
   public void testGroupByWithDistinctCountAgg() throws Exception
   {
-    final GroupByQueryConfig config = new GroupByQueryConfig();
-    config.setMaxIntermediateRows(10000);
-    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
-
     IncrementalIndex index = new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()

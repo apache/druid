@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
+import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.RequestLogLine;
 
@@ -61,6 +63,24 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
     public ComposingRequestLogger(List<RequestLogger> loggers)
     {
       this.loggers = loggers;
+    }
+
+    @LifecycleStart
+    @Override
+    public void start() throws Exception
+    {
+      for (RequestLogger logger : loggers) {
+        logger.start();
+      }
+    }
+
+    @LifecycleStop
+    @Override
+    public void stop()
+    {
+      for (RequestLogger logger : loggers) {
+        logger.stop();
+      }
     }
 
     @Override

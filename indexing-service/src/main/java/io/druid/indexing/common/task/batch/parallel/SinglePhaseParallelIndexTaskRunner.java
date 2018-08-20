@@ -382,7 +382,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   {
     final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
       final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(segments);
-      return toolbox.getTaskActionClient().submit(action).isSuccess();
+      return toolbox.getTaskActionClient().submit(action);
     };
     final UsedSegmentChecker usedSegmentChecker = new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient());
     final Set<DataSegment> segmentsToPublish = segmentsMap
@@ -390,7 +390,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
         .stream()
         .flatMap(report -> report.getSegments().stream())
         .collect(Collectors.toSet());
-    final boolean published = publisher.publishSegments(segmentsToPublish, null);
+    final boolean published = publisher.publishSegments(segmentsToPublish, null).isSuccess();
 
     if (published) {
       log.info("Published segments");

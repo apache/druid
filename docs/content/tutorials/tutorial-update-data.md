@@ -9,7 +9,7 @@ This tutorial demonstrates how to update existing data, showing both overwrites 
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html), [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html), and [Tutorial: Rollup](/docs/VERSION/tutorials/tutorial-rollup.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html), [Tutorial: Querying data](../tutorials/tutorial-query.html), and [Tutorial: Rollup](../tutorials/tutorial-rollup.html).
 
 ## Overwrite
 
@@ -23,13 +23,13 @@ The spec we'll use for this tutorial is located at `quickstart/tutorial/updates-
 
 Let's submit that task:
 
-```
+```bash
 bin/post-index-task --file quickstart/tutorial/updates-init-index.json 
 ```
 
 We have three initial rows containing an "animal" dimension and "number" metric:
 
-```
+```bash
 dsql> select * from "updates-tutorial"; 
 ┌──────────────────────────┬──────────┬───────┬────────┐
 │ __time                   │ animal   │ count │ number │
@@ -51,13 +51,13 @@ Note that this task reads input from `quickstart/tutorial/updates-data2.json`, a
 
 Let's submit that task:
 
-```
+```bash
 bin/post-index-task --file quickstart/tutorial/updates-overwrite-index.json 
 ```
 
 When Druid finishes loading the new segment from this overwrite task, the "tiger" row now has the value "lion", the "aardvark" row has a different number, and the "giraffe" row has been replaced. It may take a couple of minutes for the changes to take effect:
 
-```
+```bash
 dsql> select * from "updates-tutorial";
 ┌──────────────────────────┬──────────┬───────┬────────┐
 │ __time                   │ animal   │ count │ number │
@@ -77,13 +77,13 @@ The `quickstart/tutorial/updates-append-index.json` task spec has been configure
 
 Let's submit that task:
 
-```
+```bash
 bin/post-index-task --file quickstart/tutorial/updates-append-index.json 
 ```
 
 When Druid finishes loading the new segment from this overwrite task, the new rows will have been added to the datasource. Note that roll-up occurred for the "lion" row:
 
-```
+```bash
 dsql> select * from "updates-tutorial";
 ┌──────────────────────────┬──────────┬───────┬────────┐
 │ __time                   │ animal   │ count │ number │
@@ -106,13 +106,13 @@ The `quickstart/tutorial/updates-append-index2.json` task spec reads input from 
 
 Let's submit that task:
 
-```
+```bash
 bin/post-index-task --file quickstart/tutorial/updates-append-index2.json 
 ```
 
 When the new data is loaded, we can see two additional rows after "octopus". Note that the new "bear" row with number 222 has not been rolled up with the existing bear-111 row, because the new data is held in a separate segment.
 
-```
+```bash
 dsql> select * from "updates-tutorial";
 ┌──────────────────────────┬──────────┬───────┬────────┐
 │ __time                   │ animal   │ count │ number │
@@ -132,7 +132,7 @@ Retrieved 8 rows in 0.02s.
 
 If we run a GroupBy query instead of a `select *`, we can see that the "bear" rows will group together at query time:
 
-```
+```bash
 dsql> select __time, animal, SUM("count"), SUM("number") from "updates-tutorial" group by __time, animal;
 ┌──────────────────────────┬──────────┬────────┬────────┐
 │ __time                   │ animal   │ EXPR$2 │ EXPR$3 │

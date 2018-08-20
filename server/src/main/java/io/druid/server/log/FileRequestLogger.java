@@ -63,7 +63,8 @@ public class FileRequestLogger implements RequestLogger
   }
 
   @LifecycleStart
-  public void start()
+  @Override
+  public void start() throws Exception
   {
     try {
       baseDir.mkdirs();
@@ -117,6 +118,7 @@ public class FileRequestLogger implements RequestLogger
   }
 
   @LifecycleStop
+  @Override
   public void stop()
   {
     synchronized (lock) {

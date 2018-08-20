@@ -33,10 +33,11 @@ import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.writeout.WriteOutBytes;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -66,6 +67,9 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private List<int[]> vals;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public V3CompressedVSizeColumnarMultiIntsSerializerTest(
       CompressionStrategy compressionStrategy,
@@ -111,7 +115,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
 
   private void checkSerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
   {
-    FileSmoosher smoosher = new FileSmoosher(FileUtils.getTempDirectory());
+    FileSmoosher smoosher = new FileSmoosher(temporaryFolder.newFolder());
 
     try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium()) {
       int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;

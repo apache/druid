@@ -90,12 +90,10 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     final File outDir = Files.createTempDirectory("druid").toFile();
     try {
       expect(azureStorage.getBlobInputStream(containerName, blobPath)).andThrow(
-          new StorageException(
+          new URISyntaxException(
               "error",
               "error",
-              404,
-              null,
-              null
+              404
           )
       );
 

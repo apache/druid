@@ -16,20 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.collections;
 
-package io.druid.server.log;
+import com.google.common.base.Supplier;
 
-import io.druid.server.RequestLogLine;
+import java.io.Closeable;
 
-import java.io.IOException;
-
-/**
- */
-public interface RequestLogger
+public class CloseableDefaultBlockingPool<T> extends DefaultBlockingPool<T> implements Closeable
 {
-  void log(RequestLogLine requestLogLine) throws IOException;
+  public CloseableDefaultBlockingPool(Supplier<T> generator, int limit)
+  {
+    super(generator, limit);
+  }
 
-  default void start() throws Exception {}
-
-  default void stop() {}
+  @Override
+  public void close()
+  {
+    objects.clear();
+  }
 }

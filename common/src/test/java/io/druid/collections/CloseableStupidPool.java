@@ -16,20 +16,28 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.collections;
 
-package io.druid.server.log;
+import com.google.common.base.Supplier;
 
-import io.druid.server.RequestLogLine;
+import java.io.Closeable;
 
-import java.io.IOException;
-
-/**
- */
-public interface RequestLogger
+public class CloseableStupidPool<T> extends StupidPool<T> implements Closeable
 {
-  void log(RequestLogLine requestLogLine) throws IOException;
+  public CloseableStupidPool(String name, Supplier<T> generator)
+  {
+    super(name, generator);
+  }
 
-  default void start() throws Exception {}
+  public CloseableStupidPool(String name, Supplier<T> generator, int initCount, int objectsCacheMaxCount)
+  {
+    super(name, generator, initCount, objectsCacheMaxCount);
+  }
 
-  default void stop() {}
+  @Override
+  public void close()
+  {
+    objects.clear();
+    poolSize.set(0);
+  }
 }

@@ -70,8 +70,8 @@ import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
-import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.metrics.ExceptionCapturingServiceEmitter;
+import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -2104,6 +2104,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.moveTaskGroupToPendingCompletion(0);
     supervisor.checkpoint(
         0,
+        ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoints.get(0))),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, fakeCheckpoints))
     );
@@ -2173,6 +2174,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.checkpoint(
         0,
+        ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, Collections.emptyMap())),
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, Collections.emptyMap()))
     );
@@ -2183,12 +2185,103 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertNotNull(serviceEmitter.getStackTrace());
+    while (serviceEmitter.getStackTrace() == null) {
+      Thread.sleep(100);
+    }
+
+    Assert.assertTrue(serviceEmitter.getStackTrace().startsWith("io.druid.java.util.common.ISE: WTH?! cannot find"));
     Assert.assertEquals(
         "WTH?! cannot find taskGroup [0] among all taskGroups [{}]",
         serviceEmitter.getExceptionMessage()
     );
     Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testCheckpointWithNullTaskGroupId()
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
+  {
+    supervisor = getSupervisor(1, 3, true, "PT1S", null, null, false);
+    //not adding any events
+    final Task id1 = createKafkaIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
+        new KafkaPartitions(topic, ImmutableMap.of(0, Long.MAX_VALUE)),
+        null,
+        null
+    );
+
+    final Task id2 = createKafkaIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
+        new KafkaPartitions(topic, ImmutableMap.of(0, Long.MAX_VALUE)),
+        null,
+        null
+    );
+
+    final Task id3 = createKafkaIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
+        new KafkaPartitions(topic, ImmutableMap.of(0, Long.MAX_VALUE)),
+        null,
+        null
+    );
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(
+        indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(new KafkaDataSourceMetadata(null)
+    ).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    expect(taskClient.getStatusAsync(anyString()))
+        .andReturn(Futures.immediateFuture(KafkaIndexTask.Status.READING))
+        .anyTimes();
+    final TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(0, 0L));
+    expect(taskClient.getCheckpointsAsync(anyString(), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(3);
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
+    expect(taskClient.pauseAsync(anyString()))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L)))
+        .anyTimes();
+    expect(taskClient.setEndOffsetsAsync(anyString(), EasyMock.eq(ImmutableMap.of(0, 10L)), anyBoolean()))
+        .andReturn(Futures.immediateFuture(true))
+        .anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+
+    supervisor.runInternal();
+
+    final TreeMap<Integer, Map<Integer, Long>> newCheckpoints = new TreeMap<>();
+    newCheckpoints.put(0, ImmutableMap.of(0, 10L));
+    supervisor.checkpoint(
+        null,
+        ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
+        new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoints.get(0))),
+        new KafkaDataSourceMetadata(new KafkaPartitions(topic, newCheckpoints.get(0)))
+    );
+
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
+
+    verifyAll();
   }
 
   private void addSomeEvents(int numEventsPerPartition) throws Exception
@@ -2197,7 +2290,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       for (int i = 0; i < NUM_PARTITIONS; i++) {
         for (int j = 0; j < numEventsPerPartition; j++) {
           kafkaProducer.send(
-              new ProducerRecord<byte[], byte[]>(
+              new ProducerRecord<>(
                   topic,
                   i,
                   null,

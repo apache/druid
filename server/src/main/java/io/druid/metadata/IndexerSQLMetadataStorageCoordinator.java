@@ -311,7 +311,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
 
-    final AtomicBoolean txnFailure = new AtomicBoolean(false);
+    final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
 
     try {
       return connector.retryTransaction(
@@ -323,6 +323,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 final TransactionStatus transactionStatus
             ) throws Exception
             {
+              // Set definitelyNotUpdated back to false upon retrying.
+              definitelyNotUpdated.set(false);
+
               final Set<DataSegment> inserted = Sets.newHashSet();
 
               if (startMetadata != null) {
@@ -334,8 +337,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 );
 
                 if (result != DataSourceMetadataUpdateResult.SUCCESS) {
+                  // Metadata was definitely not updated.
                   transactionStatus.setRollbackOnly();
-                  txnFailure.set(true);
+                  definitelyNotUpdated.set(true);
 
                   if (result == DataSourceMetadataUpdateResult.FAILURE) {
                     throw new RuntimeException("Aborting transaction!");
@@ -359,9 +363,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
     }
     catch (CallbackFailedException e) {
-      if (txnFailure.get()) {
-        return new SegmentPublishResult(ImmutableSet.of(), false);
+      if (definitelyNotUpdated.get()) {
+        return SegmentPublishResult.fail();
       } else {
+        // Must throw exception if we are not sure if we updated or not.
         throw e;
       }
     }
@@ -890,7 +895,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
    *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}
    *
-   * @return true if dataSource metadata was updated from matching startMetadata to matching endMetadata
+   * @return SUCCESS if dataSource metadata was updated from matching startMetadata to matching endMetadata, FAILURE or
+   * TRY_AGAIN if it definitely was not updated. This guarantee is meant to help
+   * {@link #announceHistoricalSegments(Set, DataSourceMetadata, DataSourceMetadata)}
+   * achieve its own guarantee.
+   *
+   * @throws RuntimeException if state is unknown after this call
    */
   protected DataSourceMetadataUpdateResult updateDataSourceMetadataWithHandle(
       final Handle handle,
@@ -1163,29 +1173,31 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         handle -> handle.createQuery(
             StringUtils.format(
                 "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource " +
-                    "AND start >= :start AND %2$send%2$s <= :end AND used = true",
+                "AND start >= :start AND %2$send%2$s <= :end AND used = true",
                 dbTables.getSegmentsTable(), connector.getQuoteString()
             )
         )
-            .bind("dataSource", dataSource)
-            .bind("start", interval.getStart().toString())
-            .bind("end", interval.getEnd().toString())
-            .map(new ResultSetMapper<Pair<DataSegment, String>>()
-            {
-              @Override
-              public Pair<DataSegment, String> map(int index, ResultSet r, StatementContext ctx) throws SQLException
-              {
-                try {
-                  return new Pair<>(
-                      jsonMapper.readValue(r.getBytes("payload"), DataSegment.class),
-                      r.getString("created_date"));
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
-              }
-            })
-            .list()
+                        .bind("dataSource", dataSource)
+                        .bind("start", interval.getStart().toString())
+                        .bind("end", interval.getEnd().toString())
+                        .map(new ResultSetMapper<Pair<DataSegment, String>>()
+                        {
+                          @Override
+                          public Pair<DataSegment, String> map(int index, ResultSet r, StatementContext ctx)
+                              throws SQLException
+                          {
+                            try {
+                              return new Pair<>(
+                                  jsonMapper.readValue(r.getBytes("payload"), DataSegment.class),
+                                  r.getString("created_date")
+                              );
+                            }
+                            catch (IOException e) {
+                              throw new RuntimeException(e);
+                            }
+                          }
+                        })
+                        .list()
     );
   }
 
@@ -1197,7 +1209,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .createStatement(
                 StringUtils.format(
                     "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) VALUES" +
-                        " (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+                    " (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
                     dbTables.getDataSourceTable()
                 )
             )

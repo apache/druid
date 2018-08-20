@@ -8,10 +8,10 @@ This tutorial will demonstrate how to query data in Druid, with examples for Dru
 
 The tutorial assumes that you've already completed one of the 4 ingestion tutorials, as we will be querying the sample Wikipedia edits data.
 
-* [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
-* [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
-* [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
-* [Tutorial: Loading stream data using Tranquility](/docs/VERSION/tutorials/tutorial-tranquility.html)
+* [Tutorial: Loading a file](../tutorials/tutorial-batch.html)
+* [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.html)
+* [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.html)
+* [Tutorial: Loading stream data using Tranquility](../tutorials/tutorial-tranquility.html)
 
 ## Native JSON queries
 
@@ -102,7 +102,7 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipe
 
 The following results should be returned:
 
-```
+```json
 [
   {
     "page": "Wikipedia:Vandalismusmeldung",
@@ -153,7 +153,7 @@ For convenience, the Druid package includes a SQL command-line client, located a
 
 Let's now run `bin/dsql`; you should see the following prompt:
 
-```
+```bash
 Welcome to dsql, the command-line client for Druid SQL.
 Type "\h" for help.
 dsql> 
@@ -161,7 +161,7 @@ dsql>
 
 To submit the query, paste it to the `dsql` prompt and press enter:
 
-```
+```bash
 dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;
 ┌──────────────────────────────────────────────────────────┬───────┐
 │ page                                                     │ Edits │
@@ -186,7 +186,7 @@ Retrieved 10 rows in 0.06s.
 
 `SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY FLOOR(__time to HOUR);`
 
-```
+```bash
 dsql> SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY FLOOR(__time to HOUR);
 ┌──────────────────────────┬──────────────┐
 │ HourTime                 │ LinesDeleted │
@@ -223,7 +223,7 @@ Retrieved 24 rows in 0.08s.
 
 `SELECT channel, SUM(added) FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY channel ORDER BY SUM(added) DESC LIMIT 5;`
 
-```
+```bash
 dsql> SELECT channel, SUM(added) FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY channel ORDER BY SUM(added) DESC LIMIT 5;
 ┌───────────────┬─────────┐
 │ channel       │ EXPR$1  │
@@ -241,7 +241,7 @@ Retrieved 5 rows in 0.05s.
 
 ` SELECT user, page FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 02:00:00' AND TIMESTAMP '2015-09-12 03:00:00' LIMIT 5;`
 
-```
+```bash
  dsql> SELECT user, page FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 02:00:00' AND TIMESTAMP '2015-09-12 03:00:00' LIMIT 5;
 ┌────────────────────────┬────────────────────────────────────────────────────────┐
 │ user                   │ page                                                   │
@@ -263,7 +263,7 @@ Using the TopN query above as an example:
 
 `EXPLAIN PLAN FOR SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;`
 
-```
+```bash
 dsql> EXPLAIN PLAN FOR SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ PLAN                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    │
@@ -275,6 +275,6 @@ Retrieved 1 row in 0.03s.
 
 ## Further reading
 
-The [Queries documentation](/docs/VERSION/querying/querying.html) has more information on Druid's native JSON queries.
+The [Queries documentation](../querying/querying.html) has more information on Druid's native JSON queries.
 
-The [Druid SQL documentation](/docs/VERSION/querying/sql.html) has more information on using Druid SQL queries.
+The [Druid SQL documentation](../querying/sql.html) has more information on using Druid SQL queries.

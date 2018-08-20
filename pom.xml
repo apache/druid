@@ -910,6 +910,7 @@
                 <artifactId>forbiddenapis</artifactId>
                 <version>2.3</version>
                 <configuration>
+                    <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
@@ -1015,9 +1016,15 @@
                     <version>2.19.1</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
-                        <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                        <argLine>-Xmx3000m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
-                            -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                        <!-- set default options -->
+                        <argLine>
+                            -Xmx1500m
+                            -XX:MaxDirectMemorySize=512m
+                            -Duser.language=en
+                            -Duser.GroupByQueryRunnerTest.javacountry=US
+                            -Dfile.encoding=UTF-8
+                            -Duser.timezone=UTC
+                            -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             <!--@TODO After fixing https://github.com/druid-io/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>

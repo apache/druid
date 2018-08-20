@@ -9,7 +9,7 @@ This tutorial demonstrates how to configure retention rules on a datasource to s
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html) and [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html) and [Tutorial: Querying data](../tutorials/tutorial-query.html).
 
 ## Load the example data
 
@@ -17,7 +17,7 @@ For this tutorial, we'll be using the Wikipedia edits sample data, with an inges
 
 The ingestion spec can be found at `quickstart/retention-index.json`. Let's submit that spec, which will create a datasource called `retention-tutorial`:
 
-```
+```bash
 bin/post-index-task --file quickstart/tutorial/retention-index.json 
 ```
 
@@ -67,13 +67,12 @@ The segments for the first 12 hours of 2015-09-12 are now gone:
 
 The resulting retention rule chain is the following:
 
-```
-loadByInterval 2015-09-12T12/2015-09-13 (12 hours)
+1. loadByInterval 2015-09-12T12/2015-09-13 (12 hours)
 
-dropForever
+2. dropForever
 
-loadForever (default rule)
-```
+3. loadForever (default rule)
+
 
 The rule chain is evaluated from top to bottom, with the default rule chain always added at the bottom.
 
@@ -89,4 +88,4 @@ If instead you want to retain data based on how old it is (e.g., retain data tha
 
 ## Further reading
 
-* [Load rules](/docs/VERSION/operations/rule-configuration.html)
+* [Load rules](../operations/rule-configuration.html)

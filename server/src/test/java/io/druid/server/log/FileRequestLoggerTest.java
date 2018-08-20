@@ -31,7 +31,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.concurrent.Executors;
@@ -45,7 +44,7 @@ public class FileRequestLoggerTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  @Test public void testLog() throws IOException
+  @Test public void testLog() throws Exception
   {
     ObjectMapper objectMapper = new ObjectMapper();
     DateTime dateTime = DateTimes.nowUtc();
