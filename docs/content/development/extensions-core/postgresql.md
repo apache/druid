@@ -53,13 +53,13 @@ In most cases, the configuration options map directly to the [postgres jdbc conn
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
-| useSSL | Enables SSL | `false` | no |
-| sslPassword | The [Password Provider](../../operations/password-provider.html) or String password for the client's key. | none | no |
-| sslFactory | The class name to as as the `SSLSocketFactory` | none | no |
-| sslFactoryArg | An optional argument passed to the sslFactory's constructor | none | no |
-| sslMode | The sslMode. Possible values are "disable", "require", "verify-ca", "verify-full", "allow" and "prefer"| none | no |
-| sslCert | The full path to the certificate file. | none | no |
-| sslKey | The full path to the key file. | none | no |
-| sslRootCert | The full path to the root certificate. | none | no |
-| sslHostNameVerifier | The classname of the hostname verifier. | none | no |
-| sslPasswordCallback | The classname of the SSL password provider. | none | no |
+| `druid.metadata.postgres.useSSL` | Enables SSL | `false` | no |
+| `druid.metadata.postgres.sslPassword` | The [Password Provider](../../operations/password-provider.html) or String password for the client's key. | none | no |
+| `druid.metadata.postgres.sslFactory` | The class name to as the `SSLSocketFactory` | none | no |
+| `druid.metadata.postgres.sslFactoryArg` | An optional argument passed to the sslFactory's constructor | none | no |
+| `druid.metadata.postgres.sslMode` | The sslMode. Possible values are "disable", "require", "verify-ca", "verify-full", "allow" and "prefer"| none | no |
+| `druid.metadata.postgres.sslCert` | The full path to the certificate file. | none | no |
+| `druid.metadata.postgres.sslKey` | The full path to the key file. | none | no |
+| `druid.metadata.postgres.sslRootCert` | The full path to the root certificate. | none | no |
+| `druid.metadata.postgres.sslHostNameVerifier` | The classname of the hostname verifier. | none | no |
+| `druid.metadata.postgres.sslPasswordCallback` | The classname of the SSL password provider. | none | no |
