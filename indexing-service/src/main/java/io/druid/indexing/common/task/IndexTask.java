@@ -1451,7 +1451,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
           "targetPartitionSize and numShards cannot both be set"
       );
 
-      this.targetPartitionSize = targetPartitionSize;
+      this.targetPartitionSize = (targetPartitionSize != null && targetPartitionSize == -1)
+                                 ? null
+                                 : targetPartitionSize;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see server.src.main.java.io.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)

@@ -106,14 +106,14 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(false, tuningConfig.isForceExtendableShardSpecs());
-    Assert.assertEquals(false, tuningConfig.isReportParseExceptions());
+    Assert.assertFalse(tuningConfig.isForceExtendableShardSpecs());
+    Assert.assertFalse(tuningConfig.isReportParseExceptions());
     Assert.assertEquals(new IndexSpec(), tuningConfig.getIndexSpec());
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
     Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
-    Assert.assertEquals(null, tuningConfig.getNumShards());
-    Assert.assertEquals(5000000, (int) tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getNumShards());
+    Assert.assertNull(tuningConfig.getTargetPartitionSize());
   }
 
   @Test
@@ -125,14 +125,14 @@ public class TaskSerdeTest
     );
 
     Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
-    Assert.assertEquals(null, tuningConfig.getNumShards());
+    Assert.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"numShards\":10}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(null, tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getTargetPartitionSize());
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
@@ -140,7 +140,7 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(null, tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getTargetPartitionSize());
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
@@ -148,7 +148,7 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(null, tuningConfig.getNumShards());
+    Assert.assertNull(tuningConfig.getNumShards());
     Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
 
     tuningConfig = jsonMapper.readValue(
@@ -156,11 +156,8 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(null, tuningConfig.getNumShards());
-    Assert.assertEquals(
-        IndexTask.IndexTuningConfig.DEFAULT_TARGET_PARTITION_SIZE,
-        (int) tuningConfig.getTargetPartitionSize()
-    );
+    Assert.assertNull(tuningConfig.getNumShards());
+    Assert.assertNull(tuningConfig.getTargetPartitionSize());
   }
 
   @Test
