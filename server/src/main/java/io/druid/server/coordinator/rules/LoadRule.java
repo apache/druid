@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,6 +20,7 @@
 package io.druid.server.coordinator.rules;
 
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -174,6 +175,13 @@ public abstract class LoadRule implements Rule
       }
       final String tier = entry.getKey();
 
+      String noAvailability = StringUtils.format(
+          "No available [%s] servers or node capacity to assign primary segment[%s]! Expected Replicants[%d]",
+          tier,
+          segment.getIdentifier(),
+          targetReplicantsInTier
+      );
+
       final List<ServerHolder> holders = getFilteredHolders(
           tier,
           params.getDruidCluster(),
@@ -181,16 +189,13 @@ public abstract class LoadRule implements Rule
       );
       // no holders satisfy the predicate
       if (holders.isEmpty()) {
+        log.warn(noAvailability);
         continue;
       }
 
       final ServerHolder candidate = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
       if (candidate == null) {
-        log.warn(
-            "No available [%s] servers or node capacity to assign primary segment[%s]! " +
-            "Expected Replicants[%d]",
-            tier, segment.getIdentifier(), targetReplicantsInTier
-        );
+        log.warn(noAvailability);
       } else {
         // cache the result for later use.
         strategyCache.put(tier, candidate);
@@ -204,6 +209,12 @@ public abstract class LoadRule implements Rule
     if (topCandidate != null) {
       // remove tier for primary replica
       strategyCache.remove(topCandidate.getServer().getTier());
+      log.info(
+          "Assigning 'primary' for segment [%s] to server [%s] in tier [%s]",
+          segment.getIdentifier(),
+          topCandidate.getServer().getName(),
+          topCandidate.getServer().getTier()
+      );
       topCandidate.getPeon().loadSegment(segment, null);
     }
 
@@ -225,6 +236,7 @@ public abstract class LoadRule implements Rule
     for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
       final String tier = entry.getKey();
       if (tier.equals(tierToSkip)) {
+        log.info("Skipping replica assignment for tier [%s]", tier);
         continue;
       }
       final int numAssigned = assignReplicasForTier(
@@ -257,15 +269,24 @@ public abstract class LoadRule implements Rule
       return 0;
     }
 
+    String noAvailability = StringUtils.format(
+        "No available [%s] servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
+        tier,
+        segment.getIdentifier(),
+        targetReplicantsInTier
+    );
+
     final List<ServerHolder> holders = getFilteredHolders(tier, params.getDruidCluster(), predicate);
     // if no holders available for assignment
     if (holders.isEmpty()) {
+      log.warn(noAvailability);
       return 0;
     }
 
     final ReplicationThrottler throttler = params.getReplicationManager();
     for (int numAssigned = 0; numAssigned < numToAssign; numAssigned++) {
       if (!throttler.canCreateReplicant(tier)) {
+        log.info("Throttling replication for segment [%s] in tier [%s]", segment.getIdentifier(), tier);
         return numAssigned;
       }
 
@@ -277,10 +298,7 @@ public abstract class LoadRule implements Rule
       }
 
       if (holder == null) {
-        log.warn(
-            "No available [%s] servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
-            tier, segment.getIdentifier(), targetReplicantsInTier
-        );
+        log.warn(noAvailability);
         return numAssigned;
       }
       holders.remove(holder);
@@ -288,6 +306,12 @@ public abstract class LoadRule implements Rule
       final String segmentId = segment.getIdentifier();
       final String holderHost = holder.getServer().getHost();
       throttler.registerReplicantCreation(tier, segmentId, holderHost);
+      log.info(
+          "Assigning 'replica' for segment [%s] to server [%s] in tier [%s]",
+          segment.getIdentifier(),
+          holder.getServer().getName(),
+          holder.getServer().getTier()
+      );
       holder.getPeon().loadSegment(segment, () -> throttler.unregisterReplicantCreation(tier, segmentId, holderHost));
     }
 
@@ -307,6 +331,7 @@ public abstract class LoadRule implements Rule
 
     // This enforces that loading is completed before we attempt to drop stuffs as a safety measure.
     if (loadingInProgress(druidCluster)) {
+      log.info("Loading in progress, skipping drop until loading is complete");
       return;
     }
 
@@ -322,7 +347,11 @@ public abstract class LoadRule implements Rule
       } else {
         final int currentReplicantsInTier = entry.getIntValue();
         final int numToDrop = currentReplicantsInTier - targetReplicants.getOrDefault(tier, 0);
-        numDropped = dropForTier(numToDrop, holders, segment, params.getBalancerStrategy());
+        if (numToDrop > 0) {
+          numDropped = dropForTier(numToDrop, holders, segment, params.getBalancerStrategy());
+        } else {
+          numDropped = 0;
+        }
       }
 
       stats.addToTieredStat(DROPPED_COUNT, tier, numDropped);
@@ -368,6 +397,12 @@ public abstract class LoadRule implements Rule
       final ServerHolder holder = iterator.next();
 
       if (holder.isServingSegment(segment)) {
+        log.info(
+            "Dropping segment [%s] on server [%s] in tier [%s]",
+            segment.getIdentifier(),
+            holder.getServer().getName(),
+            holder.getServer().getTier()
+        );
         holder.getPeon().dropSegment(segment, null);
         ++numDropped;
       } else {

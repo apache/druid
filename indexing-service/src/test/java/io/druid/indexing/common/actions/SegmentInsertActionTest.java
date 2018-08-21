@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -56,9 +56,9 @@ public class SegmentInsertActionTest
       DATA_SOURCE,
       INTERVAL,
       PARTY_YEAR,
-      ImmutableMap.<String, Object>of(),
-      ImmutableList.<String>of(),
-      ImmutableList.<String>of(),
+      ImmutableMap.of(),
+      ImmutableList.of(),
+      ImmutableList.of(),
       new LinearShardSpec(0),
       9,
       1024
@@ -68,9 +68,9 @@ public class SegmentInsertActionTest
       DATA_SOURCE,
       INTERVAL,
       PARTY_YEAR,
-      ImmutableMap.<String, Object>of(),
-      ImmutableList.<String>of(),
-      ImmutableList.<String>of(),
+      ImmutableMap.of(),
+      ImmutableList.of(),
+      ImmutableList.of(),
       new LinearShardSpec(1),
       9,
       1024
@@ -80,9 +80,9 @@ public class SegmentInsertActionTest
       DATA_SOURCE,
       INTERVAL,
       THE_DISTANT_FUTURE,
-      ImmutableMap.<String, Object>of(),
-      ImmutableList.<String>of(),
-      ImmutableList.<String>of(),
+      ImmutableMap.of(),
+      ImmutableList.of(),
+      ImmutableList.of(),
       new LinearShardSpec(1),
       9,
       1024
@@ -127,7 +127,7 @@ public class SegmentInsertActionTest
     actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     thrown.expect(IllegalStateException.class);
-    thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));
+    thrown.expectMessage(CoreMatchers.containsString("are not covered by locks"));
     final Set<DataSegment> segments = actionTestKit.getTaskLockbox().doInCriticalSection(
         task,
         Collections.singletonList(INTERVAL),

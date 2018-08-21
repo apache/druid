@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -28,6 +28,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
@@ -36,6 +37,8 @@ import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.coordinator.CoordinatorClient;
+import io.druid.client.indexing.HttpIndexingServiceClient;
+import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.guice.Binders;
 import io.druid.guice.CacheModule;
 import io.druid.guice.DruidProcessingModule;
@@ -62,12 +65,17 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClient;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
-import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -82,7 +90,6 @@ import io.druid.segment.loading.OmniDataSegmentArchiver;
 import io.druid.segment.loading.OmniDataSegmentKiller;
 import io.druid.segment.loading.OmniDataSegmentMover;
 import io.druid.segment.loading.SegmentLoaderConfig;
-import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
@@ -100,7 +107,7 @@ import org.eclipse.jetty.server.Server;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -142,7 +149,7 @@ public class CliPeon extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -158,6 +165,19 @@ public class CliPeon extends GuiceRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                 .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             PolyBind.createChoice(
                 binder,
@@ -182,6 +202,11 @@ public class CliPeon extends GuiceRunnable
             JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
             configureTaskActionClient(binder);
+            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
+
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
+                  .to(ParallelIndexTaskClientFactory.class)
+                  .in(LazySingleton.class);
 
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
@@ -228,7 +253,7 @@ public class CliPeon extends GuiceRunnable
             // configuration of other parameters, but I don't think that's actually a problem.
             // Note, if that is actually not a problem, then that probably means we have the wrong abstraction.
             binder.bind(SegmentLoaderConfig.class)
-                  .toInstance(new SegmentLoaderConfig().withLocations(Arrays.<StorageLocationConfig>asList()));
+                  .toInstance(new SegmentLoaderConfig().withLocations(Collections.emptyList()));
             binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
@@ -320,14 +345,9 @@ public class CliPeon extends GuiceRunnable
       try {
         final Lifecycle lifecycle = initLifecycle(injector);
         final Thread hook = new Thread(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                log.info("Running shutdown hook");
-                lifecycle.stop();
-              }
+            () -> {
+              log.info("Running shutdown hook");
+              lifecycle.stop();
             }
         );
         Runtime.getRuntime().addShutdownHook(hook);

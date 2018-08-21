@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -26,8 +26,8 @@ import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
+import io.druid.segment.StorageAdapter;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -39,17 +39,17 @@ import java.util.List;
  */
 public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], TopNParams>
 {
-  private final Capabilities capabilities;
+  private final StorageAdapter storageAdapter;
   private final TopNQuery query;
   private final NonBlockingPool<ByteBuffer> bufferPool;
 
   public AggregateTopNMetricFirstAlgorithm(
-      Capabilities capabilities,
+      StorageAdapter storageAdapter,
       TopNQuery query,
       NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    this.capabilities = capabilities;
+    this.storageAdapter = storageAdapter;
     this.query = query;
     this.bufferPool = bufferPool;
   }
@@ -91,7 +91,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
         .build();
     final TopNResultBuilder singleMetricResultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, singleMetricQuery);
 
-    PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(capabilities, singleMetricQuery, bufferPool);
+    PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(storageAdapter, singleMetricQuery, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;
     int[] dimValSelector = null;
     try {
@@ -110,7 +110,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       singleMetricAlgo.cleanup(singleMetricParam);
     }
 
-    PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+    PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(storageAdapter, query, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams allMetricsParam = null;
     try {
       // Run topN for all metrics for top N dimension values

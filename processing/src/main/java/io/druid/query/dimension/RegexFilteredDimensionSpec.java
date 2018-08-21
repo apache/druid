@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,7 +22,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
@@ -76,7 +76,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
             @Override
             public boolean apply(@Nullable String input)
             {
-              return compiledRegex.matcher(Strings.nullToEmpty(input)).matches();
+              return compiledRegex.matcher(NullHandling.nullToEmptyIfNeeded(input)).matches();
             }
           }
       );
@@ -86,7 +86,8 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap();
     forwardMapping.defaultReturnValue(-1);
     for (int i = 0; i < selectorCardinality; i++) {
-      if (compiledRegex.matcher(Strings.nullToEmpty(selector.lookupName(i))).matches()) {
+      String val = NullHandling.nullToEmptyIfNeeded(selector.lookupName(i));
+      if (val != null && compiledRegex.matcher(val).matches()) {
         forwardMapping.put(i, count++);
       }
     }

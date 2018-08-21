@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
@@ -83,7 +82,11 @@ public class S3Utils
     return RetryUtils.retry(f, S3RETRY, maxTries);
   }
 
-  static boolean isObjectInBucketIgnoringPermission(AmazonS3 s3Client, String bucketName, String objectKey)
+  static boolean isObjectInBucketIgnoringPermission(
+      ServerSideEncryptingAmazonS3 s3Client,
+      String bucketName,
+      String objectKey
+  )
   {
     try {
       return s3Client.doesObjectExist(bucketName, objectKey);
@@ -99,7 +102,7 @@ public class S3Utils
   }
 
   public static Iterator<S3ObjectSummary> objectSummaryIterator(
-      final AmazonS3 s3Client,
+      final ServerSideEncryptingAmazonS3 s3Client,
       final String bucket,
       final String prefix,
       final int numMaxKeys
@@ -191,7 +194,7 @@ public class S3Utils
     return filename;
   }
 
-  static AccessControlList grantFullControlToBucketOwner(AmazonS3 s3Client, String bucket)
+  static AccessControlList grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
   {
     final AccessControlList acl = s3Client.getBucketAcl(bucket);
     acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
@@ -240,7 +243,7 @@ public class S3Utils
    * @param bucket   s3 bucket
    * @param key      unique key for the object to be retrieved
    */
-  public static S3ObjectSummary getSingleObjectSummary(AmazonS3 s3Client, String bucket, String key)
+  public static S3ObjectSummary getSingleObjectSummary(ServerSideEncryptingAmazonS3 s3Client, String bucket, String key)
   {
     final ListObjectsV2Request request = new ListObjectsV2Request()
         .withBucketName(bucket)

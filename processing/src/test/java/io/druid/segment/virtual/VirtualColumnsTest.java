@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -156,7 +156,7 @@ public class VirtualColumnsTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("virtualColumn name[__time] not allowed");
 
-    VirtualColumns.create(ImmutableList.<VirtualColumn>of(expr));
+    VirtualColumns.create(ImmutableList.of(expr));
   }
 
   @Test
@@ -179,7 +179,7 @@ public class VirtualColumnsTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Duplicate virtualColumn name[expr]");
 
-    VirtualColumns.create(ImmutableList.<VirtualColumn>of(expr, expr2));
+    VirtualColumns.create(ImmutableList.of(expr, expr2));
   }
 
   @Test
@@ -202,20 +202,20 @@ public class VirtualColumnsTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Self-referential column[expr]");
 
-    VirtualColumns.create(ImmutableList.<VirtualColumn>of(expr, expr2));
+    VirtualColumns.create(ImmutableList.of(expr, expr2));
   }
 
   @Test
   public void testGetCacheKey()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.<VirtualColumn>of(
+        ImmutableList.of(
             new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
-        ImmutableList.<VirtualColumn>of(
+        ImmutableList.of(
             new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
@@ -228,13 +228,13 @@ public class VirtualColumnsTest
   public void testEqualsAndHashCode()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.<VirtualColumn>of(
+        ImmutableList.of(
             new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
-        ImmutableList.<VirtualColumn>of(
+        ImmutableList.of(
             new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
@@ -253,7 +253,7 @@ public class VirtualColumnsTest
   public void testSerde() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final ImmutableList<VirtualColumn> theColumns = ImmutableList.<VirtualColumn>of(
+    final ImmutableList<VirtualColumn> theColumns = ImmutableList.of(
         new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
         new ExpressionVirtualColumn("expr2", "x + z", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
     );

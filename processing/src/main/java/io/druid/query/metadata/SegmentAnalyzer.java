@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,10 +21,10 @@ package io.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
@@ -216,8 +216,8 @@ public class SegmentAnalyzer
     }
 
     if (analyzingMinMax() && cardinality > 0) {
-      min = Strings.nullToEmpty(bitmapIndex.getValue(0));
-      max = Strings.nullToEmpty(bitmapIndex.getValue(cardinality - 1));
+      min = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(0));
+      max = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(cardinality - 1));
     }
 
     return new ColumnAnalysis(
@@ -329,7 +329,7 @@ public class SegmentAnalyzer
           return new ColumnAnalysis(typeName, hasMultipleValues, 0, null, null, null, null);
         }
 
-        final int length = column.getLength();
+        final int length = complexColumn.getLength();
         for (int i = 0; i < length; ++i) {
           size += inputSizeFn.apply(complexColumn.getRowValue(i));
         }

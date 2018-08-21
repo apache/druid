@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -30,6 +30,7 @@ import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -69,6 +70,7 @@ import java.util.List;
 public class TaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final IndexSpec indexSpec = new IndexSpec();
 
   @Rule
@@ -78,6 +80,7 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
+    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
@@ -214,7 +217,8 @@ public class TaskSerdeTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -298,7 +302,8 @@ public class TaskSerdeTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
@@ -326,14 +331,14 @@ public class TaskSerdeTest
   @Test
   public void testMergeTaskSerde() throws Exception
   {
-    final List<DataSegment> segments = ImmutableList.<DataSegment>of(
+    final List<DataSegment> segments = ImmutableList.of(
         DataSegment.builder()
                    .dataSource("foo")
                    .interval(Intervals.of("2010-01-01/P1D"))
                    .version("1234")
                    .build()
     );
-    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
+    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
     final MergeTask task = new MergeTask(
         null,
         "foo",
@@ -383,7 +388,7 @@ public class TaskSerdeTest
   @Test
   public void testSameIntervalMergeTaskSerde() throws Exception
   {
-    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
+    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
     final SameIntervalMergeTask task = new SameIntervalMergeTask(
         null,
         "foo",
@@ -614,7 +619,7 @@ public class TaskSerdeTest
         null,
         "foo",
         segments,
-        ImmutableList.<AggregatorFactory>of(
+        ImmutableList.of(
             new CountAggregatorFactory("cnt")
         ),
         indexSpec,
@@ -708,7 +713,7 @@ public class TaskSerdeTest
             "dataSource",
             Intervals.of("1990-01-01/1999-12-31"),
             "version",
-            ImmutableMap.<String, Object>of(),
+            ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("metric1", "metric2"),
             NoneShardSpec.instance(),
@@ -733,7 +738,7 @@ public class TaskSerdeTest
         "dataSource",
         Intervals.of("1990-01-01/1999-12-31"),
         "version",
-        ImmutableMap.<String, Object>of(),
+        ImmutableMap.of(),
         ImmutableList.of("dim1", "dim2"),
         ImmutableList.of("metric1", "metric2"),
         NoneShardSpec.instance(),
@@ -786,7 +791,7 @@ public class TaskSerdeTest
         null,
         "foo",
         Intervals.of("2010-01-01/P1D"),
-        ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"),
+        ImmutableMap.of("bucket", "hey", "baseKey", "what"),
         null,
         null
     );
@@ -821,7 +826,7 @@ public class TaskSerdeTest
             ),
                 null,
                 jsonMapper
-            ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar"), null, null), null
+            ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
         ),
         null,
         null,

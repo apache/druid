@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,10 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.data.Indexed;
@@ -34,6 +35,7 @@ import io.druid.segment.filter.LikeFilter;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.regex.Pattern;
 
 public class LikeDimFilter implements DimFilter
@@ -98,7 +100,7 @@ public class LikeDimFilter implements DimFilter
     )
     {
       this.suffixMatch = Preconditions.checkNotNull(suffixMatch, "suffixMatch");
-      this.prefix = Strings.nullToEmpty(prefix);
+      this.prefix = NullHandling.nullToEmptyIfNeeded(prefix);
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
     }
 
@@ -151,7 +153,8 @@ public class LikeDimFilter implements DimFilter
 
     public boolean matches(@Nullable final String s)
     {
-      return pattern.matcher(Strings.nullToEmpty(s)).matches();
+      String val = NullHandling.nullToEmptyIfNeeded(s);
+      return val != null && pattern.matcher(val).matches();
     }
 
     /**
@@ -165,7 +168,7 @@ public class LikeDimFilter implements DimFilter
         return true;
       } else if (suffixMatch == SuffixMatch.MATCH_EMPTY) {
         final String s = strings.get(i);
-        return (s == null ? 0 : s.length()) == prefix.length();
+        return s == null ? matches(null) : s.length() == prefix.length();
       } else {
         // suffixMatch is MATCH_PATTERN
         final String s = strings.get(i);
@@ -181,23 +184,9 @@ public class LikeDimFilter implements DimFilter
         public Predicate<String> makeStringPredicate()
         {
           if (extractionFn != null) {
-            return new Predicate<String>()
-            {
-              @Override
-              public boolean apply(String input)
-              {
-                return matches(extractionFn.apply(input));
-              }
-            };
+            return input -> matches(extractionFn.apply(input));
           } else {
-            return new Predicate<String>()
-            {
-              @Override
-              public boolean apply(String input)
-              {
-                return matches(input);
-              }
-            };
+            return input -> matches(input);
           }
         }
 
@@ -304,6 +293,12 @@ public class LikeDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
   }
 
   @Override

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,7 +22,9 @@ package io.druid.query.aggregation.first;
 import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -70,7 +72,7 @@ public class LongFirstAggregationTest
   @Test
   public void testLongFirstAggregator()
   {
-    LongFirstAggregator agg = (LongFirstAggregator) longFirstAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = longFirstAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -88,10 +90,10 @@ public class LongFirstAggregationTest
   @Test
   public void testLongFirstBufferAggregator()
   {
-    LongFirstBufferAggregator agg = (LongFirstBufferAggregator) longFirstAggFactory.factorizeBuffered(
+    BufferAggregator agg = longFirstAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[longFirstAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[longFirstAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -118,7 +120,7 @@ public class LongFirstAggregationTest
   @Test
   public void testLongFirstCombiningAggregator()
   {
-    LongFirstAggregator agg = (LongFirstAggregator) combiningAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -137,10 +139,10 @@ public class LongFirstAggregationTest
   @Test
   public void testLongFirstCombiningBufferAggregator()
   {
-    LongFirstBufferAggregator agg = (LongFirstBufferAggregator) combiningAggFactory.factorizeBuffered(
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[longFirstAggFactory.getMaxIntermediateSize()]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[longFirstAggFactory.getMaxIntermediateSizeWithNulls()]);
     agg.init(buffer, 0);
 
     aggregate(agg, buffer, 0);
@@ -167,7 +169,7 @@ public class LongFirstAggregationTest
   }
 
   private void aggregate(
-      LongFirstAggregator agg
+      Aggregator agg
   )
   {
     agg.aggregate();
@@ -177,7 +179,7 @@ public class LongFirstAggregationTest
   }
 
   private void aggregate(
-      LongFirstBufferAggregator agg,
+      BufferAggregator agg,
       ByteBuffer buff,
       int position
   )

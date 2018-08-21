@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -54,6 +54,7 @@ import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.client.api.Result;
 import org.eclipse.jetty.client.util.BytesContentProvider;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
 
@@ -252,7 +253,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 DateTimes.nowUtc(),
                 request.getRemoteAddr(),
                 null,
-                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", errorMessage))
+                new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
             )
         );
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -306,7 +307,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     if (query != null) {
       final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
       try {
-        proxyRequest.content(new BytesContentProvider(objectMapper.writeValueAsBytes(query)));
+        byte[] bytes = objectMapper.writeValueAsBytes(query);
+        proxyRequest.content(new BytesContentProvider(bytes));
+        proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
       }
       catch (JsonProcessingException e) {
         Throwables.propagate(e);
@@ -483,7 +486,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         "query/time",
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
@@ -514,7 +517,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         "success",
                         false,
                         "exception",

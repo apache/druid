@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  */
@@ -127,16 +128,16 @@ public class ServiceMetricEventTest
                     .put("service", "test")
                     .put("host", "localhost")
                     .put("metric", "test-metric")
-                    .put("user1", Arrays.asList("a"))
-                    .put("user2", Arrays.asList("b"))
-                    .put("user3", Arrays.asList("c"))
-                    .put("user4", Arrays.asList("d"))
-                    .put("user5", Arrays.asList("e"))
-                    .put("user6", Arrays.asList("f"))
-                    .put("user7", Arrays.asList("g"))
-                    .put("user8", Arrays.asList("h"))
-                    .put("user9", Arrays.asList("i"))
-                    .put("user10", Arrays.asList("j"))
+                    .put("user1", Collections.singletonList("a"))
+                    .put("user2", Collections.singletonList("b"))
+                    .put("user3", Collections.singletonList("c"))
+                    .put("user4", Collections.singletonList("d"))
+                    .put("user5", Collections.singletonList("e"))
+                    .put("user6", Collections.singletonList("f"))
+                    .put("user7", Collections.singletonList("g"))
+                    .put("user8", Collections.singletonList("h"))
+                    .put("user9", Collections.singletonList("i"))
+                    .put("user10", Collections.singletonList("j"))
                     .put("value", 1234)
                     .build(), arrayConstructorEvent.toMap()
     );
@@ -217,16 +218,16 @@ public class ServiceMetricEventTest
                     .put("service", "test")
                     .put("host", "localhost")
                     .put("metric", "test-metric")
-                    .put("user1", Arrays.asList("a"))
-                    .put("user2", Arrays.asList("b"))
-                    .put("user3", Arrays.asList("c"))
-                    .put("user4", Arrays.asList("d"))
-                    .put("user5", Arrays.asList("e"))
-                    .put("user6", Arrays.asList("f"))
-                    .put("user7", Arrays.asList("g"))
-                    .put("user8", Arrays.asList("h"))
-                    .put("user9", Arrays.asList("i"))
-                    .put("user10", Arrays.asList("j"))
+                    .put("user1", Collections.singletonList("a"))
+                    .put("user2", Collections.singletonList("b"))
+                    .put("user3", Collections.singletonList("c"))
+                    .put("user4", Collections.singletonList("d"))
+                    .put("user5", Collections.singletonList("e"))
+                    .put("user6", Collections.singletonList("f"))
+                    .put("user7", Collections.singletonList("g"))
+                    .put("user8", Collections.singletonList("h"))
+                    .put("user9", Collections.singletonList("i"))
+                    .put("user10", Collections.singletonList("j"))
                     .put("value", 1234)
                     .build(),
         ServiceMetricEvent.builder()

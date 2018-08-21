@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,6 +23,7 @@ import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -36,6 +37,8 @@ import java.util.Map;
  * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e. g. min,
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
+ * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
+ * to extend {@link NullableAggregatorFactory}.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
@@ -59,7 +62,8 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @return an object representing the combination of lhs and rhs, this can be a new object or a mutation of the inputs
    */
-  public abstract Object combine(Object lhs, Object rhs);
+  @Nullable
+  public abstract Object combine(@Nullable Object lhs, @Nullable Object rhs);
 
   /**
    * Creates an AggregateCombiner to fold rollup aggregation results from serveral "rows" of different indexes during
@@ -73,6 +77,20 @@ public abstract class AggregatorFactory implements Cacheable
   public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("[%s] does not implement makeAggregateCombiner()", this.getClass().getName());
+  }
+
+  /**
+   * Creates an {@link AggregateCombiner} which supports nullability.
+   * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
+   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
+   *
+   * @see AggregateCombiner
+   * @see NullableAggregatorFactory
+   */
+  public AggregateCombiner makeNullableAggregateCombiner()
+  {
+    return makeAggregateCombiner();
   }
 
   /**
@@ -126,7 +144,8 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @return the finalized value that should be returned for the initial query
    */
-  public abstract Object finalizeComputation(Object object);
+  @Nullable
+  public abstract Object finalizeComputation(@Nullable Object object);
 
   public abstract String getName();
 
@@ -140,6 +159,27 @@ public abstract class AggregatorFactory implements Cacheable
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
    */
   public abstract int getMaxIntermediateSize();
+
+  /**
+   * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
+   * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
+   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
+   *
+   * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
+   */
+  public int getMaxIntermediateSizeWithNulls()
+  {
+    return getMaxIntermediateSize();
+  }
+
+  /**
+   * Return a potentially optimized form of this AggregatorFactory for per-segment queries.
+   */
+  public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    return this;
+  }
 
   /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and
@@ -201,6 +241,6 @@ public abstract class AggregatorFactory implements Cacheable
 
     return mergedAggregators == null
            ? null
-           : mergedAggregators.values().toArray(new AggregatorFactory[mergedAggregators.size()]);
+           : mergedAggregators.values().toArray(new AggregatorFactory[0]);
   }
 }

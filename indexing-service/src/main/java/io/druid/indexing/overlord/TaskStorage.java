@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,13 +20,13 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
+import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
-import io.druid.java.util.common.Pair;
 import io.druid.metadata.EntryExistsException;
-import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -95,6 +95,9 @@ public interface TaskStorage
    */
   Optional<TaskStatus> getStatus(String taskid);
 
+  @Nullable
+  TaskInfo<Task, TaskStatus> getTaskInfo(String taskId);
+
   /**
    * Add an action taken by a task to the audit log.
    *
@@ -122,16 +125,32 @@ public interface TaskStorage
   List<Task> getActiveTasks();
 
   /**
-   * Returns up to {@code maxTaskStatuses} statuses of recently finished tasks as stored in the storage facility. No
-   * particular order is guaranteed, but implementations are encouraged to return tasks in descending order of creation.
-   * No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
+   * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No
+   * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
-   * @return list of recently finished tasks
+   * @param dataSource datasource
+   *
+   * @return list of {@link TaskInfo}
    */
-  List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses);
+  List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource);
 
-  @Nullable
-  Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);
+  /**
+   * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage
+   * facility. No particular order is guaranteed, but implementations are encouraged to return tasks in descending order
+   * of creation. No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply
+   * return nothing.
+   *
+   * @param maxTaskStatuses maxTaskStatuses
+   * @param duration        duration
+   * @param datasource      datasource
+   *
+   * @return list of {@link TaskInfo}
+   */
+  List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfo(
+      @Nullable Integer maxTaskStatuses,
+      @Nullable Duration duration,
+      @Nullable String datasource
+  );
 
   /**
    * Returns a list of locks for a particular task.

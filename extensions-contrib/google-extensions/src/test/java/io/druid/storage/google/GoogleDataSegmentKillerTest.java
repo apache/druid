@@ -1,29 +1,33 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package io.druid.storage.google;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.Intervals;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,15 +40,16 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 {
   private static final String bucket = "bucket";
   private static final String indexPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
+  private static final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf("/")) + "/descriptor.json";
 
   private static final DataSegment dataSegment = new DataSegment(
       "test",
       Intervals.of("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.<String, Object>of("bucket", bucket, "path", indexPath),
+      ImmutableMap.of("bucket", bucket, "path", indexPath),
       null,
       null,
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1
   );
@@ -60,11 +65,9 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test
   public void killTest() throws SegmentLoadingException, IOException
   {
-    final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf("/")) + "/descriptor.json";
-
-    storage.delete(bucket, indexPath);
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
     expectLastCall();
-    storage.delete(bucket, descriptorPath);
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(descriptorPath));
     expectLastCall();
 
     replayAll();
@@ -79,8 +82,35 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test(expected = SegmentLoadingException.class)
   public void killWithErrorTest() throws SegmentLoadingException, IOException
   {
-    storage.delete(bucket, indexPath);
-    expectLastCall().andThrow(new IOException(""));
+    final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
+        JacksonFactory.getDefaultInstance(),
+        300,
+        "test"
+    );
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
+    expectLastCall().andThrow(exception);
+
+    replayAll();
+
+    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage);
+
+    killer.kill(dataSegment);
+
+    verifyAll();
+  }
+
+  @Test
+  public void killRetryWithErrorTest() throws SegmentLoadingException, IOException
+  {
+    final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
+        JacksonFactory.getDefaultInstance(),
+        500,
+        "test"
+    );
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
+    expectLastCall().andThrow(exception).once().andVoid().once();
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(descriptorPath));
+    expectLastCall().andThrow(exception).once().andVoid().once();
 
     replayAll();
 

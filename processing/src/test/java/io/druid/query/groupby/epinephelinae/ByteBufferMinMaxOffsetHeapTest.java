@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -39,7 +39,7 @@ public class ByteBufferMinMaxOffsetHeapTest
   {
     int limit = 15;
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     ArrayList<Integer> values = Lists.newArrayList(
         30, 45, 81, 92, 68, 54, 66, 33, 89, 98,
@@ -91,7 +91,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     ArrayList<Integer> deletedValues = Lists.newArrayList();
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (int i = 0; i < values.size(); i++) {
       int droppedOffset = heap.addOffset(values.get(i));
@@ -148,7 +148,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     ArrayList<Integer> deletedValues = Lists.newArrayList();
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (int i = 0; i < values.size(); i++) {
       int droppedOffset = heap.addOffset(values.get(i));
@@ -202,7 +202,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     });
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (Integer value : values) {
       heap.addOffset(value);
@@ -236,7 +236,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     });
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
-    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.<Integer>natural(), null);
+    ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (Integer value : values) {
       heap.addOffset(value);

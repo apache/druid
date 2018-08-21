@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -58,7 +59,7 @@ public class ChainedExecutionQueryRunnerTest
     neverRelease.lock();
   }
   
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testQueryCancellation() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
@@ -85,8 +86,8 @@ public class ChainedExecutionQueryRunnerTest
     Capture<ListenableFuture> capturedFuture = EasyMock.newCapture();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
     watcher.registerQuery(
-        EasyMock.<Query>anyObject(),
-        EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture))
+        EasyMock.anyObject(),
+        EasyMock.and(EasyMock.anyObject(), EasyMock.capture(capturedFuture))
     );
     EasyMock.expectLastCall()
             .andAnswer(
@@ -114,15 +115,15 @@ public class ChainedExecutionQueryRunnerTest
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
         watcher,
-        Lists.<QueryRunner<Integer>>newArrayList(
+        Lists.newArrayList(
          runners
         )
     );
-    Map<String, Object> context = ImmutableMap.<String, Object>of();
+    Map<String, Object> context = ImmutableMap.of();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
-                                  .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")))
+                                  .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
 
@@ -182,7 +183,7 @@ public class ChainedExecutionQueryRunnerTest
     EasyMock.verify(watcher);
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testQueryTimeout() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
@@ -209,8 +210,8 @@ public class ChainedExecutionQueryRunnerTest
     Capture<ListenableFuture> capturedFuture = new Capture<>();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
     watcher.registerQuery(
-        EasyMock.<Query>anyObject(),
-        EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture))
+        EasyMock.anyObject(),
+        EasyMock.and(EasyMock.anyObject(), EasyMock.capture(capturedFuture))
     );
     EasyMock.expectLastCall()
             .andAnswer(
@@ -239,7 +240,7 @@ public class ChainedExecutionQueryRunnerTest
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
         watcher,
-        Lists.<QueryRunner<Integer>>newArrayList(
+        Lists.newArrayList(
             runners
         )
     );
@@ -247,7 +248,7 @@ public class ChainedExecutionQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
-                                  .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")))
+                                  .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
@@ -345,7 +346,7 @@ public class ChainedExecutionQueryRunnerTest
 
       hasCompleted = true;
       stop.countDown();
-      return Sequences.simple(Lists.newArrayList(123));
+      return Sequences.simple(Collections.singletonList(123));
     }
   }
 }

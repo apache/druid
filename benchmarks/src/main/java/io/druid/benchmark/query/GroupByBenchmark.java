@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -59,7 +59,6 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -190,17 +189,8 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
-              new DefaultDimensionSpec("dimSequential", null),
-              new DefaultDimensionSpec("dimZipf", null)
-              //new DefaultDimensionSpec("dimUniform", null),
-              //new DefaultDimensionSpec("dimSequentialHalfNull", null)
-              //new DefaultDimensionSpec("dimMultivalEnumerated", null), //multival dims greatly increase the running time, disable for now
-              //new DefaultDimensionSpec("dimMultivalEnumerated2", null)
-          ))
-          .setAggregatorSpecs(
-              queryAggs
-          )
+          .setDimensions(new DefaultDimensionSpec("dimSequential", null), new DefaultDimensionSpec("dimZipf", null))
+          .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
@@ -219,13 +209,8 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
-              new DefaultDimensionSpec("dimSequential", null),
-              new DefaultDimensionSpec("dimZipf", null)
-          ))
-          .setAggregatorSpecs(
-              queryAggs
-          )
+          .setDimensions(new DefaultDimensionSpec("dimSequential", null), new DefaultDimensionSpec("dimZipf", null))
+          .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularities.DAY)
           .build();
 
@@ -233,12 +218,8 @@ public class GroupByBenchmark
           .builder()
           .setDataSource(subqueryA)
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
-              new DefaultDimensionSpec("dimSequential", null)
-          ))
-          .setAggregatorSpecs(
-              queryAggs
-          )
+          .setDimensions(new DefaultDimensionSpec("dimSequential", null))
+          .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularities.WEEK)
           .build();
 
@@ -260,7 +241,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dimUniform", null)))
+          .setDimensions(new DefaultDimensionSpec("dimUniform", null))
           .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .setDimFilter(new BoundDimFilter("dimUniform", "0", "100", true, true, null, null, null))
@@ -284,7 +265,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dimZipf", null)))
+          .setDimensions(new DefaultDimensionSpec("dimZipf", null))
           .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .build();
@@ -309,9 +290,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
-              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.STRING)
-          ))
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.STRING))
           .setAggregatorSpecs(
               queryAggs
           )
@@ -336,9 +315,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
-              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.LONG)
-          ))
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.LONG))
           .setAggregatorSpecs(
               queryAggs
           )
@@ -363,12 +340,8 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
-              new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.FLOAT)
-          ))
-          .setAggregatorSpecs(
-              queryAggs
-          )
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.FLOAT))
+          .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .build();
 
@@ -575,7 +548,7 @@ public class GroupByBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     return queryResult.toList();
   }
 
@@ -650,7 +623,7 @@ public class GroupByBenchmark
     );
 
     final GroupByQuery spillingQuery = query.withOverriddenContext(
-        ImmutableMap.<String, Object>of("bufferGrouperMaxSize", 4000)
+        ImmutableMap.of("bufferGrouperMaxSize", 4000)
     );
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), Maps.newHashMap());
     List<Row> results = queryResult.toList();
@@ -679,7 +652,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     List<Row> results = queryResult.toList();
 
     for (Row result : results) {

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -203,13 +204,13 @@ public class CacheKeyBuilderTest
     keys.add(
         new CacheKeyBuilder((byte) 10)
             .appendStrings(ImmutableList.of("testtest"))
-            .appendStrings(ImmutableList.<String>of())
+            .appendStrings(ImmutableList.of())
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendStrings(ImmutableList.<String>of())
+            .appendStrings(ImmutableList.of())
             .appendStrings(ImmutableList.of("testtest"))
             .build()
     );
@@ -260,21 +261,21 @@ public class CacheKeyBuilderTest
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheables(Lists.newArrayList(testtest))
+            .appendCacheables(Collections.singletonList(testtest))
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheables(Lists.newArrayList(testtest))
-            .appendCacheables(Lists.<Cacheable>newArrayList())
+            .appendCacheables(Collections.singletonList(testtest))
+            .appendCacheables(Lists.newArrayList())
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheables(Lists.<Cacheable>newArrayList())
-            .appendCacheables(Lists.newArrayList(testtest))
+            .appendCacheables(Lists.newArrayList())
+            .appendCacheables(Collections.singletonList(testtest))
             .build()
     );
 
@@ -298,17 +299,17 @@ public class CacheKeyBuilderTest
         .build();
 
     byte[] key2 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Lists.newArrayList(""))
+        .appendStrings(Collections.singletonList(""))
         .build();
 
     assertFalse(Arrays.equals(key1, key2));
 
     key1 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Lists.newArrayList(""))
+        .appendStrings(Collections.singletonList(""))
         .build();
 
     key2 = new CacheKeyBuilder((byte) 10)
-        .appendStrings(Lists.newArrayList((String) null))
+        .appendStrings(Collections.singletonList((String) null))
         .build();
 
     assertArrayEquals(key1, key2);
@@ -318,11 +319,11 @@ public class CacheKeyBuilderTest
   public void testEmptyOrNullCacheables()
   {
     final byte[] key1 = new CacheKeyBuilder((byte) 10)
-        .appendCacheables(Lists.<Cacheable>newArrayList())
+        .appendCacheables(Lists.newArrayList())
         .build();
 
     final byte[] key2 = new CacheKeyBuilder((byte) 10)
-        .appendCacheables(Lists.newArrayList((Cacheable) null))
+        .appendCacheables(Collections.singletonList((Cacheable) null))
         .build();
 
     assertFalse(Arrays.equals(key1, key2));

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
@@ -77,28 +76,23 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/internal-hadoop-indexer");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+    return ImmutableList.of(
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/internal-hadoop-indexer");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
-            // bind metadata storage config based on HadoopIOConfig
-            MetadataStorageUpdaterJobSpec metadataSpec = getHadoopDruidIndexerConfig().getSchema()
-                                                                                      .getIOConfig()
-                                                                                      .getMetadataUpdateSpec();
+          // bind metadata storage config based on HadoopIOConfig
+          MetadataStorageUpdaterJobSpec metadataSpec = getHadoopDruidIndexerConfig().getSchema()
+                                                                                    .getIOConfig()
+                                                                                    .getMetadataUpdateSpec();
 
-            binder.bind(new TypeLiteral<Supplier<MetadataStorageConnectorConfig>>() {})
-                  .toInstance(metadataSpec);
-            binder.bind(MetadataStorageTablesConfig.class).toInstance(metadataSpec.getMetadataStorageTablesConfig());
-            binder.bind(IndexerMetadataStorageCoordinator.class).to(IndexerSQLMetadataStorageCoordinator.class).in(
-                LazySingleton.class
-            );
-          }
+          binder.bind(new TypeLiteral<Supplier<MetadataStorageConnectorConfig>>() {})
+                .toInstance(metadataSpec);
+          binder.bind(MetadataStorageTablesConfig.class).toInstance(metadataSpec.getMetadataStorageTablesConfig());
+          binder.bind(IndexerMetadataStorageCoordinator.class).to(IndexerSQLMetadataStorageCoordinator.class).in(
+              LazySingleton.class
+          );
         }
     );
   }
@@ -150,7 +144,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
             final URI argumentSpecUri = new URI(argumentSpec);
             final String argumentSpecScheme = argumentSpecUri.getScheme();
 
-            if (argumentSpecScheme == null || argumentSpecScheme.equals("file")) {
+            if (argumentSpecScheme == null || "file".equals(argumentSpecScheme)) {
               // File URI.
               localConfigFile = new File(argumentSpecUri.getPath());
             }

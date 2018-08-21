@@ -1,27 +1,27 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package io.druid.segment.filter;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -90,7 +90,12 @@ public class LikeFilter implements Filter
   {
     if (isSimpleEquals()) {
       // Verify that dimension equals prefix.
-      return ImmutableList.of(selector.getBitmapIndex(dimension, likeMatcher.getPrefix()));
+      return ImmutableList.of(
+          selector.getBitmapIndex(
+              dimension,
+              NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
+          )
+      );
     } else if (isSimplePrefix()) {
       // Verify that dimension startsWith prefix, and is accepted by likeMatcher.matchesSuffixOnly.
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
@@ -140,16 +145,24 @@ public class LikeFilter implements Filter
       final Indexed<String> dimValues
   )
   {
-    final String lower = Strings.nullToEmpty(likeMatcher.getPrefix());
-    final String upper = Strings.nullToEmpty(likeMatcher.getPrefix()) + Character.MAX_VALUE;
+
+    final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
+    final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
+
     final int startIndex; // inclusive
     final int endIndex; // exclusive
 
-    final int lowerFound = bitmapIndex.getIndex(lower);
-    startIndex = lowerFound >= 0 ? lowerFound : -(lowerFound + 1);
+    if (lower == null) {
+      // For Null values
+      startIndex = bitmapIndex.getIndex(null);
+      endIndex = startIndex + 1;
+    } else {
+      final int lowerFound = bitmapIndex.getIndex(lower);
+      startIndex = lowerFound >= 0 ? lowerFound : -(lowerFound + 1);
 
-    final int upperFound = bitmapIndex.getIndex(upper);
-    endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
+      final int upperFound = bitmapIndex.getIndex(upper);
+      endIndex = upperFound >= 0 ? upperFound + 1 : -(upperFound + 1);
+    }
 
     return new IntIterable()
     {

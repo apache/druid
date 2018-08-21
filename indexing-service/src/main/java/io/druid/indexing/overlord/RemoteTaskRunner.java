@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -45,8 +45,9 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ProvisioningService;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
@@ -87,6 +88,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -465,6 +467,23 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return ImmutableList.copyOf(Iterables.concat(pendingTasks.values(), runningTasks.values(), completeTasks.values()));
   }
 
+  @Nullable
+  @Override
+  public RunnerTaskState getRunnerTaskState(String taskId)
+  {
+    if (pendingTasks.containsKey(taskId)) {
+      return RunnerTaskState.PENDING;
+    }
+    if (runningTasks.containsKey(taskId)) {
+      return RunnerTaskState.RUNNING;
+    }
+    if (completeTasks.containsKey(taskId)) {
+      return RunnerTaskState.NONE;
+    }
+
+    return null;
+  }
+
   @Override
   public Optional<ScalingStats> getScalingStats()
   {
@@ -580,7 +599,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     } else {
       // Worker is still running this task
       final URL url = makeWorkerURL(zkWorker.getWorker(), StringUtils.format("/task/%s/log?offset=%d", taskId, offset));
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override

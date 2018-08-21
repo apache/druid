@@ -276,7 +276,7 @@ There is only one possible resource name for the "STATE" config resource type, "
 |`/druid/worker/v1/enabled`|middleManager|
 |`/druid/worker/v1/tasks`|middleManager|
 |`/druid/worker/v1/task/{taskid}/shutdown`|middleManager|
-|`/druid/worker/v1//task/{taskid}/log`|middleManager|
+|`/druid/worker/v1/task/{taskid}/log`|middleManager|
 |`/druid/historical/v1`|historical|
 |`/druid-internal/v1/segments/`|historical|
 |`/druid-internal/v1/segments/`|peon|

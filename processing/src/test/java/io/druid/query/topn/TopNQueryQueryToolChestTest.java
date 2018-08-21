@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
@@ -35,9 +36,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
 import io.druid.query.TestQueryRunners;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -52,7 +51,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 public class TopNQueryQueryToolChestTest
@@ -70,11 +71,6 @@ public class TopNQueryQueryToolChestTest
   }
 
   @Test
-  public void testCacheStrategyWithFloatDimension() throws Exception
-  {
-  }
-
-  @Test
   public void testComputeCacheKeyWithDifferentPostAgg()
   {
     final TopNQuery query1 = new TopNQuery(
@@ -86,8 +82,8 @@ public class TopNQueryQueryToolChestTest
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         null,
         Granularities.ALL,
-        ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
-        ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
+        ImmutableList.of(new CountAggregatorFactory("metric1")),
+        ImmutableList.of(new ConstantPostAggregator("post", 10)),
         null
     );
 
@@ -100,12 +96,12 @@ public class TopNQueryQueryToolChestTest
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
         null,
         Granularities.ALL,
-        ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
-        ImmutableList.<PostAggregator>of(
+        ImmutableList.of(new CountAggregatorFactory("metric1")),
+        ImmutableList.of(
             new ArithmeticPostAggregator(
                 "post",
                 "+",
-                ImmutableList.<PostAggregator>of(
+                ImmutableList.of(
                     new FieldAccessPostAggregator(
                         null,
                         "metric1"
@@ -141,46 +137,48 @@ public class TopNQueryQueryToolChestTest
         config,
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    QueryRunnerFactory factory = new TopNQueryRunnerFactory(
-        TestQueryRunners.getPool(),
-        chest,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
-    );
-    QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
-        factory,
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId),
-        null
-    );
+    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+      QueryRunnerFactory factory = new TopNQueryRunnerFactory(
+          pool,
+          chest,
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+      QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
+          factory,
+          new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId),
+          null
+      );
 
-    Map<String, Object> context = Maps.newHashMap();
-    context.put("minTopNThreshold", 500);
+      Map<String, Object> context = Maps.newHashMap();
+      context.put("minTopNThreshold", 500);
 
-    TopNQueryBuilder builder = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.placementishDimension)
-        .metric(QueryRunnerTestHelper.indexMetric)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
+      TopNQueryBuilder builder = new TopNQueryBuilder()
+          .dataSource(QueryRunnerTestHelper.dataSource)
+          .granularity(QueryRunnerTestHelper.allGran)
+          .dimension(QueryRunnerTestHelper.placementishDimension)
+          .metric(QueryRunnerTestHelper.indexMetric)
+          .intervals(QueryRunnerTestHelper.fullOnInterval)
+          .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
 
-    TopNQuery query1 = builder.threshold(10).context(null).build();
-    MockQueryRunner mockRunner = new MockQueryRunner(runner);
-    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
-        QueryPlus.wrap(query1),
-        ImmutableMap.<String, Object>of()
-    );
-    Assert.assertEquals(1000, mockRunner.query.getThreshold());
+      TopNQuery query1 = builder.threshold(10).context(null).build();
+      MockQueryRunner mockRunner = new MockQueryRunner(runner);
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config).run(
+          QueryPlus.wrap(query1),
+          ImmutableMap.of()
+      );
+      Assert.assertEquals(1000, mockRunner.query.getThreshold());
 
-    TopNQuery query2 = builder.threshold(10).context(context).build();
+      TopNQuery query2 = builder.threshold(10).context(context).build();
 
-    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(QueryPlus.wrap(query2), ImmutableMap.<String, Object>of());
-    Assert.assertEquals(500, mockRunner.query.getThreshold());
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
+          .run(QueryPlus.wrap(query2), ImmutableMap.of());
+      Assert.assertEquals(500, mockRunner.query.getThreshold());
 
-    TopNQuery query3 = builder.threshold(2000).context(context).build();
-    new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
-        .run(QueryPlus.wrap(query3), ImmutableMap.<String, Object>of());
-    Assert.assertEquals(2000, mockRunner.query.getThreshold());
+      TopNQuery query3 = builder.threshold(2000).context(context).build();
+      new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
+          .run(QueryPlus.wrap(query3), ImmutableMap.of());
+      Assert.assertEquals(2000, mockRunner.query.getThreshold());
+    }
   }
 
   private void doTestCacheStrategy(final ValueType valueType, final Object dimValue) throws IOException
@@ -196,8 +194,8 @@ public class TopNQueryQueryToolChestTest
                 new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
                 null,
                 Granularities.ALL,
-                ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
-                ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
+                ImmutableList.of(new CountAggregatorFactory("metric1")),
+                ImmutableList.of(new ConstantPostAggregator("post", 10)),
                 null
             )
         );
@@ -206,8 +204,8 @@ public class TopNQueryQueryToolChestTest
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
         new TopNResultValue(
-            Arrays.asList(
-                ImmutableMap.<String, Object>of(
+            Collections.singletonList(
+                ImmutableMap.of(
                     "test", dimValue,
                     "metric1", 2
                 )
@@ -233,8 +231,8 @@ public class TopNQueryQueryToolChestTest
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
         new TopNResultValue(
-            Arrays.asList(
-                ImmutableMap.<String, Object>of(
+            Collections.singletonList(
+                ImmutableMap.of(
                     "test", dimValue,
                     "metric1", 2,
                     "post", 10

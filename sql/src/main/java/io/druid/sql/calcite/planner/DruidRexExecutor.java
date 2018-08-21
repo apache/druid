@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -84,7 +84,10 @@ public class DruidRexExecutor implements RexExecutor
         if (sqlTypeName == SqlTypeName.BOOLEAN) {
           literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
         } else if (sqlTypeName == SqlTypeName.DATE) {
-          if (!constExp.getType().isNullable() && exprResult.isNull()) {
+          // It is possible for an expression to have a non-null String value but it can return null when parsed
+          // as a primitive long/float/double.
+          // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
+          if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
             throw new IAE("Illegal DATE constant: %s", constExp);
           }
 
@@ -95,7 +98,10 @@ public class DruidRexExecutor implements RexExecutor
               )
           );
         } else if (sqlTypeName == SqlTypeName.TIMESTAMP) {
-          if (!constExp.getType().isNullable() && exprResult.isNull()) {
+          // It is possible for an expression to have a non-null String value but it can return null when parsed
+          // as a primitive long/float/double.
+          // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
+          if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
             throw new IAE("Illegal TIMESTAMP constant: %s", constExp);
           }
 

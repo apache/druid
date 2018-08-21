@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -239,8 +239,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   {
     expectedException.expect(ExecutionException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage(
-        "Failed to publish segments[[DataSegment{size=0, shardSpec=NumberedShardSpec{partitionNum=0, partitions=0}, metrics=[], dimensions=[], version='abc123', loadSpec={}, interval=2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z, dataSource='foo', binaryVersion='0'}, DataSegment{size=0, shardSpec=NumberedShardSpec{partitionNum=0, partitions=0}, metrics=[], dimensions=[], version='abc123', loadSpec={}, interval=2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z, dataSource='foo', binaryVersion='0'}]]");
+    expectedException.expectMessage("Failed to publish segments.");
 
     testFailDuringPublishInternal(false);
   }
@@ -279,31 +278,34 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
       Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
-    dataSegmentKiller.killQuietly(new DataSegment(
-        "foo",
-        Intervals.of("2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z"),
-        "abc123",
-        ImmutableMap.of(),
-        ImmutableList.of(),
-        ImmutableList.of(),
-        new NumberedShardSpec(0, 0),
-        0,
-        0
-    ));
-    EasyMock.expectLastCall().once();
+    if (!failWithException) {
+      // Should only kill segments if there was _no_ exception.
+      dataSegmentKiller.killQuietly(new DataSegment(
+          "foo",
+          Intervals.of("2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z"),
+          "abc123",
+          ImmutableMap.of(),
+          ImmutableList.of(),
+          ImmutableList.of(),
+          new NumberedShardSpec(0, 0),
+          0,
+          0
+      ));
+      EasyMock.expectLastCall().once();
 
-    dataSegmentKiller.killQuietly(new DataSegment(
-        "foo",
-        Intervals.of("2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z"),
-        "abc123",
-        ImmutableMap.of(),
-        ImmutableList.of(),
-        ImmutableList.of(),
-        new NumberedShardSpec(0, 0),
-        0,
-        0
-    ));
-    EasyMock.expectLastCall().once();
+      dataSegmentKiller.killQuietly(new DataSegment(
+          "foo",
+          Intervals.of("2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z"),
+          "abc123",
+          ImmutableMap.of(),
+          ImmutableList.of(),
+          ImmutableList.of(),
+          new NumberedShardSpec(0, 0),
+          0,
+          0
+      ));
+      EasyMock.expectLastCall().once();
+    }
 
     EasyMock.replay(dataSegmentKiller);
 

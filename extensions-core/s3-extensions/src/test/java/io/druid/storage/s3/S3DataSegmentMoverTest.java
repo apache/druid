@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,11 +25,9 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectResult;
@@ -58,7 +56,7 @@ public class S3DataSegmentMoverTest
       "test",
       Intervals.of("2013-01-01/2013-01-02"),
       "1",
-      ImmutableMap.<String, Object>of(
+      ImmutableMap.of(
           "key",
           "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
           "bucket",
@@ -88,7 +86,7 @@ public class S3DataSegmentMoverTest
 
     DataSegment movedSegment = mover.move(
         sourceSegment,
-        ImmutableMap.<String, Object>of("baseKey", "targetBaseKey", "bucket", "archive")
+        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
@@ -114,7 +112,7 @@ public class S3DataSegmentMoverTest
 
     DataSegment movedSegment = mover.move(
         sourceSegment,
-        ImmutableMap.<String, Object>of("baseKey", "targetBaseKey", "bucket", "archive")
+        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
@@ -132,7 +130,7 @@ public class S3DataSegmentMoverTest
 
     mover.move(
         sourceSegment,
-        ImmutableMap.<String, Object>of("baseKey", "targetBaseKey", "bucket", "archive")
+        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
   }
   
@@ -145,7 +143,7 @@ public class S3DataSegmentMoverTest
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
         "1",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "key",
             "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
             "bucket",
@@ -156,7 +154,7 @@ public class S3DataSegmentMoverTest
         NoneShardSpec.instance(),
         0,
         1
-    ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
+    ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
   }
 
   @Test(expected = SegmentLoadingException.class)
@@ -168,7 +166,7 @@ public class S3DataSegmentMoverTest
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
         "1",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "key",
             "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
             "bucket",
@@ -179,10 +177,10 @@ public class S3DataSegmentMoverTest
         NoneShardSpec.instance(),
         0,
         1
-    ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
+    ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
   }
 
-  private static class MockAmazonS3Client extends AmazonS3Client
+  private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     Map<String, Set<String>> storage = Maps.newHashMap();
     boolean copied = false;
@@ -190,7 +188,7 @@ public class S3DataSegmentMoverTest
 
     private MockAmazonS3Client()
     {
-      super();
+      super(new AmazonS3Client(), new NoopServerSideEncryption());
     }
 
     public boolean didMove()
@@ -205,12 +203,6 @@ public class S3DataSegmentMoverTest
       acl.setOwner(new Owner("ownerId", "owner"));
       acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
       return acl;
-    }
-
-    @Override
-    public ObjectMetadata getObjectMetadata(GetObjectMetadataRequest getObjectMetadataRequest)
-    {
-      return new ObjectMetadata();
     }
 
     @Override

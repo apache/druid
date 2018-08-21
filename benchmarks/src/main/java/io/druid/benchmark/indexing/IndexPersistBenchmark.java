@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -32,7 +32,6 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
@@ -64,43 +63,37 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class IndexPersistBenchmark
 {
-  @Param({"75000"})
-  private int rowsPerSegment;
-
-  @Param({"basic"})
-  private String schema;
-
-  @Param({"true", "false"})
-  private boolean rollup;
-
+  public static final ObjectMapper JSON_MAPPER;
   private static final Logger log = new Logger(IndexPersistBenchmark.class);
   private static final int RNG_SEED = 9999;
-
-  private IncrementalIndex incIndex;
-  private ArrayList<InputRow> rows;
-  private BenchmarkSchemaInfo schemaInfo;
-
-
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
-  public static final ObjectMapper JSON_MAPPER;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        new ColumnConfig()
-        {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
-        }
+        () -> 0
     );
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
+
+  @Param({"75000"})
+  private int rowsPerSegment;
+
+  @Param({"rollo"})
+  private String schema;
+
+  @Param({"true", "false"})
+  private boolean rollup;
+
+  @Param({"none", "moderate", "high"})
+  private String rollupOpportunity;
+
+  private IncrementalIndex incIndex;
+  private ArrayList<InputRow> rows;
+  private BenchmarkSchemaInfo schemaInfo;
 
   @Setup
   public void setup()
@@ -114,11 +107,23 @@ public class IndexPersistBenchmark
     rows = new ArrayList<InputRow>();
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 
+    int valuesPerTimestamp = 1;
+    switch (rollupOpportunity) {
+      case "moderate":
+        valuesPerTimestamp = 1000;
+        break;
+      case "high":
+        valuesPerTimestamp = 10000;
+        break;
+
+    }
+
     BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
+        schemaInfo.getDataInterval().getStartMillis(),
+        valuesPerTimestamp,
+        1000.0
     );
 
     for (int i = 0; i < rowsPerSegment; i++) {
@@ -128,8 +133,6 @@ public class IndexPersistBenchmark
       }
       rows.add(row);
     }
-
-
   }
 
   @Setup(Level.Iteration)
@@ -154,9 +157,9 @@ public class IndexPersistBenchmark
     return new IncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
-            .withMetrics(schemaInfo.getAggsArray())
-            .withRollup(rollup)
-            .build()
+                .withMetrics(schemaInfo.getAggsArray())
+                .withRollup(rollup)
+                .build()
         )
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)

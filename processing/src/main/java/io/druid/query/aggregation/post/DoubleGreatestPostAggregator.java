@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -37,14 +38,9 @@ import java.util.Set;
 
 public class DoubleGreatestPostAggregator implements PostAggregator
 {
-  private static final Comparator COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o, Object o1)
-    {
-      return ((Double) o).compareTo((Double) o1);
-    }
-  };
+  private static final Comparator<Number> COMPARATOR = Comparator.nullsFirst(
+      Comparator.comparingDouble(Number::doubleValue)
+  );
 
   private final String name;
   private final List<PostAggregator> fields;
@@ -81,13 +77,15 @@ public class DoubleGreatestPostAggregator implements PostAggregator
   public Object compute(Map<String, Object> values)
   {
     Iterator<PostAggregator> fieldsIter = fields.iterator();
-    double retVal = Double.NEGATIVE_INFINITY;
-    if (fieldsIter.hasNext()) {
-      retVal = ((Number) fieldsIter.next().compute(values)).doubleValue();
-      while (fieldsIter.hasNext()) {
-        double other = ((Number) fieldsIter.next().compute(values)).doubleValue();
-        if (other > retVal) {
-          retVal = other;
+    Double retVal = NullHandling.replaceWithDefault() ? Double.NEGATIVE_INFINITY : null;
+    while (fieldsIter.hasNext()) {
+      Number nextVal = ((Number) fieldsIter.next().compute(values));
+      // Ignore NULL values and return the greatest out of non-null values.
+      if (nextVal != null && (retVal == null || COMPARATOR.compare(nextVal, retVal) > 0)) {
+        if (nextVal instanceof Double) {
+          retVal = (Double) nextVal;
+        } else {
+          retVal = nextVal.doubleValue();
         }
       }
     }

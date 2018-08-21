@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -161,7 +161,7 @@ public class ExpressionSelectors
     if (bindings.equals(ExprUtils.nilBindings())) {
       // Optimization for constant expressions.
       final ExprEval eval = expression.eval(bindings);
-      if (NullHandling.sqlCompatible() && eval.isNull()) {
+      if (NullHandling.sqlCompatible() && eval.isNumericNull()) {
         return NilColumnValueSelector.instance();
       }
       return new ConstantColumnValueSelector<>(
@@ -248,19 +248,27 @@ public class ExpressionSelectors
   {
     final Map<String, Supplier<Object>> suppliers = Maps.newHashMap();
     for (String columnName : Parser.findRequiredBindings(expression)) {
-      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
+      final ColumnCapabilities columnCapabilities = columnSelectorFactory
+              .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
-        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getFloat;
+        ColumnValueSelector selector = columnSelectorFactory
+                .makeColumnValueSelector(columnName);
+        supplier = makeNullableSupplier(selector, selector::getFloat);
       } else if (nativeType == ValueType.LONG) {
-        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getLong;
+        ColumnValueSelector selector = columnSelectorFactory
+                .makeColumnValueSelector(columnName);
+        supplier = makeNullableSupplier(selector, selector::getLong);
       } else if (nativeType == ValueType.DOUBLE) {
-        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getDouble;
+        ColumnValueSelector selector = columnSelectorFactory
+                .makeColumnValueSelector(columnName);
+        supplier = makeNullableSupplier(selector, selector::getDouble);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
-            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
+                columnSelectorFactory
+                        .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
         );
       } else if (nativeType == null) {
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
@@ -289,6 +297,23 @@ public class ExpressionSelectors
       };
     } else {
       return Parser.withSuppliers(suppliers);
+    }
+  }
+
+  private static <T> Supplier<T> makeNullableSupplier(
+      ColumnValueSelector selector,
+      Supplier<T> supplier
+  )
+  {
+    if (NullHandling.replaceWithDefault()) {
+      return supplier;
+    } else {
+      return () -> {
+        if (selector.isNull()) {
+          return null;
+        }
+        return supplier.get();
+      };
     }
   }
 

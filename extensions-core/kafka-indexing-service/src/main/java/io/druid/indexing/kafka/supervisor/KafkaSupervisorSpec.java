@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.guice.annotations.Json;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskMaster;
@@ -53,6 +54,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   private final ObjectMapper mapper;
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   @JsonCreator
   public KafkaSupervisorSpec(
@@ -66,7 +68,8 @@ public class KafkaSupervisorSpec implements SupervisorSpec
       @JacksonInject KafkaIndexTaskClientFactory kafkaIndexTaskClientFactory,
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
-      @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig
+      @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -106,6 +109,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     this.mapper = mapper;
     this.emitter = emitter;
     this.monitorSchedulerConfig = monitorSchedulerConfig;
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
   }
 
   @JsonProperty
@@ -157,7 +161,8 @@ public class KafkaSupervisorSpec implements SupervisorSpec
         indexerMetadataStorageCoordinator,
         kafkaIndexTaskClientFactory,
         mapper,
-        this
+        this,
+        rowIngestionMetersFactory
     );
   }
 

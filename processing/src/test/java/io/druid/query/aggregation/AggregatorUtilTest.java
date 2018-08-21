@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static io.druid.query.QueryRunnerTestHelper.dependentPostAggMetric;
@@ -42,12 +43,12 @@ public class AggregatorUtilTest
   public void testPruneDependentPostAgg()
   {
     PostAggregator agg1 = new ArithmeticPostAggregator(
-        "abc", "+", Lists.<PostAggregator>newArrayList(
+        "abc", "+", Lists.newArrayList(
         new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("2", 2L)
     )
     );
     PostAggregator dependency1 = new ArithmeticPostAggregator(
-        "dep1", "+", Lists.<PostAggregator>newArrayList(
+        "dep1", "+", Lists.newArrayList(
         new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("4", 4L)
     )
     );
@@ -56,7 +57,7 @@ public class AggregatorUtilTest
     PostAggregator aggregator = new ArithmeticPostAggregator(
         "finalAgg",
         "+",
-        Lists.<PostAggregator>newArrayList(
+        Lists.newArrayList(
             new FieldAccessPostAggregator("dep1", "dep1"),
             new FieldAccessPostAggregator("dep2", "dep2")
         )
@@ -77,12 +78,12 @@ public class AggregatorUtilTest
   public void testOutOfOrderPruneDependentPostAgg()
   {
     PostAggregator agg1 = new ArithmeticPostAggregator(
-        "abc", "+", Lists.<PostAggregator>newArrayList(
+        "abc", "+", Lists.newArrayList(
         new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("2", 2L)
     )
     );
     PostAggregator dependency1 = new ArithmeticPostAggregator(
-        "dep1", "+", Lists.<PostAggregator>newArrayList(
+        "dep1", "+", Lists.newArrayList(
         new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("4", 4L)
     )
     );
@@ -91,7 +92,7 @@ public class AggregatorUtilTest
     PostAggregator aggregator = new ArithmeticPostAggregator(
         "finalAgg",
         "+",
-        Lists.<PostAggregator>newArrayList(
+        Lists.newArrayList(
             new FieldAccessPostAggregator("dep1", "dep1"),
             new FieldAccessPostAggregator("dep2", "dep2")
         )
@@ -112,7 +113,7 @@ public class AggregatorUtilTest
   public void testCondenseAggregators()
   {
 
-    ArrayList<AggregatorFactory> aggregatorFactories = Lists.<AggregatorFactory>newArrayList(
+    ArrayList<AggregatorFactory> aggregatorFactories = Lists.newArrayList(
         Iterables.concat(
             QueryRunnerTestHelper.commonDoubleAggregators,
             Lists.newArrayList(
@@ -122,7 +123,7 @@ public class AggregatorUtilTest
         )
     );
 
-    List<PostAggregator> postAggregatorList = Arrays.<PostAggregator>asList(
+    List<PostAggregator> postAggregatorList = Arrays.asList(
         QueryRunnerTestHelper.addRowsIndexConstant,
         QueryRunnerTestHelper.dependentPostAgg
     );
@@ -151,7 +152,7 @@ public class AggregatorUtilTest
     AggregatorFactory agg1 = new DoubleSumAggregatorFactory("agg1", "value");
     AggregatorFactory agg2 = new DoubleSumAggregatorFactory("agg2", "count");
     PostAggregator postAgg1 = new ArithmeticPostAggregator(
-        null, "*", Lists.<PostAggregator>newArrayList(
+        null, "*", Lists.newArrayList(
         new FieldAccessPostAggregator(
             null,
             "agg1"
@@ -162,7 +163,7 @@ public class AggregatorUtilTest
     PostAggregator postAgg2 = new ArithmeticPostAggregator(
         "postAgg",
         "/",
-        Lists.<PostAggregator>newArrayList(
+        Lists.newArrayList(
             new FieldAccessPostAggregator(
                 null,
                 "agg1"
@@ -171,7 +172,7 @@ public class AggregatorUtilTest
     );
 
     Assert.assertEquals(
-        new Pair(Lists.newArrayList(agg1, agg2), Lists.newArrayList(postAgg2)), AggregatorUtil.condensedAggregators(
+        new Pair(Lists.newArrayList(agg1, agg2), Collections.singletonList(postAgg2)), AggregatorUtil.condensedAggregators(
         Lists.newArrayList(agg1, agg2),
         Lists.newArrayList(postAgg1, postAgg2),
         "postAgg"
@@ -186,7 +187,7 @@ public class AggregatorUtilTest
     AggregatorFactory agg1 = new DoubleSumAggregatorFactory("Agg1", "value");
     AggregatorFactory agg2 = new DoubleSumAggregatorFactory("Agg2", "count");
     PostAggregator postAgg1 = new ArithmeticPostAggregator(
-        null, "*", Lists.<PostAggregator>newArrayList(
+        null, "*", Lists.newArrayList(
         new FieldAccessPostAggregator(
             null,
             "Agg1"
@@ -197,7 +198,7 @@ public class AggregatorUtilTest
     PostAggregator postAgg2 = new ArithmeticPostAggregator(
         "postAgg",
         "/",
-        Lists.<PostAggregator>newArrayList(
+        Lists.newArrayList(
             new FieldAccessPostAggregator(
                 null,
                 "Agg1"
@@ -206,7 +207,7 @@ public class AggregatorUtilTest
     );
 
     Assert.assertEquals(
-        new Pair(Lists.newArrayList(agg1, agg2), Lists.newArrayList(postAgg2)), AggregatorUtil.condensedAggregators(
+        new Pair(Lists.newArrayList(agg1, agg2), Collections.singletonList(postAgg2)), AggregatorUtil.condensedAggregators(
         Lists.newArrayList(agg1, agg2),
         Lists.newArrayList(postAgg1, postAgg2),
         "postAgg"

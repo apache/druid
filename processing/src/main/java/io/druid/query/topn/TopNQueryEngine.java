@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -30,7 +30,6 @@ import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
-import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
@@ -99,7 +98,7 @@ public class TopNQueryEngine
               }
             }
         ),
-        Predicates.<Result<TopNResultValue>>notNull()
+        Predicates.notNull()
     );
   }
 
@@ -109,7 +108,6 @@ public class TopNQueryEngine
       final @Nullable TopNQueryMetrics queryMetrics
   )
   {
-    final Capabilities capabilities = adapter.getCapabilities();
     final String dimension = query.getDimensionSpec().getDimension();
     final int cardinality = adapter.getDimensionCardinality(dimension);
     if (queryMetrics != null) {
@@ -118,7 +116,7 @@ public class TopNQueryEngine
 
     int numBytesPerRecord = 0;
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-      numBytesPerRecord += aggregatorFactory.getMaxIntermediateSize();
+      numBytesPerRecord += aggregatorFactory.getMaxIntermediateSizeWithNulls();
     }
 
     final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(cardinality, numBytesPerRecord);
@@ -137,19 +135,19 @@ public class TopNQueryEngine
         ) {
       // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
       // currently relies on the dimension cardinality to support lexicographic sorting
-      topNAlgorithm = new TimeExtractionTopNAlgorithm(capabilities, query);
+      topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isHasExtractionFn()) {
-      topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
+      topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
     } else if (columnCapabilities != null && !(columnCapabilities.getType() == ValueType.STRING
-                                              && columnCapabilities.isDictionaryEncoded())) {
+                                               && columnCapabilities.isDictionaryEncoded())) {
       // Use DimExtraction for non-Strings and for non-dictionary-encoded Strings.
-      topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
+      topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isAggregateAllMetrics()) {
-      topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
     } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {
-      topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
     } else {
-      topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
     }
     if (queryMetrics != null) {
       queryMetrics.algorithm(topNAlgorithm);
@@ -162,7 +160,9 @@ public class TopNQueryEngine
   {
     return query.getDimensionSpec() != null
            && query.getDimensionSpec().getExtractionFn() != null
-           && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(query.getDimensionSpec().getExtractionFn().getExtractionType())
+           && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(query.getDimensionSpec()
+                                                                 .getExtractionFn()
+                                                                 .getExtractionType())
            && query.getTopNMetricSpec().canBeOptimizedUnordered();
   }
 }

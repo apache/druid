@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,6 +22,7 @@ package io.druid.storage.s3;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -75,7 +76,7 @@ public class S3DataSegmentFinderTest
       .interval(Intervals.of("2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z"))
       .version("2015-10-21T22:07:57.074Z")
       .loadSpec(
-          ImmutableMap.<String, Object>of(
+          ImmutableMap.of(
               "type",
               "s3_zip",
               "bucket",
@@ -114,7 +115,7 @@ public class S3DataSegmentFinderTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  MockAmazonS3Client mockS3Client;
+  ServerSideEncryptingAmazonS3 mockS3Client;
   S3DataSegmentPusherConfig config;
 
   private String bucket;
@@ -350,14 +351,14 @@ public class S3DataSegmentFinderTest
     return S3Utils.descriptorPathForSegmentPath(String.valueOf(segment.getLoadSpec().get("key")));
   }
 
-  private static class MockAmazonS3Client extends AmazonS3Client
+  private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     private final File baseDir;
     private final Map<String, Map<String, ObjectMetadata>> storage = Maps.newHashMap();
 
     public MockAmazonS3Client(File baseDir)
     {
-      super();
+      super(new AmazonS3Client(), new NoopServerSideEncryption());
       this.baseDir = baseDir;
     }
 
@@ -460,6 +461,12 @@ public class S3DataSegmentFinderTest
       }
 
       return storageObject;
+    }
+
+    @Override
+    public S3Object getObject(GetObjectRequest request)
+    {
+      return getObject(request.getBucketName(), request.getKey());
     }
 
     @Override

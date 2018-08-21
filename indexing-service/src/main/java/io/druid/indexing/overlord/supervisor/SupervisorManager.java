@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -63,7 +63,7 @@ public class SupervisorManager
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
-    return supervisor == null ? Optional.<SupervisorSpec>absent() : Optional.fromNullable(supervisor.rhs);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.rhs);
   }
 
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
@@ -142,6 +142,12 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStatus());
   }
 
+  public Optional<Map<String, Map<String, Object>>> getSupervisorStats(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
+  }
+
   public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
@@ -159,9 +165,10 @@ public class SupervisorManager
 
   public boolean checkPointDataSourceMetadata(
       String supervisorId,
-      @Nullable String sequenceName,
-      @Nullable DataSourceMetadata previousDataSourceMetadata,
-      @Nullable DataSourceMetadata currentDataSourceMetadata
+      @Nullable Integer taskGroupId,
+      String baseSequenceName,
+      DataSourceMetadata previousDataSourceMetadata,
+      DataSourceMetadata currentDataSourceMetadata
   )
   {
     try {
@@ -172,7 +179,7 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      supervisor.lhs.checkpoint(sequenceName, previousDataSourceMetadata, currentDataSourceMetadata);
+      supervisor.lhs.checkpoint(taskGroupId, baseSequenceName, previousDataSourceMetadata, currentDataSourceMetadata);
       return true;
     }
     catch (Exception e) {

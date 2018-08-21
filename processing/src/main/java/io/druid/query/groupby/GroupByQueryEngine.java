@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -178,37 +178,33 @@ public class GroupByQueryEngine
       return positions;
     }
 
-    private List<ByteBuffer> updateValues(
-        ByteBuffer key,
-        List<DimensionSelector> dims
-    )
+    @Nullable
+    private List<ByteBuffer> updateValues(ByteBuffer key, List<DimensionSelector> dims)
     {
       if (dims.size() > 0) {
-        List<ByteBuffer> retVal = null;
-        List<ByteBuffer> unaggregatedBuffers = null;
-
         final DimensionSelector dimSelector = dims.get(0);
         final IndexedInts row = dimSelector.getRow();
         final int rowSize = row.size();
         if (rowSize == 0) {
           ByteBuffer newKey = key.duplicate();
           newKey.putInt(MISSING_VALUE);
-          unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+          return updateValues(newKey, dims.subList(1, dims.size()));
         } else {
+          List<ByteBuffer> retVal = null;
           for (int i = 0; i < rowSize; i++) {
             ByteBuffer newKey = key.duplicate();
             int dimValue = row.get(i);
             newKey.putInt(dimValue);
-            unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+            List<ByteBuffer> unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+            if (unaggregatedBuffers != null) {
+              if (retVal == null) {
+                retVal = Lists.newArrayList();
+              }
+              retVal.addAll(unaggregatedBuffers);
+            }
           }
+          return retVal;
         }
-        if (unaggregatedBuffers != null) {
-          if (retVal == null) {
-            retVal = Lists.newArrayList();
-          }
-          retVal.addAll(unaggregatedBuffers);
-        }
-        return retVal;
       } else {
         key.clear();
         Integer position = positionsHash.get(key);
@@ -222,7 +218,7 @@ public class GroupByQueryEngine
 
           position = positionMaintainer.getNext();
           if (position == null) {
-            return Lists.newArrayList(keyCopy);
+            return Collections.singletonList(keyCopy);
           }
 
           positions.put(keyCopy, position);
@@ -351,7 +347,7 @@ public class GroupByQueryEngine
         AggregatorFactory aggregatorSpec = aggregatorSpecs.get(i);
         aggregators[i] = aggregatorSpec.factorizeBuffered(cursor.getColumnSelectorFactory());
         metricNames[i] = aggregatorSpec.getName();
-        sizesRequired[i] = aggregatorSpec.getMaxIntermediateSize();
+        sizesRequired[i] = aggregatorSpec.getMaxIntermediateSizeWithNulls();
       }
     }
 
@@ -376,7 +372,7 @@ public class GroupByQueryEngine
       final RowUpdater rowUpdater = new RowUpdater(metricsBuffer, aggregators, positionMaintainer);
       if (unprocessedKeys != null) {
         for (ByteBuffer key : unprocessedKeys) {
-          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.<DimensionSelector>of());
+          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.of());
           if (unprocUnproc != null) {
             throw new ISE("Not enough memory to process the request.");
           }

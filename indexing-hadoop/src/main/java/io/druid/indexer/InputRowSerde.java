@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -26,6 +26,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Rows;
@@ -45,6 +46,7 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.WritableUtils;
 
+import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -330,18 +332,22 @@ public class InputRowSerde
           }
 
           String t = aggFactory.getTypeName();
-
-          if (t.equals("float")) {
-            out.writeFloat(agg.getFloat());
-          } else if (t.equals("long")) {
-            WritableUtils.writeVLong(out, agg.getLong());
-          } else if (t.equals("double")) {
-            out.writeDouble(agg.getDouble());
+          if (agg.isNull()) {
+            out.writeByte(NullHandling.IS_NULL_BYTE);
           } else {
-            //its a complex metric
-            Object val = agg.get();
-            ComplexMetricSerde serde = getComplexMetricSerde(t);
-            writeBytes(serde.toBytes(val), out);
+            out.writeByte(NullHandling.IS_NOT_NULL_BYTE);
+            if ("float".equals(t)) {
+              out.writeFloat(agg.getFloat());
+            } else if ("long".equals(t)) {
+              WritableUtils.writeVLong(out, agg.getLong());
+            } else if ("double".equals(t)) {
+              out.writeDouble(agg.getDouble());
+            } else {
+              //its a complex metric
+              Object val = agg.get();
+              ComplexMetricSerde serde = getComplexMetricSerde(t);
+              writeBytes(serde.toBytes(val), out);
+            }
           }
         }
       }
@@ -353,10 +359,13 @@ public class InputRowSerde
     }
   }
 
-  private static void writeBytes(byte[] value, ByteArrayDataOutput out) throws IOException
+  private static void writeBytes(@Nullable byte[] value, ByteArrayDataOutput out) throws IOException
   {
-    WritableUtils.writeVInt(out, value.length);
-    out.write(value, 0, value.length);
+    int length = value == null ? -1 : value.length;
+    WritableUtils.writeVInt(out, length);
+    if (value != null) {
+      out.write(value, 0, value.length);
+    }
   }
 
   private static void writeString(String value, ByteArrayDataOutput out) throws IOException
@@ -450,11 +459,16 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         String metric = readString(in);
         String type = getType(metric, aggs, i);
-        if (type.equals("float")) {
+        byte metricNullability = in.readByte();
+        if (metricNullability == NullHandling.IS_NULL_BYTE) {
+          // metric value is null.
+          continue;
+        }
+        if ("float".equals(type)) {
           event.put(metric, in.readFloat());
-        } else if (type.equals("long")) {
+        } else if ("long".equals(type)) {
           event.put(metric, WritableUtils.readVLong(in));
-        } else if (type.equals("double")) {
+        } else if ("double".equals(type)) {
           event.put(metric, in.readDouble());
         } else {
           ComplexMetricSerde serde = getComplexMetricSerde(type);

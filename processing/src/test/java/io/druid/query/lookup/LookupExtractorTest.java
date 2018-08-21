@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,7 +21,6 @@ package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.MapLookupExtractor;
 import org.junit.Assert;
@@ -52,9 +51,9 @@ public class LookupExtractorTest
       "value1",
       Arrays.asList("key1", "key-1"),
       "value2",
-      Arrays.asList("key2"),
+      Collections.singletonList("key2"),
       "emptyString",
-      Arrays.asList("")
+      Collections.singletonList("")
   );
   LookupExtractor lookupExtractor = new MapLookupExtractor(EXPECTED_MAP, false);
 
@@ -80,7 +79,7 @@ public class LookupExtractorTest
   @Test
   public void testApplyAllWithEmptySet()
   {
-    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(Collections.<String>emptySet()));
+    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(Collections.emptySet()));
   }
 
   @Test
@@ -88,7 +87,7 @@ public class LookupExtractorTest
   {
     Map<String, String> expected = new HashMap<>();
     expected.put("not there", null);
-    Assert.assertEquals(expected, lookupExtractor.applyAll(Lists.newArrayList("not there")));
+    Assert.assertEquals(expected, lookupExtractor.applyAll(Collections.singletonList("not there")));
   }
 
   @Test
@@ -100,7 +99,7 @@ public class LookupExtractorTest
   @Test
   public void testunapplyAllWithEmptySet()
   {
-    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.unapplyAll(Collections.<String>emptySet()));
+    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.unapplyAll(Collections.emptySet()));
   }
 
   @Test

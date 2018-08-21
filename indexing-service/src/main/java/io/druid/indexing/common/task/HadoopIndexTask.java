@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -39,16 +39,17 @@ import io.druid.indexer.IngestionState;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskReport;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.JodaUtils;
@@ -424,11 +425,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     Map<String, Object> totalsMap = Maps.newHashMap();
 
     if (determinePartitionsStatsGetter != null) {
-      totalsMap.put("determinePartitions", determinePartitionsStatsGetter.getTotalMetrics());
+      totalsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsStatsGetter.getTotalMetrics());
     }
 
     if (buildSegmentsStatsGetter != null) {
-      totalsMap.put("buildSegments", buildSegmentsStatsGetter.getTotalMetrics());
+      totalsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsStatsGetter.getTotalMetrics());
     }
 
     returnMap.put("totals", totalsMap);
@@ -455,13 +456,13 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     Map<String, Object> metrics = Maps.newHashMap();
     if (determineConfigStatus != null) {
       metrics.put(
-          "determinePartitions",
+          RowIngestionMeters.DETERMINE_PARTITIONS,
           determineConfigStatus.getMetrics()
       );
     }
     if (buildSegmentsStatus != null) {
       metrics.put(
-          "buildSegments",
+          RowIngestionMeters.BUILD_SEGMENTS,
           buildSegmentsStatus.getMetrics()
       );
     }

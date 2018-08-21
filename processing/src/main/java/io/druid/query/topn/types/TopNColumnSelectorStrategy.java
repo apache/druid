@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,8 +25,8 @@ import io.druid.query.dimension.ColumnSelectorStrategy;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultBuilder;
-import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -51,12 +51,14 @@ public interface TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggr
    *
    * A dimension type that does not have integer values should return null.
    *
-   * @param query The TopN query being served
-   * @param params Parameters for the TopN query being served
-   * @param capabilities Object indicating if dimension values are sorted
+   * @param query          The TopN query being served
+   * @param params         Parameters for the TopN query being served
+   * @param storageAdapter Column storage adapter, to provide information about the column that can be used for
+   *                       query optimization, e.g. whether dimension values are sorted or not
+   *
    * @return an Aggregator[][] for integer-valued dimensions, null otherwise
    */
-  Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, Capabilities capabilities);
+  Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter);
 
   /**
    * Used by DimExtractionTopNAlgorithm.
@@ -73,21 +75,22 @@ public interface TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggr
    *
    * Iterate through the cursor, reading the current row from a dimension value selector, and for each row value:
    * 1. Retrieve the Aggregator[] for the row value from rowSelector (fast integer lookup) or from
-   *    aggregatesStore (slower map).
+   * aggregatesStore (slower map).
    *
    * 2. If the rowSelector and/or aggregatesStore did not have an entry for a particular row value,
-   *    this function should retrieve the current Aggregator[] using BaseTopNAlgorithm.makeAggregators() and the
-   *    provided cursor and query, storing them in rowSelector and aggregatesStore
+   * this function should retrieve the current Aggregator[] using BaseTopNAlgorithm.makeAggregators() and the
+   * provided cursor and query, storing them in rowSelector and aggregatesStore
    *
    * 3. Call aggregate() on each of the aggregators.
    *
    * If a dimension type doesn't have integer values, it should ignore rowSelector and use the aggregatesStore map only.
    *
-   * @param query The TopN query being served.
-   * @param selector Dimension value selector
-   * @param cursor Cursor for the segment being queried
-   * @param rowSelector Integer lookup containing aggregators
+   * @param query           The TopN query being served.
+   * @param selector        Dimension value selector
+   * @param cursor          Cursor for the segment being queried
+   * @param rowSelector     Integer lookup containing aggregators
    * @param aggregatesStore Map containing aggregators
+   *
    * @return the number of processed rows (after postFilters are applied inside the cursor being processed)
    */
   long dimExtractionScanAndAggregate(
@@ -104,9 +107,9 @@ public interface TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggr
    * Read entries from the aggregates store, adding the keys and associated values to the resultBuilder, applying the
    * valueTransformer to the keys if present
    *
-   * @param aggregatesStore Map created by makeDimExtractionAggregateStore()
+   * @param aggregatesStore  Map created by makeDimExtractionAggregateStore()
    * @param valueTransformer Converts keys to different types, if null no conversion is needed
-   * @param resultBuilder TopN result builder
+   * @param resultBuilder    TopN result builder
    */
   void updateDimExtractionResults(
       DimExtractionAggregateStoreType aggregatesStore,

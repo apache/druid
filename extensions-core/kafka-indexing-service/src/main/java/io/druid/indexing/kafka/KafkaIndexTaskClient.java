@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,79 +21,31 @@ package io.druid.indexing.kafka;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.RetryPolicy;
-import io.druid.indexing.common.RetryPolicyConfig;
-import io.druid.indexing.common.RetryPolicyFactory;
+import io.druid.indexing.common.IndexTaskClient;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskStatus;
-import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.FullResponseHandler;
 import io.druid.java.util.http.client.response.FullResponseHolder;
-import io.druid.segment.realtime.firehose.ChatHandlerResource;
-import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.joda.time.Period;
 
-import javax.ws.rs.core.MediaType;
+import javax.annotation.Nullable;
 import java.io.IOException;
-import java.net.Socket;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
 
-public class KafkaIndexTaskClient
+public class KafkaIndexTaskClient extends IndexTaskClient
 {
-  public static class NoTaskLocationException extends RuntimeException
-  {
-    public NoTaskLocationException(String message)
-    {
-      super(message);
-    }
-  }
-
-  public static class TaskNotRunnableException extends RuntimeException
-  {
-    public TaskNotRunnableException(String message)
-    {
-      super(message);
-    }
-  }
-
-  public static final int MAX_RETRY_WAIT_SECONDS = 10;
-
-  private static final int MIN_RETRY_WAIT_SECONDS = 2;
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTaskClient.class);
-  private static final String BASE_PATH = "/druid/worker/v1/chat";
-  private static final int TASK_MISMATCH_RETRY_DELAY_SECONDS = 5;
-  private static final TreeMap EMPTY_TREE_MAP = new TreeMap();
-
-  private final HttpClient httpClient;
-  private final ObjectMapper jsonMapper;
-  private final TaskInfoProvider taskInfoProvider;
-  private final Duration httpTimeout;
-  private final RetryPolicyFactory retryPolicyFactory;
-  private final ListeningExecutorService executorService;
-  private final long numRetries;
+  private static final TreeMap<Integer, Map<Integer, Long>> EMPTY_TREE_MAP = new TreeMap<>();
 
   public KafkaIndexTaskClient(
       HttpClient httpClient,
@@ -105,27 +57,7 @@ public class KafkaIndexTaskClient
       long numRetries
   )
   {
-    this.httpClient = httpClient;
-    this.jsonMapper = jsonMapper;
-    this.taskInfoProvider = taskInfoProvider;
-    this.httpTimeout = httpTimeout;
-    this.numRetries = numRetries;
-    this.retryPolicyFactory = createRetryPolicyFactory();
-
-    this.executorService = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(
-            numThreads,
-            StringUtils.format(
-                "KafkaIndexTaskClient-%s-%%d",
-                dataSource
-            )
-        )
-    );
-  }
-
-  public void close()
-  {
-    executorService.shutdownNow();
+    super(httpClient, jsonMapper, taskInfoProvider, httpTimeout, dataSource, numThreads, numRetries);
   }
 
   public boolean stop(final String id, final boolean publish)
@@ -133,10 +65,10 @@ public class KafkaIndexTaskClient
     log.debug("Stop task[%s] publish[%s]", id, publish);
 
     try {
-      final FullResponseHolder response = submitRequest(
+      final FullResponseHolder response = submitRequestWithEmptyContent(
           id, HttpMethod.POST, "stop", publish ? "publish=true" : null, true
       );
-      return response.getStatus().getCode() / 100 == 2;
+      return isSuccess(response);
     }
     catch (NoTaskLocationException e) {
       return false;
@@ -156,46 +88,41 @@ public class KafkaIndexTaskClient
     log.debug("Resume task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.POST, "resume", null, true);
-      return response.getStatus().getCode() / 100 == 2;
+      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.POST, "resume", null, true);
+      return isSuccess(response);
     }
-    catch (NoTaskLocationException e) {
+    catch (NoTaskLocationException | IOException e) {
+      log.warn(e, "Exception while stopping task [%s]", id);
       return false;
     }
   }
 
   public Map<Integer, Long> pause(final String id)
   {
-    return pause(id, 0);
-  }
-
-  public Map<Integer, Long> pause(final String id, final long timeout)
-  {
-    log.debug("Pause task[%s] timeout[%d]", id, timeout);
+    log.debug("Pause task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequest(
+      final FullResponseHolder response = submitRequestWithEmptyContent(
           id,
           HttpMethod.POST,
           "pause",
-          timeout > 0 ? StringUtils.format("timeout=%d", timeout) : null,
+          null,
           true
       );
 
       if (response.getStatus().equals(HttpResponseStatus.OK)) {
         log.info("Task [%s] paused successfully", id);
-        return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>()
+        return deserialize(response.getContent(), new TypeReference<Map<Integer, Long>>()
         {
         });
       }
 
-      final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
       while (true) {
         if (getStatus(id) == KafkaIndexTask.Status.PAUSED) {
           return getCurrentOffsets(id, true);
         }
 
-        final Duration delay = retryPolicy.getAndIncrementRetryDelay();
+        final Duration delay = newRetryPolicy().getAndIncrementRetryDelay();
         if (delay == null) {
           log.error("Task [%s] failed to pause, aborting", id);
           throw new ISE("Task [%s] failed to pause, aborting", id);
@@ -215,8 +142,10 @@ public class KafkaIndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException | InterruptedException e) {
-      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(
+          StringUtils.format("Exception [%s] while pausing Task [%s]", e.getMessage(), id),
+          e
+      );
     }
   }
 
@@ -225,32 +154,57 @@ public class KafkaIndexTaskClient
     log.debug("GetStatus task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "status", null, true);
-      return jsonMapper.readValue(response.getContent(), KafkaIndexTask.Status.class);
+      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "status", null, true);
+      return deserialize(response.getContent(), KafkaIndexTask.Status.class);
     }
     catch (NoTaskLocationException e) {
       return KafkaIndexTask.Status.NOT_STARTED;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
+  @Nullable
   public DateTime getStartTime(final String id)
   {
     log.debug("GetStartTime task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "time/start", null, true);
+      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "time/start", null, true);
       return response.getContent() == null || response.getContent().isEmpty()
              ? null
-             : jsonMapper.readValue(response.getContent(), DateTime.class);
+             : deserialize(response.getContent(), DateTime.class);
     }
     catch (NoTaskLocationException e) {
       return null;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  public Map<String, Object> getMovingAverages(final String id)
+  {
+    log.debug("GetMovingAverages task[%s]", id);
+
+    try {
+      final FullResponseHolder response = submitRequestWithEmptyContent(
+          id,
+          HttpMethod.GET,
+          "rowStats",
+          null,
+          true
+      );
+      return response.getContent() == null || response.getContent().isEmpty()
+             ? Collections.emptyMap()
+             : deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+    }
+    catch (NoTaskLocationException e) {
+      return Collections.emptyMap();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -259,8 +213,14 @@ public class KafkaIndexTaskClient
     log.debug("GetCurrentOffsets task[%s] retry[%s]", id, retry);
 
     try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "offsets/current", null, retry);
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>()
+      final FullResponseHolder response = submitRequestWithEmptyContent(
+          id,
+          HttpMethod.GET,
+          "offsets/current",
+          null,
+          retry
+      );
+      return deserialize(response.getContent(), new TypeReference<Map<Integer, Long>>()
       {
       });
     }
@@ -268,7 +228,7 @@ public class KafkaIndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -276,16 +236,19 @@ public class KafkaIndexTaskClient
   {
     log.debug("GetCheckpoints task[%s] retry[%s]", id, retry);
     try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "checkpoints", null, retry);
-      return jsonMapper.readValue(response.getContent(), new TypeReference<TreeMap<Integer, TreeMap<Integer, Long>>>()
-      {
-      });
+      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
+      return deserialize(
+          response.getContent(),
+          new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
+          {
+          }
+      );
     }
     catch (NoTaskLocationException e) {
       return EMPTY_TREE_MAP;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -294,9 +257,7 @@ public class KafkaIndexTaskClient
       final boolean retry
   )
   {
-    return executorService.submit(
-        () -> getCheckpoints(id, retry)
-    );
+    return doAsync(() -> getCheckpoints(id, retry));
   }
 
   public Map<Integer, Long> getEndOffsets(final String id)
@@ -304,8 +265,8 @@ public class KafkaIndexTaskClient
     log.debug("GetEndOffsets task[%s]", id);
 
     try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "offsets/end", null, true);
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<Integer, Long>>()
+      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
+      return deserialize(response.getContent(), new TypeReference<Map<Integer, Long>>()
       {
       });
     }
@@ -313,328 +274,80 @@ public class KafkaIndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
   public boolean setEndOffsets(
       final String id,
       final Map<Integer, Long> endOffsets,
-      final boolean resume,
       final boolean finalize
-  )
+  ) throws IOException
   {
-    log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s] finalize[%s]", id, endOffsets, resume, finalize);
+    log.debug("SetEndOffsets task[%s] endOffsets[%s] finalize[%s]", id, endOffsets, finalize);
 
     try {
-      final FullResponseHolder response = submitRequest(
+      final FullResponseHolder response = submitJsonRequest(
           id,
           HttpMethod.POST,
           "offsets/end",
-          StringUtils.format("resume=%s&finish=%s", resume, finalize),
-          jsonMapper.writeValueAsBytes(endOffsets),
+          StringUtils.format("finish=%s", finalize),
+          serialize(endOffsets),
           true
       );
-      return response.getStatus().getCode() / 100 == 2;
+      return isSuccess(response);
     }
     catch (NoTaskLocationException e) {
       return false;
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
     }
   }
 
   public ListenableFuture<Boolean> stopAsync(final String id, final boolean publish)
   {
-    return executorService.submit(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            return stop(id, publish);
-          }
-        }
-    );
+    return doAsync(() -> stop(id, publish));
   }
 
   public ListenableFuture<Boolean> resumeAsync(final String id)
   {
-    return executorService.submit(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            return resume(id);
-          }
-        }
-    );
+    return doAsync(() -> resume(id));
   }
 
   public ListenableFuture<Map<Integer, Long>> pauseAsync(final String id)
   {
-    return pauseAsync(id, 0);
-  }
-
-  public ListenableFuture<Map<Integer, Long>> pauseAsync(final String id, final long timeout)
-  {
-    return executorService.submit(
-        new Callable<Map<Integer, Long>>()
-        {
-          @Override
-          public Map<Integer, Long> call()
-          {
-            return pause(id, timeout);
-          }
-        }
-    );
+    return doAsync(() -> pause(id));
   }
 
   public ListenableFuture<KafkaIndexTask.Status> getStatusAsync(final String id)
   {
-    return executorService.submit(
-        new Callable<KafkaIndexTask.Status>()
-        {
-          @Override
-          public KafkaIndexTask.Status call()
-          {
-            return getStatus(id);
-          }
-        }
-    );
+    return doAsync(() -> getStatus(id));
   }
 
   public ListenableFuture<DateTime> getStartTimeAsync(final String id)
   {
-    return executorService.submit(
-        new Callable<DateTime>()
-        {
-          @Override
-          public DateTime call()
-          {
-            return getStartTime(id);
-          }
-        }
-    );
+    return doAsync(() -> getStartTime(id));
   }
 
   public ListenableFuture<Map<Integer, Long>> getCurrentOffsetsAsync(final String id, final boolean retry)
   {
-    return executorService.submit(
-        new Callable<Map<Integer, Long>>()
-        {
-          @Override
-          public Map<Integer, Long> call()
-          {
-            return getCurrentOffsets(id, retry);
-          }
-        }
-    );
+    return doAsync(() -> getCurrentOffsets(id, retry));
   }
 
   public ListenableFuture<Map<Integer, Long>> getEndOffsetsAsync(final String id)
   {
-    return executorService.submit(
-        new Callable<Map<Integer, Long>>()
-        {
-          @Override
-          public Map<Integer, Long> call()
-          {
-            return getEndOffsets(id);
-          }
-        }
-    );
+    return doAsync(() -> getEndOffsets(id));
   }
 
   public ListenableFuture<Boolean> setEndOffsetsAsync(
-      final String id, final Map<Integer, Long> endOffsets, final boolean resume, final boolean finalize
+      final String id,
+      final Map<Integer, Long> endOffsets,
+      final boolean finalize
   )
   {
-    return executorService.submit(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            return setEndOffsets(id, endOffsets, resume, finalize);
-          }
-        }
-    );
+    return doAsync(() -> setEndOffsets(id, endOffsets, finalize));
   }
 
-  @VisibleForTesting
-  RetryPolicyFactory createRetryPolicyFactory()
+  public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(final String id)
   {
-    // Retries [numRetries] times before giving up; this should be set long enough to handle any temporary
-    // unresponsiveness such as network issues, if a task is still in the process of starting up, or if the task is in
-    // the middle of persisting to disk and doesn't respond immediately.
-    return new RetryPolicyFactory(
-        new RetryPolicyConfig()
-            .setMinWait(Period.seconds(MIN_RETRY_WAIT_SECONDS))
-            .setMaxWait(Period.seconds(MAX_RETRY_WAIT_SECONDS))
-            .setMaxRetryCount(numRetries)
-    );
-  }
-
-  @VisibleForTesting
-  void checkConnection(String host, int port) throws IOException
-  {
-    new Socket(host, port).close();
-  }
-
-  private FullResponseHolder submitRequest(String id, HttpMethod method, String pathSuffix, String query, boolean retry)
-  {
-    return submitRequest(id, method, pathSuffix, query, new byte[0], retry);
-  }
-
-  private FullResponseHolder submitRequest(
-      String id,
-      HttpMethod method,
-      String pathSuffix,
-      String query,
-      byte[] content,
-      boolean retry
-  )
-  {
-    final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-    while (true) {
-      FullResponseHolder response = null;
-      Request request = null;
-      TaskLocation location = TaskLocation.unknown();
-      String path = StringUtils.format("%s/%s/%s", BASE_PATH, id, pathSuffix);
-
-      Optional<TaskStatus> status = taskInfoProvider.getTaskStatus(id);
-      if (!status.isPresent() || !status.get().isRunnable()) {
-        throw new TaskNotRunnableException(StringUtils.format(
-            "Aborting request because task [%s] is not runnable",
-            id
-        ));
-      }
-
-      String host = location.getHost();
-      String scheme = "";
-      int port = -1;
-
-      try {
-        location = taskInfoProvider.getTaskLocation(id);
-        if (location.equals(TaskLocation.unknown())) {
-          throw new NoTaskLocationException(StringUtils.format("No TaskLocation available for task [%s]", id));
-        }
-
-        host = location.getHost();
-        scheme = location.getTlsPort() >= 0 ? "https" : "http";
-        port = location.getTlsPort() >= 0 ? location.getTlsPort() : location.getPort();
-
-        // Netty throws some annoying exceptions if a connection can't be opened, which happens relatively frequently
-        // for tasks that happen to still be starting up, so test the connection first to keep the logs clean.
-        checkConnection(host, port);
-
-        try {
-          URI serviceUri = new URI(
-              scheme,
-              null,
-              host,
-              port,
-              path,
-              query,
-              null
-          );
-          request = new Request(method, serviceUri.toURL());
-
-          // used to validate that we are talking to the correct worker
-          request.addHeader(ChatHandlerResource.TASK_ID_HEADER, id);
-
-          if (content.length > 0) {
-            request.setContent(MediaType.APPLICATION_JSON, content);
-          }
-
-          log.debug("HTTP %s: %s", method.getName(), serviceUri.toString());
-          response = httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
-        }
-        catch (Exception e) {
-          Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
-          Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
-          throw Throwables.propagate(e);
-        }
-
-        int responseCode = response.getStatus().getCode();
-        if (responseCode / 100 == 2) {
-          return response;
-        } else if (responseCode == 400) { // don't bother retrying if it's a bad request
-          throw new IAE("Received 400 Bad Request with body: %s", response.getContent());
-        } else {
-          throw new IOE("Received status [%d]", responseCode);
-        }
-      }
-      catch (IOException | ChannelException e) {
-
-        // Since workers are free to move tasks around to different ports, there is a chance that a task may have been
-        // moved but our view of its location has not been updated yet from ZK. To detect this case, we send a header
-        // identifying our expected recipient in the request; if this doesn't correspond to the worker we messaged, the
-        // worker will return an HTTP 404 with its ID in the response header. If we get a mismatching task ID, then
-        // we will wait for a short period then retry the request indefinitely, expecting the task's location to
-        // eventually be updated.
-
-        final Duration delay;
-        if (response != null && response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-          String headerId = response.getResponse().headers().get(ChatHandlerResource.TASK_ID_HEADER);
-          if (headerId != null && !headerId.equals(id)) {
-            log.warn(
-                "Expected worker to have taskId [%s] but has taskId [%s], will retry in [%d]s",
-                id, headerId, TASK_MISMATCH_RETRY_DELAY_SECONDS
-            );
-            delay = Duration.standardSeconds(TASK_MISMATCH_RETRY_DELAY_SECONDS);
-          } else {
-            delay = retryPolicy.getAndIncrementRetryDelay();
-          }
-        } else {
-          delay = retryPolicy.getAndIncrementRetryDelay();
-        }
-        String urlForLog = (request != null
-                            ? request.getUrl().toString()
-                            : StringUtils.format(
-                                "%s://%s:%d%s",
-                                scheme,
-                                host,
-                                port,
-                                path
-                            ));
-        if (!retry) {
-          // if retry=false, we probably aren't too concerned if the operation doesn't succeed (i.e. the request was
-          // for informational purposes only) so don't log a scary stack trace
-          log.info("submitRequest failed for [%s], with message [%s]", urlForLog, e.getMessage());
-          Throwables.propagate(e);
-        } else if (delay == null) {
-          log.warn(e, "Retries exhausted for [%s], last exception:", urlForLog);
-          Throwables.propagate(e);
-        } else {
-          try {
-            final long sleepTime = delay.getMillis();
-            log.debug(
-                "Bad response HTTP [%s] from [%s]; will try again in [%s] (body/exception: [%s])",
-                (response != null ? response.getStatus().getCode() : "no response"),
-                urlForLog,
-                new Duration(sleepTime).toString(),
-                (response != null ? response.getContent() : e.getMessage())
-            );
-            Thread.sleep(sleepTime);
-          }
-          catch (InterruptedException e2) {
-            Throwables.propagate(e2);
-          }
-        }
-      }
-      catch (NoTaskLocationException e) {
-        log.info("No TaskLocation available for task [%s], this task may not have been assigned to a worker yet or "
-                 + "may have already completed", id);
-        throw e;
-      }
-      catch (Exception e) {
-        log.warn(e, "Exception while sending request");
-        throw e;
-      }
-    }
+    return doAsync(() -> getMovingAverages(id));
   }
 }

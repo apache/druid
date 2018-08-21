@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -28,16 +28,17 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -148,6 +149,32 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
+  @Nullable
+  @Override
+  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkNotNull(taskId, "taskId");
+      final TaskStuff taskStuff = tasks.get(taskId);
+      if (taskStuff != null) {
+        return new TaskInfo<>(
+            taskStuff.getTask().getId(),
+            taskStuff.getCreatedDate(),
+            taskStuff.getStatus(),
+            taskStuff.getDataSource(),
+            taskStuff.getTask()
+        );
+      } else {
+        return null;
+      }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
   @Override
   public List<Task> getActiveTasks()
   {
@@ -168,7 +195,35 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
+  {
+    giant.lock();
+
+    try {
+      final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
+      for (final TaskStuff taskStuff : tasks.values()) {
+        if (taskStuff.getStatus().isRunnable()) {
+          TaskInfo t = new TaskInfo(
+              taskStuff.getTask().getId(),
+              taskStuff.getCreatedDate(),
+              taskStuff.getStatus(),
+              taskStuff.getDataSource(),
+              taskStuff.getTask()
+          );
+          listBuilder.add(t);
+        }
+      }
+      return listBuilder.build();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfo(
+      @Nullable Integer maxTaskStatuses, @Nullable Duration duration, @Nullable String datasource
+  )
   {
     giant.lock();
 
@@ -183,59 +238,72 @@ public class HeapMemoryTaskStorage implements TaskStorage
       }.reverse();
 
       return maxTaskStatuses == null ?
-             getRecentlyFinishedTaskStatusesSince(
-                 System.currentTimeMillis() - config.getRecentlyFinishedThreshold().getMillis(),
+             getRecentlyFinishedTaskInfoSince(
+                 DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
                  createdDateDesc
              ) :
-             getNRecentlyFinishedTaskStatuses(maxTaskStatuses, createdDateDesc);
+             getNRecentlyFinishedTaskInfo(maxTaskStatuses, createdDateDesc);
     }
     finally {
       giant.unlock();
     }
   }
 
-  private List<TaskStatus> getRecentlyFinishedTaskStatusesSince(long start, Ordering<TaskStuff> createdDateDesc)
+  private List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfoSince(
+      DateTime start,
+      Ordering<TaskStuff> createdDateDesc
+  )
   {
     giant.lock();
 
     try {
-      return createdDateDesc
+      List<TaskStuff> list = createdDateDesc
           .sortedCopy(tasks.values())
           .stream()
-          .filter(taskStuff -> taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > start)
-          .map(TaskStuff::getStatus)
+          .filter(taskStuff -> taskStuff.getStatus().isComplete())
           .collect(Collectors.toList());
+      final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
+      for (final TaskStuff taskStuff : list) {
+        String id = taskStuff.getTask().getId();
+        TaskInfo t = new TaskInfo(
+            id,
+            taskStuff.getCreatedDate(),
+            taskStuff.getStatus(),
+            taskStuff.getDataSource(),
+            taskStuff.getTask()
+        );
+        listBuilder.add(t);
+      }
+      return listBuilder.build();
     }
     finally {
       giant.unlock();
     }
   }
 
-  private List<TaskStatus> getNRecentlyFinishedTaskStatuses(int n, Ordering<TaskStuff> createdDateDesc)
+  private List<TaskInfo<Task, TaskStatus>> getNRecentlyFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
   {
     giant.lock();
 
     try {
-      return createdDateDesc.sortedCopy(tasks.values())
-                            .stream()
-                            .limit(n)
-                            .map(TaskStuff::getStatus)
-                            .collect(Collectors.toList());
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  @Nullable
-  @Override
-  public Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId)
-  {
-    giant.lock();
-
-    try {
-      final TaskStuff taskStuff = tasks.get(taskId);
-      return taskStuff == null ? null : Pair.of(taskStuff.getCreatedDate(), taskStuff.getDataSource());
+      List<TaskStuff> list = createdDateDesc
+          .sortedCopy(tasks.values())
+          .stream()
+          .limit(n)
+          .collect(Collectors.toList());
+      final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
+      for (final TaskStuff taskStuff : list) {
+        String id = taskStuff.getTask().getId();
+        TaskInfo t = new TaskInfo<>(
+            id,
+            taskStuff.getCreatedDate(),
+            taskStuff.getStatus(),
+            taskStuff.getDataSource(),
+            taskStuff.getTask()
+        );
+        listBuilder.add(t);
+      }
+      return listBuilder.build();
     }
     finally {
       giant.unlock();

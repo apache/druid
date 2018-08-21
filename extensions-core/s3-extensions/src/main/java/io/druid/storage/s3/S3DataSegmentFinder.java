@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
@@ -47,13 +46,13 @@ public class S3DataSegmentFinder implements DataSegmentFinder
 {
   private static final Logger log = new Logger(S3DataSegmentFinder.class);
 
-  private final AmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final ObjectMapper jsonMapper;
   private final S3DataSegmentPusherConfig config;
 
   @Inject
   public S3DataSegmentFinder(
-      AmazonS3 s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentPusherConfig config,
       ObjectMapper jsonMapper
   )
@@ -79,7 +78,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
       while (objectSummaryIterator.hasNext()) {
         final S3ObjectSummary objectSummary = objectSummaryIterator.next();
 
-        if (S3Utils.toFilename(objectSummary.getKey()).equals("descriptor.json")) {
+        if ("descriptor.json".equals(S3Utils.toFilename(objectSummary.getKey()))) {
           final String descriptorJson = objectSummary.getKey();
           String indexZip = S3Utils.indexZipForSegmentPath(descriptorJson);
 

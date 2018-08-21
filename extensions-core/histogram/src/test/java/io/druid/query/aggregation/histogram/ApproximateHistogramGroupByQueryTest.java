@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,11 +22,12 @@ package io.druid.query.aggregation.histogram;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -36,11 +37,12 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.segment.TestHelper;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.Arrays;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -49,8 +51,10 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class ApproximateHistogramGroupByQueryTest
 {
+  private static final Closer resourceCloser = Closer.create();
+
   private final QueryRunner<Row> runner;
-  private GroupByQueryRunnerFactory factory;
+  private final GroupByQueryRunnerFactory factory;
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -115,7 +119,11 @@ public class ApproximateHistogramGroupByQueryTest
     );
 
     for (GroupByQueryConfig config : configs) {
-      final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
+      final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+          config
+      );
+      final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
+      resourceCloser.register(factoryAndCloser.rhs);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
@@ -129,13 +137,23 @@ public class ApproximateHistogramGroupByQueryTest
     return constructors;
   }
 
-  public ApproximateHistogramGroupByQueryTest(String testName, GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public ApproximateHistogramGroupByQueryTest(
+      String testName,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
+  )
   {
     this.factory = factory;
     this.runner = runner;
 
     //Note: this is needed in order to properly register the serde for Histogram.
     new ApproximateHistogramDruidModule().configure(null);
+  }
+
+  @After
+  public void teardown() throws IOException
+  {
+    resourceCloser.close();
   }
 
   @Test
@@ -152,32 +170,17 @@ public class ApproximateHistogramGroupByQueryTest
 
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Arrays.<DimensionSpec>asList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    "marketalias"
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            "marketalias"
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "marketalias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 1
+                Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
+                1
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount,
-                aggFactory
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, aggFactory)
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)
@@ -226,32 +229,17 @@ public class ApproximateHistogramGroupByQueryTest
 
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(
-            Arrays.<DimensionSpec>asList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    "marketalias"
-                )
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.allGran).setDimensions(new DefaultDimensionSpec(
+            QueryRunnerTestHelper.marketDimension,
+            "marketalias"
+        ))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Lists.newArrayList(
-                    new OrderByColumnSpec(
-                        "marketalias",
-                        OrderByColumnSpec.Direction.DESCENDING
-                    )
-                ), 1
+                Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
+                1
             )
-        )
-        .setAggregatorSpecs(
-            Lists.newArrayList(
-                QueryRunnerTestHelper.rowsCount,
-                aggFactory
-            )
-        )
+        ).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, aggFactory)
         .setPostAggregatorSpecs(
             Collections.singletonList(
                 new QuantilePostAggregator("quantile", "quantile", 0.5f)

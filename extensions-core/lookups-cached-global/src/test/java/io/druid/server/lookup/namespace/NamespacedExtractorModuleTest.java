@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,7 +22,6 @@ package io.druid.server.lookup.namespace;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.CacheGenerator;
@@ -63,10 +62,10 @@ public class NamespacedExtractorModuleTest
   public void setUp() throws Exception
   {
     final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> factoryMap =
-        ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+        ImmutableMap.of(
             UriExtractionNamespace.class,
             new UriCacheGenerator(
-                ImmutableMap.<String, SearchableVersionedDataFinder>of(
+                ImmutableMap.of(
                     "file",
                     new LocalFileTimestampVersionFinder()
                 )
@@ -94,10 +93,10 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriCacheGenerator factory = new UriCacheGenerator(
-        ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
+        ImmutableMap.of("file", new LocalFileTimestampVersionFinder())
     );
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -120,7 +119,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -136,12 +135,12 @@ public class NamespacedExtractorModuleTest
     }
   }
 
-  @Test//(timeout = 10_000)
+  @Test//(timeout = 60_000L)
   public void testDeleteNamespaces() throws Exception
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -162,7 +161,7 @@ public class NamespacedExtractorModuleTest
   {
     final File tmpFile = temporaryFolder.newFile();
     try (Writer out = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+      out.write(mapper.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),

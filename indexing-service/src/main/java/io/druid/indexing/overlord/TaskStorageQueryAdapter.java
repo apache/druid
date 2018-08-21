@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,14 +22,14 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
-import io.druid.java.util.common.Pair;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -53,16 +53,18 @@ public class TaskStorageQueryAdapter
     return storage.getActiveTasks();
   }
 
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
-    return storage.getRecentlyFinishedTaskStatuses(maxTaskStatuses);
+    return storage.getActiveTaskInfo(dataSource);
   }
 
-  @Nullable
-  public DateTime getCreatedTime(String taskId)
+  public List<TaskInfo<Task, TaskStatus>> getRecentlyCompletedTaskInfo(
+      @Nullable Integer maxTaskStatuses,
+      @Nullable Duration duration,
+      @Nullable String dataSource
+  )
   {
-    final Pair<DateTime, String> pair = storage.getCreatedDateTimeAndDataSource(taskId);
-    return pair == null ? null : pair.lhs;
+    return storage.getRecentlyFinishedTaskInfo(maxTaskStatuses, duration, dataSource);
   }
 
   public Optional<Task> getTask(final String taskid)
@@ -73,6 +75,12 @@ public class TaskStorageQueryAdapter
   public Optional<TaskStatus> getStatus(final String taskid)
   {
     return storage.getStatus(taskid);
+  }
+
+  @Nullable
+  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  {
+    return storage.getTaskInfo(taskId);
   }
 
   /**
@@ -97,10 +105,4 @@ public class TaskStorageQueryAdapter
     }
     return segments;
   }
-  
-  public Pair<DateTime, String> getCreatedDateAndDataSource(String taskId)
-  {
-    return storage.getCreatedDateTimeAndDataSource(taskId);
-  }
-  
 }

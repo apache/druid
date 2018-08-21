@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -160,7 +160,7 @@ public class WorkerTaskMonitorTest
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
-    EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject())).andReturn(taskActionClient).anyTimes();
+    EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
     return new WorkerTaskMonitor(
@@ -185,6 +185,7 @@ public class WorkerTaskMonitorTest
             ),
                 jsonMapper,
                 indexIO,
+                null,
                 null,
                 null,
                 indexMergerV9,
@@ -215,7 +216,7 @@ public class WorkerTaskMonitorTest
     testingCluster.stop();
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testRunTask() throws Exception
   {
     Assert.assertTrue(
@@ -271,7 +272,7 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(TaskState.SUCCESS, taskAnnouncement.getTaskStatus().getStatusCode());
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testGetAnnouncements() throws Exception
   {
     cf.create()
@@ -309,7 +310,7 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(DUMMY_NODE.getPlaintextPort(), announcements.get(0).getTaskLocation().getPort());
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testRestartCleansOldStatus() throws Exception
   {
     task = TestTasks.unending("test");
@@ -345,7 +346,7 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(TaskState.FAILED, announcements.get(0).getTaskStatus().getStatusCode());
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testStatusAnnouncementsArePersistent() throws Exception
   {
     cf.create()

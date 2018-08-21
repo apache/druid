@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,11 +20,11 @@
 package io.druid.query.topn;
 
 import com.google.common.collect.Maps;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.query.ColumnSelectorPlus;
-import io.druid.segment.Capabilities;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.StorageAdapter;
 
 import java.util.Map;
 
@@ -33,9 +33,9 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
   public static final int[] EMPTY_INTS = new int[]{};
   private final TopNQuery query;
 
-  public TimeExtractionTopNAlgorithm(Capabilities capabilities, TopNQuery query)
+  public TimeExtractionTopNAlgorithm(StorageAdapter storageAdapter, TopNQuery query)
   {
-    super(capabilities);
+    super(storageAdapter);
     this.query = query;
   }
 

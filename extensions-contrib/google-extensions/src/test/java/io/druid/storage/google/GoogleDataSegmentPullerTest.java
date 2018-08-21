@@ -1,26 +1,30 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package io.druid.storage.google;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import io.druid.segment.loading.SegmentLoadingException;
 import org.apache.commons.io.FileUtils;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Test;
 
@@ -43,8 +47,12 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
     final File outDir = Files.createTempDirectory("druid").toFile();
     try {
       GoogleStorage storage = createMock(GoogleStorage.class);
-
-      expect(storage.get(bucket, path)).andThrow(new IOException(""));
+      final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
+          JacksonFactory.getDefaultInstance(),
+          300,
+          "test"
+      );
+      expect(storage.get(EasyMock.eq(bucket), EasyMock.eq(path))).andThrow(exception);
 
       replayAll();
 

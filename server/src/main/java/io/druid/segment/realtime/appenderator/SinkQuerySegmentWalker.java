@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -24,15 +24,17 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
+import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.CPUTimeMetricQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
@@ -76,6 +78,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final ExecutorService queryExecutorService;
   private final Cache cache;
   private final CacheConfig cacheConfig;
+  private final CachePopulatorStats cachePopulatorStats;
 
   public SinkQuerySegmentWalker(
       String dataSource,
@@ -85,7 +88,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       QueryRunnerFactoryConglomerate conglomerate,
       ExecutorService queryExecutorService,
       Cache cache,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      CachePopulatorStats cachePopulatorStats
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -96,6 +100,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.queryExecutorService = Preconditions.checkNotNull(queryExecutorService, "queryExecutorService");
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
+    this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
 
     if (!cache.isLocal()) {
       log.warn("Configured cache[%s] is not local, caching will not be enabled.", cache.getClass().getName());
@@ -235,7 +240,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                             cache,
                                                             toolChest,
                                                             baseRunner,
-                                                            MoreExecutors.sameThreadExecutor(),
+                                                            // Always populate in foreground regardless of config
+                                                            new ForegroundCachePopulator(
+                                                                objectMapper,
+                                                                cachePopulatorStats,
+                                                                cacheConfig.getMaxEntrySize()
+                                                            ),
                                                             cacheConfig
                                                         );
                                                       } else {

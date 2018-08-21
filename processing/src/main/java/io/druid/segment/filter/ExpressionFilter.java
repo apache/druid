@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,6 +21,7 @@ package io.druid.segment.filter;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.druid.common.config.NullHandling;
 import io.druid.math.expr.Evals;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -58,6 +59,9 @@ public class ExpressionFilter implements Filter
       @Override
       public boolean matches()
       {
+        if (NullHandling.sqlCompatible() && selector.isNull()) {
+          return false;
+        }
         return Evals.asBoolean(selector.getLong());
       }
 
@@ -108,7 +112,8 @@ public class ExpressionFilter implements Filter
           value -> expr.eval(identifierName -> {
             // There's only one binding, and it must be the single column, so it can safely be ignored in production.
             assert column.equals(identifierName);
-            return value;
+            // convert null to Empty before passing to expressions if needed.
+            return NullHandling.nullToEmptyIfNeeded(value);
           }).asBoolean()
       );
     }

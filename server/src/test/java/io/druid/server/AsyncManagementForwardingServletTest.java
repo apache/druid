@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -37,7 +37,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.initialization.BaseJettyTest;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.commons.codec.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
@@ -60,6 +59,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class AsyncManagementForwardingServletTest extends BaseJettyTest
@@ -239,7 +239,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
     connection.setDoOutput(true);
     OutputStream os = connection.getOutputStream();
-    os.write(coordinatorExpectedRequest.body.getBytes(Charsets.UTF_8));
+    os.write(coordinatorExpectedRequest.body.getBytes(StandardCharsets.UTF_8));
     os.close();
 
     Assert.assertEquals(200, connection.getResponseCode());
@@ -267,7 +267,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
     connection.setDoOutput(true);
     OutputStream os = connection.getOutputStream();
-    os.write(overlordExpectedRequest.body.getBytes(Charsets.UTF_8));
+    os.write(overlordExpectedRequest.body.getBytes(StandardCharsets.UTF_8));
     os.close();
 
     Assert.assertEquals(200, connection.getResponseCode());
@@ -436,7 +436,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root)});
+      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root, 4096, -1)});
       server.setHandler(handlerList);
     }
   }

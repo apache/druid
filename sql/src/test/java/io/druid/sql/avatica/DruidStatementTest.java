@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,8 +21,12 @@ package io.druid.sql.avatica;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.io.Closer;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
@@ -36,12 +40,15 @@ import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.List;
 
 public class DruidStatementTest extends CalciteTestBase
@@ -52,23 +59,38 @@ public class DruidStatementTest extends CalciteTestBase
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
+  private static QueryRunnerFactoryConglomerate conglomerate;
+  private static Closer resourceCloser;
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
+        .createQueryRunnerFactoryConglomerate();
+    conglomerate = conglomerateCloserPair.lhs;
+    resourceCloser = conglomerateCloserPair.rhs;
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    resourceCloser.close();
+  }
+
   private SpecificSegmentsQuerySegmentWalker walker;
   private PlannerFactory plannerFactory;
 
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(
-        walker,
-        plannerConfig
-    );
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     plannerFactory = new PlannerFactory(
         druidSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker),
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -137,13 +159,19 @@ public class DruidStatementTest extends CalciteTestBase
         Meta.Frame.create(
             0,
             true,
-            Lists.<Object>newArrayList(
+            Lists.newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
-                new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f},
+                new Object[]{
+                    DateTimes.of("2000-01-02").getMillis(),
+                    1L,
+                    "10.1",
+                    NullHandling.defaultStringValue(),
+                    2.0f
+                },
                 new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
                 new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
                 new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
-                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", "", 6.0f}
+                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", NullHandling.defaultStringValue(), 6.0f}
             )
         ),
         frame
@@ -164,9 +192,15 @@ public class DruidStatementTest extends CalciteTestBase
         Meta.Frame.create(
             0,
             false,
-            Lists.<Object>newArrayList(
+            Lists.newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
-                new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", "", 2.0f}
+                new Object[]{
+                    DateTimes.of("2000-01-02").getMillis(),
+                    1L,
+                    "10.1",
+                    NullHandling.defaultStringValue(),
+                    2.0f
+                }
             )
         ),
         frame
@@ -179,11 +213,11 @@ public class DruidStatementTest extends CalciteTestBase
         Meta.Frame.create(
             2,
             true,
-            Lists.<Object>newArrayList(
+            Lists.newArrayList(
                 new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
                 new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
                 new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
-                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", "", 6.0f}
+                new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", NullHandling.defaultStringValue(), 6.0f}
             )
         ),
         frame

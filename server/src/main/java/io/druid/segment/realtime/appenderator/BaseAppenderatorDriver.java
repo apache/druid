@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -42,12 +42,13 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -55,6 +56,7 @@ import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -76,6 +78,94 @@ import java.util.stream.Stream;
 public abstract class BaseAppenderatorDriver implements Closeable
 {
   /**
+   * Segments allocated for an intervval.
+   * There should be at most a single active (appending) segment at any time.
+   */
+  static class SegmentsOfInterval
+  {
+    private final Interval interval;
+    private final List<SegmentWithState> appendFinishedSegments = new ArrayList<>();
+
+    @Nullable
+    private SegmentWithState appendingSegment;
+
+    SegmentsOfInterval(Interval interval)
+    {
+      this.interval = interval;
+    }
+
+    SegmentsOfInterval(
+        Interval interval,
+        @Nullable SegmentWithState appendingSegment,
+        List<SegmentWithState> appendFinishedSegments
+    )
+    {
+      this.interval = interval;
+      this.appendingSegment = appendingSegment;
+      this.appendFinishedSegments.addAll(appendFinishedSegments);
+
+      if (appendingSegment != null) {
+        Preconditions.checkArgument(
+            appendingSegment.getState() == SegmentState.APPENDING,
+            "appendingSegment[%s] is not in the APPENDING state",
+            appendingSegment.getSegmentIdentifier()
+        );
+      }
+      if (appendFinishedSegments
+          .stream()
+          .anyMatch(segmentWithState -> segmentWithState.getState() == SegmentState.APPENDING)) {
+        throw new ISE("Some appendFinishedSegments[%s] is in the APPENDING state", appendFinishedSegments);
+      }
+    }
+
+    void setAppendingSegment(SegmentWithState appendingSegment)
+    {
+      Preconditions.checkArgument(
+          appendingSegment.getState() == SegmentState.APPENDING,
+          "segment[%s] is not in the APPENDING state",
+          appendingSegment.getSegmentIdentifier()
+      );
+      // There should be only one appending segment at any time
+      Preconditions.checkState(
+          this.appendingSegment == null,
+          "WTF?! Current appendingSegment[%s] is not null. "
+          + "Its state must be changed before setting a new appendingSegment[%s]",
+          this.appendingSegment,
+          appendingSegment
+      );
+      this.appendingSegment = appendingSegment;
+    }
+
+    void finishAppendingToCurrentActiveSegment(Consumer<SegmentWithState> stateTransitionFn)
+    {
+      Preconditions.checkNotNull(appendingSegment, "appendingSegment");
+      stateTransitionFn.accept(appendingSegment);
+      appendFinishedSegments.add(appendingSegment);
+      appendingSegment = null;
+    }
+
+    Interval getInterval()
+    {
+      return interval;
+    }
+
+    SegmentWithState getAppendingSegment()
+    {
+      return appendingSegment;
+    }
+
+    List<SegmentWithState> getAllSegments()
+    {
+      final List<SegmentWithState> allSegments = new ArrayList<>(appendFinishedSegments.size() + 1);
+      if (appendingSegment != null) {
+        allSegments.add(appendingSegment);
+      }
+      allSegments.addAll(appendFinishedSegments);
+      return allSegments;
+    }
+  }
+
+  /**
    * Allocated segments for a sequence
    */
   static class SegmentsForSequence
@@ -83,7 +173,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
     // Interval Start millis -> List of Segments for this interval
     // there might be multiple segments for a start interval, for example one segment
     // can be in APPENDING state and others might be in PUBLISHING state
-    private final NavigableMap<Long, LinkedList<SegmentWithState>> intervalToSegmentStates;
+    private final NavigableMap<Long, SegmentsOfInterval> intervalToSegmentStates;
 
     // most recently allocated segment
     private String lastSegmentId;
@@ -94,7 +184,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
     }
 
     SegmentsForSequence(
-        NavigableMap<Long, LinkedList<SegmentWithState>> intervalToSegmentStates,
+        NavigableMap<Long, SegmentsOfInterval> intervalToSegmentStates,
         String lastSegmentId
     )
     {
@@ -104,24 +194,34 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
     void add(SegmentIdentifier identifier)
     {
-      intervalToSegmentStates.computeIfAbsent(identifier.getInterval().getStartMillis(), k -> new LinkedList<>())
-                             .addFirst(SegmentWithState.newSegment(identifier));
+      intervalToSegmentStates.computeIfAbsent(
+          identifier.getInterval().getStartMillis(),
+          k -> new SegmentsOfInterval(identifier.getInterval())
+      ).setAppendingSegment(SegmentWithState.newSegment(identifier));
       lastSegmentId = identifier.getIdentifierAsString();
     }
 
-    Entry<Long, LinkedList<SegmentWithState>> floor(long timestamp)
+    Entry<Long, SegmentsOfInterval> floor(long timestamp)
     {
       return intervalToSegmentStates.floorEntry(timestamp);
     }
 
-    LinkedList<SegmentWithState> get(long timestamp)
+    SegmentsOfInterval get(long timestamp)
     {
       return intervalToSegmentStates.get(timestamp);
     }
 
-    Stream<SegmentWithState> segmentStateStream()
+    Stream<SegmentWithState> allSegmentStateStream()
     {
-      return intervalToSegmentStates.values().stream().flatMap(Collection::stream);
+      return intervalToSegmentStates
+          .values()
+          .stream()
+          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
+    }
+
+    Stream<SegmentsOfInterval> getAllSegmentsOfInterval()
+    {
+      return intervalToSegmentStates.values().stream();
     }
   }
 
@@ -183,13 +283,19 @@ public abstract class BaseAppenderatorDriver implements Closeable
         return null;
       }
 
-      final Map.Entry<Long, LinkedList<SegmentWithState>> candidateEntry = segmentsForSequence.floor(
+      final Map.Entry<Long, SegmentsOfInterval> candidateEntry = segmentsForSequence.floor(
           timestamp.getMillis()
       );
-      if (candidateEntry != null
-          && candidateEntry.getValue().getFirst().getSegmentIdentifier().getInterval().contains(timestamp)
-          && candidateEntry.getValue().getFirst().getState() == SegmentState.APPENDING) {
-        return candidateEntry.getValue().getFirst().getSegmentIdentifier();
+
+      if (candidateEntry != null) {
+        final SegmentsOfInterval segmentsOfInterval = candidateEntry.getValue();
+        if (segmentsOfInterval.interval.contains(timestamp)) {
+          return segmentsOfInterval.appendingSegment == null ?
+                 null :
+                 segmentsOfInterval.appendingSegment.getSegmentIdentifier();
+        } else {
+          return null;
+        }
       } else {
         return null;
       }
@@ -327,7 +433,20 @@ public abstract class BaseAppenderatorDriver implements Closeable
           .map(segments::get)
           .filter(Objects::nonNull)
           .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
-          .flatMap(Collection::stream);
+          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
+    }
+  }
+
+  Stream<SegmentWithState> getAppendingSegments(Collection<String> sequenceNames)
+  {
+    synchronized (segments) {
+      return sequenceNames
+          .stream()
+          .map(segments::get)
+          .filter(Objects::nonNull)
+          .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
+          .map(segmentsOfInterval -> segmentsOfInterval.appendingSegment)
+          .filter(Objects::nonNull);
     }
   }
 
@@ -436,38 +555,33 @@ public abstract class BaseAppenderatorDriver implements Closeable
               final boolean published = publisher.publishSegments(
                   ImmutableSet.copyOf(segmentsAndMetadata.getSegments()),
                   metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
-              );
+              ).isSuccess();
 
               if (published) {
                 log.info("Published segments.");
               } else {
-                log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
+                log.info("Transaction failure while publishing segments, removing them from deep storage "
+                         + "and checking if someone else beat us to publishing.");
+
+                segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+
                 final Set<SegmentIdentifier> segmentsIdentifiers = segmentsAndMetadata
                     .getSegments()
                     .stream()
                     .map(SegmentIdentifier::fromDataSegment)
                     .collect(Collectors.toSet());
+
                 if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
                                       .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
-                  log.info(
-                      "Removing our segments from deep storage because someone else already published them: %s",
-                      segmentsAndMetadata.getSegments()
-                  );
-                  segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
-
                   log.info("Our segments really do exist, awaiting handoff.");
                 } else {
-                  throw new ISE("Failed to publish segments[%s]", segmentsAndMetadata.getSegments());
+                  throw new ISE("Failed to publish segments.");
                 }
               }
             }
             catch (Exception e) {
-              log.warn(
-                  "Removing segments from deep storage after failed publish: %s",
-                  segmentsAndMetadata.getSegments()
-              );
-              segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
-
+              // Must not remove segments here, we aren't sure if our transaction succeeded or not.
+              log.warn(e, "Failed publish, not removing segments: %s", segmentsAndMetadata.getSegments());
               throw Throwables.propagate(e);
             }
           }
@@ -538,10 +652,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
             Maps.transformValues(
                 snapshot,
                 (Function<SegmentsForSequence, List<SegmentWithState>>) input -> ImmutableList.copyOf(
-                    input.intervalToSegmentStates.values()
-                                                 .stream()
-                                                 .flatMap(Collection::stream)
-                                                 .collect(Collectors.toList())
+                    input.intervalToSegmentStates
+                        .values()
+                        .stream()
+                        .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream())
+                        .collect(Collectors.toList())
                 )
             )
         ),

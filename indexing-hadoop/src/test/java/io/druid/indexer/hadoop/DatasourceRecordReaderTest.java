@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -50,14 +50,14 @@ public class DatasourceRecordReaderTest
     DataSegment segment = HadoopDruidIndexerConfig.JSON_MAPPER
         .readValue(segmentDesciptor, DataSegment.class)
         .withLoadSpec(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "type",
                 "local",
                 "path",
                 this.getClass().getClassLoader().getResource("test-segment/index.zip").getPath()
             )
         );
-    InputSplit split = new DatasourceInputSplit(Lists.newArrayList(WindowedDataSegment.of(segment)), null);
+    InputSplit split = new DatasourceInputSplit(Collections.singletonList(WindowedDataSegment.of(segment)), null);
 
     Configuration config = new Configuration();
     DatasourceInputFormat.addDataSource(
@@ -100,19 +100,19 @@ public class DatasourceRecordReaderTest
   private void verifyRows(List<InputRow> actualRows)
   {
     List<ImmutableMap<String, Object>> expectedRows = ImmutableList.of(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T00:00:00.000Z"),
             "host", ImmutableList.of("a.example.com"),
             "visited_sum", 100L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T01:00:00.000Z"),
             "host", ImmutableList.of("b.example.com"),
             "visited_sum", 150L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T02:00:00.000Z"),
             "host", ImmutableList.of("c.example.com"),
             "visited_sum", 200L,

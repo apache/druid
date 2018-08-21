@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -33,14 +33,15 @@ import io.druid.query.expression.TimestampFloorExprMacro;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExpressionDimFilter;
 import io.druid.query.filter.LikeDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.filtration.BoundRefKey;
@@ -311,13 +312,10 @@ public class Expressions
         return null;
       }
 
-      final BoundDimFilter equalFilter = Bounds.equalTo(
-          new BoundRefKey(
-              druidExpression.getSimpleExtraction().getColumn(),
-              druidExpression.getSimpleExtraction().getExtractionFn(),
-              StringComparators.LEXICOGRAPHIC
-          ),
-          ""
+      final DimFilter equalFilter = new SelectorDimFilter(
+          druidExpression.getSimpleExtraction().getColumn(),
+          NullHandling.defaultStringValue(),
+          druidExpression.getSimpleExtraction().getExtractionFn()
       );
 
       return kind == SqlKind.IS_NOT_NULL ? new NotDimFilter(equalFilter) : equalFilter;

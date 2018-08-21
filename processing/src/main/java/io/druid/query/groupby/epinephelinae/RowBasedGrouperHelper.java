@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -31,6 +30,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.collections.ReferenceCountingResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.IntArrayUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -39,6 +39,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.BaseQuery;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -450,7 +451,7 @@ public class RowBasedGrouperHelper
                 Object dimVal = entry.getKey().getKey()[i];
                 theMap.put(
                     query.getDimensions().get(i - dimStart).getOutputName(),
-                    dimVal instanceof String ? Strings.emptyToNull((String) dimVal) : dimVal
+                    dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
                 );
               }
             } else {
@@ -459,7 +460,7 @@ public class RowBasedGrouperHelper
                 Object dimVal = entry.getKey().getKey()[i];
                 dimensions.put(
                     query.getDimensions().get(i - dimStart).getOutputName(),
-                    dimVal instanceof String ? Strings.emptyToNull((String) dimVal) : dimVal
+                    dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
                 );
               }
 
@@ -553,18 +554,11 @@ public class RowBasedGrouperHelper
     @Override
     public Supplier<Comparable> makeInputRawSupplier(DimensionSelector selector)
     {
-      return new Supplier<Comparable>()
-      {
-        @Override
-        public Comparable get()
-        {
-          final String value;
-          IndexedInts index = selector.getRow();
-          value = index.size() == 0
-                  ? ""
-                  : selector.lookupName(index.get(0));
-          return Strings.nullToEmpty(value);
-        }
+      return () -> {
+        IndexedInts index = selector.getRow();
+        return index.size() == 0
+               ? null
+               : selector.lookupName(index.get(0));
       };
     }
   }
@@ -631,28 +625,19 @@ public class RowBasedGrouperHelper
       type = type == null ? ValueType.STRING : type;
       switch (type) {
         case STRING:
-          functions[i] = input -> input == null ? "" : input.toString();
+          functions[i] = input -> DimensionHandlerUtils.convertObjectToString(input);
           break;
 
         case LONG:
-          functions[i] = input -> {
-            final Long val = DimensionHandlerUtils.convertObjectToLong(input);
-            return val == null ? 0L : val;
-          };
+          functions[i] = input -> DimensionHandlerUtils.convertObjectToLong(input);
           break;
 
         case FLOAT:
-          functions[i] = input -> {
-            final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
-            return val == null ? 0.f : val;
-          };
+          functions[i] = input -> DimensionHandlerUtils.convertObjectToFloat(input);
           break;
 
         case DOUBLE:
-          functions[i] = input -> {
-            Double val = DimensionHandlerUtils.convertObjectToDouble(input);
-            return val == null ? 0.0 : val;
-          };
+          functions[i] = input -> DimensionHandlerUtils.convertObjectToDouble(input);
           break;
         default:
           throw new IAE("invalid type: [%s]", type);
@@ -897,7 +882,10 @@ public class RowBasedGrouperHelper
     private static int compareDimsInRows(RowBasedKey key1, RowBasedKey key2, int dimStart)
     {
       for (int i = dimStart; i < key1.getKey().length; i++) {
-        final int cmp = ((Comparable) key1.getKey()[i]).compareTo(key2.getKey()[i]);
+        final int cmp = Comparators.<Comparable>naturalNullsFirst().compare(
+            (Comparable) key1.getKey()[i],
+            (Comparable) key2.getKey()[i]
+        );
         if (cmp != 0) {
           return cmp;
         }
@@ -946,9 +934,10 @@ public class RowBasedGrouperHelper
 
         if (isNumericField.get(i) && comparator.equals(StringComparators.NUMERIC)) {
           // use natural comparison
-          cmp = lhs.compareTo(rhs);
+          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
-          cmp = comparator.compare(lhs.toString(), rhs.toString());
+          cmp = comparator.compare(DimensionHandlerUtils.convertObjectToString(lhs),
+                                   DimensionHandlerUtils.convertObjectToString(rhs));
         }
 
         if (cmp != 0) {
@@ -960,9 +949,10 @@ public class RowBasedGrouperHelper
     }
   }
 
-  static long estimateStringKeySize(String key)
+  static long estimateStringKeySize(@Nullable String key)
   {
-    return (long) key.length() * Character.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
+    long length = key == null ? 0 : key.length();
+    return length * Character.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
@@ -1050,7 +1040,7 @@ public class RowBasedGrouperHelper
       rankOfDictionaryIds = IntStream.range(0, dictionarySize).toArray();
       IntArrays.quickSort(
           rankOfDictionaryIds,
-          (i1, i2) -> dictionary.get(i1).compareTo(dictionary.get(i2))
+          (i1, i2) -> Comparators.<String>naturalNullsFirst().compare(dictionary.get(i1), dictionary.get(i2))
       );
 
       IntArrayUtils.inverse(rankOfDictionaryIds);
@@ -1234,7 +1224,7 @@ public class RowBasedGrouperHelper
               throw new IAE("Cannot order by a non-numeric aggregator[%s]", orderSpec);
             }
 
-            serdeHelper = makeNumericSerdeHelper(valueType, aggOffset, true, stringComparator);
+            serdeHelper = makeNullHandlingNumericserdeHelper(valueType, aggOffset, true, stringComparator);
 
             orderByHelpers.add(serdeHelper);
             needsReverses.add(needsReverse);
@@ -1390,7 +1380,7 @@ public class RowBasedGrouperHelper
         helpers.add(helper);
       }
 
-      return helpers.toArray(new RowBasedKeySerdeHelper[helpers.size()]);
+      return helpers.toArray(new RowBasedKeySerdeHelper[0]);
     }
 
     private RowBasedKeySerdeHelper makeSerdeHelper(
@@ -1419,9 +1409,31 @@ public class RowBasedGrouperHelper
         case LONG:
         case FLOAT:
         case DOUBLE:
-          return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
+          return makeNullHandlingNumericserdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
         default:
           throw new IAE("invalid type: %s", valueType);
+      }
+    }
+
+    private RowBasedKeySerdeHelper makeNullHandlingNumericserdeHelper(
+        ValueType valueType,
+        int keyBufferPosition,
+        boolean pushLimitDown,
+        @Nullable StringComparator stringComparator
+    )
+    {
+      if (NullHandling.sqlCompatible()) {
+        return new NullableRowBasedKeySerdeHelper(
+            makeNumericSerdeHelper(
+                valueType,
+                keyBufferPosition + Byte.BYTES,
+                pushLimitDown,
+                stringComparator
+            ),
+            keyBufferPosition
+        );
+      } else {
+        return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
       }
     }
 
@@ -1607,7 +1619,7 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        keyBuffer.putLong((Long) key.getKey()[idx]);
+        keyBuffer.putLong(DimensionHandlerUtils.nullToZero((Long) key.getKey()[idx]));
         return true;
       }
 
@@ -1658,7 +1670,7 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        keyBuffer.putFloat((Float) key.getKey()[idx]);
+        keyBuffer.putFloat(DimensionHandlerUtils.nullToZero((Float) key.getKey()[idx]));
         return true;
       }
 
@@ -1710,7 +1722,7 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        keyBuffer.putDouble((Double) key.getKey()[idx]);
+        keyBuffer.putDouble(DimensionHandlerUtils.nullToZero((Double) key.getKey()[idx]));
         return true;
       }
 
@@ -1724,6 +1736,81 @@ public class RowBasedGrouperHelper
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
+      }
+    }
+
+    // This class is only used when SQL compatible null handling is enabled.
+    // When serializing the key, it will add a byte to store the nullability of the serialized object before
+    // serializing the key using delegate RowBasedKeySerdeHelper.
+    // Buffer Layout - 1 byte for storing nullability + bytes from delegate RowBasedKeySerdeHelper.
+    private class NullableRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    {
+      private final RowBasedKeySerdeHelper delegate;
+      private final int keyBufferPosition;
+      private final BufferComparator comparator;
+
+      NullableRowBasedKeySerdeHelper(RowBasedKeySerdeHelper delegate, int keyBufferPosition)
+      {
+        this.delegate = delegate;
+        this.keyBufferPosition = keyBufferPosition;
+        BufferComparator delegateBufferComparator = this.delegate.getBufferComparator();
+        this.comparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+          boolean isLhsNull = (lhsBuffer.get(lhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
+          boolean isRhsNull = (rhsBuffer.get(rhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
+          if (isLhsNull && isRhsNull) {
+            // Both are null
+            return 0;
+          }
+          // only lhs is null
+          if (isLhsNull) {
+            return -1;
+          }
+          // only rhs is null
+          if (isRhsNull) {
+            return 1;
+          }
+          return delegateBufferComparator.compare(
+              lhsBuffer,
+              rhsBuffer,
+              lhsPosition,
+              rhsPosition
+          );
+        };
+      }
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return delegate.getKeyBufferValueSize() + Byte.BYTES;
+      }
+
+      @Override
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
+      {
+        Object val = key.getKey()[idx];
+        if (val == null) {
+          keyBuffer.put(NullHandling.IS_NULL_BYTE);
+        } else {
+          keyBuffer.put(NullHandling.IS_NOT_NULL_BYTE);
+        }
+        delegate.putToKeyBuffer(key, idx);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      {
+        if (buffer.get(initialOffset + keyBufferPosition) == NullHandling.IS_NULL_BYTE) {
+          dimValues[dimValIdx] = null;
+        } else {
+          delegate.getFromByteBuffer(buffer, initialOffset, dimValIdx, dimValues);
+        }
+      }
+
+      @Override
+      public BufferComparator getBufferComparator()
+      {
+        return comparator;
       }
     }
   }

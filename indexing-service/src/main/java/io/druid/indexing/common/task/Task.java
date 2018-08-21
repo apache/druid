@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,13 +21,14 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexSubTask;
+import io.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -51,6 +52,8 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "archive", value = ArchiveTask.class),
     @JsonSubTypes.Type(name = "restore", value = RestoreTask.class),
     @JsonSubTypes.Type(name = "index", value = IndexTask.class),
+    @JsonSubTypes.Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
+    @JsonSubTypes.Type(name = ParallelIndexSubTask.TYPE, value = ParallelIndexSubTask.class),
     @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
     @JsonSubTypes.Type(name = "hadoop_convert_segment", value = HadoopConverterTask.class),
     @JsonSubTypes.Type(name = "hadoop_convert_segment_sub", value = HadoopConverterTask.ConverterSubTask.class),
@@ -85,9 +88,14 @@ public interface Task
    * Returns task priority. The task priority is currently used only for prioritized locking, but, in the future, it can
    * be used for task scheduling, cluster resource management, etc.
    *
+   * The task priority must be in taskContext if the task is submitted to the proper Overlord endpoint.
+   *
+   * It might not be in taskContext in rolling update. This returns {@link Tasks#DEFAULT_TASK_PRIORITY} in this case.
+   *
    * @return task priority
    *
    * @see Tasks for default task priorities
+   * @see io.druid.indexing.overlord.http.OverlordResource#taskPost
    */
   default int getPriority()
   {
@@ -180,12 +188,17 @@ public interface Task
    */
   TaskStatus run(TaskToolbox toolbox) throws Exception;
 
+  default Map<String, Object> addToContext(String key, Object val)
+  {
+    getContext().put(key, val);
+    return getContext();
+  }
+
   Map<String, Object> getContext();
 
-  @Nullable
   default <ContextValueType> ContextValueType getContextValue(String key)
   {
-    return getContext() == null ? null : (ContextValueType) getContext().get(key);
+    return (ContextValueType) getContext().get(key);
   }
 
   default <ContextValueType> ContextValueType getContextValue(String key, ContextValueType defaultValue)

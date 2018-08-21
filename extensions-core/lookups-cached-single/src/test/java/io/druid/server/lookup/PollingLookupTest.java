@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,10 +21,11 @@ package io.druid.server.lookup;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.ISE;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.server.lookup.cache.polling.OffHeapPollingCache;
@@ -190,7 +191,7 @@ public class PollingLookupTest
       public String apply(String input)
       {
         //make sure to rewrite null strings as empty.
-        return Strings.nullToEmpty(input);
+        return NullHandling.nullToEmptyIfNeeded(input);
       }
     }));
   }
@@ -207,7 +208,7 @@ public class PollingLookupTest
     for (Map.Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String val = entry.getValue();
-      Assert.assertEquals("non-null check", Strings.emptyToNull(val), lookup.apply(key));
+      Assert.assertEquals("non-null check", NullHandling.emptyToNullIfNeeded(val), lookup.apply(key));
     }
   }
 }
