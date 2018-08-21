@@ -26,6 +26,7 @@ import org.hibernate.validator.constraints.NotEmpty;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -39,7 +40,7 @@ public class SegmentLoaderConfig
   private boolean deleteOnRemove = true;
 
   @JsonProperty("dropSegmentDelayMillis")
-  private int dropSegmentDelayMillis = 30 * 1000; // 30 seconds
+  private int dropSegmentDelayMillis = (int) TimeUnit.SECONDS.toMillis(30);
 
   @JsonProperty("announceIntervalMillis")
   private int announceIntervalMillis = 0; // do not background announce

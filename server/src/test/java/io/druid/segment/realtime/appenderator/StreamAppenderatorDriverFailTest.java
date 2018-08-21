@@ -73,7 +73,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 {
   private static final String DATA_SOURCE = "foo";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final long PUBLISH_TIMEOUT = 5000;
+  private static final long PUBLISH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
 
   private static final List<InputRow> ROWS = ImmutableList.of(
       new MapBasedInputRow(
@@ -153,7 +153,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
   }
 
   @Test
@@ -191,7 +191,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
   }
 
   @Test
@@ -229,7 +229,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     driver.registerHandoff(published).get();
   }
@@ -314,7 +314,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
           StreamAppenderatorDriverTest.makeFailingPublisher(failWithException),
           committerSupplier.get(),
           ImmutableList.of("dummy")
-      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
     catch (Exception e) {
       throw e;
