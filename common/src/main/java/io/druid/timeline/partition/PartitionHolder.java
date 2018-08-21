@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
+import java.util.Spliterator;
 import java.util.TreeSet;
 
 /**
@@ -128,6 +129,12 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
   public Iterator<PartitionChunk<T>> iterator()
   {
     return holderSet.iterator();
+  }
+
+  @Override
+  public Spliterator<PartitionChunk<T>> spliterator()
+  {
+    return holderSet.spliterator();
   }
 
   public Iterable<T> payloads()
