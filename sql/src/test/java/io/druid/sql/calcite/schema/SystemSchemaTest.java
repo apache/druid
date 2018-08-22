@@ -205,7 +205,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private final QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
       new DruidServer(
           "server2", "server2", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
-          .addDataSegment(segment4).addDataSegment(segment5), client2
+          .addDataSegment(segment2).addDataSegment(segment4).addDataSegment(segment5), client2
   );
   private final Map<String, QueryableDruidServer> serverViewClients = ImmutableMap.of(
       "server1",
@@ -269,6 +269,7 @@ public class SystemSchemaTest extends CalciteTestBase
     // segments 1,2,3 are published
     // segments 1,2,4,5 are served
     // segment 3 is published but not served
+    // segment 2 is served by 2 servers, so num_replicas=2
 
     final SystemSchema.SegmentsTable segmentsTable = (SystemSchema.SegmentsTable) schema.getTableMap().get("segments");
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
@@ -327,8 +328,11 @@ public class SystemSchemaTest extends CalciteTestBase
         //segment3 is published but not served
         Assert.assertEquals(0, isAvailable);
         Assert.assertEquals(0, replicas);
+      } else if ("test2".equals(ds)) {
+        Assert.assertEquals(1, isAvailable);
+        Assert.assertEquals(2, replicas);
       } else {
-        // all other segments are available
+        // all other segments are available with 1 replica
         Assert.assertEquals(1, isAvailable);
         Assert.assertEquals(1, replicas);
       }

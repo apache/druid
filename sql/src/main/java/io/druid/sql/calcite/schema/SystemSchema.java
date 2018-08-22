@@ -209,8 +209,9 @@ public class SystemSchema extends AbstractSchema
           int numReplicas = 1;
           if (availableSegments.containsKey(segmentId)) {
             //do not create new row if a segmentId has been seen previously
-            // but increment the replica count
+            // but increment the replica count and update row
             numReplicas++;
+            updateRow(segmentId, numReplicas, rows);
             continue;
           }
           availableSegments.putIfAbsent(segmentId, segment);
@@ -279,6 +280,26 @@ public class SystemSchema extends AbstractSchema
         rows.add(row);
       }
       return Linq4j.asEnumerable(rows);
+    }
+
+    private void updateRow(String segmentId, int replicas, List<Object[]> rows)
+    {
+      Object[] oldRow = null;
+      Object[] newRow = null;
+      for (Object[] row : rows) {
+        if (row[0].equals(segmentId)) {
+          oldRow = row;
+          row[7] = replicas;
+          newRow = row;
+          break;
+        }
+      }
+      if (oldRow == null || newRow == null) {
+        log.error("Cannot update row if the segment[%s] is not present in the existing rows", segmentId);
+        throw new RuntimeException("No row exists with segmentId " + segmentId);
+      }
+      rows.remove(oldRow);
+      rows.add(newRow);
     }
 
     private Object[] createRow(
