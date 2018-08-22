@@ -2117,7 +2117,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     Assert.assertNull(serviceEmitter.getStackTrace(), serviceEmitter.getStackTrace());
     Assert.assertNull(serviceEmitter.getExceptionMessage(), serviceEmitter.getExceptionMessage());
-    Assert.assertNull(serviceEmitter.getExceptionClass().getCanonicalName(), serviceEmitter.getExceptionClass());
+    Assert.assertNull(serviceEmitter.getExceptionClass());
   }
 
   @Test(timeout = 60_000L)
