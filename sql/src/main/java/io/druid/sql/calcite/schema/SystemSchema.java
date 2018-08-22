@@ -25,9 +25,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import io.druid.client.BrokerServerView;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
+import io.druid.client.TimelineServerView;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingService;
 import io.druid.client.selector.QueryableDruidServer;
@@ -53,13 +53,13 @@ import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -67,66 +67,70 @@ public class SystemSchema extends AbstractSchema
 {
   private static final Logger log = new Logger(SystemSchema.class);
 
-  public static final String NAME = "SYS";
-  private static final String SEGMENTS_TABLE = "SEGMENTS";
-  private static final String SERVERS_TABLE = "SERVERS";
-  private static final String SERVERSEGMENTS_TABLE = "SEGMENTSERVERS";
-  private static final String TASKS_TABLE = "TASKS";
+  public static final String NAME = "sys";
+  private static final String SEGMENTS_TABLE = "segments";
+  private static final String SERVERS_TABLE = "servers";
+  private static final String SEGMENT_SERVERS_TABLE = "segment_servers";
+  private static final String TASKS_TABLE = "tasks";
   private static final int SEGMENTS_TABLE_SIZE;
-  private static final int SERVERSEGMENTS_TABLE_SIZE;
+  private static final int SEGMENT_SERVERS_TABLE_SIZE;
 
   private static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
-      .add("SEGMENT_ID", ValueType.STRING)
-      .add("DATASOURCE", ValueType.STRING)
-      .add("START", ValueType.STRING)
-      .add("END", ValueType.STRING)
-      .add("IS_PUBLISHED", ValueType.STRING)
-      .add("IS_AVAILABLE", ValueType.STRING)
-      .add("IS_REALTIME", ValueType.STRING)
-      .add("PAYLOAD", ValueType.STRING)
+      .add("segment_id", ValueType.STRING)
+      .add("datasource", ValueType.STRING)
+      .add("start", ValueType.STRING)
+      .add("end", ValueType.STRING)
+      .add("size", ValueType.LONG)
+      .add("version", ValueType.STRING)
+      .add("partition_num", ValueType.STRING)
+      .add("num_replicas", ValueType.LONG)
+      .add("is_published", ValueType.LONG)
+      .add("is_available", ValueType.LONG)
+      .add("is_realtime", ValueType.LONG)
+      .add("payload", ValueType.STRING)
       .build();
 
   private static final RowSignature SERVERS_SIGNATURE = RowSignature
       .builder()
-      .add("SERVER", ValueType.STRING)
-      .add("SERVER_TYPE", ValueType.STRING)
-      .add("TIER", ValueType.STRING)
-      .add("CURR_SIZE", ValueType.STRING)
-      .add("MAX_SIZE", ValueType.STRING)
+      .add("server", ValueType.STRING)
+      .add("scheme", ValueType.STRING)
+      .add("server_type", ValueType.STRING)
+      .add("tier", ValueType.STRING)
+      .add("curr_size", ValueType.LONG)
+      .add("max_size", ValueType.LONG)
       .build();
 
   private static final RowSignature SERVERSEGMENTS_SIGNATURE = RowSignature
       .builder()
-      .add("SERVER", ValueType.STRING)
-      .add("SEGMENT_ID", ValueType.STRING)
+      .add("server", ValueType.STRING)
+      .add("segment_id", ValueType.STRING)
       .build();
 
   private static final RowSignature TASKS_SIGNATURE = RowSignature
       .builder()
-      .add("TASK_ID", ValueType.STRING)
-      .add("TYPE", ValueType.STRING)
-      .add("DATASOURCE", ValueType.STRING)
-      .add("CREATED_TIME", ValueType.STRING)
-      .add("QUEUE_INSERTION_TIME", ValueType.STRING)
-      .add("STATUS", ValueType.STRING)
-      .add("RUNNER_STATUS", ValueType.STRING)
-      .add("DURATION", ValueType.STRING)
-      .add("LOCATION", ValueType.STRING)
-      .add("ERROR_MSG", ValueType.STRING)
+      .add("task_id", ValueType.STRING)
+      .add("type", ValueType.STRING)
+      .add("datasource", ValueType.STRING)
+      .add("created_time", ValueType.STRING)
+      .add("queue_insertion_time", ValueType.STRING)
+      .add("status", ValueType.STRING)
+      .add("runner_status", ValueType.STRING)
+      .add("duration", ValueType.STRING)
+      .add("location", ValueType.STRING)
+      .add("error_msg", ValueType.STRING)
       .build();
 
   private final Map<String, Table> tableMap;
-  private final BrokerServerView serverView;
 
   static {
     SEGMENTS_TABLE_SIZE = SEGMENTS_SIGNATURE.getRowOrder().size();
-    SERVERSEGMENTS_TABLE_SIZE = SERVERSEGMENTS_SIGNATURE.getRowOrder().size();
+    SEGMENT_SERVERS_TABLE_SIZE = SERVERSEGMENTS_SIGNATURE.getRowOrder().size();
   }
 
   @Inject
   public SystemSchema(
-      final BrokerServerView serverView,
+      final TimelineServerView serverView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
@@ -134,11 +138,10 @@ public class SystemSchema extends AbstractSchema
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
-    this.serverView = serverView;
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(coordinatorDruidLeaderClient, jsonMapper),
-        SERVERS_TABLE, new ServersTable(),
-        SERVERSEGMENTS_TABLE, new ServerSegmentsTable(),
+        SEGMENTS_TABLE, new SegmentsTable(serverView, coordinatorDruidLeaderClient, jsonMapper),
+        SERVERS_TABLE, new ServersTable(serverView),
+        SEGMENT_SERVERS_TABLE, new ServerSegmentsTable(serverView),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper)
     );
   }
@@ -149,16 +152,19 @@ public class SystemSchema extends AbstractSchema
     return tableMap;
   }
 
-  private class SegmentsTable extends AbstractTable implements ScannableTable
+  static class SegmentsTable extends AbstractTable implements ScannableTable
   {
+    private final TimelineServerView serverView;
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
 
     public SegmentsTable(
+        TimelineServerView serverView,
         DruidLeaderClient druidLeaderClient,
         ObjectMapper jsonMapper
     )
     {
+      this.serverView = serverView;
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
     }
@@ -180,80 +186,141 @@ public class SystemSchema extends AbstractSchema
     {
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidDataSource> druidDataSourceList = getMetadataSegments(druidLeaderClient, jsonMapper);
-      final List<DataSegment> matadataSegments = druidDataSourceList
+      final List<DataSegment> metadataSegments = druidDataSourceList
           .stream()
           .flatMap(t -> t.getSegments().stream())
           .collect(Collectors.toList());
-      final Map<String, DataSegment> publishedSegments = matadataSegments
+      final Map<String, DataSegment> publishedSegments = metadataSegments
           .stream()
           .collect(Collectors.toMap(
               DataSegment::getIdentifier,
               Function.identity()
           ));
-      final Set<String> publishedSegmentIds = matadataSegments
-          .stream()
-          .map(DataSegment::getIdentifier)
-          .collect(Collectors.toSet());
-
+      final Map<String, DataSegment> availableSegments = new HashMap<>();
       final Map<String, QueryableDruidServer> serverViewClients = serverView.getClients();
       for (QueryableDruidServer queryableDruidServer : serverViewClients.values()) {
-        final Object[] row = new Object[SEGMENTS_TABLE_SIZE];
         final DruidServer druidServer = queryableDruidServer.getServer();
         final ServerType type = druidServer.getType();
-        final boolean isSegmentReplicatable = druidServer.segmentReplicatable();
         final Map<String, DataSegment> segments = new HashMap<>(druidServer.getSegments());
-        segments.putAll(publishedSegments);  // add published segments map
+        final long isRealtime = druidServer.segmentReplicatable() ? 0 : 1;
         for (Map.Entry<String, DataSegment> segmentEntry : segments.entrySet()) {
           String segmentId = segmentEntry.getKey();
           DataSegment segment = segmentEntry.getValue();
-          row[0] = segment.getIdentifier();
-          row[1] = segment.getDataSource();
-          row[2] = segment.getInterval().getStart();
-          row[3] = segment.getInterval().getEnd();
-          boolean is_available = false;
-          boolean is_published = false;
-          boolean is_realtime = false;
-          if (publishedSegmentIds.contains(segmentId)) {
-            is_published = true;
+          int numReplicas = 1;
+          if (availableSegments.containsKey(segmentId)) {
+            //do not create new row if a segmentId has been seen previously
+            // but increment the replica count
+            numReplicas++;
+            continue;
           }
-          if (type.toString().equals(ServerType.HISTORICAL.toString())) {
-            is_available = true;
-            is_published = true;
-          } else if (type.toString().equals(ServerType.REALTIME.toString())) {
-            is_available = true;
-            is_realtime = true;
-          } else if (type.toString().equals(ServerType.INDEXER_EXECUTOR.toString())) {
-            is_available = true;
-            is_published = true;
-            is_realtime = true;
+          availableSegments.putIfAbsent(segmentId, segment);
+          long isAvailable = 0;
+          final long isPublished = publishedSegments.containsKey(segmentId) ? 1 : 0;
+          if (type.toString().equals(ServerType.HISTORICAL.toString())
+              || type.toString().equals(ServerType.REALTIME.toString())
+              || type.toString().equals(ServerType.INDEXER_EXECUTOR.toString())) {
+            isAvailable = 1;
           }
-          if (!isSegmentReplicatable) {
-            is_realtime = true;
-          }
-          row[4] = is_published;
-          row[5] = is_available;
-          row[6] = is_realtime;
+          String payload;
           try {
-            String payload = jsonMapper.writeValueAsString(segment);
-            row[7] = payload;
+            payload = jsonMapper.writeValueAsString(segment);
           }
           catch (JsonProcessingException e) {
-            log.error(e, "Error parsing segment payload ");
+            log.error(e, "Error getting segment payload for segment %s", segmentId);
+            throw new RuntimeException(e);
           }
+          final Object[] row = createRow(
+              segment.getIdentifier(),
+              segment.getDataSource(),
+              segment.getInterval().getStart(),
+              segment.getInterval().getEnd(),
+              segment.getSize(),
+              segment.getVersion(),
+              segment.getShardSpec().getPartitionNum(),
+              numReplicas,
+              isPublished,
+              isAvailable,
+              isRealtime,
+              payload
+          );
           rows.add(row);
         }
+      }
+      //process publishedSegments
+      for (Map.Entry<String, DataSegment> segmentEntry : publishedSegments.entrySet()) {
+        String segmentId = segmentEntry.getKey();
+        //skip the published segments which are already processed
+        if (availableSegments.containsKey(segmentId)) {
+          continue;
+        }
+        DataSegment segment = segmentEntry.getValue();
+        String payload;
+        try {
+          payload = jsonMapper.writeValueAsString(segment);
+        }
+        catch (JsonProcessingException e) {
+          log.error(e, "Error getting segment payload for segment %s", segmentId);
+          throw new RuntimeException(e);
+        }
+        final Object[] row = createRow(
+            segment.getIdentifier(),
+            segment.getDataSource(),
+            segment.getInterval().getStart(),
+            segment.getInterval().getEnd(),
+            segment.getSize(),
+            segment.getVersion(),
+            segment.getShardSpec().getPartitionNum(),
+            0,
+            1,
+            0,
+            0,
+            payload
+        );
+        rows.add(row);
       }
       return Linq4j.asEnumerable(rows);
     }
 
-    private List<ImmutableDruidDataSource> getMetadataSegments(
-        DruidLeaderClient druidLeaderClient,
+    private Object[] createRow(
+        String identifier,
+        String dataSource,
+        DateTime start,
+        DateTime end,
+        long size,
+        String version,
+        int partitionNum,
+        int numReplicas,
+        long isPublished,
+        long isAvailable,
+        long isRealtime,
+        String payload
+    )
+    {
+      final Object[] row = new Object[SEGMENTS_TABLE_SIZE];
+      row[0] = identifier;
+      row[1] = dataSource;
+      row[2] = start;
+      row[3] = end;
+      row[4] = size;
+      row[5] = version;
+      row[6] = partitionNum;
+      row[7] = numReplicas;
+      row[8] = isPublished;
+      row[9] = isAvailable;
+      row[10] = isRealtime;
+      row[11] = payload;
+      return row;
+    }
+
+    // Note that coordinator must be up to get segments
+    List<ImmutableDruidDataSource> getMetadataSegments(
+        DruidLeaderClient coordinatorClient,
         ObjectMapper jsonMapper
     )
     {
       try {
-        FullResponseHolder response = druidLeaderClient.go(
-            druidLeaderClient.makeRequest(
+        FullResponseHolder response = coordinatorClient.go(
+            coordinatorClient.makeRequest(
                 HttpMethod.GET,
                 StringUtils.format(
                     "/druid/coordinator/v1/datasources?full"
@@ -280,8 +347,14 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
-  private class ServersTable extends AbstractTable implements ScannableTable
+  static class ServersTable extends AbstractTable implements ScannableTable
   {
+    private final TimelineServerView serverView;
+
+    public ServersTable(TimelineServerView serverView)
+    {
+      this.serverView = serverView;
+    }
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
@@ -303,6 +376,7 @@ public class SystemSchema extends AbstractSchema
           .from(serverViewClients.values())
           .transform(val -> new Object[]{
               val.getServer().getHost(),
+              val.getServer().getScheme(),
               val.getServer().getType(),
               val.getServer().getTier(),
               val.getServer().getCurrSize(),
@@ -312,8 +386,14 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
-  private class ServerSegmentsTable extends AbstractTable implements ScannableTable
+  private static class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
+    private final TimelineServerView serverView;
+
+    public ServerSegmentsTable(TimelineServerView serverView)
+    {
+      this.serverView = serverView;
+    }
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
@@ -333,10 +413,10 @@ public class SystemSchema extends AbstractSchema
       final List<Object[]> rows = new ArrayList<>();
       final Map<String, QueryableDruidServer> serverViewClients = serverView.getClients();
       for (QueryableDruidServer queryableDruidServer : serverViewClients.values()) {
-        Object[] row = new Object[SERVERSEGMENTS_TABLE_SIZE];
         final DruidServer druidServer = queryableDruidServer.getServer();
         final Map<String, DataSegment> segmentMap = druidServer.getSegments();
         for (DataSegment segment : segmentMap.values()) {
+          Object[] row = new Object[SEGMENT_SERVERS_TABLE_SIZE];
           row[0] = druidServer.getHost();
           row[1] = segment.getIdentifier();
           rows.add(row);
@@ -346,7 +426,7 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
-  private static class TasksTable extends AbstractTable implements ScannableTable
+  static class TasksTable extends AbstractTable implements ScannableTable
   {
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
@@ -402,14 +482,15 @@ public class SystemSchema extends AbstractSchema
       return Linq4j.asEnumerable(results);
     }
 
+    //Note that overlord must be up to get tasks
     private List<TaskStatusPlus> getTasks(
-        DruidLeaderClient druidLeaderClient,
+        DruidLeaderClient indexingServiceClient,
         ObjectMapper jsonMapper
     )
     {
       try {
-        final FullResponseHolder response = druidLeaderClient.go(
-            druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/tasks"))
+        final FullResponseHolder response = indexingServiceClient.go(
+            indexingServiceClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/tasks"))
         );
 
         if (!response.getStatus().equals(HttpResponseStatus.OK)) {

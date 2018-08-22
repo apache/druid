@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import io.druid.client.BrokerServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.DateTimes;
@@ -115,18 +114,16 @@ public class Calcites
     final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     rootSchema.add(DruidSchema.NAME, druidSchema);
     rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema, authorizerMapper));
-    if (serverView instanceof BrokerServerView) {
-      rootSchema.add(
-          SystemSchema.NAME,
-          new SystemSchema(
-              (BrokerServerView) serverView,
-              authorizerMapper,
-              coordinatorDruidLeaderClient,
-              overlordDruidLeaderClient,
-              jsonMapper
-          )
-      );
-    }
+    rootSchema.add(
+        SystemSchema.NAME,
+        new SystemSchema(
+            serverView,
+            authorizerMapper,
+            coordinatorDruidLeaderClient,
+            overlordDruidLeaderClient,
+            jsonMapper
+        )
+    );
     return rootSchema;
   }
 
