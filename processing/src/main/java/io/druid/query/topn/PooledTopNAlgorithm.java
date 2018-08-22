@@ -33,11 +33,9 @@ import io.druid.query.monomorphicprocessing.SpecializationService;
 import io.druid.query.monomorphicprocessing.SpecializationState;
 import io.druid.query.monomorphicprocessing.StringRuntimeShape;
 import io.druid.segment.Cursor;
-import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FilteredOffset;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
 import io.druid.segment.historical.HistoricalColumnSelector;
@@ -49,7 +47,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  */
