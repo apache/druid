@@ -25,6 +25,8 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Numbers;
 
+import java.util.concurrent.TimeUnit;
+
 @PublicApi
 public class QueryContexts
 {
@@ -41,7 +43,7 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
-  public static final long DEFAULT_TIMEOUT_MILLIS = 300_000; // 5 minutes
+  public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
 
   public static <T> boolean isBySegment(Query<T> query)

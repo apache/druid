@@ -41,6 +41,7 @@ import javax.net.ssl.SSLParameters;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -48,7 +49,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
 {
   private static final Logger log = new Logger(ChannelResourceFactory.class);
 
-  private static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT = 10000L; /* 10 seconds */
+  private static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
 
   private final ClientBootstrap bootstrap;
   private final SSLContext sslContext;
@@ -65,7 +66,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
     this.bootstrap = Preconditions.checkNotNull(bootstrap, "bootstrap");
     this.sslContext = sslContext;
     this.timer = timer;
-    this.sslHandshakeTimeout = sslHandshakeTimeout >= 0 ? sslHandshakeTimeout : DEFAULT_SSL_HANDSHAKE_TIMEOUT;
+    this.sslHandshakeTimeout = sslHandshakeTimeout >= 0 ? sslHandshakeTimeout : DEFAULT_SSL_HANDSHAKE_TIMEOUT_MILLIS;
 
     if (sslContext != null) {
       Preconditions.checkNotNull(timer, "timer is required when sslContext is present");
