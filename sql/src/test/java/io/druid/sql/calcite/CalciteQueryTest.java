@@ -452,6 +452,7 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"druid"},
+            new Object[]{"sys"},
             new Object[]{"INFORMATION_SCHEMA"}
         )
     );
