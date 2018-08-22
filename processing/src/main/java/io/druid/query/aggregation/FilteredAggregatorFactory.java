@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -42,6 +43,16 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   private final DimFilter filter;
   private final String name;
 
+  // Constructor for backwards compat only
+  public FilteredAggregatorFactory(
+      AggregatorFactory delegate,
+      DimFilter filter
+  )
+  {
+    this(delegate, filter, null);
+  }
+
+  @JsonCreator
   public FilteredAggregatorFactory(
       @JsonProperty("aggregator") AggregatorFactory delegate,
       @JsonProperty("filter") DimFilter filter,
