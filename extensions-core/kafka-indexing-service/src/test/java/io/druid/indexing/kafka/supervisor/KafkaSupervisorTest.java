@@ -2115,6 +2115,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
+    while (serviceEmitter.getStackTrace() != null) {
+      Thread.sleep(100);
+    }
+
     Assert.assertNull(serviceEmitter.getStackTrace());
     Assert.assertNull(serviceEmitter.getExceptionMessage());
     Assert.assertNull(serviceEmitter.getExceptionClass());

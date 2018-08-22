@@ -26,6 +26,7 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
 /**
@@ -52,7 +53,7 @@ public class ServerConfig
 
   @JsonProperty
   @Min(0)
-  private long defaultQueryTimeout = 300_000; // 5 minutes
+  private long defaultQueryTimeout = TimeUnit.MINUTES.toMillis(5);
 
   @JsonProperty
   @Min(1)
