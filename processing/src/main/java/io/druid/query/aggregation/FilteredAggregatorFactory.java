@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.IntervalDimFilter;
@@ -39,10 +40,12 @@ public class FilteredAggregatorFactory extends AggregatorFactory
 {
   private final AggregatorFactory delegate;
   private final DimFilter filter;
+  private final String name;
 
   public FilteredAggregatorFactory(
       @JsonProperty("aggregator") AggregatorFactory delegate,
-      @JsonProperty("filter") DimFilter filter
+      @JsonProperty("filter") DimFilter filter,
+      @JsonProperty("name") String name
   )
   {
     Preconditions.checkNotNull(delegate);
@@ -50,6 +53,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
 
     this.delegate = delegate;
     this.filter = filter;
+    this.name = name;
   }
 
   @Override
@@ -112,7 +116,11 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public String getName()
   {
-    return delegate.getName();
+    String name = delegate.getName();
+    if (Strings.isNullOrEmpty(name)) {
+      name = this.name;
+    }
+    return name;
   }
 
   @Override
@@ -198,7 +206,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
               intervalDimFilter.getDimension(),
               effectiveFilterIntervals,
               intervalDimFilter.getExtractionFn()
-          )
+          ),
+          this.name
       );
     } else {
       return this;
