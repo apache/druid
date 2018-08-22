@@ -1039,13 +1039,25 @@
                                 <pattern>Underscore is freely distributable under the MIT license</pattern>
                             </patterns>
                         </license>
+                        <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                            <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
+                            <licenseFamilyName>Allan Jardine</licenseFamilyName>
+                            <notes></notes>
+                            <patterns>
+                                <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
+                            </patterns>
+                        </license>
                     </licenses>
+
                     <licenseFamilies>
                         <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
                             <familyName>MIT JQyery</familyName>
                         </licenseFamily>
                         <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
                             <familyName>Underscore</familyName>
+                        </licenseFamily>
+                        <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                            <familyName>Allan Jardine</familyName>
                         </licenseFamily>
                     </licenseFamilies>
                     <excludes>
