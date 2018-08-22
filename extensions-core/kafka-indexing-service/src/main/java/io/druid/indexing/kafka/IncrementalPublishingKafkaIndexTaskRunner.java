@@ -448,7 +448,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
           ConsumerRecords<byte[], byte[]> records = ConsumerRecords.empty();
           try {
-            records = consumer.poll(KafkaIndexTask.POLL_TIMEOUT);
+            records = consumer.poll(KafkaIndexTask.POLL_TIMEOUT_MILLIS);
           }
           catch (OffsetOutOfRangeException e) {
             log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
@@ -603,6 +603,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
             final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
                 task.getDataSource(),
                 ioConfig.getTaskGroupId(),
+                task.getIOConfig().getBaseSequenceName(),
                 new KafkaDataSourceMetadata(new KafkaPartitions(topic, sequenceToCheckpoint.getStartOffsets())),
                 new KafkaDataSourceMetadata(new KafkaPartitions(topic, nextOffsets))
             );
