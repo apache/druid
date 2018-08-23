@@ -56,7 +56,7 @@ An example groupBy query object is shown below:
 }
 ```
 
-There are 11 main parts to a groupBy query:
+Following are main parts to a groupBy query:
 
 |property|description|required?|
 |--------|-----------|---------|
@@ -70,6 +70,7 @@ There are 11 main parts to a groupBy query:
 |aggregations|See [Aggregations](../querying/aggregations.html)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.html)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
+|subtotalsSpec| A JSON array of arrays to return additional result sets for groupings of subsets of top level `dimensions`. It is described later in more detail.|no|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
 To pull it all together, the above query would return *n\*m* data points, up to a maximum of 5000 points, where n is the cardinality of the `country` dimension, m is the cardinality of the `device` dimension, each day between 2012-01-01 and 2012-01-03, from the `sample_datasource` table. Each data point contains the (long) sum of `total_usage` if the value of the data point is greater than 100, the (double) sum of `data_transfer` and the (double) result of `total_usage` divided by `data_transfer` for the filter set for a particular grouping of `country` and `device`. The output looks like this:
@@ -112,6 +113,94 @@ your filter, you can use a [filtered dimensionSpec](dimensionspecs.html#filtered
 improve performance.
 
 See [Multi-value dimensions](multi-value-dimensions.html) for more details.
+
+### More on subtotalsSpec
+you can have a groupBy query that looks something like below...
+
+```json
+{
+"type": "groupBy",
+ ...
+ ...
+"dimenstions": [
+  {
+  "type" : "default",
+  "dimension" : "d1col",
+  "outputName": "D1"
+  },
+  {
+  "type" : "extraction",
+  "dimension" : "d2col",
+  "outputName" :  "D2",
+  "extractionFn" : extraction_func
+  },
+  {
+  "type":"lookup",
+  "dimension":"d3col",
+  "outputName":"D3",
+  "name":"my_lookup"
+  }
+],
+...
+...
+"subtotalsSpec":[ ["D1", "D2", D3"], ["D1", "D3"], ["D3"]],
+..
+
+}
+```
+
+Response returned would be equivalent to concatenating result of 3 groupBy queries with "dimensions" field being ["D1", "D2", D3"], ["D1", "D3"] and ["D3"] with appropriate `DimensionSpec` json blob as used in above query.
+Response for above query would look something like below...
+
+```json
+[
+  {
+    "version" : "v1",
+    "timestamp" : "t1",
+    "event" : { "D1": "..", "D2": "..", "D3": ".." }
+    }
+  },
+    {
+    "version" : "v1",
+    "timestamp" : "t2",
+    "event" : { "D1": "..", "D2": "..", "D3": ".." }
+    }
+  },
+  ...
+  ...
+
+   {
+    "version" : "v1",
+    "timestamp" : "t1",
+    "event" : { "D1": "..", "D3": ".." }
+    }
+  },
+    {
+    "version" : "v1",
+    "timestamp" : "t2",
+    "event" : { "D1": "..", "D3": ".." }
+    }
+  },
+  ...
+  ...
+
+  {
+    "version" : "v1",
+    "timestamp" : "t1",
+    "event" : { "D3": ".." }
+    }
+  },
+    {
+    "version" : "v1",
+    "timestamp" : "t2",
+    "event" : { "D3": ".." }
+    }
+  },
+...
+]
+```
+
+Note that "subtotalsSpec" must contain subsets of "outputName" from various `DimensionSpec` json blobs in `dimensions` attribute and also ordering of dimensions inside subtotal spec must be same as that inside top level "dimensions" attribute e.g. ["D2", "D1"] subtotal spec is not valid as it is not in same order.
 
 ### Implementation details
 
