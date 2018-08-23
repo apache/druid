@@ -1506,7 +1506,7 @@ public class KafkaSupervisor implements Supervisor
         String taskId = taskEntry.getKey();
         TaskData task = taskEntry.getValue();
 
-        // task.status can be null if any runNotice is processed before kafkaSupervisor is stopped gracefully.
+        // task.status can be null if kafkaSupervisor is stopped gracefully before processing any runNotice.
         if (task.status != null) {
           if (task.status.isSuccess()) {
             // If any task in this group has already completed, stop the rest of the tasks in the group and return.
@@ -1670,7 +1670,7 @@ public class KafkaSupervisor implements Supervisor
           final String taskId = entry.getKey();
           final TaskData taskData = entry.getValue();
 
-          Preconditions.checkNotNull(taskData.status, "task[%s] has a null status", taskId);
+          Preconditions.checkNotNull(taskData.status, "WTH? task[%s] has a null status", taskId);
 
           if (taskData.status.isFailure()) {
             iTask.remove(); // remove failed task
@@ -1755,7 +1755,7 @@ public class KafkaSupervisor implements Supervisor
           continue;
         }
 
-        Preconditions.checkNotNull(taskData.status, "task[%s] has a null status", taskId);
+        Preconditions.checkNotNull(taskData.status, "WTH? task[%s] has a null status", taskId);
 
         // remove failed tasks
         if (taskData.status.isFailure()) {
