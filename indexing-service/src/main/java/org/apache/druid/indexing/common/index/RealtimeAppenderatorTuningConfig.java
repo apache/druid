@@ -55,6 +55,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final int maxRowsPerSegment;
+  @Nullable
   private final Long maxTotalRows;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
@@ -154,6 +155,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   @Override
   @JsonProperty
+  @Nullable
   public Long getMaxTotalRows()
   {
     return maxTotalRows;

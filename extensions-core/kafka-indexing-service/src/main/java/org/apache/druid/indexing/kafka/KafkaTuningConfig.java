@@ -40,6 +40,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final int maxRowsPerSegment;
+  @Nullable
   private final Long maxTotalRows;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
@@ -167,6 +168,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
 
   @JsonProperty
   @Override
+  @Nullable
   public Long getMaxTotalRows()
   {
     return maxTotalRows;

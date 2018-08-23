@@ -1097,7 +1097,8 @@ public class AppenderatorImpl implements Appenderator
   {
     // Ensure no future writes will be made to this sink.
     if (sink.finishWriting()) {
-      // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
+      // Decrement this sink's rows from the counters. we only count active sinks so that we don't double decrement,
+      // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
       totalRows.addAndGet(-sink.getNumRows());
@@ -1105,7 +1106,6 @@ public class AppenderatorImpl implements Appenderator
 
     // Mark this identifier as dropping, so no future push tasks will pick it up.
     droppingSinks.add(identifier);
-
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
