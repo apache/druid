@@ -97,8 +97,8 @@ public class TimestampParserTest
   public void testRuby()
   {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("ruby");
-    Assert.assertEquals(DateTimes.of("2013-01-16T15:41:47+01:00"), parser.apply("1358347307.435447"));
-    Assert.assertEquals(DateTimes.of("2013-01-16T15:41:47+01:00"), parser.apply(1358347307.435447D));
+    Assert.assertEquals(DateTimes.of("2013-01-16T14:41:47.435Z"), parser.apply("1358347307.435447"));
+    Assert.assertEquals(DateTimes.of("2013-01-16T14:41:47.435Z"), parser.apply(1358347307.435447D));
   }
 
   @Test
