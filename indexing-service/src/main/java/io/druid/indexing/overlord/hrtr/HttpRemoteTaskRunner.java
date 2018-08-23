@@ -376,7 +376,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       // on a worker - this avoids overflowing a worker with tasks
       long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
       long waitStart = System.currentTimeMillis();
-      boolean isTaskAssignmentTimedout = false;
+      boolean isTaskAssignmentTimedOut = false;
       synchronized (statusLock) {
         while (tasks.containsKey(taskId)
                && tasks.get(taskId).getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING) {
@@ -384,13 +384,13 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           if (remaining > 0) {
             statusLock.wait(remaining);
           } else {
-            isTaskAssignmentTimedout = true;
+            isTaskAssignmentTimedOut = true;
             break;
           }
         }
       }
 
-      if (isTaskAssignmentTimedout) {
+      if (isTaskAssignmentTimedOut) {
         log.makeAlert(
             "Task assignment timed out on worker [%s], never ran task [%s] in timeout[%s]!",
             workerHost,
@@ -415,7 +415,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       TaskStatus taskStatus
   )
   {
-    Preconditions.checkArgument(!Thread.holdsLock(statusLock), "Current thread must not hold statusLock.");
+    Preconditions.checkState(!Thread.holdsLock(statusLock), "Current thread must not hold statusLock.");
     Preconditions.checkNotNull(taskRunnerWorkItem, "taskRunnerWorkItem");
     Preconditions.checkNotNull(taskStatus, "taskStatus");
     if (workerHolder != null) {
