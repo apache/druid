@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -36,6 +36,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -64,123 +65,129 @@ public class HyperUniquesAggregationTest
   @Test
   public void testIngestAndQuery() throws Exception
   {
-    AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Lists.newArrayList(new AggregatorsModule()),
-        config,
-        tempFolder
-    );
+    try (
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+            Collections.singletonList(new AggregatorsModule()),
+            config,
+            tempFolder
+        )
+    ) {
 
-    String metricSpec = "[{"
-                        + "\"type\": \"hyperUnique\","
-                        + "\"name\": \"index_hll\","
-                        + "\"fieldName\": \"market\""
-                        + "}]";
+      String metricSpec = "[{"
+                          + "\"type\": \"hyperUnique\","
+                          + "\"name\": \"index_hll\","
+                          + "\"fieldName\": \"market\""
+                          + "}]";
 
-    String parseSpec = "{"
-                       + "\"type\" : \"string\","
-                       + "\"parseSpec\" : {"
-                       + "    \"format\" : \"tsv\","
-                       + "    \"timestampSpec\" : {"
-                       + "        \"column\" : \"timestamp\","
-                       + "        \"format\" : \"auto\""
-                       + "},"
-                       + "    \"dimensionsSpec\" : {"
-                       + "        \"dimensions\": [],"
-                       + "        \"dimensionExclusions\" : [],"
-                       + "        \"spatialDimensions\" : []"
-                       + "    },"
-                       + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                       + "  }"
-                       + "}";
+      String parseSpec = "{"
+                         + "\"type\" : \"string\","
+                         + "\"parseSpec\" : {"
+                         + "    \"format\" : \"tsv\","
+                         + "    \"timestampSpec\" : {"
+                         + "        \"column\" : \"timestamp\","
+                         + "        \"format\" : \"auto\""
+                         + "},"
+                         + "    \"dimensionsSpec\" : {"
+                         + "        \"dimensions\": [],"
+                         + "        \"dimensionExclusions\" : [],"
+                         + "        \"spatialDimensions\" : []"
+                         + "    },"
+                         + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
+                         + "  }"
+                         + "}";
 
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"aggregations\": ["
-                   + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
-                   + "],"
-                   + "\"postAggregations\": ["
-                   + "  { \"type\": \"hyperUniqueCardinality\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
+      String query = "{"
+                     + "\"queryType\": \"groupBy\","
+                     + "\"dataSource\": \"test_datasource\","
+                     + "\"granularity\": \"ALL\","
+                     + "\"dimensions\": [],"
+                     + "\"aggregations\": ["
+                     + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
+                     + "],"
+                     + "\"postAggregations\": ["
+                     + "  { \"type\": \"hyperUniqueCardinality\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
+                     + "],"
+                     + "\"intervals\": [ \"1970/2050\" ]"
+                     + "}";
 
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
-        new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
-        parseSpec,
-        metricSpec,
-        0,
-        Granularities.NONE,
-        50000,
-        query
-    );
+      Sequence seq = helper.createIndexAndRunQueryOnSegment(
+          new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
+          parseSpec,
+          metricSpec,
+          0,
+          Granularities.NONE,
+          50000,
+          query
+      );
 
-    MapBasedRow row = (MapBasedRow) seq.toList().get(0);
-    Assert.assertEquals(3.0, row.getMetric("index_hll").floatValue(), 0.1);
-    Assert.assertEquals(3.0, row.getMetric("index_unique_count").floatValue(), 0.1);
+      MapBasedRow row = (MapBasedRow) seq.toList().get(0);
+      Assert.assertEquals(3.0, row.getMetric("index_hll").floatValue(), 0.1);
+      Assert.assertEquals(3.0, row.getMetric("index_unique_count").floatValue(), 0.1);
+    }
   }
 
   @Test
   public void testIngestAndQueryPrecomputedHll() throws Exception
   {
-    AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-            Lists.newArrayList(new AggregatorsModule()),
+    try (
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+            Collections.singletonList(new AggregatorsModule()),
             config,
             tempFolder
-    );
+        )
+    ) {
 
-    String metricSpec = "[{"
-            + "\"type\": \"hyperUnique\","
-            + "\"name\": \"index_hll\","
-            + "\"fieldName\": \"preComputedHll\","
-            + "\"isInputHyperUnique\": true"
-            + "}]";
+      String metricSpec = "[{"
+                          + "\"type\": \"hyperUnique\","
+                          + "\"name\": \"index_hll\","
+                          + "\"fieldName\": \"preComputedHll\","
+                          + "\"isInputHyperUnique\": true"
+                          + "}]";
 
-    String parseSpec = "{"
-            + "\"type\" : \"string\","
-            + "\"parseSpec\" : {"
-            + "    \"format\" : \"tsv\","
-            + "    \"timestampSpec\" : {"
-            + "        \"column\" : \"timestamp\","
-            + "        \"format\" : \"auto\""
-            + "},"
-            + "    \"dimensionsSpec\" : {"
-            + "        \"dimensions\": [],"
-            + "        \"dimensionExclusions\" : [],"
-            + "        \"spatialDimensions\" : []"
-            + "    },"
-            + "    \"columns\": [\"timestamp\", \"market\", \"preComputedHll\"]"
-            + "  }"
-            + "}";
+      String parseSpec = "{"
+                         + "\"type\" : \"string\","
+                         + "\"parseSpec\" : {"
+                         + "    \"format\" : \"tsv\","
+                         + "    \"timestampSpec\" : {"
+                         + "        \"column\" : \"timestamp\","
+                         + "        \"format\" : \"auto\""
+                         + "},"
+                         + "    \"dimensionsSpec\" : {"
+                         + "        \"dimensions\": [],"
+                         + "        \"dimensionExclusions\" : [],"
+                         + "        \"spatialDimensions\" : []"
+                         + "    },"
+                         + "    \"columns\": [\"timestamp\", \"market\", \"preComputedHll\"]"
+                         + "  }"
+                         + "}";
 
-    String query = "{"
-            + "\"queryType\": \"groupBy\","
-            + "\"dataSource\": \"test_datasource\","
-            + "\"granularity\": \"ALL\","
-            + "\"dimensions\": [],"
-            + "\"aggregations\": ["
-            + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
-            + "],"
-            + "\"postAggregations\": ["
-            + "  { \"type\": \"hyperUniqueCardinality\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
-            + "],"
-            + "\"intervals\": [ \"1970/2050\" ]"
-            + "}";
+      String query = "{"
+                     + "\"queryType\": \"groupBy\","
+                     + "\"dataSource\": \"test_datasource\","
+                     + "\"granularity\": \"ALL\","
+                     + "\"dimensions\": [],"
+                     + "\"aggregations\": ["
+                     + "  { \"type\": \"hyperUnique\", \"name\": \"index_hll\", \"fieldName\": \"index_hll\" }"
+                     + "],"
+                     + "\"postAggregations\": ["
+                     + "  { \"type\": \"hyperUniqueCardinality\", \"name\": \"index_unique_count\", \"fieldName\": \"index_hll\" }"
+                     + "],"
+                     + "\"intervals\": [ \"1970/2050\" ]"
+                     + "}";
 
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
-            new File(this.getClass().getClassLoader().getResource("druid.hll.sample.tsv").getFile()),
-            parseSpec,
-            metricSpec,
-            0,
-            Granularities.DAY,
-            50000,
-            query
-    );
+      Sequence seq = helper.createIndexAndRunQueryOnSegment(
+          new File(this.getClass().getClassLoader().getResource("druid.hll.sample.tsv").getFile()),
+          parseSpec,
+          metricSpec,
+          0,
+          Granularities.DAY,
+          50000,
+          query
+      );
 
-    MapBasedRow row = (MapBasedRow) seq.toList().get(0);
-    Assert.assertEquals(4.0, row.getMetric("index_hll").floatValue(), 0.1);
-    Assert.assertEquals(4.0, row.getMetric("index_unique_count").floatValue(), 0.1);
+      MapBasedRow row = (MapBasedRow) seq.toList().get(0);
+      Assert.assertEquals(4.0, row.getMetric("index_hll").floatValue(), 0.1);
+      Assert.assertEquals(4.0, row.getMetric("index_unique_count").floatValue(), 0.1);
+    }
   }
 }

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -28,6 +28,7 @@ import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ResourceLimitExceededException;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -294,7 +295,11 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
             for (int i : rightKeys) {
               final Object value = row[i];
-              final String stringValue = value != null ? String.valueOf(value) : "";
+              if (value == null) {
+                // NULLs are not supposed to match NULLs in a join. So ignore them.
+                continue;
+              }
+              final String stringValue = DimensionHandlerUtils.convertObjectToString(value);
               values.add(stringValue);
               if (values.size() > maxSemiJoinRowsInMemory) {
                 throw new ResourceLimitExceededException(
@@ -308,16 +313,18 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
               for (int i = 0; i < values.size(); i++) {
                 final String value = values.get(i);
-                subConditions.add(
-                    getCluster().getRexBuilder().makeCall(
-                        SqlStdOperatorTable.EQUALS,
-                        leftExpressions.get(i),
-                        getCluster().getRexBuilder().makeLiteral(value)
-                    )
-                );
+                // NULLs are not supposed to match NULLs in a join. So ignore them.
+                if (value != null) {
+                  subConditions.add(
+                      getCluster().getRexBuilder().makeCall(
+                          SqlStdOperatorTable.EQUALS,
+                          leftExpressions.get(i),
+                          getCluster().getRexBuilder().makeLiteral(value)
+                      )
+                  );
+                }
+                theConditions.add(makeAnd(subConditions));
               }
-
-              theConditions.add(makeAnd(subConditions));
             }
             return theConditions;
           }

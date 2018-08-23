@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -577,7 +577,7 @@ public class DeterminePartitionsJob implements Jobby
               }
 
               // Respect "poisoning" (negative values mean we can't use this dimension)
-              final int newNumRows = (arg1.numRows >= 0 && arg2.numRows >= 0 ? arg1.numRows + arg2.numRows : -1);
+              final long newNumRows = (arg1.numRows >= 0 && arg2.numRows >= 0 ? arg1.numRows + arg2.numRows : -1);
               return new DimValueCount(arg1.dim, arg1.value, newNumRows);
             }
           }
@@ -620,9 +620,9 @@ public class DeterminePartitionsJob implements Jobby
 
       // First DVC should be the total row count indicator
       final DimValueCount firstDvc = iterator.next();
-      final int totalRows = firstDvc.numRows;
+      final long totalRows = firstDvc.numRows;
 
-      if (!firstDvc.dim.equals("") || !firstDvc.value.equals("")) {
+      if (!"".equals(firstDvc.dim) || !"".equals(firstDvc.value)) {
         throw new IllegalStateException("WTF?! Expected total row indicator on first k/v pair!");
       }
 
@@ -899,9 +899,9 @@ public class DeterminePartitionsJob implements Jobby
       return distance;
     }
 
-    public int getRows()
+    public long getRows()
     {
-      int sum = 0;
+      long sum = 0;
       for (final DimPartition dimPartition : partitions) {
         sum += dimPartition.rows;
       }
@@ -913,16 +913,16 @@ public class DeterminePartitionsJob implements Jobby
   {
     public ShardSpec shardSpec = null;
     public int cardinality = 0;
-    public int rows = 0;
+    public long rows = 0;
   }
 
   private static class DimValueCount
   {
     public final String dim;
     public final String value;
-    public final int numRows;
+    public final long numRows;
 
-    private DimValueCount(String dim, String value, int numRows)
+    private DimValueCount(String dim, String value, long numRows)
     {
       this.dim = dim;
       this.value = value;
@@ -938,7 +938,7 @@ public class DeterminePartitionsJob implements Jobby
     {
       final Iterator<String> splits = TAB_SPLITTER.limit(3).split(text.toString()).iterator();
       final String dim = splits.next();
-      final int numRows = Integer.parseInt(splits.next());
+      final long numRows = Long.parseLong(splits.next());
       final String value = splits.next();
 
       return new DimValueCount(dim, value, numRows);

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -31,8 +31,8 @@ import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
@@ -139,19 +139,19 @@ public class OverlordTest
     taskLockbox = EasyMock.createStrictMock(TaskLockbox.class);
     taskLockbox.syncFromStorage();
     EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.add(EasyMock.<Task>anyObject());
+    taskLockbox.add(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.remove(EasyMock.<Task>anyObject());
+    taskLockbox.remove(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
 
     // for second Noop Task directly added to deep storage.
-    taskLockbox.add(EasyMock.<Task>anyObject());
+    taskLockbox.add(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.remove(EasyMock.<Task>anyObject());
+    taskLockbox.remove(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
 
     taskActionClientFactory = EasyMock.createStrictMock(TaskActionClientFactory.class);
-    EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject()))
+    EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject()))
             .andReturn(null).anyTimes();
     EasyMock.replay(taskLockbox, taskActionClientFactory, req);
 
@@ -199,7 +199,7 @@ public class OverlordTest
     EmittingLogger.registerEmitter(serviceEmitter);
   }
 
-  @Test(timeout = 2000L)
+  @Test(timeout = 60_000L)
   public void testOverlordRun() throws Exception
   {
     // basic task master lifecycle test
@@ -248,7 +248,7 @@ public class OverlordTest
     Assert.assertEquals(taskId_0, ((TaskStatusResponse) response.getEntity()).getTask());
     Assert.assertEquals(
         TaskStatus.running(taskId_0).getStatusCode(),
-        ((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode()
+        ((TaskStatusResponse) response.getEntity()).getStatus().getState()
     );
 
     // Simulate completion of task_0
@@ -296,7 +296,7 @@ public class OverlordTest
   {
     while (true) {
       Response response = overlordResource.getTaskStatus(taskId);
-      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode())) {
+      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getState())) {
         break;
       }
       Thread.sleep(10);
@@ -401,6 +401,7 @@ public class OverlordTest
         {
           return task.getDataSource();
         }
+
       };
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);
       return future;

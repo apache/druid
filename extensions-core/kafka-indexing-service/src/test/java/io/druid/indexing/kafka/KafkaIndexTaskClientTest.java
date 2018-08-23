@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -28,8 +28,9 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.IndexTaskClient;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
@@ -56,7 +57,9 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -133,7 +136,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testNoTaskLocation()
+  public void testNoTaskLocation() throws IOException
   {
     reset(taskInfoProvider);
     expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(TaskLocation.unknown()).anyTimes();
@@ -143,13 +146,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertEquals(false, client.stop(TEST_ID, true));
     Assert.assertEquals(false, client.resume(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
-    Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID, 10));
+    Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
     Assert.assertEquals(KafkaIndexTask.Status.NOT_STARTED, client.getStatus(TEST_ID));
     Assert.assertEquals(null, client.getStartTime(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.getCurrentOffsets(TEST_ID, true));
     Assert.assertEquals(ImmutableMap.of(), client.getEndOffsets(TEST_ID));
-    Assert.assertEquals(false, client.setEndOffsets(TEST_ID, ImmutableMap.<Integer, Long>of(), false, true));
-    Assert.assertEquals(false, client.setEndOffsets(TEST_ID, ImmutableMap.<Integer, Long>of(), true, true));
+    Assert.assertEquals(false, client.setEndOffsets(TEST_ID, Collections.emptyMap(), true));
+    Assert.assertEquals(false, client.setEndOffsets(TEST_ID, Collections.emptyMap(), true));
 
     verifyAll();
   }
@@ -157,7 +160,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testTaskNotRunnableException()
   {
-    expectedException.expect(KafkaIndexTaskClient.TaskNotRunnableException.class);
+    expectedException.expect(IndexTaskClient.TaskNotRunnableException.class);
     expectedException.expectMessage("Aborting request because task [test-id] is not runnable");
 
     reset(taskInfoProvider);
@@ -448,33 +451,6 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testPauseWithTimeout() throws Exception
-  {
-    Capture<Request> captured = Capture.newInstance();
-    expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).times(2);
-    expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}").anyTimes();
-    expect(httpClient.go(capture(captured), anyObject(FullResponseHandler.class), eq(TEST_HTTP_TIMEOUT))).andReturn(
-        Futures.immediateFuture(responseHolder)
-    );
-    replayAll();
-
-    Map<Integer, Long> results = client.pause(TEST_ID, 101);
-    verifyAll();
-
-    Request request = captured.getValue();
-    Assert.assertEquals(HttpMethod.POST, request.getMethod());
-    Assert.assertEquals(
-        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/pause?timeout=101"),
-        request.getUrl()
-    );
-    Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
-
-    Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(0));
-    Assert.assertEquals(10, (long) results.get(1));
-  }
-
-  @Test
   public void testPauseWithSubsequentGetOffsets() throws Exception
   {
     Capture<Request> captured = Capture.newInstance();
@@ -560,13 +536,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.setEndOffsets(TEST_ID, endOffsets, false, true);
+    client.setEndOffsets(TEST_ID, endOffsets, true);
     verifyAll();
 
     Request request = captured.getValue();
     Assert.assertEquals(HttpMethod.POST, request.getMethod());
     Assert.assertEquals(
-        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/offsets/end?resume=false&finish=true"),
+        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/offsets/end?finish=true"),
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
@@ -585,13 +561,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.setEndOffsets(TEST_ID, endOffsets, true, true);
+    client.setEndOffsets(TEST_ID, endOffsets, true);
     verifyAll();
 
     Request request = captured.getValue();
     Assert.assertEquals(HttpMethod.POST, request.getMethod());
     Assert.assertEquals(
-        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/offsets/end?resume=true&finish=true"),
+        new URL("http://test-host:1234/druid/worker/v1/chat/test-id/offsets/end?finish=true"),
         request.getUrl()
     );
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
@@ -723,39 +699,6 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "pause")));
       futures.add(client.pauseAsync(testId));
-    }
-
-    List<Map<Integer, Long>> responses = Futures.allAsList(futures).get();
-
-    verifyAll();
-    List<Request> requests = captured.getValues();
-
-    Assert.assertEquals(numRequests, requests.size());
-    Assert.assertEquals(numRequests, responses.size());
-    for (int i = 0; i < numRequests; i++) {
-      Assert.assertEquals(HttpMethod.POST, requests.get(i).getMethod());
-      Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
-    }
-  }
-
-  @Test
-  public void testPauseAsyncWithTimeout() throws Exception
-  {
-    final int numRequests = TEST_IDS.size();
-    Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
-    expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
-    expect(httpClient.go(capture(captured), anyObject(FullResponseHandler.class), eq(TEST_HTTP_TIMEOUT))).andReturn(
-        Futures.immediateFuture(responseHolder)
-    ).times(numRequests);
-    replayAll();
-
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
-    for (String testId : TEST_IDS) {
-      expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "pause?timeout=9")));
-      futures.add(client.pauseAsync(testId, 9));
     }
 
     List<Map<Integer, Long>> responses = Futures.allAsList(futures).get();
@@ -925,9 +868,9 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
           TEST_HOST,
           TEST_PORT,
           testId,
-          StringUtils.format("offsets/end?resume=%s&finish=%s", false, true)
+          StringUtils.format("offsets/end?finish=%s", true)
       )));
-      futures.add(client.setEndOffsetsAsync(testId, endOffsets, false, true));
+      futures.add(client.setEndOffsetsAsync(testId, endOffsets, true));
     }
 
     List<Boolean> responses = Futures.allAsList(futures).get();
@@ -966,11 +909,11 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
                   TEST_HOST,
                   TEST_PORT,
                   testId,
-                  "offsets/end?resume=true&finish=true"
+                  "offsets/end?finish=true"
               )
           )
       );
-      futures.add(client.setEndOffsetsAsync(testId, endOffsets, true, true));
+      futures.add(client.setEndOffsetsAsync(testId, endOffsets, true));
     }
 
     List<Boolean> responses = Futures.allAsList(futures).get();
@@ -1009,7 +952,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
 
     @Override
-    void checkConnection(String host, int port)
+    protected void checkConnection(String host, int port)
     {
     }
   }

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -48,6 +48,7 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TimeZone;
@@ -630,7 +631,7 @@ public class QueryGranularityTest
     final DateTime baseTime = DateTimes.of("2011-01-01T00:00:00.000Z");
 
     assertSameInterval(
-        Lists.newArrayList(baseTime),
+        Collections.singletonList(baseTime),
         Granularities.ALL.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
     );
   }
@@ -641,7 +642,7 @@ public class QueryGranularityTest
     final DateTime baseTime = DateTimes.of("2011-01-01T09:38:02.992Z");
 
     assertSameInterval(
-        Lists.newArrayList(baseTime),
+        Collections.singletonList(baseTime),
         Granularities.ALL.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
     );
   }
@@ -754,7 +755,7 @@ public class QueryGranularityTest
   public void testMerge()
   {
     Assert.assertNull(Granularity.mergeGranularities(null));
-    Assert.assertNull(Granularity.mergeGranularities(ImmutableList.<Granularity>of()));
+    Assert.assertNull(Granularity.mergeGranularities(ImmutableList.of()));
     Assert.assertNull(Granularity.mergeGranularities(Lists.newArrayList(null, Granularities.DAY)));
     Assert.assertNull(Granularity.mergeGranularities(Lists.newArrayList(Granularities.DAY, null)));
     Assert.assertNull(

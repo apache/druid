@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,11 +20,9 @@
 package io.druid.query;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -40,7 +38,7 @@ import java.util.concurrent.TimeoutException;
 public class AsyncQueryRunnerTest
 {
 
-  private static final long TEST_TIMEOUT = 60000;
+  private static final long TEST_TIMEOUT_MILLIS = 60_000;
   
   private final ExecutorService executor;
   private final Query query;
@@ -51,11 +49,11 @@ public class AsyncQueryRunnerTest
     query = Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .intervals("2014/2015")
-              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
               .build();
   }
   
-  @Test(timeout = TEST_TIMEOUT)
+  @Test(timeout = TEST_TIMEOUT_MILLIS)
   public void testAsyncNature()
   {
     final CountDownLatch latch = new CountDownLatch(1);
@@ -66,7 +64,7 @@ public class AsyncQueryRunnerTest
       {
         try {
           latch.await();
-          return Sequences.simple(Lists.newArrayList(1));
+          return Sequences.simple(Collections.singletonList(1));
         }
         catch (InterruptedException ex) {
           throw new RuntimeException(ex);
@@ -82,10 +80,10 @@ public class AsyncQueryRunnerTest
 
     Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
     latch.countDown();
-    Assert.assertEquals(Lists.newArrayList(1), lazy.toList());
+    Assert.assertEquals(Collections.singletonList(1), lazy.toList());
   }
   
-  @Test(timeout = TEST_TIMEOUT)
+  @Test(timeout = TEST_TIMEOUT_MILLIS)
   public void testQueryTimeoutHonored()
   {
     QueryRunner baseRunner = new QueryRunner()

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -39,9 +39,6 @@ public class StupidPool<T> implements NonBlockingPool<T>
 {
   private static final Logger log = new Logger(StupidPool.class);
 
-  private final String name;
-  private final Supplier<T> generator;
-
   /**
    * StupidPool Implementation Note
    * It is assumed that StupidPools are never reclaimed by the GC, either stored in static fields or global singleton
@@ -50,13 +47,20 @@ public class StupidPool<T> implements NonBlockingPool<T>
    * and registered in the global lifecycle), in this close() method all {@link ObjectResourceHolder}s should be drained
    * from the {@code objects} queue, and notifier.disable() called for them.
    */
-  private final Queue<ObjectResourceHolder> objects = new ConcurrentLinkedQueue<>();
+  @VisibleForTesting
+  final Queue<ObjectResourceHolder> objects = new ConcurrentLinkedQueue<>();
+
   /**
    * {@link ConcurrentLinkedQueue}'s size() is O(n) queue traversal apparently for the sake of being 100%
    * wait-free, that is not required by {@code StupidPool}. In {@code poolSize} we account the queue size
    * ourselves, to avoid traversal of {@link #objects} in {@link #tryReturnToPool}.
    */
-  private final AtomicLong poolSize = new AtomicLong(0);
+  @VisibleForTesting
+  final AtomicLong poolSize = new AtomicLong(0);
+
+  private final String name;
+  private final Supplier<T> generator;
+
   private final AtomicLong leakedObjectsCounter = new AtomicLong(0);
 
   //note that this is just the max entries in the cache, pool can still create as many buffers as needed.

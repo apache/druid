@@ -1,27 +1,24 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package io.druid.client;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.java.util.common.StringUtils;
@@ -31,8 +28,6 @@ import io.druid.query.QueryContexts;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class CacheUtil
@@ -55,23 +50,6 @@ public class CacheUtil
         .putInt(descriptor.getPartitionNumber())
         .put(queryCacheKey).array()
     );
-  }
-
-  public static void populate(Cache cache, ObjectMapper mapper, Cache.NamedKey key, Iterable<Object> results)
-  {
-    try {
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      try (JsonGenerator gen = mapper.getFactory().createGenerator(bytes)) {
-        for (Object result : results) {
-          gen.writeObject(result);
-        }
-      }
-
-      cache.put(key, bytes.toByteArray());
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   public static <T> boolean useCacheOnBrokers(

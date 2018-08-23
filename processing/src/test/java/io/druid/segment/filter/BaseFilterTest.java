@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -54,7 +54,6 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
@@ -82,7 +81,7 @@ import java.util.Map;
 public abstract class BaseFilterTest
 {
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
-      ImmutableList.<VirtualColumn>of(
+      ImmutableList.of(
           new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
       )
   );
@@ -168,7 +167,7 @@ public abstract class BaseFilterTest
   {
     final List<Object[]> constructors = Lists.newArrayList();
 
-    final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.<String, BitmapSerdeFactory>of(
+    final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.of(
         "concise", new ConciseBitmapSerdeFactory(),
         "roaring", new RoaringBitmapSerdeFactory(true)
     );
@@ -185,7 +184,7 @@ public abstract class BaseFilterTest
           public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
           {
             final IncrementalIndex index = input.buildIncrementalIndex();
-            return Pair.<StorageAdapter, Closeable>of(
+            return Pair.of(
                 new IncrementalIndexStorageAdapter(index),
                 new Closeable()
                 {
@@ -204,7 +203,7 @@ public abstract class BaseFilterTest
           public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
           {
             final QueryableIndex index = input.buildMMappedIndex();
-            return Pair.<StorageAdapter, Closeable>of(
+            return Pair.of(
                 new QueryableIndexStorageAdapter(index),
                 new Closeable()
                 {
@@ -223,7 +222,7 @@ public abstract class BaseFilterTest
           public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
           {
             final QueryableIndex index = input.buildMMappedMergedIndex();
-            return Pair.<StorageAdapter, Closeable>of(
+            return Pair.of(
                 new QueryableIndexStorageAdapter(index),
                 new Closeable()
                 {

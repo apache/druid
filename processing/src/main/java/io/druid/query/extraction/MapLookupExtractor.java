@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,21 +23,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupExtractor;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @JsonTypeName("map")
 public class MapLookupExtractor extends LookupExtractor
@@ -64,22 +63,32 @@ public class MapLookupExtractor extends LookupExtractor
 
   @Nullable
   @Override
-  public String apply(@NotNull String val)
+  public String apply(@Nullable String key)
   {
-    return map.get(val);
+    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
+    if (keyEquivalent == null) {
+      // keyEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+      return null;
+    }
+    return NullHandling.emptyToNullIfNeeded(map.get(keyEquivalent));
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<String> unapply(@Nullable final String value)
   {
-    return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
-    {
-      @Override public boolean apply(@Nullable String key)
-      {
-        return map.get(key).equals(Strings.nullToEmpty(value));
-      }
-    }).keySet());
-
+    String valueToLookup = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueToLookup == null) {
+      // valueToLookup is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+      // null value maps to empty list when SQL Compatible
+      return Collections.emptyList();
+    }
+    return map.entrySet()
+              .stream()
+              .filter(entry -> entry.getValue().equals(valueToLookup))
+              .map(entry -> entry.getKey())
+              .collect(Collectors.toList());
   }
 
   @Override

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.MapInputRowParser;
@@ -34,7 +35,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -48,6 +48,7 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.After;
 import org.junit.Assert;
@@ -87,12 +88,12 @@ public class SchemaEvolutionTest
         )
     );
     return ImmutableList.of(
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-01", "c1", "9", "c2", ImmutableList.of("a"))).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-02", "c1", "10.1", "c2", ImmutableList.of())).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-03", "c1", "2", "c2", ImmutableList.of(""))).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-01", "c1", "1", "c2", ImmutableList.of("a", "c"))).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-02", "c1", "4", "c2", ImmutableList.of("abc"))).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-03", "c1", "5")).get(0)
+        parser.parseBatch(ImmutableMap.of("t", "2000-01-01", "c1", "9", "c2", ImmutableList.of("a"))).get(0),
+        parser.parseBatch(ImmutableMap.of("t", "2000-01-02", "c1", "10.1", "c2", ImmutableList.of())).get(0),
+        parser.parseBatch(ImmutableMap.of("t", "2000-01-03", "c1", "2", "c2", ImmutableList.of(""))).get(0),
+        parser.parseBatch(ImmutableMap.of("t", "2001-01-01", "c1", "1", "c2", ImmutableList.of("a", "c"))).get(0),
+        parser.parseBatch(ImmutableMap.of("t", "2001-01-02", "c1", "4", "c2", ImmutableList.of("abc"))).get(0),
+        parser.parseBatch(ImmutableMap.of("t", "2001-01-03", "c1", "5")).get(0)
     );
   }
 
@@ -121,7 +122,7 @@ public class SchemaEvolutionTest
             )
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
-    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    ).run(QueryPlus.wrap(query), Maps.newHashMap());
     return results.toList();
   }
 
@@ -196,7 +197,7 @@ public class SchemaEvolutionTest
                                  .withRollup(false)
                                  .build()
                          )
-                         .rows(inputRowsWithDimensions(ImmutableList.<String>of()))
+                         .rows(inputRowsWithDimensions(ImmutableList.of()))
                          .buildMMappedIndex();
 
     if (index4.getAvailableDimensions().size() != 0) {
@@ -224,7 +225,7 @@ public class SchemaEvolutionTest
         .dataSource(DATA_SOURCE)
         .intervals("1000/3000")
         .aggregators(
-            ImmutableList.<AggregatorFactory>of(
+            ImmutableList.of(
                 new HyperUniquesAggregatorFactory("uniques", "uniques")
             )
         )
@@ -284,8 +285,13 @@ public class SchemaEvolutionTest
     );
 
     // Only nonexistent(4)
+    Map<String, Object> result = Maps.newHashMap();
+    result.put("a", NullHandling.defaultLongValue());
+    result.put("b", NullHandling.defaultDoubleValue());
+    result.put("c", NullHandling.defaultLongValue());
+    result.put("d", NullHandling.defaultDoubleValue());
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L, "d", 0.0)),
+        timeseriesResult(result),
         runQuery(query, factory, ImmutableList.of(index4))
     );
 
@@ -354,7 +360,14 @@ public class SchemaEvolutionTest
 
     // Only nonexistent(4)
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L)),
+        timeseriesResult(TestHelper.createExpectedMap(
+            "a",
+            NullHandling.defaultLongValue(),
+            "b",
+            NullHandling.defaultDoubleValue(),
+            "c",
+            0L
+        )),
         runQuery(query, factory, ImmutableList.of(index4))
     );
 

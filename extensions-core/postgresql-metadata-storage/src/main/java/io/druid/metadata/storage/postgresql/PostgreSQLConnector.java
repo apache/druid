@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -27,6 +27,7 @@ import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.postgresql.PGProperty;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -48,7 +49,11 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   private volatile Boolean canUpsert;
 
   @Inject
-  public PostgreSQLConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
+  public PostgreSQLConnector(
+      Supplier<MetadataStorageConnectorConfig> config,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      PostgreSQLConnectorConfig connectorConfig
+  )
   {
     super(config, dbTables);
 
@@ -57,6 +62,46 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     // so we need to help JDBC find the driver
     datasource.setDriverClassLoader(getClass().getClassLoader());
     datasource.setDriverClassName("org.postgresql.Driver");
+
+    // SSL Configuration
+    if (connectorConfig.isUseSSL()) {
+      log.info("SSL is enabled on this PostgreSQL connection.");
+      datasource.addConnectionProperty(PGProperty.SSL.getName(), String.valueOf(connectorConfig.isUseSSL()));
+
+      if (connectorConfig.getPassword() != null) {
+        datasource.addConnectionProperty(PGProperty.SSL_PASSWORD.getName(), connectorConfig.getPassword());
+      }
+      if (connectorConfig.getSslFactory() != null) {
+        datasource.addConnectionProperty(PGProperty.SSL_FACTORY.getName(), connectorConfig.getSslFactory());
+      }
+      if (connectorConfig.getSslFactoryArg() != null) {
+        datasource.addConnectionProperty(PGProperty.SSL_FACTORY_ARG.getName(), connectorConfig.getSslFactoryArg());
+      }
+      if (connectorConfig.getSslMode() != null) {
+        datasource.addConnectionProperty(PGProperty.SSL_MODE.getName(), connectorConfig.getSslMode());
+      }
+      if (connectorConfig.getSslCert() != null) {
+        datasource.addConnectionProperty(PGProperty.SSL_CERT.getName(), connectorConfig.getSslCert());
+      }
+      if (connectorConfig.getSslKey() != null) {
+        datasource.addConnectionProperty(PGProperty.SSL_KEY.getName(), connectorConfig.getSslKey());
+      }
+      if (connectorConfig.getSslRootCert() != null) {
+        datasource.addConnectionProperty(PGProperty.SSL_ROOT_CERT.getName(), connectorConfig.getSslRootCert());
+      }
+      if (connectorConfig.getSslHostNameVerifier() != null) {
+        datasource.addConnectionProperty(
+            PGProperty.SSL_HOSTNAME_VERIFIER.getName(),
+            connectorConfig.getSslHostNameVerifier()
+        );
+      }
+      if (connectorConfig.getSslPasswordCallback() != null) {
+        datasource.addConnectionProperty(
+            PGProperty.SSL_PASSWORD_CALLBACK.getName(),
+            connectorConfig.getSslPasswordCallback()
+        );
+      }
+    }
 
     this.dbi = new DBI(datasource);
 

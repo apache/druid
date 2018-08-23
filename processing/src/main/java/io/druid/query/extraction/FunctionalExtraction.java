@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,7 +21,7 @@ package io.druid.query.extraction;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 
@@ -52,9 +52,9 @@ public abstract class FunctionalExtraction extends DimExtractionFn
   )
   {
     this.retainMissingValue = retainMissingValue;
-    this.replaceMissingValueWith = Strings.emptyToNull(replaceMissingValueWith);
+    this.replaceMissingValueWith = NullHandling.emptyToNullIfNeeded(replaceMissingValueWith);
     Preconditions.checkArgument(
-        !(this.retainMissingValue && !Strings.isNullOrEmpty(this.replaceMissingValueWith)),
+        !(this.retainMissingValue && !(this.replaceMissingValueWith == null)),
         "Cannot specify a [replaceMissingValueWith] and set [retainMissingValue] to true"
     );
 
@@ -69,7 +69,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
         public String apply(@Nullable String dimValue)
         {
           final String retval = extractionFunction.apply(dimValue);
-          return Strings.isNullOrEmpty(retval) ? Strings.emptyToNull(dimValue) : retval;
+          return NullHandling.isNullOrEquivalent(retval) ? NullHandling.emptyToNullIfNeeded(dimValue) : retval;
         }
       };
     } else {
@@ -79,8 +79,10 @@ public abstract class FunctionalExtraction extends DimExtractionFn
         @Override
         public String apply(@Nullable String dimValue)
         {
-          final String retval = extractionFunction.apply(dimValue);
-          return Strings.isNullOrEmpty(retval) ? FunctionalExtraction.this.replaceMissingValueWith : retval;
+          final String retval = NullHandling.emptyToNullIfNeeded(extractionFunction.apply(dimValue));
+          return retval == null
+                 ? FunctionalExtraction.this.replaceMissingValueWith
+                 : retval;
         }
       };
     }

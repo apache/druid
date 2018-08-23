@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -101,7 +101,7 @@ public class ConditionalMultibindTest
     }));
 
     Assert.assertEquals(2, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.<Animal>of(new Cat(), new Dog()));
+    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog()));
   }
 
   @Test
@@ -128,7 +128,7 @@ public class ConditionalMultibindTest
     }));
 
     Assert.assertEquals(2, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.<Animal>of(new Cat(), new Dog()));
+    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog()));
   }
 
   @Test
@@ -164,7 +164,7 @@ public class ConditionalMultibindTest
     }));
 
     Assert.assertEquals(3, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.<Animal>of(new Cat(), new Dog(), new Fish()));
+    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog(), new Fish()));
   }
 
   @Test
@@ -202,7 +202,7 @@ public class ConditionalMultibindTest
     {
     }, SanDiego.class));
     Assert.assertEquals(4, animalSet_1.size());
-    Assert.assertEquals(animalSet_1, ImmutableSet.<Animal>of(new Bird(), new Cat(), new Dog(), new Tiger()));
+    Assert.assertEquals(animalSet_1, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Tiger()));
 
     Set<Animal> animalSet_2 = injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>()
     {
@@ -244,7 +244,7 @@ public class ConditionalMultibindTest
     injector.injectMembers(shop);
 
     Assert.assertEquals(4, shop.animals.size());
-    Assert.assertEquals(shop.animals, ImmutableSet.<Animal>of(new Bird(), new Cat(), new Dog(), new Fish()));
+    Assert.assertEquals(shop.animals, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Fish()));
   }
 
   @Test
@@ -252,9 +252,9 @@ public class ConditionalMultibindTest
   {
     props.setProperty("animal.type", "pets");
 
-    final Set<Animal> set1 = ImmutableSet.<Animal>of(new Dog(), new Tiger());
-    final Set<Animal> set2 = ImmutableSet.<Animal>of(new Cat(), new Fish());
-    final Set<Animal> set3 = ImmutableSet.<Animal>of(new Cat());
+    final Set<Animal> set1 = ImmutableSet.of(new Dog(), new Tiger());
+    final Set<Animal> set2 = ImmutableSet.of(new Cat(), new Fish());
+    final Set<Animal> set3 = ImmutableSet.of(new Cat());
     final Set<Animal> union = new HashSet<>();
     union.addAll(set1);
     union.addAll(set2);

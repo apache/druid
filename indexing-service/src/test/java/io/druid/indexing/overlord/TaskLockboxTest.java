@@ -1,29 +1,32 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package io.druid.indexing.overlord;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
@@ -262,6 +265,84 @@ public class TaskLockboxTest
   }
 
   @Test
+  public void testSyncFromStorageWithMissingTaskLockPriority() throws EntryExistsException
+  {
+    final Task task = NoopTask.create();
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    taskStorage.addLock(
+        task.getId(),
+        new TaskLockWithoutPriority(task.getGroupId(), task.getDataSource(), Intervals.of("2017/2018"), "v1")
+    );
+
+    final List<TaskLock> beforeLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                           .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
+                                                           .collect(Collectors.toList());
+
+    final TaskLockbox lockbox = new TaskLockbox(taskStorage);
+    lockbox.syncFromStorage();
+
+    final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                          .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
+                                                          .collect(Collectors.toList());
+
+    Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
+  }
+
+  @Test
+  public void testSyncFromStorageWithMissingTaskPriority() throws EntryExistsException
+  {
+    final Task task = NoopTask.create();
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    taskStorage.addLock(
+        task.getId(),
+        new TaskLock(
+            TaskLockType.EXCLUSIVE,
+            task.getGroupId(),
+            task.getDataSource(),
+            Intervals.of("2017/2018"),
+            "v1",
+            task.getPriority()
+        )
+    );
+
+    final List<TaskLock> beforeLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                           .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
+                                                           .collect(Collectors.toList());
+
+    final TaskLockbox lockbox = new TaskLockbox(taskStorage);
+    lockbox.syncFromStorage();
+
+    final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
+                                                          .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
+                                                          .collect(Collectors.toList());
+
+    Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
+  }
+
+  @Test
+  public void testSyncFromStorageWithInvalidPriority() throws EntryExistsException
+  {
+    final Task task = NoopTask.create();
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    taskStorage.addLock(
+        task.getId(),
+        new TaskLock(
+            TaskLockType.EXCLUSIVE,
+            task.getGroupId(),
+            task.getDataSource(),
+            Intervals.of("2017/2018"),
+            "v1",
+            10
+        )
+    );
+
+    final TaskLockbox lockbox = new TaskLockbox(taskStorage);
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("lock priority[10] is different from task priority[50]");
+    lockbox.syncFromStorage();
+  }
+
+  @Test
   public void testRevokedLockSyncFromStorage() throws EntryExistsException
   {
     final TaskLockbox originalBox = new TaskLockbox(taskStorage);
@@ -408,7 +489,7 @@ public class TaskLockboxTest
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testAcquireLockAfterRevoked() throws EntryExistsException, InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
@@ -503,5 +584,68 @@ public class TaskLockboxTest
     return tasks.stream()
                 .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
                 .collect(Collectors.toSet());
+  }
+
+  private static class TaskLockWithoutPriority extends TaskLock
+  {
+    @JsonCreator
+    TaskLockWithoutPriority(
+        String groupId,
+        String dataSource,
+        Interval interval,
+        String version
+    )
+    {
+      super(null, groupId, dataSource, interval, version, 0, false);
+    }
+
+    @Override
+    @JsonProperty
+    public TaskLockType getType()
+    {
+      return super.getType();
+    }
+
+    @Override
+    @JsonProperty
+    public String getGroupId()
+    {
+      return super.getGroupId();
+    }
+
+    @Override
+    @JsonProperty
+    public String getDataSource()
+    {
+      return super.getDataSource();
+    }
+
+    @Override
+    @JsonProperty
+    public Interval getInterval()
+    {
+      return super.getInterval();
+    }
+
+    @Override
+    @JsonProperty
+    public String getVersion()
+    {
+      return super.getVersion();
+    }
+
+    @JsonIgnore
+    @Override
+    public Integer getPriority()
+    {
+      return super.getPriority();
+    }
+
+    @JsonIgnore
+    @Override
+    public boolean isRevoked()
+    {
+      return super.isRevoked();
+    }
   }
 }

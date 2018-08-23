@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -44,11 +44,17 @@ import static org.easymock.EasyMock.createMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.hamcrest.CoreMatchers;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 
 public class MaterializedViewSupervisorSpecTest 
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private ObjectMapper objectMapper = TestHelper.makeJsonMapper();
   
   @Before
@@ -142,5 +148,93 @@ public class MaterializedViewSupervisorSpecTest
     Assert.assertEquals(expected.getDataSourceName(), spec.getDataSourceName());
     Assert.assertEquals(expected.getDimensions(), spec.getDimensions());
     Assert.assertEquals(expected.getMetrics(), spec.getMetrics());
+  }
+
+  @Test
+  public void testEmptyBaseDataSource() throws Exception
+  {
+    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectMessage(
+        "baseDataSource cannot be null or empty. Please provide a baseDataSource."
+    );
+    MaterializedViewSupervisorSpec materializedViewSupervisorSpec = new MaterializedViewSupervisorSpec(
+        "",
+        new DimensionsSpec(
+            Lists.newArrayList(
+                new StringDimensionSchema("isUnpatrolled"),
+                new StringDimensionSchema("metroCode"),
+                new StringDimensionSchema("namespace"),
+                new StringDimensionSchema("page"),
+                new StringDimensionSchema("regionIsoCode"),
+                new StringDimensionSchema("regionName"),
+                new StringDimensionSchema("user")
+            ),
+            null,
+            null
+        ),
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("count"),
+            new LongSumAggregatorFactory("added", "added")
+        },
+        HadoopTuningConfig.makeDefaultTuningConfig(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        objectMapper,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new MaterializedViewTaskConfig(),
+        createMock(AuthorizerMapper.class),
+        new NoopChatHandlerProvider()
+    );
+  }
+
+  @Test
+  public void testNullBaseDataSource() throws Exception
+  {
+    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectMessage(
+        "baseDataSource cannot be null or empty. Please provide a baseDataSource."
+    );
+    MaterializedViewSupervisorSpec materializedViewSupervisorSpec = new MaterializedViewSupervisorSpec(
+        null,
+        new DimensionsSpec(
+            Lists.newArrayList(
+                new StringDimensionSchema("isUnpatrolled"),
+                new StringDimensionSchema("metroCode"),
+                new StringDimensionSchema("namespace"),
+                new StringDimensionSchema("page"),
+                new StringDimensionSchema("regionIsoCode"),
+                new StringDimensionSchema("regionName"),
+                new StringDimensionSchema("user")
+            ),
+            null,
+            null
+        ),
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("count"),
+            new LongSumAggregatorFactory("added", "added")
+        },
+        HadoopTuningConfig.makeDefaultTuningConfig(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        objectMapper,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new MaterializedViewTaskConfig(),
+        createMock(AuthorizerMapper.class),
+        new NoopChatHandlerProvider()
+    );
   }
 }

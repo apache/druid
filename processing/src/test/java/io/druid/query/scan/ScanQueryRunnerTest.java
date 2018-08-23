@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -40,7 +40,6 @@ import io.druid.query.TableDataSource;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -141,7 +140,7 @@ public class ScanQueryRunnerTest
   {
     return ScanQuery.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .columns(Arrays.<String>asList())
+                    .columns(Collections.emptyList())
                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                     .limit(3)
                     .legacy(legacy);
@@ -421,7 +420,7 @@ public class ScanQueryRunnerTest
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
     Iterable<ScanResultValue> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap())
+        .run(QueryPlus.wrap(query), Maps.newHashMap())
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -469,7 +468,7 @@ public class ScanQueryRunnerTest
         .intervals(I_0112_0114)
         .filters(
             new AndDimFilter(
-                Arrays.<DimFilter>asList(
+                Arrays.asList(
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null),
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo", null)
                 )

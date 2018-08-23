@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -41,7 +41,9 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.BaseQuery;
 import io.druid.query.Query;
@@ -54,7 +56,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -83,6 +84,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -90,6 +92,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -102,6 +105,7 @@ import java.util.concurrent.TimeUnit;
 public class RealtimeManagerTest
 {
   private static QueryRunnerFactory factory;
+  private static Closer resourceCloser;
   private static QueryRunnerFactoryConglomerate conglomerate;
 
   private static final List<TestInputRowHolder> rows = Arrays.asList(
@@ -125,7 +129,9 @@ public class RealtimeManagerTest
   @BeforeClass
   public static void setupStatic()
   {
-    factory = initFactory();
+    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = initFactory();
+    factory = factoryAndCloser.lhs;
+    resourceCloser = factoryAndCloser.rhs;
     conglomerate = new QueryRunnerFactoryConglomerate()
     {
       @Override
@@ -134,6 +140,12 @@ public class RealtimeManagerTest
         return factory;
       }
     };
+  }
+
+  @AfterClass
+  public static void teardownStatic() throws IOException
+  {
+    resourceCloser.close();
   }
 
   @Before
@@ -231,7 +243,7 @@ public class RealtimeManagerTest
     ));
 
     realtimeManager = new RealtimeManager(
-        Arrays.<FireDepartment>asList(
+        Collections.singletonList(
             new FireDepartment(
                 schema,
                 ioConfig,
@@ -253,7 +265,7 @@ public class RealtimeManagerTest
     ));
 
     realtimeManager2 = new RealtimeManager(
-        Arrays.<FireDepartment>asList(
+        Collections.singletonList(
             new FireDepartment(
                 schema2,
                 ioConfig2,
@@ -376,7 +388,7 @@ public class RealtimeManagerTest
     Assert.assertEquals(0, plumber2.getPersistCount());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testNormalStop() throws InterruptedException
   {
     final TestFirehose firehose = new TestFirehose(rows.iterator());
@@ -421,7 +433,7 @@ public class RealtimeManagerTest
     Assert.assertTrue(plumber2.isFinishedJob());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testStopByInterruption()
   {
     final SleepingFirehose firehose = new SleepingFirehose();
@@ -454,7 +466,7 @@ public class RealtimeManagerTest
     Assert.assertFalse(plumber.isFinishedJob());
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testQueryWithInterval() throws InterruptedException
   {
     List<Row> expectedResults = Arrays.asList(
@@ -488,13 +500,8 @@ public class RealtimeManagerTest
           .builder()
           .setDataSource(QueryRunnerTestHelper.dataSource)
           .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-          .setAggregatorSpecs(
-              Arrays.asList(
-                  QueryRunnerTestHelper.rowsCount,
-                  new LongSumAggregatorFactory("idx", "index")
-              )
-          )
+          .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+          .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
           .setGranularity(QueryRunnerTestHelper.dayGran)
           .build();
       plumber.setRunners(ImmutableMap.of(query.getIntervals().get(0), runner));
@@ -532,7 +539,7 @@ public class RealtimeManagerTest
     }
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testQueryWithSegmentSpec() throws InterruptedException
   {
     List<Row> expectedResults = Arrays.asList(
@@ -566,13 +573,8 @@ public class RealtimeManagerTest
           .builder()
           .setDataSource(QueryRunnerTestHelper.dataSource)
           .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-          .setAggregatorSpecs(
-              Arrays.asList(
-                  QueryRunnerTestHelper.rowsCount,
-                  new LongSumAggregatorFactory("idx", "index")
-              )
-          )
+          .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+          .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
           .setGranularity(QueryRunnerTestHelper.dayGran)
           .build();
       plumber.setRunners(ImmutableMap.of(query.getIntervals().get(0), runner));
@@ -582,7 +584,7 @@ public class RealtimeManagerTest
           factory,
           realtimeManager3.getQueryRunnerForSegments(
               query,
-              ImmutableList.<SegmentDescriptor>of(
+              ImmutableList.of(
                   new SegmentDescriptor(
                       Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"),
                       "ver",
@@ -597,7 +599,7 @@ public class RealtimeManagerTest
           factory,
           realtimeManager3.getQueryRunnerForSegments(
               query,
-              ImmutableList.<SegmentDescriptor>of(
+              ImmutableList.of(
                   new SegmentDescriptor(
                       Intervals.of("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"),
                       "ver",
@@ -611,7 +613,7 @@ public class RealtimeManagerTest
 
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testQueryWithMultipleSegmentSpec() throws InterruptedException
   {
 
@@ -672,23 +674,18 @@ public class RealtimeManagerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(
             new MultipleSpecificSegmentSpec(
-                ImmutableList.<SegmentDescriptor>of(
+                ImmutableList.of(
                     descriptor_26_28_0,
                     descriptor_28_29_0,
                     descriptor_26_28_1,
                     descriptor_28_29_1
                 )))
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
-            )
-        )
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final Map<Interval, QueryRunner> runnerMap = ImmutableMap.<Interval, QueryRunner>of(
+    final Map<Interval, QueryRunner> runnerMap = ImmutableMap.of(
         interval_26_28,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
@@ -716,7 +713,7 @@ public class RealtimeManagerTest
         factory,
         realtimeManager3.getQueryRunnerForSegments(
             query,
-            ImmutableList.<SegmentDescriptor>of(
+            ImmutableList.of(
                 descriptor_26_28_0)
         ),
         query
@@ -727,7 +724,7 @@ public class RealtimeManagerTest
         factory,
         realtimeManager3.getQueryRunnerForSegments(
             query,
-            ImmutableList.<SegmentDescriptor>of(
+            ImmutableList.of(
                 descriptor_28_29_0)
         ),
         query
@@ -738,7 +735,7 @@ public class RealtimeManagerTest
         factory,
         realtimeManager3.getQueryRunnerForSegments(
             query,
-            ImmutableList.<SegmentDescriptor>of(
+            ImmutableList.of(
                 descriptor_26_28_1)
         ),
         query
@@ -749,7 +746,7 @@ public class RealtimeManagerTest
         factory,
         realtimeManager3.getQueryRunnerForSegments(
             query,
-            ImmutableList.<SegmentDescriptor>of(
+            ImmutableList.of(
                 descriptor_28_29_1)
         ),
         query
@@ -758,7 +755,7 @@ public class RealtimeManagerTest
 
   }
 
-  private static GroupByQueryRunnerFactory initFactory()
+  private static Pair<GroupByQueryRunnerFactory, Closer> initFactory()
   {
     final GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
@@ -797,7 +794,7 @@ public class RealtimeManagerTest
         @Override
         public List<String> getDimensions()
         {
-          return Arrays.asList("testDim");
+          return Collections.singletonList("testDim");
         }
 
         @Override

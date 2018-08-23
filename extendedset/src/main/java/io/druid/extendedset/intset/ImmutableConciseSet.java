@@ -1,18 +1,21 @@
 /*
-* Copyright 2012 Metamarkets Group Inc.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package io.druid.extendedset.intset;
 
@@ -144,7 +147,7 @@ public class ImmutableConciseSet
     ImmutableConciseSet partialResults = doUnion(Iterators.limit(sets, CHUNK_SIZE));
     while (sets.hasNext()) {
       final UnmodifiableIterator<ImmutableConciseSet> partialIter = Iterators.singletonIterator(partialResults);
-      partialResults = doUnion(Iterators.<ImmutableConciseSet>concat(partialIter, Iterators.limit(sets, CHUNK_SIZE)));
+      partialResults = doUnion(Iterators.concat(partialIter, Iterators.limit(sets, CHUNK_SIZE)));
     }
     return partialResults;
   }
@@ -165,7 +168,7 @@ public class ImmutableConciseSet
     while (sets.hasNext()) {
       final UnmodifiableIterator<ImmutableConciseSet> partialIter = Iterators.singletonIterator(partialResults);
       partialResults = doIntersection(
-          Iterators.<ImmutableConciseSet>concat(Iterators.limit(sets, CHUNK_SIZE), partialIter)
+          Iterators.concat(Iterators.limit(sets, CHUNK_SIZE), partialIter)
       );
     }
     return partialResults;

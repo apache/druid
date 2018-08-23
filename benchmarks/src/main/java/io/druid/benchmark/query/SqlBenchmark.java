@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -26,15 +26,15 @@ import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.datagen.SegmentGenerator;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.QueryableIndex;
 import io.druid.server.security.AuthTestUtils;
@@ -64,7 +64,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -88,6 +87,7 @@ public class SqlBenchmark
   private PlannerFactory plannerFactory;
   private GroupByQuery groupByQuery;
   private String sqlQuery;
+  private Closer resourceCloser;
 
   @Setup(Level.Trial)
   public void setup()
@@ -107,13 +107,15 @@ public class SqlBenchmark
     this.segmentGenerator = new SegmentGenerator();
 
     final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
-    final QueryRunnerFactoryConglomerate conglomerate = CalciteTests.queryRunnerFactoryConglomerate();
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
+        .createQueryRunnerFactoryConglomerate();
+    final QueryRunnerFactoryConglomerate conglomerate = conglomerateCloserPair.lhs;
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
     plannerFactory = new PlannerFactory(
-        CalciteTests.createMockSchema(walker, plannerConfig),
-        CalciteTests.createMockQueryLifecycleFactory(walker),
+        CalciteTests.createMockSchema(conglomerate, walker, plannerConfig),
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -124,13 +126,8 @@ public class SqlBenchmark
         .builder()
         .setDataSource("foo")
         .setInterval(Intervals.ETERNITY)
-        .setDimensions(
-            Arrays.<DimensionSpec>asList(
-                new DefaultDimensionSpec("dimZipf", "d0"),
-                new DefaultDimensionSpec("dimSequential", "d1")
-            )
-        )
-        .setAggregatorSpecs(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("c")))
+        .setDimensions(new DefaultDimensionSpec("dimZipf", "d0"), new DefaultDimensionSpec("dimSequential", "d1"))
+        .setAggregatorSpecs(new CountAggregatorFactory("c"))
         .setGranularity(Granularities.ALL)
         .build();
 
@@ -153,6 +150,10 @@ public class SqlBenchmark
     if (segmentGenerator != null) {
       segmentGenerator.close();
       segmentGenerator = null;
+    }
+
+    if (resourceCloser != null) {
+      resourceCloser.close();
     }
 
     if (tmpDir != null) {

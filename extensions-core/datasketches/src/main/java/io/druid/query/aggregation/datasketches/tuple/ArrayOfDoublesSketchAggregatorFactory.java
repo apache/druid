@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -32,15 +32,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import io.druid.java.util.common.IAE;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.NilColumnValueSelector;
@@ -125,7 +128,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
           selector,
           nominalEntries,
           numberOfValues,
-          getMaxIntermediateSize()
+          getMaxIntermediateSizeWithNulls()
       );
     }
     // input is raw data (key and array of values), use build aggregator
@@ -143,7 +146,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
         keySelector,
         valueSelectors,
         nominalEntries,
-        getMaxIntermediateSize()
+        getMaxIntermediateSizeWithNulls()
     );
   }
 
@@ -173,6 +176,42 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return union.getResult();
   }
 
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new ObjectAggregateCombiner<ArrayOfDoublesSketch>()
+    {
+      private final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
+          .setNumberOfValues(numberOfValues).buildUnion();
+
+      @Override
+      public void reset(final ColumnValueSelector selector)
+      {
+        union.reset();
+        fold(selector);
+      }
+
+      @Override
+      public void fold(final ColumnValueSelector selector)
+      {
+        final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) selector.getObject();
+        union.update(sketch);
+      }
+
+      @Override
+      public ArrayOfDoublesSketch getObject()
+      {
+        return union.getResult();
+      }
+
+      @Override
+      public Class<ArrayOfDoublesSketch> classOfObject()
+      {
+        return ArrayOfDoublesSketch.class;
+      }
+    };
+  }
+  
   @Override
   @JsonProperty
   public String getName()
@@ -233,7 +272,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(
+    return Collections.singletonList(
       new ArrayOfDoublesSketchAggregatorFactory(
           fieldName,
           fieldName,

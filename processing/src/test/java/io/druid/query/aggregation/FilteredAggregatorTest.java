@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,13 +21,13 @@ package io.druid.query.aggregation;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.NotDimFilter;
@@ -93,7 +93,7 @@ public class FilteredAggregatorTest
       {
         final String dimensionName = dimensionSpec.getDimension();
 
-        if (dimensionName.equals("dim")) {
+        if ("dim".equals(dimensionName)) {
           return dimensionSpec.decorate(
               new DimensionSelector()
               {
@@ -195,7 +195,7 @@ public class FilteredAggregatorTest
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
       {
-        if (columnName.equals("value")) {
+        if ("value".equals(columnName)) {
           return selector;
         } else {
           throw new UnsupportedOperationException();
@@ -206,7 +206,7 @@ public class FilteredAggregatorTest
       public ColumnCapabilities getColumnCapabilities(String columnName)
       {
         ColumnCapabilitiesImpl caps;
-        if (columnName.equals("value")) {
+        if ("value".equals(columnName)) {
           caps = new ColumnCapabilitiesImpl();
           caps.setType(ValueType.FLOAT);
           caps.setDictionaryEncoded(false);
@@ -224,9 +224,9 @@ public class FilteredAggregatorTest
 
   private void assertValues(FilteredAggregator agg, TestFloatColumnSelector selector, double... expectedVals)
   {
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
     for (double expectedVal : expectedVals) {
       aggregate(selector, agg);
       Assert.assertEquals(expectedVal, agg.get());
@@ -257,7 +257,7 @@ public class FilteredAggregatorTest
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new OrDimFilter(Lists.<DimFilter>newArrayList(new SelectorDimFilter("dim", "a", null), new SelectorDimFilter("dim", "b", null)))
+        new OrDimFilter(Lists.newArrayList(new SelectorDimFilter("dim", "a", null), new SelectorDimFilter("dim", "b", null)))
     );
 
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
@@ -278,7 +278,7 @@ public class FilteredAggregatorTest
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new AndDimFilter(Lists.<DimFilter>newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b", null)), new SelectorDimFilter("dim", "a", null))));
+        new AndDimFilter(Lists.newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b", null)), new SelectorDimFilter("dim", "a", null))));
 
     validateFilteredAggs(factory, values, selector);
   }

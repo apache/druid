@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,17 +22,16 @@ package io.druid.query.aggregation.histogram;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNQueryConfig;
@@ -40,10 +39,12 @@ import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNQueryRunnerFactory;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.TestHelper;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -54,14 +55,30 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class ApproximateHistogramTopNQueryTest
 {
+  private static final Closer resourceCloser = Closer.create();
+
+  @AfterClass
+  public static void teardown() throws IOException
+  {
+    resourceCloser.close();
+  }
+
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
+    final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
+        "TopNQueryRunnerFactory-bufferPool",
+        () -> ByteBuffer.allocate(2000)
+    );
+    resourceCloser.register(defaultPool);
+    resourceCloser.register(customPool);
+
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         Iterables.concat(
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
-                    TestQueryRunners.getPool(),
+                    defaultPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
@@ -71,10 +88,7 @@ public class ApproximateHistogramTopNQueryTest
             ),
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
-                    new StupidPool<ByteBuffer>(
-                        "TopNQueryRunnerFactory-bufferPool",
-                        () -> ByteBuffer.allocate(2000)
-                    ),
+                    customPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
@@ -115,7 +129,7 @@ public class ApproximateHistogramTopNQueryTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     QueryRunnerTestHelper.commonDoubleAggregators,
                     Lists.newArrayList(
@@ -127,7 +141,7 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 QueryRunnerTestHelper.addRowsIndexConstant,
                 QueryRunnerTestHelper.dependentPostAgg,
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)

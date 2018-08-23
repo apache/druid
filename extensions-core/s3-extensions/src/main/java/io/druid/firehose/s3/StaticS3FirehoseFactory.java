@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -30,11 +30,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import io.druid.data.input.FiniteFirehoseFactory;
+import io.druid.data.input.InputSplit;
+import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import io.druid.storage.s3.S3Utils;
@@ -44,6 +48,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -52,7 +57,7 @@ import java.util.stream.Collectors;
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
  */
-public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<S3ObjectSummary>
+public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
   private static final int MAX_LISTING_LENGTH = 1024;
@@ -87,11 +92,11 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     }
 
     for (final URI inputURI : this.uris) {
-      Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
+      Preconditions.checkArgument("s3".equals(inputURI.getScheme()), "input uri scheme == s3 (%s)", inputURI);
     }
 
     for (final URI inputURI : this.prefixes) {
-      Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
+      Preconditions.checkArgument("s3".equals(inputURI.getScheme()), "input uri scheme == s3 (%s)", inputURI);
     }
   }
 
@@ -108,20 +113,12 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected Collection<S3ObjectSummary> initObjects() throws IOException
+  protected Collection<URI> initObjects() throws IOException
   {
     // Here, the returned s3 objects contain minimal information without data.
     // Getting data is deferred until openObjectStream() is called for each object.
     if (!uris.isEmpty()) {
-      return uris.stream()
-                 .map(
-                     uri -> {
-                       final String s3Bucket = uri.getAuthority();
-                       final String key = S3Utils.extractS3Key(uri);
-                       return S3Utils.getSingleObjectSummary(s3Client, s3Bucket, key);
-                     }
-                 )
-                 .collect(Collectors.toList());
+      return uris;
     } else {
       final List<S3ObjectSummary> objects = new ArrayList<>();
       for (URI uri : prefixes) {
@@ -167,18 +164,21 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
           }
         }
       }
-      return objects;
+      return objects.stream().map(StaticS3FirehoseFactory::toUri).collect(Collectors.toList());
     }
   }
 
   @Override
-  protected InputStream openObjectStream(S3ObjectSummary object) throws IOException
+  protected InputStream openObjectStream(URI object) throws IOException
   {
     try {
       // Get data of the given object and open an input stream
-      final S3Object s3Object = s3Client.getObject(object.getBucketName(), object.getKey());
+      final String bucket = object.getAuthority();
+      final String key = S3Utils.extractS3Key(object);
+
+      final S3Object s3Object = s3Client.getObject(bucket, key);
       if (s3Object == null) {
-        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", object.getBucketName(), object.getKey());
+        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", bucket, key);
       }
       return s3Object.getObjectContent();
     }
@@ -188,17 +188,20 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected InputStream openObjectStream(S3ObjectSummary object, long start) throws IOException
+  protected InputStream openObjectStream(URI object, long start) throws IOException
   {
-    final GetObjectRequest request = new GetObjectRequest(object.getBucketName(), object.getKey());
+    final String bucket = object.getAuthority();
+    final String key = S3Utils.extractS3Key(object);
+
+    final GetObjectRequest request = new GetObjectRequest(bucket, key);
     request.setRange(start);
     try {
       final S3Object s3Object = s3Client.getObject(request);
       if (s3Object == null) {
         throw new ISE(
             "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
-            object.getBucketName(),
-            object.getKey(),
+            bucket,
+            key,
             start
         );
       }
@@ -210,9 +213,9 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected InputStream wrapObjectStream(S3ObjectSummary object, InputStream stream) throws IOException
+  protected InputStream wrapObjectStream(URI object, InputStream stream) throws IOException
   {
-    return CompressionUtils.decompress(stream, object.getKey());
+    return CompressionUtils.decompress(stream, S3Utils.extractS3Key(object));
   }
 
   @Override
@@ -254,5 +257,41 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   protected Predicate<Throwable> getRetryCondition()
   {
     return S3Utils.S3RETRY;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<StringInputRowParser, URI> withSplit(InputSplit<URI> split)
+  {
+    return new StaticS3FirehoseFactory(
+        s3Client,
+        Collections.singletonList(split.get()),
+        null,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
+  }
+
+  /**
+   * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
+   *
+   * <pre>
+   * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
+   * </pre>
+   */
+  private static URI toUri(S3ObjectSummary object)
+  {
+    final String originalAuthority = object.getBucketName();
+    final String originalPath = object.getKey();
+    final String authority = originalAuthority.endsWith("/") ?
+                             originalAuthority.substring(0, originalAuthority.length() - 1) :
+                             originalAuthority;
+    final String path = originalPath.startsWith("/") ?
+                        originalPath.substring(1, originalPath.length()) :
+                        originalPath;
+
+    return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }
 }

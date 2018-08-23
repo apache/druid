@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -53,6 +54,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,24 +72,24 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
-  private static final long PUBLISH_TIMEOUT = 10000;
-  private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
+  private static final long PUBLISH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
+  private static final long HANDOFF_CONDITION_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
 
-  private static final List<InputRow> ROWS = Arrays.<InputRow>asList(
+  private static final List<InputRow> ROWS = Arrays.asList(
       new MapBasedInputRow(
           DateTimes.of("2000"),
           ImmutableList.of("dim1"),
-          ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
+          ImmutableMap.of("dim1", "foo", "met1", "1")
       ),
       new MapBasedInputRow(
           DateTimes.of("2000T01"),
           ImmutableList.of("dim1"),
-          ImmutableMap.<String, Object>of("dim1", "foo", "met1", 2.0)
+          ImmutableMap.of("dim1", "foo", "met1", 2.0)
       ),
       new MapBasedInputRow(
           DateTimes.of("2000T01"),
           ImmutableList.of("dim2"),
-          ImmutableMap.<String, Object>of("dim2", "bar", "met1", 2.0)
+          ImmutableMap.of("dim2", "bar", "met1", 2.0)
       )
   );
 
@@ -126,7 +128,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     driver.close();
   }
 
-  @Test(timeout = 2000L)
+  @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
@@ -142,14 +144,14 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     while (driver.getSegments().containsKey("dummy")) {
       Thread.sleep(100);
     }
 
     final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
-                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+                                                          .get(HANDOFF_CONDITION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(
@@ -192,19 +194,19 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     while (driver.getSegments().containsKey("dummy")) {
       Thread.sleep(100);
     }
 
     final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
-                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+                                                          .get(HANDOFF_CONDITION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
     Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndMetadata.getCommitMetadata());
   }
 
-  @Test(timeout = 5000L, expected = TimeoutException.class)
+  @Test(timeout = 60_000L, expected = TimeoutException.class)
   public void testHandoffTimeout() throws Exception
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
@@ -221,13 +223,13 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     while (driver.getSegments().containsKey("dummy")) {
       Thread.sleep(100);
     }
 
-    driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+    driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
   }
 
   @Test
@@ -246,7 +248,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
           makeOkPublisher(),
           committerSupplier.get(),
           ImmutableList.of("dummy")
-      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
       Assert.assertEquals(
           ImmutableSet.of(
@@ -267,7 +269,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
           makeOkPublisher(),
           committerSupplier.get(),
           ImmutableList.of("dummy")
-      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
       Assert.assertEquals(
           ImmutableSet.of(
@@ -288,7 +290,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(),
@@ -326,11 +328,11 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     );
 
     final SegmentsAndMetadata handedoffFromSequence0 = futureForSequence0.get(
-        HANDOFF_CONDITION_TIMEOUT,
+        HANDOFF_CONDITION_TIMEOUT_MILLIS,
         TimeUnit.MILLISECONDS
     );
     final SegmentsAndMetadata handedoffFromSequence1 = futureForSequence1.get(
-        HANDOFF_CONDITION_TIMEOUT,
+        HANDOFF_CONDITION_TIMEOUT_MILLIS,
         TimeUnit.MILLISECONDS
     );
 
@@ -359,7 +361,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segments, commitMetadata) -> true;
+    return (segments, commitMetadata) -> new SegmentPublishResult(Collections.emptySet(), true);
   }
 
   static TransactionalSegmentPublisher makeFailingPublisher(boolean failWithException)
@@ -368,7 +370,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
       if (failWithException) {
         throw new RuntimeException("test");
       }
-      return false;
+      return SegmentPublishResult.fail();
     };
   }
 

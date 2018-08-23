@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -34,19 +34,20 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -79,10 +80,12 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -90,6 +93,7 @@ import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +104,7 @@ import java.util.Map;
  * It allows you to create index from raw data, run a group by query on it which simulates query processing inside
  * of a druid cluster exercising most of the features from aggregation and returns the results that you could verify.
  */
-public class AggregationTestHelper
+public class AggregationTestHelper implements Closeable
 {
   private final ObjectMapper mapper;
   private final IndexMerger indexMerger;
@@ -109,6 +113,7 @@ public class AggregationTestHelper
   private final QueryRunnerFactory factory;
 
   private final TemporaryFolder tempFolder;
+  private final Closer resourceCloser;
 
   private AggregationTestHelper(
       ObjectMapper mapper,
@@ -117,7 +122,8 @@ public class AggregationTestHelper
       QueryToolChest toolchest,
       QueryRunnerFactory factory,
       TemporaryFolder tempFolder,
-      List<? extends Module> jsonModulesToRegister
+      List<? extends Module> jsonModulesToRegister,
+      Closer resourceCloser
   )
   {
     this.mapper = mapper;
@@ -126,20 +132,26 @@ public class AggregationTestHelper
     this.toolChest = toolchest;
     this.factory = factory;
     this.tempFolder = tempFolder;
+    this.resourceCloser = resourceCloser;
 
     for (Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
     }
   }
 
-  public static final AggregationTestHelper createGroupByQueryAggregationTestHelper(
+  public static AggregationTestHelper createGroupByQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       GroupByQueryConfig config,
       TemporaryFolder tempFolder
   )
   {
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
-    GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(mapper, config);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+        mapper,
+        config
+    );
+    final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
+    final Closer closer = factoryAndCloser.rhs;
 
     IndexIO indexIO = new IndexIO(
         mapper,
@@ -161,11 +173,12 @@ public class AggregationTestHelper
         factory.getToolchest(),
         factory,
         tempFolder,
-        jsonModulesToRegister
+        jsonModulesToRegister,
+        closer
     );
   }
 
-  public static final AggregationTestHelper createSelectQueryAggregationTestHelper(
+  public static AggregationTestHelper createSelectQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolder tempFolder
   )
@@ -217,11 +230,12 @@ public class AggregationTestHelper
         toolchest,
         factory,
         tempFolder,
-        jsonModulesToRegister
+        jsonModulesToRegister,
+        Closer.create()
     );
   }
 
-  public static final AggregationTestHelper createTimeseriesQueryAggregationTestHelper(
+  public static AggregationTestHelper createTimeseriesQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolder tempFolder
   )
@@ -258,11 +272,12 @@ public class AggregationTestHelper
         toolchest,
         factory,
         tempFolder,
-        jsonModulesToRegister
+        jsonModulesToRegister,
+        Closer.create()
     );
   }
 
-  public static final AggregationTestHelper createTopNQueryAggregationTestHelper(
+  public static AggregationTestHelper createTopNQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolder tempFolder
   )
@@ -274,18 +289,20 @@ public class AggregationTestHelper
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
 
+    final CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
+        "TopNQueryRunnerFactory-bufferPool",
+        new Supplier<ByteBuffer>()
+        {
+          @Override
+          public ByteBuffer get()
+          {
+            return ByteBuffer.allocate(10 * 1024 * 1024);
+          }
+        }
+    );
+    final Closer resourceCloser = Closer.create();
     TopNQueryRunnerFactory factory = new TopNQueryRunnerFactory(
-        new StupidPool<>(
-            "TopNQueryRunnerFactory-bufferPool",
-            new Supplier<ByteBuffer>()
-            {
-              @Override
-              public ByteBuffer get()
-              {
-                return ByteBuffer.allocate(10 * 1024 * 1024);
-              }
-            }
-        ),
+        pool,
         toolchest,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
@@ -310,7 +327,8 @@ public class AggregationTestHelper
         toolchest,
         factory,
         tempFolder,
-        jsonModulesToRegister
+        jsonModulesToRegister,
+        resourceCloser
     );
   }
 
@@ -325,8 +343,24 @@ public class AggregationTestHelper
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
+    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
     return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
+  }
+
+  public Sequence<Row> createIndexAndRunQueryOnSegment(
+      File inputDataFile,
+      String parserJson,
+      String aggregators,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      boolean rollup,
+      String groupByQueryJson
+  ) throws Exception
+  {
+    File segmentDir = tempFolder.newFolder();
+    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, rollup);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
   public Sequence<Row> createIndexAndRunQueryOnSegment(
@@ -339,9 +373,32 @@ public class AggregationTestHelper
       String groupByQueryJson
   ) throws Exception
   {
+    return createIndexAndRunQueryOnSegment(
+        inputDataStream,
+        parserJson,
+        aggregators,
+        minTimestamp,
+        gran,
+        maxRowCount,
+        true,
+        groupByQueryJson
+    );
+  }
+
+  public Sequence<Row> createIndexAndRunQueryOnSegment(
+      InputStream inputDataStream,
+      String parserJson,
+      String aggregators,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      boolean rollup,
+      String groupByQueryJson
+  ) throws Exception
+  {
     File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
-    return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
+    createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, rollup);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
   public void createIndex(
@@ -361,7 +418,31 @@ public class AggregationTestHelper
         outDir,
         minTimestamp,
         gran,
-        maxRowCount
+        maxRowCount,
+        true
+    );
+  }
+
+  public void createIndex(
+      File inputDataFile,
+      String parserJson,
+      String aggregators,
+      File outDir,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      boolean rollup
+  ) throws Exception
+  {
+    createIndex(
+        new FileInputStream(inputDataFile),
+        parserJson,
+        aggregators,
+        outDir,
+        minTimestamp,
+        gran,
+        maxRowCount,
+        rollup
     );
   }
 
@@ -372,7 +453,8 @@ public class AggregationTestHelper
       File outDir,
       long minTimestamp,
       Granularity gran,
-      int maxRowCount
+      int maxRowCount,
+      boolean rollup
   ) throws Exception
   {
     try {
@@ -394,7 +476,8 @@ public class AggregationTestHelper
           minTimestamp,
           gran,
           true,
-          maxRowCount
+          maxRowCount,
+          rollup
       );
     }
     finally {
@@ -410,7 +493,8 @@ public class AggregationTestHelper
       long minTimestamp,
       Granularity gran,
       boolean deserializeComplexMetrics,
-      int maxRowCount
+      int maxRowCount,
+      boolean rollup
   ) throws Exception
   {
     IncrementalIndex index = null;
@@ -423,6 +507,7 @@ public class AggregationTestHelper
                   .withMinTimestamp(minTimestamp)
                   .withQueryGranularity(gran)
                   .withMetrics(metrics)
+                  .withRollup(rollup)
                   .build()
           )
           .setDeserializeComplexMetrics(deserializeComplexMetrics)
@@ -442,6 +527,7 @@ public class AggregationTestHelper
                       .withMinTimestamp(minTimestamp)
                       .withQueryGranularity(gran)
                       .withMetrics(metrics)
+                      .withRollup(rollup)
                       .build()
               )
               .setDeserializeComplexMetrics(deserializeComplexMetrics)
@@ -466,7 +552,7 @@ public class AggregationTestHelper
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, true, metrics, outDir, new IndexSpec(), null);
+        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, new IndexSpec(), null);
 
         for (QueryableIndex qi : indexes) {
           qi.close();
@@ -568,7 +654,7 @@ public class AggregationTestHelper
       public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.<String, Object>newHashMap());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.newHashMap());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()
@@ -635,7 +721,7 @@ public class AggregationTestHelper
     agg.aggregate(myBuf, 0);
     results[0] = (T) agg.get(myBuf, 0);
 
-    byte[] theBytes = new byte[factory.getMaxIntermediateSize()];
+    byte[] theBytes = new byte[factory.getMaxIntermediateSizeWithNulls()];
     myBuf.get(theBytes);
 
     ByteBuffer newBuf = ByteBuffer.allocate(941209);
@@ -645,6 +731,12 @@ public class AggregationTestHelper
     agg.relocate(0, 7574, myBuf, newBuf);
     results[1] = (T) agg.get(newBuf, 7574);
     return results;
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    resourceCloser.close();
   }
 }
 

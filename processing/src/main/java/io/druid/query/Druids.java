@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -54,6 +54,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,7 @@ public class Druids
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
     private Map<String, Object> context;
+    private int limit;
 
     private TimeseriesQueryBuilder()
     {
@@ -116,6 +118,7 @@ public class Druids
       granularity = Granularities.ALL;
       aggregatorSpecs = Lists.newArrayList();
       postAggregatorSpecs = Lists.newArrayList();
+      limit = 0;
       context = null;
     }
 
@@ -130,6 +133,7 @@ public class Druids
           granularity,
           aggregatorSpecs,
           postAggregatorSpecs,
+          limit,
           context
       );
     }
@@ -145,6 +149,7 @@ public class Druids
           .granularity(query.getGranularity())
           .aggregators(query.getAggregatorSpecs())
           .postAggregators(query.getPostAggregatorSpecs())
+          .limit(query.getLimit())
           .context(query.getContext());
     }
 
@@ -252,6 +257,12 @@ public class Druids
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
       context = c;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder limit(int lim)
+    {
+      limit = lim;
       return this;
     }
   }
@@ -402,7 +413,7 @@ public class Druids
 
     public SearchQueryBuilder dimensions(DimensionSpec d)
     {
-      dimensions = Lists.newArrayList(d);
+      dimensions = Collections.singletonList(d);
       return this;
     }
 

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -135,12 +135,12 @@ public class ResourceFilterTestHelper
 
   public static Collection<Object[]> getRequestPaths(final Class clazz)
   {
-    return getRequestPaths(clazz, ImmutableList.<Class<?>>of(), ImmutableList.<Key<?>>of());
+    return getRequestPaths(clazz, ImmutableList.of(), ImmutableList.of());
   }
 
   public static Collection<Object[]> getRequestPathsWithAuthorizer(final Class clazz)
   {
-    return getRequestPaths(clazz, ImmutableList.<Class<?>>of(AuthorizerMapper.class), ImmutableList.<Key<?>>of());
+    return getRequestPaths(clazz, ImmutableList.of(AuthorizerMapper.class), ImmutableList.of());
   }
 
   public static Collection<Object[]> getRequestPaths(
@@ -148,7 +148,7 @@ public class ResourceFilterTestHelper
       final Iterable<Class<?>> mockableInjections
   )
   {
-    return getRequestPaths(clazz, mockableInjections, ImmutableList.<Key<?>>of());
+    return getRequestPaths(clazz, mockableInjections, ImmutableList.of());
   }
 
   public static Collection<Object[]> getRequestPaths(
@@ -189,7 +189,7 @@ public class ResourceFilterTestHelper
     );
     final String basepath = ((Path) clazz.getAnnotation(Path.class)).value().substring(1); //Ignore the first "/"
     final List<Class<? extends ResourceFilter>> baseResourceFilters =
-        clazz.getAnnotation(ResourceFilters.class) == null ? Collections.<Class<? extends ResourceFilter>>emptyList() :
+        clazz.getAnnotation(ResourceFilters.class) == null ? Collections.emptyList() :
         ImmutableList.copyOf(((ResourceFilters) clazz.getAnnotation(ResourceFilters.class)).value());
 
     return ImmutableList.copyOf(

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -22,6 +22,7 @@ package io.druid.query.search;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -64,6 +65,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -166,10 +168,10 @@ public class SearchQueryRunnerTest
           )
           {
             final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-01-12/2011-02-28")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-01-12/2011-02-28")))
             );
             final QueryPlus<Result<SearchResultValue>> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of("2011-03-01/2011-04-15")))
+                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-03-01/2011-04-15")))
             );
             return Sequences.concat(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext));
           }
@@ -398,7 +400,7 @@ public class SearchQueryRunnerTest
               .granularity(QueryRunnerTestHelper.allGran)
               .filters(
                   new AndDimFilter(
-                      Arrays.<DimFilter>asList(
+                      Arrays.asList(
                           new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
                           new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null)
                       )))
@@ -721,14 +723,14 @@ public class SearchQueryRunnerTest
         new MapBasedInputRow(
             1481871600000L,
             Arrays.asList("name", "host"),
-            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+            ImmutableMap.of("name", "name1", "host", "host")
         )
     );
     index.add(
         new MapBasedInputRow(
             1481871670000L,
             Arrays.asList("name", "table"),
-            ImmutableMap.<String, Object>of("name", "name2", "table", "table")
+            ImmutableMap.of("name", "name2", "table", "table")
         )
     );
 
@@ -740,7 +742,7 @@ public class SearchQueryRunnerTest
                                     .granularity(QueryRunnerTestHelper.allGran)
                                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                                     // simulate when cardinality is big enough to fallback to cursorOnly strategy
-                                    .context(ImmutableMap.<String, Object>of("searchStrategy", "cursorOnly"))
+                                    .context(ImmutableMap.of("searchStrategy", "cursorOnly"))
                                     .build();
 
     QueryRunnerFactory factory = new SearchQueryRunnerFactory(
@@ -751,7 +753,7 @@ public class SearchQueryRunnerTest
     QueryRunner runner = factory.createRunner(new QueryableIndexSegment("asdf", TestIndex.persistRealtimeAndLoadMMapped(index)));
     List<SearchHit> expectedHits = Lists.newLinkedList();
     expectedHits.add(new SearchHit("table", "table", 1));
-    expectedHits.add(new SearchHit("table", "", 1));
+    expectedHits.add(new SearchHit("table", NullHandling.defaultStringValue(), 1));
     checkSearchQuery(searchQuery, runner, expectedHits);
   }
 

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -272,6 +272,9 @@ class UnaryMinusExpr extends UnaryExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval ret = expr.eval(bindings);
+    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+      return ExprEval.of(null);
+    }
     if (ret.type() == ExprType.LONG) {
       return ExprEval.of(-ret.asLong());
     }
@@ -307,6 +310,9 @@ class UnaryNotExpr extends UnaryExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval ret = expr.eval(bindings);
+    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+      return ExprEval.of(null);
+    }
     // conforming to other boolean-returning binary operators
     ExprType retType = ret.type() == ExprType.DOUBLE ? ExprType.DOUBLE : ExprType.LONG;
     return ExprEval.of(!ret.asBoolean(), retType);
@@ -365,15 +371,21 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 
     // Result of any Binary expressions is null if any of the argument is null.
     // e.g "select null * 2 as c;" or "select null + 1 as c;" will return null as per Standard SQL spec.
-    if (NullHandling.sqlCompatible() && (leftVal.isNull() || rightVal.isNull())) {
+    if (NullHandling.sqlCompatible() && (leftVal.value() == null || rightVal.value() == null)) {
       return ExprEval.of(null);
     }
 
     if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());
     } else if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {
+      if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(evalLong(leftVal.asLong(), rightVal.asLong()));
     } else {
+      if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));
     }
   }

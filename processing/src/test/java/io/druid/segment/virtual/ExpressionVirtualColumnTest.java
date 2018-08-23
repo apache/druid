@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -134,7 +134,11 @@ public class ExpressionVirtualColumnTest
     final BaseLongColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(0L, selector.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, selector.getLong());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
 
     CURRENT_ROW.set(ROW1);
     if (NullHandling.replaceWithDefault()) {
@@ -157,7 +161,11 @@ public class ExpressionVirtualColumnTest
     final BaseLongColumnValueSelector selector = ZCONCATX.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(0L, selector.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, selector.getLong());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
 
     CURRENT_ROW.set(ROW1);
     if (NullHandling.replaceWithDefault()) {
@@ -168,10 +176,18 @@ public class ExpressionVirtualColumnTest
     }
 
     CURRENT_ROW.set(ROW2);
-    Assert.assertEquals(0L, selector.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, selector.getLong());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
 
     CURRENT_ROW.set(ROW3);
-    Assert.assertEquals(0L, selector.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, selector.getLong());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
   }
 
   @Test
@@ -180,7 +196,11 @@ public class ExpressionVirtualColumnTest
     final BaseFloatColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
 
     CURRENT_ROW.set(ROW1);
     if (NullHandling.replaceWithDefault()) {
@@ -207,7 +227,7 @@ public class ExpressionVirtualColumnTest
 
     final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
     final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.<String>notNull());
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.notNull());
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(true, nullMatcher.matches());
@@ -282,7 +302,7 @@ public class ExpressionVirtualColumnTest
 
     final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
     final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.<String>notNull());
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.notNull());
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(true, nullMatcher.matches());

@@ -8,12 +8,16 @@ To use this extension, make sure to [include](../../operations/including-extensi
 
 ## Deep Storage
 
-[Google Cloud Storage](https://cloud.google.com/storage/) is another option for deep storage. This requires some additional druid configuration.
+Deep storage can be written to Google Cloud Storage either via this extension or the [druid-hdfs-storage extension](../extensions-core/hdfs.html).
 
-|Property|Description|Default|Required?|
-|--------|-----------|-------|---------|
-|bucket|Name of the Google Cloud bucket|N/A|yes|
-|prefix|The path where data is located.|N/A|yes|
+### Configuration
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.storage.type`|google||Must be set.|
+|`druid.google.bucket`||GCS bucket name.|Must be set.|
+|`druid.google.prefix`||GCS prefix.|Must be set.|
+
 
 ## Firehose
 
@@ -22,6 +26,9 @@ To use this extension, make sure to [include](../../operations/including-extensi
 This firehose ingests events, similar to the StaticS3Firehose, but from an Google Cloud Store.
 
 As with the S3 blobstore, it is assumed to be gzipped if the extension ends in .gz
+
+This firehose is _splittable_ and can be used by [native parallel index tasks](../../ingestion/native_tasks.html#parallel-index-task).
+Since each split represents an object in this firehose, each worker task of `index_parallel` will read an object.
 
 Sample spec:
 

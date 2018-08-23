@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
+import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.query.Queries;
 import io.druid.query.Query;
 import io.druid.query.Result;
@@ -36,6 +37,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumns;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,12 +79,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     this.threshold = threshold;
 
     this.dimFilter = dimFilter;
-    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
+    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
         ImmutableList.of(dimensionSpec.getOutputName()),
         this.aggregatorSpecs,
         postAggregatorSpecs == null
-            ? ImmutableList.<PostAggregator>of()
+            ? ImmutableList.of()
             : postAggregatorSpecs
     );
 
@@ -183,6 +185,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return new TopNQueryBuilder(this).dataSource(dataSource).build();
   }
 
+  @Override
+  public Query<Result<TopNResultValue>> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    return new TopNQueryBuilder(this).aggregators(optimizeAggs(optimizationContext)).build();
+  }
+
   public TopNQuery withThreshold(int threshold)
   {
     return new TopNQueryBuilder(this).threshold(threshold).build();
@@ -251,5 +259,14 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         aggregatorSpecs,
         postAggregatorSpecs
     );
+  }
+
+  private List<AggregatorFactory> optimizeAggs(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    List<AggregatorFactory> optimizedAggs = new ArrayList<>();
+    for (AggregatorFactory aggregatorFactory : aggregatorSpecs) {
+      optimizedAggs.add(aggregatorFactory.optimizeForSegment(optimizationContext));
+    }
+    return optimizedAggs;
   }
 }

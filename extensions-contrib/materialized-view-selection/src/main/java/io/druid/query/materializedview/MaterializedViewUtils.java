@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,24 +20,12 @@
 package io.druid.query.materializedview;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.InDimFilter;
-import io.druid.query.filter.IntervalDimFilter;
-import io.druid.query.filter.LikeDimFilter;
-import io.druid.query.filter.NotDimFilter;
-import io.druid.query.filter.OrDimFilter;
-import io.druid.query.filter.RegexDimFilter;
-import io.druid.query.filter.SearchQueryDimFilter;
-import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.TopNQuery;
@@ -60,10 +48,9 @@ public class MaterializedViewUtils
   public static Set<String> getRequiredFields(Query query)
   {
     Set<String> dimensions = new HashSet<>();
-    Set<String> dimsInFilter = getDimensionsInFilter(query.getFilter());
-    if (dimsInFilter != null) {
-      dimensions.addAll(dimsInFilter);
-    }
+    Set<String> dimsInFilter = null == query.getFilter() ? new HashSet<String>() : query.getFilter().getRequiredColumns();
+    dimensions.addAll(dimsInFilter);
+
     if (query instanceof TopNQuery) {
       TopNQuery q = (TopNQuery) query;
       dimensions.addAll(extractFieldsFromAggregations(q.getAggregatorSpecs()));
@@ -90,56 +77,11 @@ public class MaterializedViewUtils
     for (AggregatorFactory agg : aggs) {
       if (agg instanceof FilteredAggregatorFactory) {
         FilteredAggregatorFactory fagg = (FilteredAggregatorFactory) agg;
-        ret.addAll(getDimensionsInFilter(fagg.getFilter()));
+        ret.addAll(fagg.getFilter().getRequiredColumns());
       }
       ret.addAll(agg.requiredFields());
     }
     return ret;
-  }
-
-  private static Set<String> getDimensionsInFilter(DimFilter dimFilter)
-  {
-    if (dimFilter instanceof AndDimFilter) {
-      AndDimFilter d = (AndDimFilter) dimFilter;
-      Set<String> ret = new HashSet<>();
-      for (DimFilter filter : d.getFields()) {
-        ret.addAll(getDimensionsInFilter(filter));
-      }
-      return ret;
-    } else if (dimFilter instanceof OrDimFilter) {
-      OrDimFilter d = (OrDimFilter) dimFilter;
-      Set<String> ret = new HashSet<>();
-      for (DimFilter filter : d.getFields()) {
-        ret.addAll(getDimensionsInFilter(filter));
-      }
-      return ret;
-    } else if (dimFilter instanceof NotDimFilter) {
-      NotDimFilter d = (NotDimFilter) dimFilter;
-      return getDimensionsInFilter(d.getField());
-    } else if (dimFilter instanceof BoundDimFilter) {
-      BoundDimFilter d = (BoundDimFilter) dimFilter;
-      return Sets.newHashSet(d.getDimension());
-    } else if (dimFilter instanceof InDimFilter) {
-      InDimFilter d = (InDimFilter) dimFilter;
-      return Sets.newHashSet(d.getDimension());
-    } else if (dimFilter instanceof IntervalDimFilter) {
-      IntervalDimFilter d = (IntervalDimFilter) dimFilter;
-      return Sets.newHashSet(d.getDimension());
-    } else if (dimFilter instanceof LikeDimFilter) {
-      LikeDimFilter d = (LikeDimFilter) dimFilter;
-      return Sets.newHashSet(d.getDimension());
-    } else if (dimFilter instanceof RegexDimFilter) {
-      RegexDimFilter d = (RegexDimFilter) dimFilter;
-      return Sets.newHashSet(d.getDimension());
-    } else if (dimFilter instanceof SearchQueryDimFilter) {
-      SearchQueryDimFilter d = (SearchQueryDimFilter) dimFilter;
-      return Sets.newHashSet(d.getDimension());
-    } else if (dimFilter instanceof SelectorDimFilter) {
-      SelectorDimFilter d = (SelectorDimFilter) dimFilter;
-      return Sets.newHashSet(d.getDimension());
-    } else {
-      return null;
-    }
   }
 
   /**

@@ -1,37 +1,20 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- */
-
-/*
- * Druid - a distributed column store.
- * Copyright 2015 - Yahoo! Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package io.druid.server;
@@ -82,7 +65,7 @@ public class ClientInfoResourceTest
   @Before
   public void setup()
   {
-    VersionedIntervalTimeline<String, ServerSelector> timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
+    VersionedIntervalTimeline<String, ServerSelector> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     DruidServer server = new DruidServer("name", "host", null, 1234, ServerType.HISTORICAL, "tier", 0);
 
     addSegment(timeline, server, "1960-02-13/1961-02-14", ImmutableList.of("d5"), ImmutableList.of("m5"), "v0");
@@ -153,7 +136,7 @@ public class ClientInfoResourceTest
   public void testGetDatasourceNonFullWithInterval()
   {
     Map<String, Object> actual = resource.getDatasource(dataSource, "1975/2015", null);
-    Map<String, Object> expected = ImmutableMap.<String, Object>of(
+    Map<String, Object> expected = ImmutableMap.of(
         KEY_DIMENSIONS, ImmutableSet.of("d1", "d2"),
         KEY_METRICS, ImmutableSet.of("m1", "m2")
     );
@@ -165,7 +148,7 @@ public class ClientInfoResourceTest
   public void testGetDatasourceFullWithInterval()
   {
     Map<String, Object> actual = resource.getDatasource(dataSource, "1975/2015", "true");
-    Map<String, Object> expected = ImmutableMap.<String, Object>of(
+    Map<String, Object> expected = ImmutableMap.of(
         "2014-02-13T00:00:00.000Z/2014-02-15T00:00:00.000Z",
         ImmutableMap.of(KEY_DIMENSIONS, ImmutableSet.of("d1"), KEY_METRICS, ImmutableSet.of("m1")),
         "2014-02-16T00:00:00.000Z/2014-02-17T00:00:00.000Z",
@@ -186,7 +169,7 @@ public class ClientInfoResourceTest
         "2014-02-13T09:00:00.000Z/2014-02-17T23:00:00.000Z",
         "true"
     );
-    Map<String, Object> expected = ImmutableMap.<String, Object>of(
+    Map<String, Object> expected = ImmutableMap.of(
         "2014-02-13T09:00:00.000Z/2014-02-15T00:00:00.000Z",
         ImmutableMap.of(KEY_DIMENSIONS, ImmutableSet.of("d1"), KEY_METRICS, ImmutableSet.of("m1")),
         "2014-02-16T00:00:00.000Z/2014-02-17T00:00:00.000Z",
@@ -203,7 +186,7 @@ public class ClientInfoResourceTest
   public void testGetDatasourceWithDefaultInterval()
   {
     Map<String, Object> actual = resource.getDatasource(dataSource, null, null);
-    Map<String, Object> expected = ImmutableMap.<String, Object>of(KEY_DIMENSIONS, ImmutableSet.of(), KEY_METRICS, ImmutableSet.of());
+    Map<String, Object> expected = ImmutableMap.of(KEY_DIMENSIONS, ImmutableSet.of(), KEY_METRICS, ImmutableSet.of());
 
     Assert.assertEquals(expected, actual);
   }
@@ -216,7 +199,7 @@ public class ClientInfoResourceTest
         new SegmentMetadataQueryConfig("P100Y")
     );
 
-    Map<String, Object> expected = ImmutableMap.<String, Object>of(
+    Map<String, Object> expected = ImmutableMap.of(
         KEY_DIMENSIONS,
         ImmutableSet.of("d1", "d2", "d3", "d4", "d5"),
         KEY_METRICS,
@@ -237,7 +220,7 @@ public class ClientInfoResourceTest
         "true"
     );
     
-    Map<String, Object> expected = ImmutableMap.<String, Object>of(
+    Map<String, Object> expected = ImmutableMap.of(
         "2015-02-02T09:00:00.000Z/2015-02-03T00:00:00.000Z",
         ImmutableMap.of(KEY_DIMENSIONS, ImmutableSet.of("d1"), KEY_METRICS, ImmutableSet.of("m1")),
         "2015-02-03T00:00:00.000Z/2015-02-05T00:00:00.000Z",
@@ -265,7 +248,7 @@ public class ClientInfoResourceTest
         "true"
     );
 
-    Map<String, Object> expected = ImmutableMap.<String, Object>of(
+    Map<String, Object> expected = ImmutableMap.of(
         "2015-02-09T09:00:00.000Z/2015-02-10T00:00:00.000Z",
         ImmutableMap.of(KEY_DIMENSIONS, ImmutableSet.of("d1", "d3"), KEY_METRICS, ImmutableSet.of("m1", "m3")),
         "2015-02-10T00:00:00.000Z/2015-02-11T00:00:00.000Z",
@@ -293,7 +276,7 @@ public class ClientInfoResourceTest
         "true"
     );
 
-    Map<String, Object> expected = ImmutableMap.<String, Object>of(
+    Map<String, Object> expected = ImmutableMap.of(
         "2015-03-13T02:00:00.000Z/2015-03-19T00:00:00.000Z",
         ImmutableMap.of(KEY_DIMENSIONS, ImmutableSet.of("d1"), KEY_METRICS, ImmutableSet.of("m1"))
     );

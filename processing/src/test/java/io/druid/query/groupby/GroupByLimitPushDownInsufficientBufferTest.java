@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -30,10 +30,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.collections.BlockingPool;
-import io.druid.collections.DefaultBlockingPool;
-import io.druid.collections.NonBlockingPool;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableDefaultBlockingPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
@@ -46,6 +44,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.BySegmentQueryRunner;
@@ -60,7 +59,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
@@ -98,15 +96,18 @@ import java.util.function.Function;
 
 public class GroupByLimitPushDownInsufficientBufferTest
 {
+  public static final ObjectMapper JSON_MAPPER;
+
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
-  public static final ObjectMapper JSON_MAPPER;
+
   private File tmpDir;
   private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
   private QueryRunnerFactory<Row, GroupByQuery> tooSmallGroupByFactory;
   private List<IncrementalIndex> incrementalIndices = Lists.newArrayList();
   private List<QueryableIndex> groupByIndices = Lists.newArrayList();
   private ExecutorService executorService;
+  private Closer resourceCloser;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -260,6 +261,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
 
     groupByIndices = Arrays.asList(qindexA, qindexB);
+    resourceCloser = Closer.create();
     setupGroupByFactory();
   }
 
@@ -267,7 +269,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
   {
     executorService = Execs.multiThreaded(3, "GroupByThreadPool[%d]");
 
-    NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
+    final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
         "GroupByBenchmark-computeBufferPool",
         new OffheapBufferGenerator("compute", 10_000_000),
         0,
@@ -275,15 +277,19 @@ public class GroupByLimitPushDownInsufficientBufferTest
     );
 
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    BlockingPool<ByteBuffer> mergePool = new DefaultBlockingPool<>(
+    final CloseableDefaultBlockingPool<ByteBuffer> mergePool = new CloseableDefaultBlockingPool<>(
         new OffheapBufferGenerator("merge", 10_000_000),
         2
     );
     // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    BlockingPool<ByteBuffer> tooSmallMergePool = new DefaultBlockingPool<>(
+    final CloseableDefaultBlockingPool<ByteBuffer> tooSmallMergePool = new CloseableDefaultBlockingPool<>(
         new OffheapBufferGenerator("merge", 255),
         2
     );
+
+    resourceCloser.register(bufferPool);
+    resourceCloser.register(mergePool);
+    resourceCloser.register(tooSmallMergePool);
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
@@ -413,6 +419,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
       queryableIndex.close();
     }
 
+    resourceCloser.close();
+
     if (tmpDir != null) {
       FileUtils.deleteDirectory(tmpDir);
     }
@@ -467,15 +475,11 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
-            new DefaultDimensionSpec("dimA", null)
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(new LongSumAggregatorFactory("metA", "metA"))
-        )
+        .setDimensions(new DefaultDimensionSpec("dimA", null))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("metA", "metA"))
         .setLimitSpec(
             new DefaultLimitSpec(
-                Arrays.asList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.DESCENDING)),
+                Collections.singletonList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.DESCENDING)),
                 3
             )
         )
@@ -557,15 +561,11 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
-            new DefaultDimensionSpec("dimA", null)
-        ))
-        .setAggregatorSpecs(
-            Arrays.asList(new LongSumAggregatorFactory("metA", "metA"))
-        )
+        .setDimensions(new DefaultDimensionSpec("dimA", null))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("metA", "metA"))
         .setLimitSpec(
             new DefaultLimitSpec(
-                Arrays.asList(
+                Collections.singletonList(
                     new OrderByColumnSpec("metA", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC)
                 ),
                 3
@@ -573,7 +573,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         )
         .setGranularity(Granularities.ALL)
         .setContext(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
               GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
               true
             )

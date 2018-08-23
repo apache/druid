@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,7 +21,7 @@ package io.druid.server.lookup;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.server.lookup.cache.loading.LoadingCache;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -40,16 +40,29 @@ public class LoadingLookupTest
   LoadingLookup loadingLookup = new LoadingLookup(dataFetcher, lookupCache, reverseLookupCache);
 
   @Test
-  public void testApplyEmptyOrNull()
+  public void testApplyEmptyOrNull() throws ExecutionException
   {
-    Assert.assertEquals(null, loadingLookup.apply(null));
-    Assert.assertEquals(null, loadingLookup.apply(""));
+    EasyMock.expect(lookupCache.get(EasyMock.eq(""), EasyMock.anyObject(Callable.class)))
+            .andReturn("empty").atLeastOnce();
+    EasyMock.replay(lookupCache);
+    Assert.assertEquals("empty", loadingLookup.apply(""));
+    if (!NullHandling.sqlCompatible()) {
+      // Nulls and empty strings should have same behavior
+      Assert.assertEquals("empty", loadingLookup.apply(null));
+    } else {
+      Assert.assertNull(loadingLookup.apply(null));
+    }
+    EasyMock.verify(lookupCache);
   }
 
   @Test
   public void testUnapplyNull()
   {
-    Assert.assertEquals(Collections.EMPTY_LIST, loadingLookup.unapply(null));
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply(null));
+    } else {
+      Assert.assertNull(loadingLookup.unapply(null));
+    }
   }
 
   @Test
@@ -65,10 +78,10 @@ public class LoadingLookupTest
   public void testUnapplyAll() throws ExecutionException
   {
     EasyMock.expect(reverseLookupCache.get(EasyMock.eq("value"), EasyMock.anyObject(Callable.class)))
-            .andReturn(Lists.newArrayList("key"))
+            .andReturn(Collections.singletonList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(ImmutableMap.of("value", Lists.newArrayList("key")), loadingLookup.unapplyAll(ImmutableSet.<String>of("value")));
+    Assert.assertEquals(ImmutableMap.of("value", Collections.singletonList("key")), loadingLookup.unapplyAll(ImmutableSet.of("value")));
     EasyMock.verify(reverseLookupCache);
   }
 
@@ -89,7 +102,7 @@ public class LoadingLookupTest
             .andThrow(new ExecutionException(null))
             .once();
     EasyMock.replay(lookupCache);
-    Assert.assertEquals(null, loadingLookup.apply("key"));
+    Assert.assertNull(loadingLookup.apply("key"));
     EasyMock.verify(lookupCache);
   }
 
@@ -100,7 +113,7 @@ public class LoadingLookupTest
             .andThrow(new ExecutionException(null))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(Collections.EMPTY_LIST, loadingLookup.unapply("value"));
+    Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply("value"));
     EasyMock.verify(reverseLookupCache);
   }
 

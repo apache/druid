@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -56,7 +56,7 @@ public class GraphiteEmitter implements Emitter
   private final List<Emitter> requestLogEmitters;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<GraphiteEvent> eventsQueue;
-  private static final long FLUSH_TIMEOUT = 60000; // default flush wait 1 min
+  private static final long FLUSH_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(1); // default flush wait 1 min
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
       .setDaemon(true)
       .setNameFormat("GraphiteEmitter-%s")
@@ -222,7 +222,7 @@ public class GraphiteEmitter implements Emitter
     if (started.get()) {
       Future future = exec.schedule(new ConsumerRunnable(), 0, TimeUnit.MILLISECONDS);
       try {
-        future.get(FLUSH_TIMEOUT, TimeUnit.MILLISECONDS);
+        future.get(FLUSH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
         if (e instanceof InterruptedException) {

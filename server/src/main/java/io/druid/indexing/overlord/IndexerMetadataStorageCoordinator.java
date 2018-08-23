@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,6 +25,7 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -42,17 +43,21 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @throws IOException
    */
-  List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval);
+  default List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
+  {
+    return getUsedSegmentsForIntervals(dataSource, Collections.singletonList(interval));
+  }
 
   /**
    * Get all used segments and the created_date of these segments in a given datasource and interval
-   * 
+   *
    * @param dataSource The datasource to query
    * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive, end is exclusive
+   *
    * @return The DataSegments and the related created_date of segments which include data in the requested interval
    */
   List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
-  
+
   /**
    * Get all segments which may include any data in the interval and are flagged as used.
    *
@@ -130,9 +135,12 @@ public interface IndexerMetadataStorageCoordinator
    *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                      involve a metadata transaction
    *
-   * @return segment publish result indicating transaction success or failure, and set of segments actually published
+   * @return segment publish result indicating transaction success or failure, and set of segments actually published.
+   * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
+   * it must throw an exception instead.
    *
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
+   * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
   SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
@@ -173,7 +181,7 @@ public interface IndexerMetadataStorageCoordinator
    * @return true if the entry was inserted, false otherwise
    */
   boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
-  
+
   void updateSegmentMetadata(Set<DataSegment> segments);
 
   void deleteSegments(Set<DataSegment> segments);

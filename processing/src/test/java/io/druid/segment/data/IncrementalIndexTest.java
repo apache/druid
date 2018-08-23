@@ -1,25 +1,24 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package io.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,7 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import io.druid.collections.StupidPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -39,6 +38,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryPlus;
@@ -64,19 +64,23 @@ import io.druid.segment.CloserRule;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndex.Builder;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.Interval;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -98,14 +102,20 @@ public class IncrementalIndexTest
     IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
   }
 
+  private static final Closer resourceCloser = Closer.create();
+
+  @AfterClass
+  public static void teardown() throws IOException
+  {
+    resourceCloser.close();
+  }
+
   private final IndexCreator indexCreator;
 
   @Rule
-  public final CloserRule closer = new CloserRule(false);
+  public final CloserRule closerRule = new CloserRule(false);
 
-  public IncrementalIndexTest(
-      IndexCreator indexCreator
-  )
+  public IncrementalIndexTest(IndexCreator indexCreator)
   {
     this.indexCreator = indexCreator;
   }
@@ -113,86 +123,42 @@ public class IncrementalIndexTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return IncrementalIndexTest.createIndex(factories);
-                  }
-                }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setSimpleTestingIndexSchema(factories)
-                        .setMaxRowCount(1000000)
-                        .buildOffheap(
-                            new StupidPool<ByteBuffer>(
-                                "OffheapIncrementalIndex-bufferPool",
-                                new Supplier<ByteBuffer>()
-                                {
-                                  @Override
-                                  public ByteBuffer get()
-                                  {
-                                    return ByteBuffer.allocate(256 * 1024);
-                                  }
-                                }
-                            )
-                        );
-                  }
-                }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return IncrementalIndexTest.createNoRollupIndex(factories);
-                  }
-                }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setIndexSchema(
-                            new IncrementalIndexSchema.Builder()
-                                .withMetrics(factories)
-                                .withRollup(false)
-                                .build()
-                        )
-                        .setMaxRowCount(1000000)
-                        .buildOffheap(
-                            new StupidPool<ByteBuffer>(
-                                "OffheapIncrementalIndex-bufferPool",
-                                new Supplier<ByteBuffer>()
-                                {
-                                  @Override
-                                  public ByteBuffer get()
-                                  {
-                                    return ByteBuffer.allocate(256 * 1024);
-                                  }
-                                }
-                            )
-                        );
-                  }
-                }
-            }
-
+    final List<Object[]> params = new ArrayList<>();
+    params.add(new Object[] {(IndexCreator) IncrementalIndexTest::createIndex});
+    final CloseableStupidPool<ByteBuffer> pool1 = new CloseableStupidPool<>(
+        "OffheapIncrementalIndex-bufferPool",
+        () -> ByteBuffer.allocate(256 * 1024)
+    );
+    resourceCloser.register(pool1);
+    params.add(
+        new Object[] {
+            (IndexCreator) factories -> new Builder()
+                .setSimpleTestingIndexSchema(factories)
+                .setMaxRowCount(1000000)
+                .buildOffheap(pool1)
         }
     );
+    params.add(new Object[] {(IndexCreator) IncrementalIndexTest::createNoRollupIndex});
+    final CloseableStupidPool<ByteBuffer> pool2 = new CloseableStupidPool<>(
+        "OffheapIncrementalIndex-bufferPool",
+        () -> ByteBuffer.allocate(256 * 1024)
+    );
+    resourceCloser.register(pool2);
+    params.add(
+        new Object[] {
+            (IndexCreator) factories -> new Builder()
+                .setIndexSchema(
+                    new IncrementalIndexSchema.Builder()
+                        .withMetrics(factories)
+                        .withRollup(false)
+                        .build()
+                )
+                .setMaxRowCount(1000000)
+                .buildOffheap(pool2)
+        }
+    );
+
+    return params;
   }
 
   public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
@@ -239,7 +205,7 @@ public class IncrementalIndexTest
     }
 
     return new IncrementalIndex.Builder()
-        .setSimpleTestingIndexSchema(aggregatorFactories)
+        .setSimpleTestingIndexSchema(false, aggregatorFactories)
         .setMaxRowCount(1000000)
         .buildOnheap();
   }
@@ -250,7 +216,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
+            ImmutableMap.of("dim1", "1", "dim2", "2")
         )
     );
 
@@ -258,7 +224,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2"),
-            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
+            ImmutableMap.of("dim1", "3", "dim2", "4")
         )
     );
   }
@@ -301,7 +267,7 @@ public class IncrementalIndexTest
   public void testCaseSensitivity() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = closer.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
 
     populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
@@ -310,20 +276,20 @@ public class IncrementalIndexTest
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("2"), row.getDimension("dim2"));
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("4"), row.getDimension("dim2"));
   }
 
   @Test
   public void testFilteredAggregators() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = closer.closeLater(
+    IncrementalIndex index = closerRule.closeLater(
         indexCreator.createIndex(new AggregatorFactory[]{
             new CountAggregatorFactory("count"),
             new FilteredAggregatorFactory(
@@ -349,7 +315,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2", "dim3"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "dim3", Lists.newArrayList("b", "a"), "met1", 10)
+            ImmutableMap.of("dim1", "1", "dim2", "2", "dim3", Lists.newArrayList("b", "a"), "met1", 10)
         )
     );
 
@@ -357,7 +323,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2", "dim3"),
-            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4", "dim3", Lists.newArrayList("c", "d"), "met1", 11)
+            ImmutableMap.of("dim1", "3", "dim2", "4", "dim3", Lists.newArrayList("c", "d"), "met1", 11)
         )
     );
 
@@ -377,8 +343,8 @@ public class IncrementalIndexTest
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("2"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("a", "b"), row.getDimension("dim3"));
     Assert.assertEquals(1L, row.getMetric("count"));
     Assert.assertEquals(1L, row.getMetric("count_selector_filtered"));
@@ -388,8 +354,8 @@ public class IncrementalIndexTest
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("4"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("c", "d"), row.getDimension("dim3"));
     Assert.assertEquals(1L, row.getMetric("count"));
     Assert.assertEquals(0L, row.getMetric("count_selector_filtered"));
@@ -419,10 +385,10 @@ public class IncrementalIndexTest
       );
     }
 
-    final IncrementalIndex index = closer.closeLater(
+    final IncrementalIndex index = closerRule.closeLater(
         indexCreator.createIndex(
             ingestAggregatorFactories.toArray(
-                new AggregatorFactory[ingestAggregatorFactories.size()]
+                new AggregatorFactory[0]
             )
         )
     );
@@ -534,8 +500,8 @@ public class IncrementalIndexTest
     }
 
 
-    final IncrementalIndex index = closer.closeLater(
-        indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[dimensionCount]))
+    final IncrementalIndex index = closerRule.closeLater(
+        indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[0]))
     );
     final int concurrentThreads = 2;
     final int elementsPerThread = 10_000;
@@ -649,7 +615,7 @@ public class IncrementalIndexTest
                             }
                             queriesAccumualted.incrementAndGet();
                             return Lists.asList(in.getValue().getDoubleMetric("doubleSumResult0"), accumulated)
-                                        .toArray(new Double[accumulated.length + 1]);
+                                        .toArray(new Double[0]);
                           }
                         }
                     );
@@ -716,7 +682,7 @@ public class IncrementalIndexTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = closer.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+    final IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;
@@ -777,7 +743,7 @@ public class IncrementalIndexTest
         )
         .setMaxRowCount(1000000)
         .buildOnheap();
-    closer.closeLater(incrementalIndex);
+    closerRule.closeLater(incrementalIndex);
 
     Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
   }
@@ -789,26 +755,26 @@ public class IncrementalIndexTest
         .setSimpleTestingIndexSchema(/* empty */)
         .setMaxRowCount(10)
         .buildOnheap();
-    closer.closeLater(index);
+    closerRule.closeLater(index);
     index.add(
         new MapBasedInputRow(
             1481871600000L,
             Arrays.asList("name", "host"),
-            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+            ImmutableMap.of("name", "name1", "host", "host")
         )
     );
     index.add(
         new MapBasedInputRow(
             1481871670000L,
             Arrays.asList("name", "table"),
-            ImmutableMap.<String, Object>of("name", "name2", "table", "table")
+            ImmutableMap.of("name", "name2", "table", "table")
         )
     );
     index.add(
         new MapBasedInputRow(
             1481871600000L,
             Arrays.asList("name", "host"),
-            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+            ImmutableMap.of("name", "name1", "host", "host")
         )
     );
 

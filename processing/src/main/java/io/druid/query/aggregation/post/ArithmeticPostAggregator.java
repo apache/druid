@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.IAE;
 import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -109,11 +110,21 @@ public class ArithmeticPostAggregator implements PostAggregator
   public Object compute(Map<String, Object> values)
   {
     Iterator<PostAggregator> fieldsIter = fields.iterator();
-    double retVal = 0.0;
+    Double retVal = NullHandling.defaultDoubleValue();
     if (fieldsIter.hasNext()) {
-      retVal = ((Number) fieldsIter.next().compute(values)).doubleValue();
+      Number nextVal = (Number) fieldsIter.next().compute(values);
+      if (nextVal == null) {
+        // As per SQL standard if any of the value is null, arithmetic operators will return null.
+        return null;
+      }
+      retVal = nextVal.doubleValue();
       while (fieldsIter.hasNext()) {
-        retVal = op.compute(retVal, ((Number) fieldsIter.next().compute(values)).doubleValue());
+        nextVal = (Number) fieldsIter.next().compute(values);
+        if (nextVal == null) {
+          // As per SQL standard if any of the value is null, arithmetic operators will return null.
+          return null;
+        }
+        retVal = op.compute(retVal, (nextVal).doubleValue());
       }
     }
     return retVal;
@@ -268,7 +279,7 @@ public class ArithmeticPostAggregator implements PostAggregator
     /**
      * Ensures the following order: numeric > NaN > Infinite.
      *
-     * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
+     * The name may be referenced via {@link #valueOf(String)} in the constructor {@link
      * ArithmeticPostAggregator#ArithmeticPostAggregator(String, String, List, String)}.
      */
     @SuppressWarnings("unused")

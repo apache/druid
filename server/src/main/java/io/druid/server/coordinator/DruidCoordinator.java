@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -696,63 +696,58 @@ public class DruidCoordinator
       super(
           ImmutableList.of(
               new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this),
-              new DruidCoordinatorHelper()
-              {
-                @Override
-                public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-                {
-                  // Display info about all historical servers
-                  Iterable<ImmutableDruidServer> servers = FunctionalIterable
-                      .create(serverInventoryView.getInventory())
-                      .filter(DruidServer::segmentReplicatable)
-                      .transform(DruidServer::toImmutableDruidServer);
+              params -> {
+                // Display info about all historical servers
+                Iterable<ImmutableDruidServer> servers = FunctionalIterable
+                    .create(serverInventoryView.getInventory())
+                    .filter(DruidServer::segmentReplicatable)
+                    .transform(DruidServer::toImmutableDruidServer);
 
-                  if (log.isDebugEnabled()) {
-                    log.debug("Servers");
-                    for (ImmutableDruidServer druidServer : servers) {
-                      log.debug("  %s", druidServer);
-                      log.debug("    -- DataSources");
-                      for (ImmutableDruidDataSource druidDataSource : druidServer.getDataSources()) {
-                        log.debug("    %s", druidDataSource);
-                      }
+                if (log.isDebugEnabled()) {
+                  log.debug("Servers");
+                  for (ImmutableDruidServer druidServer : servers) {
+                    log.debug("  %s", druidServer);
+                    log.debug("    -- DataSources");
+                    for (ImmutableDruidDataSource druidDataSource : druidServer.getDataSources()) {
+                      log.debug("    %s", druidDataSource);
                     }
                   }
-
-                  // Find all historical servers, group them by subType and sort by ascending usage
-                  final DruidCluster cluster = new DruidCluster();
-                  for (ImmutableDruidServer server : servers) {
-                    if (!loadManagementPeons.containsKey(server.getName())) {
-                      LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(server);
-                      loadQueuePeon.start();
-                      log.info("Created LoadQueuePeon for server[%s].", server.getName());
-
-                      loadManagementPeons.put(server.getName(), loadQueuePeon);
-                    }
-
-                    cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
-                  }
-
-                  segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
-
-                  // Stop peons for servers that aren't there anymore.
-                  final Set<String> disappeared = Sets.newHashSet(loadManagementPeons.keySet());
-                  for (ImmutableDruidServer server : servers) {
-                    disappeared.remove(server.getName());
-                  }
-                  for (String name : disappeared) {
-                    log.info("Removing listener for server[%s] which is no longer there.", name);
-                    LoadQueuePeon peon = loadManagementPeons.remove(name);
-                    peon.stop();
-                  }
-
-                  return params.buildFromExisting()
-                               .withDruidCluster(cluster)
-                               .withDatabaseRuleManager(metadataRuleManager)
-                               .withLoadManagementPeons(loadManagementPeons)
-                               .withSegmentReplicantLookup(segmentReplicantLookup)
-                               .withBalancerReferenceTimestamp(DateTimes.nowUtc())
-                               .build();
                 }
+
+                // Find all historical servers, group them by subType and sort by ascending usage
+                final DruidCluster cluster = new DruidCluster();
+                for (ImmutableDruidServer server : servers) {
+                  if (!loadManagementPeons.containsKey(server.getName())) {
+                    LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(server);
+                    loadQueuePeon.start();
+                    log.info("Created LoadQueuePeon for server[%s].", server.getName());
+
+                    loadManagementPeons.put(server.getName(), loadQueuePeon);
+                  }
+
+                  cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
+                }
+
+                segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
+
+                // Stop peons for servers that aren't there anymore.
+                final Set<String> disappeared = Sets.newHashSet(loadManagementPeons.keySet());
+                for (ImmutableDruidServer server : servers) {
+                  disappeared.remove(server.getName());
+                }
+                for (String name : disappeared) {
+                  log.info("Removing listener for server[%s] which is no longer there.", name);
+                  LoadQueuePeon peon = loadManagementPeons.remove(name);
+                  peon.stop();
+                }
+
+                return params.buildFromExisting()
+                             .withDruidCluster(cluster)
+                             .withDatabaseRuleManager(metadataRuleManager)
+                             .withLoadManagementPeons(loadManagementPeons)
+                             .withSegmentReplicantLookup(segmentReplicantLookup)
+                             .withBalancerReferenceTimestamp(DateTimes.nowUtc())
+                             .build();
               },
               new DruidCoordinatorRuleRunner(DruidCoordinator.this),
               new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -53,7 +53,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.filter.NoopDimFilter;
+import io.druid.query.filter.TrueDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
@@ -201,7 +201,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     return new MapBasedInputRow(
         DateTimes.of(timeString).getMillis(),
         Arrays.asList(DIMENSIONS),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             TIME_COLUMN, DateTimes.of(timeString).toString(),
             DIMENSIONS[0], "bar",
             METRICS[0], metricValue
@@ -238,7 +238,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       throw Throwables.propagate(e);
     }
 
-    return ImmutableMap.<String, Object>of(
+    return ImmutableMap.of(
         "type", "local",
         "path", persistDir.getAbsolutePath()
     );
@@ -340,6 +340,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           INDEX_IO,
           null,
           null,
+          null,
           INDEX_MERGER_V9,
           null,
           null,
@@ -350,7 +351,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
           DATA_SOURCE,
           testCase.interval,
-          new NoopDimFilter(),
+          new TrueDimFilter(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
           INDEX_IO

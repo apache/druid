@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -143,7 +143,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       }
                     }
                 ).fold(
-                    Maps.<String, List<VersionedSupervisorSpec>>newHashMap(),
+                    Maps.newHashMap(),
                     new Folder3<Map<String, List<VersionedSupervisorSpec>>, Pair<String, VersionedSupervisorSpec>>()
                     {
                       @Override
@@ -157,7 +157,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                         try {
                           String specId = pair.lhs;
                           if (!retVal.containsKey(specId)) {
-                            retVal.put(specId, Lists.<VersionedSupervisorSpec>newArrayList());
+                            retVal.put(specId, Lists.newArrayList());
                           }
 
                           retVal.get(specId).add(pair.rhs);
@@ -203,7 +203,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                         try {
                           return Pair.of(
                               r.getString("spec_id"),
-                              jsonMapper.<SupervisorSpec>readValue(
+                              jsonMapper.readValue(
                                   r.getBytes("payload"), new TypeReference<SupervisorSpec>()
                                   {
                                   }
@@ -216,7 +216,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       }
                     }
                 ).fold(
-                    Maps.<String, SupervisorSpec>newHashMap(),
+                    Maps.newHashMap(),
                     new Folder3<Map<String, SupervisorSpec>, Pair<String, SupervisorSpec>>()
                     {
                       @Override

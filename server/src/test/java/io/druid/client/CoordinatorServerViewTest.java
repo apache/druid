@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -148,7 +148,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     setupViews();
 
     final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.<String>of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
         new Function<String, DruidServer>()
         {
           @Override
@@ -172,7 +172,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     }
 
     final List<DataSegment> segments = Lists.transform(
-        ImmutableList.<Pair<String, String>>of(
+        ImmutableList.of(
             Pair.of("2011-04-01/2011-04-03", "v1"),
             Pair.of("2011-04-03/2011-04-06", "v1"),
             Pair.of("2011-04-01/2011-04-09", "v2"),
@@ -291,7 +291,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
+        Predicates.alwaysTrue()
     )
     {
       @Override
@@ -341,7 +341,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                       .dataSource("test_overlord_server_view")
                       .interval(Intervals.of(intervalStr))
                       .loadSpec(
-                          ImmutableMap.<String, Object>of(
+                          ImmutableMap.of(
                               "type",
                               "local",
                               "path",
@@ -349,8 +349,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                           )
                       )
                       .version(version)
-                      .dimensions(ImmutableList.<String>of())
-                      .metrics(ImmutableList.<String>of())
+                      .dimensions(ImmutableList.of())
+                      .metrics(ImmutableList.of())
                       .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
                       .size(0)

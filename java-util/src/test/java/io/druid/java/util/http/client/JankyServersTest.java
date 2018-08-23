@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -31,7 +31,9 @@ import org.joda.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -54,6 +56,9 @@ public class JankyServersTest
   static ServerSocket silentServerSocket;
   static ServerSocket echoServerSocket;
   static ServerSocket closingServerSocket;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @BeforeClass
   public static void setUp() throws Exception
@@ -309,16 +314,10 @@ public class JankyServersTest
               new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
-      Throwable e = null;
-      try {
-        response.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-      }
+      expectedException.expect(ExecutionException.class);
+      expectedException.expectMessage("java.lang.IllegalArgumentException: invalid version format: GET");
 
-      Assert.assertTrue("IllegalArgumentException thrown by 'get'", e instanceof IllegalArgumentException);
-      Assert.assertTrue("Expected error message", e.getMessage().matches(".*invalid version format:.*"));
+      response.get();
     }
     finally {
       lifecycle.stop();
@@ -339,15 +338,10 @@ public class JankyServersTest
               new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
-      Throwable e = null;
-      try {
-        response.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-      }
+      expectedException.expect(ExecutionException.class);
+      expectedException.expectMessage("org.jboss.netty.channel.ChannelException: Faulty channel in resource pool");
 
-      Assert.assertNotNull("ChannelException thrown by 'get'", e);
+      response.get();
     }
     finally {
       lifecycle.stop();

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -49,6 +49,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * refer @{link https://cwiki.apache.org/confluence/display/KAFKA/0.8.0+SimpleConsumer+Example}
@@ -74,10 +75,10 @@ public class KafkaSimpleConsumer
   private List<HostAndPort> replicaBrokers;
   private SimpleConsumer consumer = null;
 
-  private static final int SO_TIMEOUT = 30000;
+  private static final int SO_TIMEOUT_MILLIS = (int) TimeUnit.SECONDS.toMillis(30);
   private static final int BUFFER_SIZE = 65536;
-  private static final long RETRY_INTERVAL = 1000L;
-  private static final int FETCH_SIZE = 100000000;
+  private static final long RETRY_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
+  private static final int FETCH_SIZE = 100_000_000;
 
   public KafkaSimpleConsumer(String topic, int partitionId, String clientId, List<String> brokers, boolean earliest)
   {
@@ -121,7 +122,7 @@ public class KafkaSimpleConsumer
       );
 
       consumer = new SimpleConsumer(
-          leaderBroker.host(), leaderBroker.port(), SO_TIMEOUT, BUFFER_SIZE, clientId
+          leaderBroker.host(), leaderBroker.port(), SO_TIMEOUT_MILLIS, BUFFER_SIZE, clientId
       );
     }
   }
@@ -306,7 +307,7 @@ public class KafkaSimpleConsumer
       SimpleConsumer consumer = null;
       try {
         log.info("Finding new leader from Kafka brokers, try broker [%s]", broker.toString());
-        consumer = new SimpleConsumer(broker.getHostText(), broker.getPort(), SO_TIMEOUT, BUFFER_SIZE, leaderLookupClientId);
+        consumer = new SimpleConsumer(broker.getHostText(), broker.getPort(), SO_TIMEOUT_MILLIS, BUFFER_SIZE, leaderLookupClientId);
         TopicMetadataResponse resp = consumer.send(new TopicMetadataRequest(Collections.singletonList(topic)));
 
         List<TopicMetadata> metaData = resp.topicsMetadata();
@@ -361,7 +362,7 @@ public class KafkaSimpleConsumer
         }
       }
 
-      Thread.sleep(RETRY_INTERVAL);
+      Thread.sleep(RETRY_INTERVAL_MILLIS);
       retryCnt++;
       // if could not find the leader for current replicaBrokers, let's try to
       // find one via allBrokers

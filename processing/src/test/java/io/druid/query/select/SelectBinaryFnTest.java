@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,7 +20,6 @@
 package io.druid.query.select;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.DateTimes;
@@ -31,6 +30,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,14 +52,14 @@ public class SelectBinaryFnTest
     Result<SelectResultValue> res1 = new Result<>(
         DateTimes.of("2013-01-01"),
         new SelectResultValue(
-            ImmutableMap.<String, Integer>of(),
+            ImmutableMap.of(),
             Sets.newHashSet("first", "fourth"),
             Sets.newHashSet("sixth"),
             Arrays.asList(
                 new EventHolder(
                     segmentId1,
                     0,
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         EventHolder.timestampKey,
                         DateTimes.of("2013-01-01T00"),
                         "dim",
@@ -69,7 +69,7 @@ public class SelectBinaryFnTest
                 new EventHolder(
                     segmentId1,
                     1,
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         EventHolder.timestampKey,
                         DateTimes.of("2013-01-01T03"),
                         "dim",
@@ -79,7 +79,7 @@ public class SelectBinaryFnTest
                 new EventHolder(
                     segmentId1,
                     2,
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         EventHolder.timestampKey,
                         DateTimes.of("2013-01-01T05"),
                         "dim",
@@ -94,14 +94,14 @@ public class SelectBinaryFnTest
     Result<SelectResultValue> res2 = new Result<>(
         DateTimes.of("2013-01-01"),
         new SelectResultValue(
-            ImmutableMap.<String, Integer>of(),
+            ImmutableMap.of(),
             Sets.newHashSet("second", "third"),
             Sets.newHashSet("fifth"),
             Arrays.asList(
                 new EventHolder(
                     segmentId2,
                     0,
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         EventHolder.timestampKey,
                         DateTimes.of("2013-01-01T00"),
                         "dim",
@@ -111,7 +111,7 @@ public class SelectBinaryFnTest
                 new EventHolder(
                     segmentId2,
                     1,
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         EventHolder.timestampKey,
                         DateTimes.of("2013-01-01T02"),
                         "dim",
@@ -121,7 +121,7 @@ public class SelectBinaryFnTest
                 new EventHolder(
                     segmentId2,
                     2,
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         EventHolder.timestampKey,
                         DateTimes.of("2013-01-01T04"),
                         "dim",
@@ -153,11 +153,11 @@ public class SelectBinaryFnTest
 
     verifyIters(exOffsetIter, acOffsetIter);
 
-    List<EventHolder> exEvents = Arrays.<EventHolder>asList(
+    List<EventHolder> exEvents = Arrays.asList(
         new EventHolder(
             segmentId1,
             0,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 EventHolder.timestampKey,
                 DateTimes.of("2013-01-01T00"), "dim", "first"
             )
@@ -165,7 +165,7 @@ public class SelectBinaryFnTest
         new EventHolder(
             segmentId2,
             0,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 EventHolder.timestampKey,
                 DateTimes.of("2013-01-01T00"),
                 "dim",
@@ -175,7 +175,7 @@ public class SelectBinaryFnTest
         new EventHolder(
             segmentId2,
             1,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 EventHolder.timestampKey,
                 DateTimes.of("2013-01-01T02"),
                 "dim",
@@ -185,7 +185,7 @@ public class SelectBinaryFnTest
         new EventHolder(
             segmentId1,
             1,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 EventHolder.timestampKey,
                 DateTimes.of("2013-01-01T03"),
                 "dim",
@@ -195,7 +195,7 @@ public class SelectBinaryFnTest
         new EventHolder(
             segmentId2,
             2,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 EventHolder.timestampKey,
                 DateTimes.of("2013-01-01T04"),
                 "dim",
@@ -218,38 +218,32 @@ public class SelectBinaryFnTest
     Result<SelectResultValue> res1 = new Result<>(
         DateTimes.of("2013-01-01"),
         new SelectResultValue(
-            ImmutableMap.<String, Integer>of(),
+            ImmutableMap.of(),
             Sets.newHashSet("first", "second", "fourth"),
             Sets.newHashSet("eight", "nineth"),
-            Lists.<EventHolder>newArrayList(
+            Collections.singletonList(
                 new EventHolder(
                     segmentId1,
                     0,
-                    ImmutableMap.<String, Object>of(
-                        EventHolder.timestampKey,
-                        DateTimes.of("2013-01-01T00"), "dim", "first"
-                    )
-                ))
+                    ImmutableMap.of(EventHolder.timestampKey, DateTimes.of("2013-01-01T00"), "dim", "first")
+                )
+            )
         )
     );
 
     Result<SelectResultValue> res2 = new Result<>(
         DateTimes.of("2013-01-01"),
         new SelectResultValue(
-            ImmutableMap.<String, Integer>of(),
+            ImmutableMap.of(),
             Sets.newHashSet("third", "second", "fifth"),
             Sets.newHashSet("seventh"),
-            Lists.<EventHolder>newArrayList(
+            Collections.singletonList(
                 new EventHolder(
                     segmentId2,
                     0,
-                    ImmutableMap.<String, Object>of(
-                        EventHolder.timestampKey,
-                        DateTimes.of("2013-01-01T00"),
-                        "dim",
-                        "second"
-                    )
-                ))
+                    ImmutableMap.of(EventHolder.timestampKey, DateTimes.of("2013-01-01T00"), "dim", "second")
+                )
+            )
         )
     );
 

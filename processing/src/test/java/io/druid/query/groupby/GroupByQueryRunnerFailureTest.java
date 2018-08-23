@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -26,11 +26,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.BlockingPool;
-import io.druid.collections.DefaultBlockingPool;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.CloseableDefaultBlockingPool;
+import io.druid.collections.CloseableStupidPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.DruidProcessingConfig;
@@ -41,14 +39,13 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.ResourceLimitExceededException;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.query.groupby.strategy.GroupByStrategyV1;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.hamcrest.CoreMatchers;
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -58,6 +55,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -101,17 +99,7 @@ public class GroupByQueryRunnerFailureTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
-        "GroupByQueryEngine-bufferPool",
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocateDirect(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes());
-          }
-        }
-    );
+
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
@@ -139,7 +127,18 @@ public class GroupByQueryRunnerFailureTest
     );
   }
 
-  private static final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
+  private static final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
+      "GroupByQueryEngine-bufferPool",
+      new Supplier<ByteBuffer>()
+      {
+        @Override
+        public ByteBuffer get()
+        {
+          return ByteBuffer.allocateDirect(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes());
+        }
+      }
+  );
+  private static final CloseableDefaultBlockingPool<ByteBuffer> mergeBufferPool = new CloseableDefaultBlockingPool<>(
       new Supplier<ByteBuffer>()
       {
         @Override
@@ -165,6 +164,13 @@ public class GroupByQueryRunnerFailureTest
 
   private QueryRunner<Row> runner;
 
+  @AfterClass
+  public static void teardownClass()
+  {
+    bufferPool.close();
+    mergeBufferPool.close();
+  }
+
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
@@ -180,7 +186,7 @@ public class GroupByQueryRunnerFailureTest
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner));
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 60_000L)
   public void testNotEnoughMergeBuffersOnQueryable()
   {
     expectedException.expect(QueryInterruptedException.class);
@@ -195,21 +201,21 @@ public class GroupByQueryRunnerFailureTest
                             .setDataSource(QueryRunnerTestHelper.dataSource)
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 60_000L)
   public void testResourceLimitExceededOnBroker()
   {
     expectedException.expect(ResourceLimitExceededException.class);
@@ -224,30 +230,30 @@ public class GroupByQueryRunnerFailureTest
                                             .setDataSource(QueryRunnerTestHelper.dataSource)
                                             .setInterval(QueryRunnerTestHelper.firstToThird)
                                             .setGranularity(Granularities.ALL)
-                                            .setDimensions(Lists.<DimensionSpec>newArrayList(
+                                            .setDimensions(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
-                                            ))
-                                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                                            )
+                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                                             .build()
                             )
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
-  @Test(timeout = 10000, expected = InsufficientResourcesException.class)
+  @Test(timeout = 60_000L, expected = InsufficientResourcesException.class)
   public void testInsufficientResourcesOnBroker()
   {
     final GroupByQuery query = GroupByQuery
@@ -258,14 +264,14 @@ public class GroupByQueryRunnerFailureTest
                             .setDataSource(QueryRunnerTestHelper.dataSource)
                             .setInterval(QueryRunnerTestHelper.firstToThird)
                             .setGranularity(Granularities.ALL)
-                            .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-                            .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+                            .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.firstToThird)
-        .setAggregatorSpecs(Lists.<AggregatorFactory>newArrayList(new LongSumAggregatorFactory("rows", "rows")))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 

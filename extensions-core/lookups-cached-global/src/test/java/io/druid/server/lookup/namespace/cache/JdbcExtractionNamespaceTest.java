@@ -1,31 +1,31 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package io.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
@@ -35,6 +35,7 @@ import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
+import io.druid.server.ServerTestHelper;
 import io.druid.server.lookup.namespace.JdbcCacheGenerator;
 import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -195,7 +196,7 @@ public class JdbcExtractionNamespaceTest
             NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
             scheduler = new CacheScheduler(
                 noopServiceEmitter,
-                ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+                ImmutableMap.of(
                     JdbcExtractionNamespace.class,
                     new CacheGenerator<JdbcExtractionNamespace>()
                     {
@@ -226,7 +227,11 @@ public class JdbcExtractionNamespaceTest
                       }
                     }
                 ),
-                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
+                new OnHeapNamespaceExtractionCacheManager(
+                    lifecycle,
+                    noopServiceEmitter,
+                    new NamespaceExtractionConfig()
+                )
             );
             try {
               lifecycle.start();
@@ -362,7 +367,7 @@ public class JdbcExtractionNamespaceTest
     Thread.sleep(2);
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testMappingWithoutFilter()
       throws InterruptedException
   {
@@ -383,13 +388,17 @@ public class JdbcExtractionNamespaceTest
         String key = e.getKey();
         String[] val = e.getValue();
         String field = val[0];
-        Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
+        Assert.assertEquals(
+            "non-null check",
+            NullHandling.emptyToNullIfNeeded(field),
+            NullHandling.emptyToNullIfNeeded(map.get(key))
+        );
       }
       Assert.assertEquals("null check", null, map.get("baz"));
     }
   }
 
-  @Test(timeout = 20_000L)
+  @Test(timeout = 60_000L)
   public void testMappingWithFilter()
       throws InterruptedException
   {
@@ -412,16 +421,20 @@ public class JdbcExtractionNamespaceTest
         String field = val[0];
         String filterVal = val[1];
 
-        if (filterVal.equals("1")) {
-          Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
+        if ("1".equals(filterVal)) {
+          Assert.assertEquals(
+              "non-null check",
+              NullHandling.emptyToNullIfNeeded(field),
+              NullHandling.emptyToNullIfNeeded(map.get(key))
+          );
         } else {
-          Assert.assertEquals("non-null check", null, Strings.emptyToNull(map.get(key)));
+          Assert.assertEquals("non-null check", null, NullHandling.emptyToNullIfNeeded(map.get(key)));
         }
       }
     }
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testSkipOld()
       throws InterruptedException
   {
@@ -456,6 +469,27 @@ public class JdbcExtractionNamespaceTest
       Set set = entry.getCache().keySet();
       Assert.assertFalse(set.contains("fooz"));
     }
+  }
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        tableName,
+        keyName,
+        valName,
+        tsColumn,
+        "some filter",
+        new Period(10)
+    );
+
+    final ExtractionNamespace extractionNamespace2 = ServerTestHelper.MAPPER.readValue(
+        ServerTestHelper.MAPPER.writeValueAsBytes(extractionNamespace),
+        ExtractionNamespace.class
+    );
+
+    Assert.assertEquals(extractionNamespace, extractionNamespace2);
   }
 
   private CacheScheduler.Entry ensureEntry()

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -36,7 +36,6 @@ import io.druid.indexer.HadoopTuningConfig;
 import io.druid.indexer.HadoopyShardSpec;
 import io.druid.indexer.IndexGeneratorJob;
 import io.druid.indexer.JobHelper;
-import io.druid.indexer.Jobby;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
@@ -255,7 +254,7 @@ public class OrcIndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
 
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
@@ -291,8 +290,8 @@ public class OrcIndexGeneratorJobTest
         Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());
 
         Assert.assertEquals(dataSourceName, dataSegment.getDataSource());
-        Assert.assertTrue(dataSegment.getDimensions().size() == 1);
-        String[] dimensions = dataSegment.getDimensions().toArray(new String[dataSegment.getDimensions().size()]);
+        Assert.assertEquals(1, dataSegment.getDimensions().size());
+        String[] dimensions = dataSegment.getDimensions().toArray(new String[0]);
         Arrays.sort(dimensions);
         Assert.assertEquals("host", dimensions[0]);
         Assert.assertEquals("visited_num", dataSegment.getMetrics().get(0));

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -66,7 +66,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new LinearShardSpec(0),
@@ -78,7 +78,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new LinearShardSpec(1),
@@ -90,7 +90,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
       "version",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       NoneShardSpec.instance(),
@@ -103,7 +103,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new LinearShardSpec(0),
@@ -115,7 +115,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(0, 0),
@@ -127,7 +127,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(1, 0),
@@ -139,7 +139,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(2, 0),
@@ -151,7 +151,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(2, 1),
@@ -163,7 +163,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       "fooDataSource",
       Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
-      ImmutableMap.<String, Object>of(),
+      ImmutableMap.of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
       new NumberedShardSpec(3, 1),
@@ -428,7 +428,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result1);
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result1);
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
@@ -449,7 +449,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result2);
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -470,7 +470,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result2);
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());

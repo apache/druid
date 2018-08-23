@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,9 +23,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.druid.common.config.NullHandling;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Druids;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
@@ -63,17 +67,38 @@ import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.List;
 
 public class QuantileSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
+
+  private static QueryRunnerFactoryConglomerate conglomerate;
+  private static Closer resourceCloser;
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
+        .createQueryRunnerFactoryConglomerate();
+    conglomerate = conglomerateCloserPair.lhs;
+    resourceCloser = conglomerateCloserPair.rhs;
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException
+  {
+    resourceCloser.close();
+  }
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -113,7 +138,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                              .rows(CalciteTests.ROWS1)
                                              .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(CalciteTests.queryRunnerFactoryConglomerate()).add(
+    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())
@@ -124,7 +149,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(new QuantileSqlAggregator()),
         ImmutableSet.of()
@@ -132,7 +157,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
     plannerFactory = new PlannerFactory(
         druidSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker),
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -228,7 +253,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                     new QuantilePostAggregator("a7", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a8", "a8:agg", 0.50f)
                 )
-                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
+                .context(ImmutableMap.of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
@@ -291,7 +316,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                     new QuantilePostAggregator("a5", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 )
-                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
+                .context(ImmutableMap.of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
@@ -312,9 +337,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
       // Verify results
       final List<Object[]> results = plannerResult.run().toList();
-      final List<Object[]> expectedResults = ImmutableList.of(
-          new Object[]{7.0, 8.26386833190918}
-      );
+      final List<Object[]> expectedResults;
+      if (NullHandling.replaceWithDefault()) {
+        expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
+      } else {
+        expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
+      }
       Assert.assertEquals(expectedResults.size(), results.size());
       for (int i = 0; i < expectedResults.size(); i++) {
         Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
@@ -329,7 +357,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                           .setDataSource(CalciteTests.DATASOURCE1)
                                           .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                                           .setGranularity(Granularities.ALL)
-                                          .setDimensions(ImmutableList.of(new DefaultDimensionSpec("dim2", "d0")))
+                                          .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
                                           .setAggregatorSpecs(
                                               ImmutableList.of(
                                                   new DoubleSumAggregatorFactory("a0", "m1")
@@ -341,11 +369,15 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                       )
                       .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                       .setGranularity(Granularities.ALL)
-                      .setAggregatorSpecs(ImmutableList.of(
-                          new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                          new CountAggregatorFactory("_a0:count"),
-                          new ApproximateHistogramAggregatorFactory("_a1:agg", "a0", null, null, null, null)
-                      ))
+                      .setAggregatorSpecs(new DoubleSumAggregatorFactory("_a0:sum", "a0"),
+                                          new CountAggregatorFactory("_a0:count"),
+                                          new ApproximateHistogramAggregatorFactory("_a1:agg",
+                                                                                    "a0",
+                                                                                    null,
+                                                                                    null,
+                                                                                    null,
+                                                                                    null
+                                          ))
                       .setPostAggregatorSpecs(
                           ImmutableList.of(
                               new ArithmeticPostAggregator(

@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -32,19 +32,22 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.NullableAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.Column;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class DoubleFirstAggregatorFactory extends AggregatorFactory
+public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
   public static final Comparator VALUE_COMPARATOR = (o1, o2) -> Doubles.compare(
       ((SerializablePair<Long, Double>) o1).rhs,
@@ -75,20 +78,26 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  {
+    return metricFactory.makeColumnValueSelector(fieldName);
+  }
+
+  @Override
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     return new DoubleFirstAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName)
+        selector
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     return new DoubleFirstBufferAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeColumnValueSelector(fieldName)
+        selector
     );
   }
 
@@ -99,8 +108,15 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return TIME_COMPARATOR.compare(lhs, rhs) <= 0 ? lhs : rhs;
   }
 
@@ -116,9 +132,8 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
     return new DoubleFirstAggregatorFactory(name, name)
     {
       @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
+      public Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
       {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return new DoubleFirstAggregator(null, null)
         {
           @Override
@@ -134,9 +149,8 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
       {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return new DoubleFirstBufferAggregator(null, null)
         {
           @Override
@@ -163,7 +177,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new DoubleFirstAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new DoubleFirstAggregatorFactory(fieldName, fieldName));
   }
 
   @Override
@@ -174,9 +188,10 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return ((SerializablePair<Long, Double>) object).rhs;
+    return object == null ? null : ((SerializablePair<Long, Double>) object).rhs;
   }
 
   @Override

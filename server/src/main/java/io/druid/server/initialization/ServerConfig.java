@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -26,6 +26,7 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
 /**
@@ -52,7 +53,7 @@ public class ServerConfig
 
   @JsonProperty
   @Min(0)
-  private long defaultQueryTimeout = 300_000; // 5 minutes
+  private long defaultQueryTimeout = TimeUnit.MINUTES.toMillis(5);
 
   @JsonProperty
   @Min(1)
@@ -71,7 +72,7 @@ public class ServerConfig
 
   @JsonProperty
   @NotNull
-  private Period unannouncePropogationDelay = Period.ZERO;
+  private Period unannouncePropagationDelay = Period.ZERO;
 
   @JsonProperty
   @Min(0)
@@ -127,9 +128,9 @@ public class ServerConfig
     return gracefulShutdownTimeout;
   }
 
-  public Period getUnannouncePropogationDelay()
+  public Period getUnannouncePropagationDelay()
   {
-    return unannouncePropogationDelay;
+    return unannouncePropagationDelay;
   }
 
   public int getInflateBufferSize()
@@ -164,7 +165,7 @@ public class ServerConfig
            compressionLevel == that.compressionLevel &&
            Objects.equals(maxIdleTime, that.maxIdleTime) &&
            Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
-           Objects.equals(unannouncePropogationDelay, that.unannouncePropogationDelay);
+           Objects.equals(unannouncePropagationDelay, that.unannouncePropagationDelay);
   }
 
   @Override
@@ -181,7 +182,7 @@ public class ServerConfig
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
-        unannouncePropogationDelay,
+        unannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel
     );
@@ -200,7 +201,7 @@ public class ServerConfig
            ", maxQueryTimeout=" + maxQueryTimeout +
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
-           ", unannouncePropogationDelay=" + unannouncePropogationDelay +
+           ", unannouncePropagationDelay=" + unannouncePropagationDelay +
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            '}';
