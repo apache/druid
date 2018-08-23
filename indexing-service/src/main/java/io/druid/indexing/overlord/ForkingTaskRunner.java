@@ -104,7 +104,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final ListeningExecutorService exec;
   private final ObjectMapper jsonMapper;
   private final PortFinder portFinder;
-  private final PortFinder tlsPortFinder;
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   // Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting.
@@ -130,7 +129,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.jsonMapper = jsonMapper;
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort());
-    this.tlsPortFinder = new PortFinder(config.getTlsStartPort());
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -247,7 +245,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         }
 
                         if (node.isEnableTlsPort()) {
-                          tlsChildPort = tlsPortFinder.findUnusedPort();
+                          tlsChildPort = portFinder.findUnusedPort();
                         }
 
                         final TaskLocation taskLocation = TaskLocation.create(childHost, childPort, tlsChildPort);
@@ -515,7 +513,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               portFinder.markPortUnused(childPort);
                             }
                             if (node.isEnableTlsPort()) {
-                              tlsPortFinder.markPortUnused(tlsChildPort);
+                              portFinder.markPortUnused(tlsChildPort);
                             }
                             if (childChatHandlerPort > 0) {
                               portFinder.markPortUnused(childChatHandlerPort);
