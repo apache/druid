@@ -240,7 +240,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       numAdvanced = -1;
       maxRowIndex = index.getLastRowIndex();
       final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
-      cursorIterable = index.getFacts().timeRangeIterable(
+      cursorIterable = index.timeRangeIterable(
           descending,
           timeStart,
           Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStart()).getMillis())

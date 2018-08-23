@@ -41,7 +41,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.AggsManager;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.WritableUtils;
@@ -315,7 +315,7 @@ public class InputRowSerde
         writeString(k, out);
 
         try (Aggregator agg = aggFactory.factorize(
-            IncrementalIndex.makeColumnSelectorFactory(
+            AggsManager.makeColumnSelectorFactory(
                 VirtualColumns.EMPTY,
                 aggFactory,
                 supplier,
