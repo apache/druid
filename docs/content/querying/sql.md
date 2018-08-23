@@ -390,7 +390,7 @@ The supported result formats are:
 |`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/csv|
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
-same format as [native Druid query errors](../querying#query-errors). If an error occurs while the response body is
+same format as [native Druid query errors](../querying/querying.html#query-errors). If an error occurs while the response body is
 being sent, at that point it is too late to change the HTTP status code or report a JSON error, so the response will
 simply end midstream and an error will be logged by the Druid server that was handling your request.
 

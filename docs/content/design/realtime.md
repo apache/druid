@@ -6,7 +6,7 @@ Real-time Node
 ==============
 
 <div class="note info">
-NOTE: Realtime nodes are deprecated.
+NOTE: Realtime nodes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead. 
 </div>
 
 For Real-time Node Configuration, see [Realtime Configuration](../configuration/realtime.html).
