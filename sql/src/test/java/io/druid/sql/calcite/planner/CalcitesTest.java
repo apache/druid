@@ -40,7 +40,7 @@ public class CalcitesTest extends CalciteTestBase
   }
 
   @Test
-  public void testFindOutputNamePrefix()
+  public void testFindUnusedPrefix()
   {
     Assert.assertEquals("x", Calcites.findUnusedPrefix("x", ImmutableSortedSet.of("foo", "bar")));
     Assert.assertEquals("x", Calcites.findUnusedPrefix("x", ImmutableSortedSet.of("foo", "bar", "x")));
