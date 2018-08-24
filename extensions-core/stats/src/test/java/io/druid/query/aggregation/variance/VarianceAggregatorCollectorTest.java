@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class VarianceAggregatorCollectorTest
 {
@@ -83,7 +84,7 @@ public class VarianceAggregatorCollectorTest
   @Test
   public void testVariance()
   {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     for (float[] values : Arrays.asList(market_upfront, market_total_market)) {
       double sum = 0;
       for (float f : values) {

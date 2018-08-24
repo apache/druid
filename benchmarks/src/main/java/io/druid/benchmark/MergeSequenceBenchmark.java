@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -65,7 +66,7 @@ public class MergeSequenceBenchmark
   @Setup
   public void setup()
   {
-    Random rand = new Random(0);
+    Random rand = ThreadLocalRandom.current();
     sequences = Lists.newArrayList();
     for (int i = 0; i < count; i++) {
       int[] sequence = new int[sequenceLength];

@@ -50,7 +50,7 @@ public class SequenceInputStreamResponseHandlerTest
   {
     final ByteBuffer buffer = ByteBuffer.wrap(allBytes);
     while (buffer.hasRemaining()) {
-      final byte[] bytes = new byte[Math.min(Math.abs(RANDOM.nextInt()) % 128, buffer.remaining())];
+      final byte[] bytes = new byte[Math.min(RANDOM.nextInt(128), buffer.remaining())];
       RANDOM.nextBytes(bytes);
       buffer.put(bytes);
       BYTE_LIST.add(bytes);
@@ -85,7 +85,7 @@ public class SequenceInputStreamResponseHandlerTest
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     response.setChunked(true);
     ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response);
-    final int failAt = Math.abs(RANDOM.nextInt()) % allBytes.length;
+    final int failAt = RANDOM.nextInt(allBytes.length);
     while (it.hasNext()) {
       final DefaultHttpChunk chunk = new DefaultHttpChunk(
           new BigEndianHeapChannelBuffer(it.next())
@@ -159,7 +159,7 @@ public class SequenceInputStreamResponseHandlerTest
     final InputStream expectedStream = new ByteArrayInputStream(allBytes);
     int read = 0;
     while (read < allBytes.length) {
-      final byte[] expectedBytes = new byte[Math.min(Math.abs(RANDOM.nextInt()) % 128, allBytes.length - read)];
+      final byte[] expectedBytes = new byte[Math.min(RANDOM.nextInt(128), allBytes.length - read)];
       final byte[] actualBytes = new byte[expectedBytes.length];
       fillBuff(stream, actualBytes);
       fillBuff(expectedStream, expectedBytes);
@@ -213,7 +213,7 @@ public class SequenceInputStreamResponseHandlerTest
     final InputStream expectedStream = new ByteArrayInputStream(allBytes);
     int read = 0;
     while (read < allBytes.length) {
-      final byte[] expectedBytes = new byte[Math.min(Math.abs(RANDOM.nextInt()) % 128, allBytes.length - read)];
+      final byte[] expectedBytes = new byte[Math.min(RANDOM.nextInt(128), allBytes.length - read)];
       final byte[] actualBytes = new byte[expectedBytes.length];
       fillBuff(stream, actualBytes);
       fillBuff(expectedStream, expectedBytes);

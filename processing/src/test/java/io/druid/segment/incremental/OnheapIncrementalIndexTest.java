@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class OnheapIncrementalIndexTest
@@ -51,7 +52,6 @@ public class OnheapIncrementalIndexTest
         .setMaxRowCount(MAX_ROWS)
         .buildOnheap();
 
-    final Random random = new Random();
     final int addThreadCount = 2;
     Thread[] addThreads = new Thread[addThreadCount];
     for (int i = 0; i < addThreadCount; ++i) {
@@ -60,6 +60,7 @@ public class OnheapIncrementalIndexTest
         @Override
         public void run()
         {
+          final Random random = ThreadLocalRandom.current();
           try {
             for (int j = 0; j < MAX_ROWS / addThreadCount; ++j) {
               index.add(new MapBasedInputRow(

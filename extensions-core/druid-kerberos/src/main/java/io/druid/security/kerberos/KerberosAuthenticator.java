@@ -88,9 +88,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -164,7 +164,7 @@ public class KerberosAuthenticator implements Authenticator
           Properties config = getConfiguration(configPrefix, filterConfig);
           String signatureSecret = config.getProperty(configPrefix + SIGNATURE_SECRET);
           if (signatureSecret == null) {
-            signatureSecret = Long.toString(new Random().nextLong());
+            signatureSecret = Long.toString(ThreadLocalRandom.current().nextLong());
             log.warn("'signature.secret' configuration not set, using a random value as secret");
           }
           final byte[] secretBytes = StringUtils.toUtf8(signatureSecret);

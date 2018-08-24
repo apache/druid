@@ -5,3 +5,4 @@ com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#
 com.google.common.base.Charsets @ Use java.nio.charset.StandardCharsets instead
 java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
 org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
+java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)

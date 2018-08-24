@@ -21,7 +21,6 @@ package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyFactory;
@@ -29,6 +28,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -36,7 +36,7 @@ import org.joda.time.Duration;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RemoteTaskActionClient implements TaskActionClient
 {
@@ -44,7 +44,6 @@ public class RemoteTaskActionClient implements TaskActionClient
   private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
   private final DruidLeaderClient druidLeaderClient;
-  private final Random random = new Random();
 
   private static final Logger log = new Logger(RemoteTaskActionClient.class);
 
@@ -121,7 +120,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 
   private long jitter(long input)
   {
-    final double jitter = random.nextGaussian() * input / 4.0;
+    final double jitter = ThreadLocalRandom.current().nextGaussian() * input / 4.0;
     long retval = input + (long) jitter;
     return retval < 0 ? 0 : retval;
   }
