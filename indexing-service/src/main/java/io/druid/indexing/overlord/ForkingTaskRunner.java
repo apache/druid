@@ -385,7 +385,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               );
 
                               command.add(StringUtils.format("-Ddruid.host=%s", childHost));
-                              command.add(StringUtils.format("-Ddruid.port=%d", childPort));
+                              command.add(StringUtils.format("-Ddruid.plaintextPort=%d", childPort));
                               command.add(StringUtils.format("-Ddruid.tlsPort=%d", tlsChildPort));
                               /**
                                * These are not enabled per default to allow the user to either set or not set them
