@@ -19,7 +19,7 @@
 
 package io.druid.query.topn.types;
 
-import com.google.common.base.Function;
+import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.BaseTopNAlgorithm;
 import io.druid.query.topn.TopNParams;
@@ -29,6 +29,7 @@ import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.Cursor;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ValueType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -37,12 +38,32 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import java.util.Map;
+import java.util.function.Function;
 
 public abstract class NumericTopNColumnSelectorStrategy<
     ValueSelectorType,
     DimExtractionAggregateStoreType extends Map<?, Aggregator[]>>
     implements TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggregateStoreType>
 {
+  public static TopNColumnSelectorStrategy ofType(final ValueType selectorType, final ValueType dimensionType)
+  {
+    final Function<Object, Comparable<?>> converter = DimensionHandlerUtils.converterFromTypeToTypeNonNull(
+        selectorType,
+        dimensionType
+    );
+
+    switch (selectorType) {
+      case LONG:
+        return new OfLong(converter);
+      case FLOAT:
+        return new OfFloat(converter);
+      case DOUBLE:
+        return new OfDouble(converter);
+      default:
+        throw new IAE("No strategy for type[%s]", selectorType);
+    }
+  }
+
   @Override
   public int getCardinality(ValueSelectorType selector)
   {
@@ -132,7 +153,6 @@ public abstract class NumericTopNColumnSelectorStrategy<
   @Override
   public void updateDimExtractionResults(
       final DimExtractionAggregateStoreType aggregatesStore,
-      final Function<Object, Object> valueTransformer,
       final TopNResultBuilder resultBuilder
   )
   {
@@ -144,11 +164,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
           vals[i] = aggs[i].get();
         }
 
-        Comparable key = convertAggregatorStoreKeyToColumnValue(entry.getKey());
-        if (valueTransformer != null) {
-          key = (Comparable) valueTransformer.apply(key);
-        }
-
+        final Comparable key = convertAggregatorStoreKeyToColumnValue(entry.getKey());
         resultBuilder.addEntry(key, key, vals);
       }
     }
@@ -159,10 +175,11 @@ public abstract class NumericTopNColumnSelectorStrategy<
   static class OfFloat
       extends NumericTopNColumnSelectorStrategy<BaseFloatColumnValueSelector, Int2ObjectMap<Aggregator[]>>
   {
-    @Override
-    public ValueType getValueType()
+    private final Function<Object, Comparable<?>> converter;
+
+    OfFloat(final Function<Object, Comparable<?>> converter)
     {
-      return ValueType.FLOAT;
+      this.converter = converter;
     }
 
     @Override
@@ -174,7 +191,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
     @Override
     Comparable convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
     {
-      return Float.intBitsToFloat((Integer) aggregatorStoreKey);
+      return converter.apply(Float.intBitsToFloat((Integer) aggregatorStoreKey));
     }
 
     @Override
@@ -193,10 +210,11 @@ public abstract class NumericTopNColumnSelectorStrategy<
   static class OfLong
       extends NumericTopNColumnSelectorStrategy<BaseLongColumnValueSelector, Long2ObjectMap<Aggregator[]>>
   {
-    @Override
-    public ValueType getValueType()
+    private final Function<Object, Comparable<?>> converter;
+
+    OfLong(final Function<Object, Comparable<?>> converter)
     {
-      return ValueType.LONG;
+      this.converter = converter;
     }
 
     @Override
@@ -208,7 +226,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
     @Override
     Comparable convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
     {
-      return (Long) aggregatorStoreKey;
+      return converter.apply(aggregatorStoreKey);
     }
 
     @Override
@@ -227,10 +245,11 @@ public abstract class NumericTopNColumnSelectorStrategy<
   static class OfDouble
       extends NumericTopNColumnSelectorStrategy<BaseDoubleColumnValueSelector, Long2ObjectMap<Aggregator[]>>
   {
-    @Override
-    public ValueType getValueType()
+    private final Function<Object, Comparable<?>> converter;
+
+    OfDouble(final Function<Object, Comparable<?>> converter)
     {
-      return ValueType.DOUBLE;
+      this.converter = converter;
     }
 
     @Override
@@ -242,7 +261,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
     @Override
     Comparable convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
     {
-      return Double.longBitsToDouble((Long) aggregatorStoreKey);
+      return converter.apply(Double.longBitsToDouble((Long) aggregatorStoreKey));
     }
 
     @Override

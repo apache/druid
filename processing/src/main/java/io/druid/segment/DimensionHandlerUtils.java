@@ -19,12 +19,14 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.dimension.ColumnSelectorStrategy;
@@ -38,6 +40,7 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public final class DimensionHandlerUtils
 {
@@ -132,9 +135,10 @@ public final class DimensionHandlerUtils
    * in a query engine. See GroupByStrategyFactory for a reference.
    *
    * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
-   * @param strategyFactory A factory provided by query engines that generates type-handling strategies
-   * @param dimensionSpecs The set of columns to generate ColumnSelectorPlus objects for
-   * @param columnSelectorFactory Used to create value selectors for columns.
+   * @param strategyFactory               A factory provided by query engines that generates type-handling strategies
+   * @param dimensionSpecs                The set of columns to generate ColumnSelectorPlus objects for
+   * @param columnSelectorFactory         Used to create value selectors for columns.
+   *
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
    */
   public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
@@ -238,6 +242,15 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
+  public static String convertObjectToString(@Nullable Object valObj)
+  {
+    if (valObj == null) {
+      return null;
+    }
+    return valObj.toString();
+  }
+
+  @Nullable
   public static Long convertObjectToLong(@Nullable Object valObj)
   {
     return convertObjectToLong(valObj, false);
@@ -290,6 +303,114 @@ public final class DimensionHandlerUtils
       return ret;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
+    }
+  }
+
+  @Nullable
+  public static Comparable<?> convertObjectToType(
+      @Nullable final Object obj,
+      final ValueType type,
+      final boolean reportParseExceptions
+  )
+  {
+    Preconditions.checkNotNull(type, "type");
+
+    switch (type) {
+      case LONG:
+        return convertObjectToLong(obj, reportParseExceptions);
+      case FLOAT:
+        return convertObjectToFloat(obj, reportParseExceptions);
+      case DOUBLE:
+        return convertObjectToDouble(obj, reportParseExceptions);
+      case STRING:
+        return convertObjectToString(obj);
+      default:
+        throw new IAE("Type[%s] is not supported for dimensions!", type);
+    }
+  }
+
+  public static int compareObjectsAsType(
+      @Nullable final Object lhs,
+      @Nullable final Object rhs,
+      final ValueType type
+  )
+  {
+    //noinspection unchecked
+    return Comparators.<Comparable>naturalNullsFirst().compare(
+        convertObjectToType(lhs, type),
+        convertObjectToType(rhs, type)
+    );
+  }
+
+  @Nullable
+  public static Comparable<?> convertObjectToType(
+      @Nullable final Object obj,
+      final ValueType type
+  )
+  {
+    return convertObjectToType(obj, Preconditions.checkNotNull(type, "type"), false);
+  }
+
+  /**
+   * This function only exists in the backport of #6220 to 0.12.x. It won't return nulls.
+   */
+  public static Comparable<?> convertObjectToTypeNonNull(
+      @Nullable final Object obj,
+      final ValueType type
+  )
+  {
+    return nonNullify(convertObjectToType(obj, Preconditions.checkNotNull(type, "type"), false), type);
+  }
+
+  /**
+   * This function only exists in the backport of #6220 to 0.12.x. It won't return nulls.
+   */
+  private static Comparable<?> nonNullify(@Nullable final Comparable<?> obj, final ValueType type)
+  {
+    if (obj == null) {
+      switch (type) {
+        case LONG:
+          return 0L;
+        case DOUBLE:
+          return 0.0d;
+        case FLOAT:
+          return 0.0f;
+        case STRING:
+          return "";
+        default:
+          throw new IAE("Cannot handle type[%s]", type);
+      }
+    } else {
+      return obj;
+    }
+  }
+
+  public static Function<Object, Comparable<?>> converterFromTypeToType(
+      final ValueType fromType,
+      final ValueType toType
+  )
+  {
+    if (fromType == toType) {
+      //noinspection unchecked
+      return (Function) Function.identity();
+    } else {
+      return obj -> convertObjectToType(obj, toType);
+    }
+  }
+
+  /**
+   * This function only exists in the backport of #6220 to 0.12.x. It won't return nulls.
+   */
+  public static Function<Object, Comparable<?>> converterFromTypeToTypeNonNull(
+      final ValueType fromType,
+      final ValueType toType
+  )
+  {
+    if (fromType == toType) {
+      //noinspection unchecked
+      return obj -> nonNullify((Comparable<?>) obj, toType);
+    } else {
+      return obj -> convertObjectToTypeNonNull(obj, toType);
     }
   }
 

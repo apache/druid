@@ -142,6 +142,10 @@ public class TopNQueryEngine
                                                && columnCapabilities.isDictionaryEncoded())) {
       // Use DimExtraction for non-Strings and for non-dictionary-encoded Strings.
       topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
+    } else if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
+      // Use DimExtraction when the dimension output type is a non-String. (It's like an extractionFn: there can be
+      // a many-to-one mapping, since numeric types can't represent all possible values of other types.)
+      topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isAggregateAllMetrics()) {
       topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
     } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {

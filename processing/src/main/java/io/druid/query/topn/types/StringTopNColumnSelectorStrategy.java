@@ -19,34 +19,47 @@
 
 package io.druid.query.topn.types;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Maps;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.BaseTopNAlgorithm;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultBuilder;
 import io.druid.segment.Cursor;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public class StringTopNColumnSelectorStrategy
-    implements TopNColumnSelectorStrategy<DimensionSelector, Map<String, Aggregator[]>>
+    implements TopNColumnSelectorStrategy<DimensionSelector, Map<Comparable, Aggregator[]>>
 {
+  private final Function<Object, Comparable<?>> dimensionValueConverter;
+
+  public StringTopNColumnSelectorStrategy(final ValueType dimensionType)
+  {
+    // We can handle null strings, but not null numbers.
+    if (dimensionType == ValueType.STRING) {
+      this.dimensionValueConverter = DimensionHandlerUtils.converterFromTypeToType(
+          ValueType.STRING,
+          dimensionType
+      );
+    } else {
+      this.dimensionValueConverter = DimensionHandlerUtils.converterFromTypeToTypeNonNull(
+          ValueType.STRING,
+          dimensionType
+      );
+    }
+  }
+
   @Override
   public int getCardinality(DimensionSelector selector)
   {
     return selector.getValueCardinality();
-  }
-
-  @Override
-  public ValueType getValueType()
-  {
-    return ValueType.STRING;
   }
 
   @Override
@@ -71,9 +84,9 @@ public class StringTopNColumnSelectorStrategy
   }
 
   @Override
-  public Map<String, Aggregator[]> makeDimExtractionAggregateStore()
+  public Map<Comparable, Aggregator[]> makeDimExtractionAggregateStore()
   {
-    return Maps.newHashMap();
+    return new HashMap<>();
   }
 
   @Override
@@ -82,7 +95,7 @@ public class StringTopNColumnSelectorStrategy
       DimensionSelector selector,
       Cursor cursor,
       Aggregator[][] rowSelector,
-      Map<String, Aggregator[]> aggregatesStore
+      Map<Comparable, Aggregator[]> aggregatesStore
   )
   {
     if (selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN) {
@@ -94,12 +107,11 @@ public class StringTopNColumnSelectorStrategy
 
   @Override
   public void updateDimExtractionResults(
-      final Map<String, Aggregator[]> aggregatesStore,
-      final Function<Object, Object> valueTransformer,
+      final Map<Comparable, Aggregator[]> aggregatesStore,
       final TopNResultBuilder resultBuilder
   )
   {
-    for (Map.Entry<String, Aggregator[]> entry : aggregatesStore.entrySet()) {
+    for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
       Aggregator[] aggs = entry.getValue();
       if (aggs != null) {
         Object[] vals = new Object[aggs.length];
@@ -107,16 +119,8 @@ public class StringTopNColumnSelectorStrategy
           vals[i] = aggs[i].get();
         }
 
-        Comparable key = entry.getKey();
-        if (valueTransformer != null) {
-          key = (Comparable) valueTransformer.apply(key);
-        }
-
-        resultBuilder.addEntry(
-            key,
-            key,
-            vals
-        );
+        final Comparable key = dimensionValueConverter.apply(entry.getKey());
+        resultBuilder.addEntry(key, key, vals);
       }
     }
   }
@@ -126,7 +130,7 @@ public class StringTopNColumnSelectorStrategy
       Cursor cursor,
       DimensionSelector selector,
       Aggregator[][] rowSelector,
-      Map<String, Aggregator[]> aggregatesStore
+      Map<Comparable, Aggregator[]> aggregatesStore
   )
   {
     long processedRows = 0;
@@ -136,7 +140,7 @@ public class StringTopNColumnSelectorStrategy
         final int dimIndex = dimValues.get(i);
         Aggregator[] theAggregators = rowSelector[dimIndex];
         if (theAggregators == null) {
-          final String key = selector.lookupName(dimIndex);
+          final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
           theAggregators = aggregatesStore.get(key);
           if (theAggregators == null) {
             theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -159,7 +163,7 @@ public class StringTopNColumnSelectorStrategy
       TopNQuery query,
       Cursor cursor,
       DimensionSelector selector,
-      Map<String, Aggregator[]> aggregatesStore
+      Map<Comparable, Aggregator[]> aggregatesStore
   )
   {
     long processedRows = 0;
@@ -167,7 +171,7 @@ public class StringTopNColumnSelectorStrategy
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0; i < dimValues.size(); ++i) {
         final int dimIndex = dimValues.get(i);
-        final String key = selector.lookupName(dimIndex);
+        final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
 
         Aggregator[] theAggregators = aggregatesStore.get(key);
         if (theAggregators == null) {

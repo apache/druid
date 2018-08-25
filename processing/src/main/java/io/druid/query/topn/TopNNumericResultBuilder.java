@@ -19,7 +19,6 @@
 
 package io.druid.query.topn;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -48,9 +47,9 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final String metricName;
   private final List<PostAggregator> postAggs;
   private final PriorityQueue<DimValHolder> pQueue;
-  private final Comparator<DimValHolder> dimValComparator;
+  private final Comparator<DimValHolder> dimValHolderComparator;
   private final String[] aggFactoryNames;
-  private static final Comparator<Comparable> dimNameComparator = new Comparator<Comparable>()
+  private static final Comparator<Comparable> dimValueComparator = new Comparator<Comparable>()
   {
     @Override
     public int compare(Comparable o1, Comparable o2)
@@ -65,6 +64,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       } else if (null == o2) {
         retval = 1;
       } else {
+        //noinspection unchecked
         retval = o1.compareTo(o2);
       }
       return retval;
@@ -91,30 +91,26 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
     this.threshold = threshold;
     this.metricComparator = comparator;
-    this.dimValComparator = new Comparator<DimValHolder>()
-    {
-      @Override
-      public int compare(DimValHolder d1, DimValHolder d2)
-      {
-        int retVal = metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
+    this.dimValHolderComparator = (d1, d2) -> {
+      //noinspection unchecked
+      int retVal = metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
 
-        if (retVal == 0) {
-          retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
-        }
-
-        return retVal;
+      if (retVal == 0) {
+        retVal = dimValueComparator.compare(d1.getDimValue(), d2.getDimValue());
       }
+
+      return retVal;
     };
 
     // The logic in addEntry first adds, then removes if needed. So it can at any point have up to threshold + 1 entries.
-    pQueue = new PriorityQueue<>(this.threshold + 1, this.dimValComparator);
+    pQueue = new PriorityQueue<>(this.threshold + 1, dimValHolderComparator);
   }
 
   private static final int LOOP_UNROLL_COUNT = 8;
 
   @Override
   public TopNNumericResultBuilder addEntry(
-      Comparable dimName,
+      Comparable dimValueObj,
       Object dimValIndex,
       Object[] metricVals
   )
@@ -126,7 +122,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
     final Map<String, Object> metricValues = Maps.newHashMapWithExpectedSize(metricVals.length + postAggs.size() + 1);
 
-    metricValues.put(dimSpec.getOutputName(), dimName);
+    metricValues.put(dimSpec.getOutputName(), dimValueObj);
 
     final int extra = metricVals.length % LOOP_UNROLL_COUNT;
 
@@ -173,7 +169,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(topNMetricVal)) {
       DimValHolder dimValHolder = new DimValHolder.Builder()
           .withTopNMetricVal(topNMetricVal)
-          .withDimName(dimName)
+          .withDimValue(dimValueObj)
           .withDimValIndex(dimValIndex)
           .withMetricValues(metricValues)
           .build();
@@ -202,7 +198,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(dimValue)) {
       final DimValHolder valHolder = new DimValHolder.Builder()
           .withTopNMetricVal(dimValue)
-          .withDimName((Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName()))
+          .withDimValue((Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName()))
           .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
           .build();
       pQueue.add(valHolder);
@@ -224,39 +220,24 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   {
     final DimValHolder[] holderValueArray = pQueue.toArray(new DimValHolder[0]);
     Arrays.sort(
-        holderValueArray, new Comparator<DimValHolder>()
-        {
-          @Override
-          public int compare(DimValHolder d1, DimValHolder d2)
-          {
-            // Values flipped compared to earlier
-            int retVal = metricComparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
+        holderValueArray,
+        (d1, d2) -> {
+          // Metric values flipped compared to dimValueHolderComparator.
 
-            if (retVal == 0) {
-              retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
-            }
+          //noinspection unchecked
+          int retVal = metricComparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
 
-            return retVal;
+          if (retVal == 0) {
+            retVal = dimValueComparator.compare(d1.getDimValue(), d2.getDimValue());
           }
+
+          return retVal;
         }
     );
     List<DimValHolder> holderValues = Arrays.asList(holderValueArray);
 
     // Pull out top aggregated values
-    final List<Map<String, Object>> values = Lists.transform(
-        holderValues,
-        new Function<DimValHolder, Map<String, Object>>()
-        {
-          @Override
-          public Map<String, Object> apply(DimValHolder valHolder)
-          {
-            return valHolder.getMetricValues();
-          }
-        }
-    );
-    return new Result<TopNResultValue>(
-        timestamp,
-        new TopNResultValue(values)
-    );
+    final List<Map<String, Object>> values = Lists.transform(holderValues, DimValHolder::getMetricValues);
+    return new Result<>(timestamp, new TopNResultValue(values));
   }
 }

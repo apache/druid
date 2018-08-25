@@ -19,7 +19,6 @@
 
 package io.druid.query.topn;
 
-import com.google.common.base.Function;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.types.TopNColumnSelectorStrategy;
@@ -110,14 +109,8 @@ public class DimExtractionTopNAlgorithm
   )
   {
     final ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
-    final boolean needsResultTypeConversion = needsResultTypeConversion(params);
-    final Function<Object, Object> valueTransformer = TopNMapFn.getValueTransformer(
-        query.getDimensionSpec().getOutputType()
-    );
-
     selectorPlus.getColumnSelectorStrategy().updateDimExtractionResults(
         aggregatesStore,
-        needsResultTypeConversion ? valueTransformer : null,
         resultBuilder
     );
   }
@@ -135,12 +128,5 @@ public class DimExtractionTopNAlgorithm
   @Override
   public void cleanup(TopNParams params)
   {
-  }
-
-  private boolean needsResultTypeConversion(TopNParams params)
-  {
-    ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
-    TopNColumnSelectorStrategy strategy = selectorPlus.getColumnSelectorStrategy();
-    return query.getDimensionSpec().getOutputType() != strategy.getValueType();
   }
 }

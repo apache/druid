@@ -5133,6 +5133,138 @@ public class TopNQueryRunnerTest
   }
 
   @Test
+  public void testSortOnDoubleAsLong()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 59L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 67L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 68L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 69L)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testSortOnTimeAsLong()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("__time", "__time_alias", ValueType.LONG))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("__time_alias", DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("__time_alias", DateTimes.of("2011-01-13T00:00:00.000Z").getMillis())
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("__time_alias", DateTimes.of("2011-01-14T00:00:00.000Z").getMillis())
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("__time_alias", DateTimes.of("2011-01-15T00:00:00.000Z").getMillis())
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testSortOnStringAsDouble()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("market", "alias", ValueType.DOUBLE))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .build();
+
+    final Map<String, Object> nullAliasMap = new HashMap<>();
+    nullAliasMap.put("alias", 0.0d);
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(Collections.singletonList(nullAliasMap))
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testSortOnDoubleAsDouble()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.DOUBLE))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 59.021022d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 59.266595d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 67.73117d)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("index_alias", 68.573162d)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
   public void testFullOnTopNLongTimeColumnWithExFn()
   {
     String jsFn = "function(str) { return 'super-' + str; }";

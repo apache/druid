@@ -28,7 +28,7 @@ import java.util.Iterator;
 public interface TopNResultBuilder
 {
   TopNResultBuilder addEntry(
-      Comparable dimNameObj,
+      Comparable dimValueObj,
       Object dimValIndex,
       Object[] metricVals
   );

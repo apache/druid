@@ -602,38 +602,10 @@ public class RowBasedGrouperHelper
   {
     final Function<Comparable, Comparable>[] functions = new Function[valueTypes.size()];
     for (int i = 0; i < functions.length; i++) {
-      ValueType type = valueTypes.get(i);
       // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
       // their types aren't known, so default to String handling.
-      type = type == null ? ValueType.STRING : type;
-      switch (type) {
-        case STRING:
-          functions[i] = input -> input == null ? "" : input.toString();
-          break;
-
-        case LONG:
-          functions[i] = input -> {
-            final Long val = DimensionHandlerUtils.convertObjectToLong(input);
-            return val == null ? 0L : val;
-          };
-          break;
-
-        case FLOAT:
-          functions[i] = input -> {
-            final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
-            return val == null ? 0.f : val;
-          };
-          break;
-
-        case DOUBLE:
-          functions[i] = input -> {
-            Double val = DimensionHandlerUtils.convertObjectToDouble(input);
-            return val == null ? 0.0 : val;
-          };
-          break;
-        default:
-          throw new IAE("invalid type: [%s]", type);
-      }
+      final ValueType type = valueTypes.get(i) == null ? ValueType.STRING : valueTypes.get(i);
+      functions[i] = input -> DimensionHandlerUtils.convertObjectToTypeNonNull(input, type);
     }
     return functions;
   }
