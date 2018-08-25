@@ -49,9 +49,13 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
       case LONG:
       case FLOAT:
       case DOUBLE:
+        // When the selector is numeric, we want to use NumericTopNColumnSelectorStrategy. It aggregates using
+        // a numeric type and then converts to the desired output type after aggregating. We must be careful not to
+        // convert to an output type that cannot represent all possible values of the input type.
+
         if (ValueType.isNumeric(dimensionType)) {
           // Return strategy that aggregates using the _output_ type, because this allows us to collapse values
-          // properly (numeric types cannot represent all values of other numeric types).
+          // properly (numeric types cannot always represent all values of other numeric types).
           return NumericTopNColumnSelectorStrategy.ofType(dimensionType, dimensionType);
         } else {
           // Return strategy that aggregates using the _input_ type. Here we are assuming that the output type can

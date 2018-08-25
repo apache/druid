@@ -36,7 +36,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class StringTopNColumnSelectorStrategy
-    implements TopNColumnSelectorStrategy<DimensionSelector, Map<Comparable, Aggregator[]>>
+    implements TopNColumnSelectorStrategy<DimensionSelector, Map<Comparable<?>, Aggregator[]>>
 {
   private final Function<Object, Comparable<?>> dimensionValueConverter;
 
@@ -73,7 +73,7 @@ public class StringTopNColumnSelectorStrategy
   }
 
   @Override
-  public Map<Comparable, Aggregator[]> makeDimExtractionAggregateStore()
+  public Map<Comparable<?>, Aggregator[]> makeDimExtractionAggregateStore()
   {
     return new HashMap<>();
   }
@@ -84,7 +84,7 @@ public class StringTopNColumnSelectorStrategy
       DimensionSelector selector,
       Cursor cursor,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      Map<Comparable<?>, Aggregator[]> aggregatesStore
   )
   {
     if (selector.getValueCardinality() != DimensionSelector.CARDINALITY_UNKNOWN) {
@@ -96,11 +96,11 @@ public class StringTopNColumnSelectorStrategy
 
   @Override
   public void updateDimExtractionResults(
-      final Map<Comparable, Aggregator[]> aggregatesStore,
+      final Map<Comparable<?>, Aggregator[]> aggregatesStore,
       final TopNResultBuilder resultBuilder
   )
   {
-    for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
+    for (Map.Entry<Comparable<?>, Aggregator[]> entry : aggregatesStore.entrySet()) {
       Aggregator[] aggs = entry.getValue();
       if (aggs != null) {
         Object[] vals = new Object[aggs.length];
@@ -108,7 +108,7 @@ public class StringTopNColumnSelectorStrategy
           vals[i] = aggs[i].get();
         }
 
-        final Comparable key = dimensionValueConverter.apply(entry.getKey());
+        final Comparable<?> key = dimensionValueConverter.apply(entry.getKey());
         resultBuilder.addEntry(key, key, vals);
       }
     }
@@ -119,7 +119,7 @@ public class StringTopNColumnSelectorStrategy
       Cursor cursor,
       DimensionSelector selector,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      Map<Comparable<?>, Aggregator[]> aggregatesStore
   )
   {
     long processedRows = 0;
@@ -152,7 +152,7 @@ public class StringTopNColumnSelectorStrategy
       TopNQuery query,
       Cursor cursor,
       DimensionSelector selector,
-      Map<Comparable, Aggregator[]> aggregatesStore
+      Map<Comparable<?>, Aggregator[]> aggregatesStore
   )
   {
     long processedRows = 0;
