@@ -88,7 +88,11 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   @Override
   public Sequence<Object[]> runQuery()
   {
-    final DruidQuery query = toDruidQuery();
+    // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
+    // is the outermost query and it will actually get run as a native query. Druid's native query layer will
+    // finalize aggregations for the outermost query even if we don't explicitly ask it to.
+
+    final DruidQuery query = toDruidQuery(false);
     if (query != null) {
       return getQueryMaker().runQuery(query);
     } else {
@@ -116,9 +120,11 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 
   @Nullable
   @Override
-  public DruidQuery toDruidQuery()
+  public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
-    final DruidQuery subQuery = ((DruidRel) sourceRel).toDruidQuery();
+    // Must finalize aggregations on subqueries.
+
+    final DruidQuery subQuery = ((DruidRel) sourceRel).toDruidQuery(true);
     if (subQuery == null) {
       return null;
     }
@@ -128,7 +134,8 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
         new QueryDataSource(subQuery.toGroupByQuery()),
         sourceRowSignature,
         getPlannerContext(),
-        getCluster().getRexBuilder()
+        getCluster().getRexBuilder(),
+        finalizeAggregations
     );
   }
 
@@ -142,7 +149,8 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
             sourceRel.getRowType()
         ),
         getPlannerContext(),
-        getCluster().getRexBuilder()
+        getCluster().getRexBuilder(),
+        false
     );
   }
 

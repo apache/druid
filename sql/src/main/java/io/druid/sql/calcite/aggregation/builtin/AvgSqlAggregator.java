@@ -21,7 +21,6 @@ package io.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -32,6 +31,7 @@ import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.Aggregations;
 import io.druid.sql.calcite.aggregation.SqlAggregator;
 import io.druid.sql.calcite.expression.DruidExpression;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -61,7 +61,8 @@ public class AvgSqlAggregator implements SqlAggregator
       final String name,
       final AggregateCall aggregateCall,
       final Project project,
-      final List<Aggregation> existingAggregations
+      final List<Aggregation> existingAggregations,
+      final boolean finalizeAggregations
   )
   {
     if (aggregateCall.isDistinct()) {
@@ -102,8 +103,8 @@ public class AvgSqlAggregator implements SqlAggregator
       expression = arg.getExpression();
     }
 
-    final String sumName = StringUtils.format("%s:sum", name);
-    final String countName = StringUtils.format("%s:count", name);
+    final String sumName = Calcites.makePrefixedName(name, "sum");
+    final String countName = Calcites.makePrefixedName(name, "count");
     final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(
         sumType,
         sumName,
