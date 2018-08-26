@@ -194,17 +194,73 @@ existing publishing tasks and will create new tasks starting at the offsets the 
 
 Seamless schema migrations can thus be achieved by simply submitting the new schema using this endpoint.
 
-#### Shutdown Supervisor
+#### Suspend Supervisor 
+
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/suspend
+```
+Suspend indexing tasks associated with a _suspendable_ supervisor. Note that the supervisor itself will still be
+operating and emitting logs and metrics, it will just ensure that no indexing tasks are running until the supervisor
+is resumed. Responds with updated SupervisorSpec.
+
+#### Resume Supervisor 
+
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/resume
+```
+Resume indexing tasks for a _suspendable_ supervisor. Responds with updated SupervisorSpec.
+
+#### Reset Supervisor
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/reset
+```
+The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
+guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
+generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
+(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
+refuse to start and in-flight tasks will fail.
+
+This endpoint can be used to clear the stored offsets which will cause the supervisor to start reading from
+either the earliest or latest offsets in Kafka (depending on the value of `useEarliestOffset`). The supervisor must be
+running for this endpoint to be available. After the stored offsets are cleared, the supervisor will automatically kill
+and re-create any active tasks so that tasks begin reading from valid offsets.
+
+Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
+may cause some Kafka messages to be skipped or to be read twice.
+
+#### Terminate Supervisor 
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/terminate
+```
+Terminate a supervisor and cause all associated indexing tasks managed by this supervisor to immediately stop and begin 
+publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved 
+with the supervisor history api, but will not be listed in the 'get supervisors' api response nor can it's configuration
+or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
+spec to the create api.
+
+#### Shutdown Supervisor 
+_Deprecated: use the equivalent 'terminate' instead_
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown
 ```
-Note that this will cause all indexing tasks managed by this supervisor to immediately stop and begin publishing their segments.
 
 #### Get Supervisor IDs
 ```
 GET /druid/indexer/v1/supervisor
 ```
-Returns a list of the currently active supervisors.
+Returns a list of strings of the currently active supervisor ids.
+
+#### Get Supervisors
+```
+GET /druid/indexer/v1/supervisor?full
+```
+Returns a list of objects of the currently active supervisors.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+
 
 #### Get Supervisor Spec
 ```
@@ -232,24 +288,6 @@ Returns an audit history of specs for all supervisors (current and past).
 GET /druid/indexer/v1/supervisor/<supervisorId>/history
 ```
 Returns an audit history of specs for the supervisor with the provided ID.
-
-#### Reset Supervisor
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/reset
-```
-The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
-guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
-generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
-(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
-refuse to start and in-flight tasks will fail.
-
-This endpoint can be used to clear the stored offsets which will cause the supervisor to start reading from
-either the earliest or latest offsets in Kafka (depending on the value of `useEarliestOffset`). The supervisor must be
-running for this endpoint to be available. After the stored offsets are cleared, the supervisor will automatically kill
-and re-create any active tasks so that tasks begin reading from valid offsets.
-
-Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
-may cause some Kafka messages to be skipped or to be read twice.
 
 ## Capacity Planning
 

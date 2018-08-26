@@ -91,6 +91,20 @@ public class SupervisorManager
     }
   }
 
+  public boolean suspendOrResumeSupervisor(String id, boolean suspend)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
+    Preconditions.checkNotNull(pair.lhs, "spec");
+    SuspendableSupervisorSpec currentState = (SuspendableSupervisorSpec) pair.rhs;
+    synchronized (lock) {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      SuspendableSupervisorSpec nextState = suspend ? currentState.createSuspendedSpec() : currentState.createRunningSpec();
+      possiblyStopAndRemoveSupervisorInternal(nextState.getId(), false);
+      return createAndStartSupervisorInternal(nextState, true);
+    }
+  }
+
   @LifecycleStart
   public void start()
   {

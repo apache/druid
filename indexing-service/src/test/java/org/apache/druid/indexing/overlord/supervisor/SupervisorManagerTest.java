@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.capture;
 import static org.easymock.EasyMock.eq;
 
 @RunWith(EasyMockRunner.class)
@@ -263,6 +265,83 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void testCreateSuspendResumeAndStopSupervisor()
+  {
+    Capture<TestSuspendableSupervisorSpec> capturedInsert = Capture.newInstance();
+    SupervisorSpec spec = new TestSuspendableSupervisorSpec("id1", supervisor1, false, supervisor2);
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id3", new TestSupervisorSpec("id3", supervisor3)
+    );
+
+    // mock adding a suspendable supervisor to manager with existing supervisor
+    Assert.assertTrue(manager.getSupervisorIds().isEmpty());
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    metadataSupervisorManager.insert("id1", spec);
+    supervisor3.start();
+    supervisor1.start();
+    replayAll();
+
+    manager.start();
+    Assert.assertEquals(1, manager.getSupervisorIds().size());
+
+    manager.createOrUpdateAndStartSupervisor(spec);
+    Assert.assertEquals(2, manager.getSupervisorIds().size());
+    Assert.assertEquals(spec, manager.getSupervisorSpec("id1").get());
+    verifyAll();
+
+    // mock suspend, which stops supervisor1 and sets suspended state in metadata, flipping to supervisor2
+    // in TestSuspendableSupervisorSpec implementation of createSuspendedSpec
+    resetAll();
+    metadataSupervisorManager.insert(eq("id1"), capture(capturedInsert));
+    supervisor2.start();
+    supervisor1.stop(true);
+    replayAll();
+
+    manager.suspendOrResumeSupervisor("id1", true);
+    Assert.assertEquals(2, manager.getSupervisorIds().size());
+    Assert.assertEquals(capturedInsert.getValue(), manager.getSupervisorSpec("id1").get());
+    Assert.assertTrue(capturedInsert.getValue().suspended);
+    verifyAll();
+
+    // mock resume, which stops supervisor2 and sets suspended to false in metadata, flipping to supervisor1
+    // in TestSuspendableSupervisorSpec implementation of createRunningSpec
+    resetAll();
+    metadataSupervisorManager.insert(eq("id1"), capture(capturedInsert));
+    supervisor2.stop(true);
+    supervisor1.start();
+    replayAll();
+
+    manager.suspendOrResumeSupervisor("id1", false);
+    Assert.assertEquals(2, manager.getSupervisorIds().size());
+    Assert.assertEquals(capturedInsert.getValue(), manager.getSupervisorSpec("id1").get());
+    Assert.assertFalse(capturedInsert.getValue().suspended);
+    verifyAll();
+
+    // mock stop of suspendable supervisor
+    resetAll();
+    metadataSupervisorManager.insert(eq("id1"), anyObject(NoopSupervisorSpec.class));
+    supervisor1.stop(true);
+    replayAll();
+
+    boolean retVal = manager.stopAndRemoveSupervisor("id1");
+    Assert.assertTrue(retVal);
+    Assert.assertEquals(1, manager.getSupervisorIds().size());
+    Assert.assertEquals(Optional.absent(), manager.getSupervisorSpec("id1"));
+    verifyAll();
+
+    // mock manager shutdown to ensure supervisor 3 stops
+    resetAll();
+    supervisor3.stop(false);
+    replayAll();
+
+    manager.stop();
+    verifyAll();
+
+    Assert.assertTrue(manager.getSupervisorIds().isEmpty());
+  }
+
   private static class TestSupervisorSpec implements SupervisorSpec
   {
     private final String id;
@@ -292,5 +371,56 @@ public class SupervisorManagerTest extends EasyMockSupport
       return new ArrayList<>();
     }
 
+  }
+
+  private static class TestSuspendableSupervisorSpec implements SuspendableSupervisorSpec
+  {
+    private final String id;
+    private final Supervisor supervisor;
+    private final boolean suspended;
+    private final Supervisor suspendedSupervisor;
+
+    public TestSuspendableSupervisorSpec(String id, Supervisor supervisor, boolean suspended, Supervisor suspendedSupervisor)
+    {
+      this.id = id;
+      this.supervisor = supervisor;
+      this.suspended = suspended;
+      this.suspendedSupervisor = suspendedSupervisor;
+    }
+    @Override
+    public SuspendableSupervisorSpec createSuspendedSpec()
+    {
+      return new TestSuspendableSupervisorSpec(id, suspendedSupervisor, true, supervisor);
+    }
+
+    @Override
+    public SuspendableSupervisorSpec createRunningSpec()
+    {
+      return new TestSuspendableSupervisorSpec(id, suspendedSupervisor, false, supervisor);
+    }
+
+    @Override
+    public String getId()
+    {
+      return id;
+    }
+
+    @Override
+    public Supervisor createSupervisor()
+    {
+      return supervisor;
+    }
+
+    @Override
+    public boolean isSuspended()
+    {
+      return suspended;
+    }
+
+    @Override
+    public List<String> getDataSources()
+    {
+      return new ArrayList<>();
+    }
   }
 }
