@@ -131,7 +131,7 @@ public class TierSelectorStrategyTest
         tierSelectorStrategy
     );
 
-    List<QueryableDruidServer> servers = Lists.newArrayList(expectedSelection);
+    List<QueryableDruidServer> servers = Arrays.asList(expectedSelection);
 
     List<DruidServerMetadata> expectedCandidates = Lists.newArrayList();
     for (QueryableDruidServer server : servers) {

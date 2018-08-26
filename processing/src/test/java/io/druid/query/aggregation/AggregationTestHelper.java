@@ -344,7 +344,7 @@ public class AggregationTestHelper implements Closeable
   {
     File segmentDir = tempFolder.newFolder();
     createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
-    return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
   public Sequence<Row> createIndexAndRunQueryOnSegment(
