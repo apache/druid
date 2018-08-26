@@ -36,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -191,7 +192,7 @@ public class DataSegmentTest
         makeDataSegment("test2", "2011-02-02/2011-02-03", "a"),
     };
 
-    List<DataSegment> shuffled = Arrays.asList(sortedOrder);
+    List<DataSegment> shuffled = new ArrayList<>(Arrays.asList(sortedOrder));
     Collections.shuffle(shuffled);
 
     Set<DataSegment> theSet = Sets.newTreeSet(DataSegment.bucketMonthComparator());

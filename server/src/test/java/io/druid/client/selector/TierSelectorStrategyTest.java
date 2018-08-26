@@ -33,6 +33,7 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -131,7 +132,7 @@ public class TierSelectorStrategyTest
         tierSelectorStrategy
     );
 
-    List<QueryableDruidServer> servers = Arrays.asList(expectedSelection);
+    List<QueryableDruidServer> servers = new ArrayList<>(Arrays.asList(expectedSelection));
 
     List<DruidServerMetadata> expectedCandidates = Lists.newArrayList();
     for (QueryableDruidServer server : servers) {
