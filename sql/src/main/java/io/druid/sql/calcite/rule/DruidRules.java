@@ -101,7 +101,7 @@ public class DruidRules
     {
       super(
           operand(relClass, operand(DruidRel.class, any())),
-          StringUtils.format("%s:%s", DruidQueryRule.class.getSimpleName(), stage)
+          StringUtils.format("%s(%s)", DruidQueryRule.class.getSimpleName(), stage)
       );
       this.stage = stage;
       this.f = f;
@@ -229,7 +229,7 @@ public class DruidRules
 
     public DruidOuterQueryRule(final RelOptRuleOperand op, final String description)
     {
-      super(op, StringUtils.format("%s:%s", DruidOuterQueryRel.class.getSimpleName(), description));
+      super(op, StringUtils.format("%s(%s)", DruidOuterQueryRel.class.getSimpleName(), description));
     }
 
     @Override

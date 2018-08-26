@@ -48,6 +48,7 @@ import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -4029,6 +4030,74 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(
             new Object[]{6L, 3L}
         )
+    );
+  }
+
+  @Test
+  public void testAvgDailyCountDistinct() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  AVG(u)\n"
+        + "FROM (SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT(cnt) AS u FROM druid.foo GROUP BY 1)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setVirtualColumns(
+                                                EXPRESSION_VIRTUAL_COLUMN(
+                                                    "d0:v",
+                                                    "timestamp_floor(\"__time\",'P1D','','UTC')",
+                                                    ValueType.LONG
+                                                )
+                                            )
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                                            .setAggregatorSpecs(
+                                                AGGS(
+                                                    new CardinalityAggregatorFactory(
+                                                        "a0:a",
+                                                        null,
+                                                        DIMS(new DefaultDimensionSpec("cnt", "cnt", ValueType.LONG)),
+                                                        false,
+                                                        true
+                                                    )
+                                                )
+                                            )
+                                            .setPostAggregatorSpecs(
+                                                ImmutableList.of(
+                                                    new HyperUniqueFinalizingPostAggregator("a0", "a0:a")
+                                                )
+                                            )
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("_a0:sum", "a0"),
+                            new CountAggregatorFactory("_a0:count")
+                        ))
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ArithmeticPostAggregator(
+                                    "_a0",
+                                    "quotient",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "_a0:sum"),
+                                        new FieldAccessPostAggregator(null, "_a0:count")
+                                    )
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{1L})
     );
   }
 

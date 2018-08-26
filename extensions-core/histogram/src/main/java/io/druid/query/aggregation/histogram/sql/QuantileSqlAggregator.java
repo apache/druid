@@ -48,6 +48,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,6 +63,7 @@ public class QuantileSqlAggregator implements SqlAggregator
     return FUNCTION_INSTANCE;
   }
 
+  @Nullable
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
@@ -70,7 +72,8 @@ public class QuantileSqlAggregator implements SqlAggregator
       final String name,
       final AggregateCall aggregateCall,
       final Project project,
-      final List<Aggregation> existingAggregations
+      final List<Aggregation> existingAggregations,
+      final boolean finalizeAggregations
   )
   {
     final DruidExpression input = Expressions.toDruidExpression(
