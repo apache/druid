@@ -1534,10 +1534,6 @@ public class KafkaSupervisor implements Supervisor
               i.remove();
             }
           }
-        } else {
-          log.info("Killing task [%s] of unknown status", taskId);
-          killTask(taskId);
-          i.remove();
         }
       }
     }
