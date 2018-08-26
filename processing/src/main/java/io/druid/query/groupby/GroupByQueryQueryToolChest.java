@@ -57,6 +57,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.groupby.resource.GroupByQueryResource;
 import io.druid.query.groupby.strategy.GroupByStrategy;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
+import io.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -451,8 +452,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             Map<String, Object> event = Maps.newLinkedHashMap();
             Iterator<DimensionSpec> dimsIter = dims.iterator();
             while (dimsIter.hasNext() && results.hasNext()) {
-              final DimensionSpec factory = dimsIter.next();
-              event.put(factory.getOutputName(), results.next());
+              final DimensionSpec dimensionSpec = dimsIter.next();
+
+              // Must convert generic Jackson-deserialized type into the proper type.
+              event.put(
+                  dimensionSpec.getOutputName(),
+                  DimensionHandlerUtils.convertObjectToType(results.next(), dimensionSpec.getOutputType())
+              );
             }
 
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();

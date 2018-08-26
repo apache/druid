@@ -19,7 +19,6 @@
 
 package io.druid.query.topn;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.query.Result;
@@ -66,32 +65,22 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
     this.threshold = threshold;
     this.pQueue = new PriorityQueue<>(
         threshold + 1,
-        new Comparator<DimValHolder>()
-        {
-          @Override
-          public int compare(
-              DimValHolder o1,
-              DimValHolder o2
-          )
-          {
-            return comparator.compare(o2.getDimName(), o1.getDimName());
-          }
-        }
+        (o1, o2) -> comparator.compare(o2.getDimValue(), o1.getDimValue())
     );
   }
 
   @Override
   public TopNResultBuilder addEntry(
-      Comparable dimNameObj,
+      Comparable dimValueObj,
       Object dimValIndex,
       Object[] metricVals
   )
   {
-    final String dimName = Objects.toString(dimNameObj, null);
+    final String dimValue = Objects.toString(dimValueObj, null);
     final Map<String, Object> metricValues = Maps.newHashMapWithExpectedSize(metricVals.length + 1);
 
-    if (shouldAdd(dimName)) {
-      metricValues.put(dimSpec.getOutputName(), dimName);
+    if (shouldAdd(dimValue)) {
+      metricValues.put(dimSpec.getOutputName(), dimValueObj);
       final int extra = metricVals.length % LOOP_UNROLL_COUNT;
       switch (extra) {
         case 7:
@@ -126,7 +115,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
         metricValues.put(aggFactoryNames[i + 7], metricVals[i + 7]);
       }
 
-      pQueue.add(new DimValHolder.Builder().withDimName(dimName).withMetricValues(metricValues).build());
+      pQueue.add(new DimValHolder.Builder().withDimValue(dimValue).withMetricValues(metricValues).build());
       if (pQueue.size() > threshold) {
         pQueue.poll();
       }
@@ -143,7 +132,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
 
     if (shouldAdd(dimensionValue)) {
       pQueue.add(
-          new DimValHolder.Builder().withDimName(dimensionValue)
+          new DimValHolder.Builder().withDimValue(dimensionValue)
                                     .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
                                     .build()
       );
@@ -167,30 +156,11 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
     final DimValHolder[] holderValueArray = pQueue.toArray(new DimValHolder[0]);
     Arrays.sort(
         holderValueArray,
-        new Comparator<DimValHolder>()
-        {
-          @Override
-          public int compare(DimValHolder o1, DimValHolder o2)
-          {
-            return comparator.compare(o1.getDimName(), o2.getDimName());
-          }
-        }
-
+        (o1, o2) -> comparator.compare(o1.getDimValue(), o2.getDimValue())
     );
-    return new Result(
-        timestamp, new TopNResultValue(
-        Lists.transform(
-            Arrays.asList(holderValueArray),
-            new Function<DimValHolder, Object>()
-            {
-              @Override
-              public Object apply(DimValHolder dimValHolder)
-              {
-                return dimValHolder.getMetricValues();
-              }
-            }
-        )
-    )
+    return new Result<>(
+        timestamp,
+        new TopNResultValue(Lists.transform(Arrays.asList(holderValueArray), DimValHolder::getMetricValues))
     );
   }
 

@@ -50,6 +50,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -384,11 +385,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             Iterator<Object> inputIter = results.iterator();
             DateTime timestamp = granularity.toDateTime(((Number) inputIter.next()).longValue());
 
-            // Need a value transformer to convert generic Jackson-deserialized type into the proper type.
-            final Function<Object, Object> dimValueTransformer = TopNMapFn.getValueTransformer(
-                query.getDimensionSpec().getOutputType()
-            );
-
             while (inputIter.hasNext()) {
               List<Object> result = (List<Object>) inputIter.next();
               Map<String, Object> vals = Maps.newLinkedHashMap();
@@ -396,7 +392,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               Iterator<AggregatorFactory> aggIter = aggs.iterator();
               Iterator<Object> resultIter = result.iterator();
 
-              vals.put(query.getDimensionSpec().getOutputName(), dimValueTransformer.apply(resultIter.next()));
+              // Must convert generic Jackson-deserialized type into the proper type.
+              vals.put(
+                  query.getDimensionSpec().getOutputName(),
+                  DimensionHandlerUtils.convertObjectToType(resultIter.next(), query.getDimensionSpec().getOutputType())
+              );
 
               while (aggIter.hasNext() && resultIter.hasNext()) {
                 final AggregatorFactory factory = aggIter.next();

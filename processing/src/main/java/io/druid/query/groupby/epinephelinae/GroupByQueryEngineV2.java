@@ -682,28 +682,7 @@ public class GroupByQueryEngineV2
       final ValueType outputType = dimSpec.getOutputType();
       rowMap.compute(
           dimSpec.getOutputName(),
-          (dimName, baseVal) -> {
-            switch (outputType) {
-              case STRING:
-                baseVal = baseVal == null ? "" : baseVal.toString();
-                break;
-              case LONG:
-                baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
-                baseVal = baseVal == null ? 0L : baseVal;
-                break;
-              case FLOAT:
-                baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
-                baseVal = baseVal == null ? 0.f : baseVal;
-                break;
-              case DOUBLE:
-                baseVal = DimensionHandlerUtils.convertObjectToDouble(baseVal);
-                baseVal = baseVal == null ? 0.d : baseVal;
-                break;
-              default:
-                throw new IAE("Unsupported type: " + outputType);
-            }
-            return baseVal;
-          }
+          (dimName, baseVal) -> DimensionHandlerUtils.convertObjectToTypeNonNull(baseVal, outputType)
       );
     }
   }

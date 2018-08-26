@@ -26,19 +26,19 @@ import java.util.Map;
 public class DimValHolder
 {
   private final Object topNMetricVal;
-  private final Comparable dimName;
+  private final Comparable dimValue;
   private final Object dimValIndex;
   private final Map<String, Object> metricValues;
 
   public DimValHolder(
       Object topNMetricVal,
-      Comparable dimName,
+      Comparable dimValue,
       Object dimValIndex,
       Map<String, Object> metricValues
   )
   {
     this.topNMetricVal = topNMetricVal;
-    this.dimName = dimName;
+    this.dimValue = dimValue;
     this.dimValIndex = dimValIndex;
     this.metricValues = metricValues;
   }
@@ -48,9 +48,9 @@ public class DimValHolder
     return topNMetricVal;
   }
 
-  public Comparable getDimName()
+  public Comparable getDimValue()
   {
-    return dimName;
+    return dimValue;
   }
 
   public Object getDimValIndex()
@@ -66,14 +66,14 @@ public class DimValHolder
   public static class Builder
   {
     private Object topNMetricVal;
-    private Comparable dimName;
+    private Comparable dimValue;
     private Object dimValIndex;
     private Map<String, Object> metricValues;
 
     public Builder()
     {
       topNMetricVal = null;
-      dimName = null;
+      dimValue = null;
       dimValIndex = null;
       metricValues = null;
     }
@@ -84,9 +84,9 @@ public class DimValHolder
       return this;
     }
 
-    public Builder withDimName(Comparable dimName)
+    public Builder withDimValue(Comparable dimValue)
     {
-      this.dimName = dimName;
+      this.dimValue = dimValue;
       return this;
     }
 
@@ -104,7 +104,7 @@ public class DimValHolder
 
     public DimValHolder build()
     {
-      return new DimValHolder(topNMetricVal, dimName, dimValIndex, metricValues);
+      return new DimValHolder(topNMetricVal, dimValue, dimValIndex, metricValues);
     }
   }
 }
