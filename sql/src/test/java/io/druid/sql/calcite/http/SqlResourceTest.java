@@ -152,16 +152,25 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testXDruidSqlColumnsHeader() throws Exception
+  public void testXDruidColumnHeaders() throws Exception
   {
     final Response response = resource.doPost(
-        new SqlQuery("SELECT COUNT(*) as TheCount, SUM(m1) FROM druid.foo", ResultFormat.OBJECT, null),
+        new SqlQuery(
+            "SELECT FLOOR(__time TO DAY) as \"day\", COUNT(*) as TheCount, SUM(m1) FROM druid.foo GROUP BY 1",
+            ResultFormat.OBJECT,
+            null
+        ),
         req
     );
 
     Assert.assertEquals(
-        "[\"TheCount\",\"EXPR$1\"]",
-        response.getMetadata().getFirst("X-Druid-Sql-Columns")
+        "[\"day\",\"TheCount\",\"EXPR$2\"]",
+        response.getMetadata().getFirst("X-Druid-Column-Names")
+    );
+
+    Assert.assertEquals(
+        "[\"TIMESTAMP\",\"BIGINT\",\"DOUBLE\"]",
+        response.getMetadata().getFirst("X-Druid-Column-Types")
     );
   }
 
@@ -281,7 +290,7 @@ public class SqlResourceTest extends CalciteTestBase
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
-    Assert.assertEquals(5, lines.size());
+    Assert.assertEquals(3, lines.size());
     Assert.assertEquals(
         Arrays.asList("2000-01-01T00:00:00.000Z", 1, "", "a", 1.0, 1.0, "io.druid.hll.HLLCV1", nullStr),
         JSON_MAPPER.readValue(lines.get(0), List.class)
@@ -291,8 +300,6 @@ public class SqlResourceTest extends CalciteTestBase
         JSON_MAPPER.readValue(lines.get(1), List.class)
     );
     Assert.assertEquals("", lines.get(2));
-    Assert.assertEquals("2", lines.get(3));
-    Assert.assertEquals("", lines.get(4));
   }
 
   @Test
@@ -350,7 +357,7 @@ public class SqlResourceTest extends CalciteTestBase
     };
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
-    Assert.assertEquals(5, lines.size());
+    Assert.assertEquals(3, lines.size());
     Assert.assertEquals(
         transformer.apply(
             ImmutableMap
@@ -384,8 +391,6 @@ public class SqlResourceTest extends CalciteTestBase
         JSON_MAPPER.readValue(lines.get(1), Object.class)
     );
     Assert.assertEquals("", lines.get(2));
-    Assert.assertEquals("2", lines.get(3));
-    Assert.assertEquals("", lines.get(4));
   }
 
   @Test
@@ -399,8 +404,6 @@ public class SqlResourceTest extends CalciteTestBase
         ImmutableList.of(
             "2000-01-01T00:00:00.000Z,1,,a,1.0,1.0,io.druid.hll.HLLCV1,",
             "2000-01-02T00:00:00.000Z,1,10.1,,2.0,2.0,io.druid.hll.HLLCV1,",
-            "",
-            "2",
             ""
         ),
         lines

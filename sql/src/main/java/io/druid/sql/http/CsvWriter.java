@@ -54,8 +54,8 @@ public class CsvWriter implements ResultFormat.Writer
   {
     writer.flush();
 
-    // Write blank line, followed by number of lines, so users can tell the response was not cut off.
-    outputStream.write(("\n" + numLines + "\n").getBytes(StandardCharsets.UTF_8));
+    // Write an extra blank line, so users can tell the response was not cut off.
+    outputStream.write('\n');
     outputStream.flush();
   }
 

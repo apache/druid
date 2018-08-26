@@ -365,8 +365,11 @@ Metadata is available over the HTTP API by querying [system tables](#retrieving-
 
 #### Responses
 
-All Druid SQL HTTP responses include a "X-Druid-Sql-Columns" header with a JSON-encoded array of columns that
-will appear in the result rows. For the result rows themselves, Druid SQL supports a variety of result formats. You can
+All Druid SQL HTTP responses include a "X-Druid-Column-Names" header with a JSON-encoded array of columns that
+will appear in the result rows and an "X-Druid-Column-Types" header with a JSON-encoded array of
+[types](#data-types-and-casts).
+
+For the result rows themselves, Druid SQL supports a variety of result formats. You can
 specify these by adding a "resultFormat" parameter, like:
 
 ```json
@@ -382,9 +385,9 @@ The supported result formats are:
 |------|-----------|------------|
 |`object`|The default, a JSON array of JSON objects. Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.|application/json|
 |`array`|JSON array of JSON arrays. Each inner array has elements matching the columns returned by the SQL query, in order.|application/json|
-|`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line followed by the number of rows in the preceding result set.|text/plain|
-|`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line followed by the number of rows in the preceding result set.|text/plain|
-|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line followed by the number of rows in the preceding result set.|text/csv|
+|`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
+|`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
+|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/csv|
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
 same format as [native Druid query errors](../querying#query-errors). If an error occurs while the response body is
@@ -393,9 +396,9 @@ simply end midstream and an error will be logged by the Druid server that was ha
 
 As a caller, it is important that you properly handle response truncation. This is easy for the "object" and "array"
 formats, since truncated responses will be invalid JSON. For the line-oriented formats, you should check the
-trailer they all include: one blank line followed by the number of rows in the preceding reponse. If you detect a
-truncated response, either through a JSON parsing error or through a missing trailer, you should assume the response
-was not fully delivered due to an error.
+trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
+through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
+delivered due to an error.
 
 ### JDBC
 

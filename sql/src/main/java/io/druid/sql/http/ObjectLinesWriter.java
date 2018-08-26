@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 
 public class ObjectLinesWriter implements ResultFormat.Writer
 {
@@ -52,8 +51,8 @@ public class ObjectLinesWriter implements ResultFormat.Writer
   {
     jsonGenerator.flush();
 
-    // Write blank line, followed by number of lines, so users can tell the response was not cut off.
-    outputStream.write(("\n\n" + numLines + "\n").getBytes(StandardCharsets.UTF_8));
+    // Write an extra blank line, so users can tell the response was not cut off.
+    outputStream.write('\n');
     outputStream.flush();
   }
 

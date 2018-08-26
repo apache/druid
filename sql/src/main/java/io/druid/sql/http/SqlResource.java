@@ -92,12 +92,14 @@ public class SqlResource
       final boolean[] timeColumns = new boolean[fieldList.size()];
       final boolean[] dateColumns = new boolean[fieldList.size()];
       final String[] columnNames = new String[fieldList.size()];
+      final String[] columnTypes = new String[fieldList.size()];
 
       for (int i = 0; i < fieldList.size(); i++) {
         final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
         timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
         dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
         columnNames[i] = fieldList.get(i).getName();
+        columnTypes[i] = sqlTypeName.getName();
       }
 
       final Yielder<Object[]> yielder0 = Yielders.each(plannerResult.run());
@@ -148,7 +150,8 @@ public class SqlResource
                   }
                 }
             )
-            .header("X-Druid-Sql-Columns", jsonMapper.writeValueAsString(columnNames))
+            .header("X-Druid-Column-Names", jsonMapper.writeValueAsString(columnNames))
+            .header("X-Druid-Column-Types", jsonMapper.writeValueAsString(columnTypes))
             .build();
       }
       catch (Throwable e) {
