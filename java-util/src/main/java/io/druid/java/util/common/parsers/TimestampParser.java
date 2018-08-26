@@ -79,7 +79,6 @@ public class TimestampParser
         return numericFun.apply(Long.parseLong(ParserUtils.stripQuotes(input)));
       };
     } else if ("ruby".equalsIgnoreCase(format)) {
-      // Numeric parser ignores millis for ruby.
       final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
       return input -> {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
@@ -103,11 +102,12 @@ public class TimestampParser
       final String format
   )
   {
-    // Ignore millis for ruby
-    if ("posix".equalsIgnoreCase(format) || "ruby".equalsIgnoreCase(format)) {
+    if ("posix".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(TimeUnit.SECONDS.toMillis(input.longValue()));
     } else if ("nano".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(input.longValue()));
+    } else if ("ruby".equalsIgnoreCase(format)) {
+      return input -> DateTimes.utc(Double.valueOf(input.doubleValue() * 1000).longValue());
     } else {
       return input -> DateTimes.utc(input.longValue());
     }
