@@ -66,8 +66,11 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class SqlResourceTest extends CalciteTestBase
 {
@@ -259,11 +262,12 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
+    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
     Assert.assertEquals(
         ImmutableList.of(
-            ImmutableList.of("2000-01-01T00:00:00.000Z", 1, "", "a", 1.0, 1.0, "io.druid.hll.HLLCV1", ""),
-            ImmutableList.of("2000-01-02T00:00:00.000Z", 1, "10.1", "", 2.0, 2.0, "io.druid.hll.HLLCV1", "")
+            Arrays.asList("2000-01-01T00:00:00.000Z", 1, "", "a", 1.0, 1.0, "io.druid.hll.HLLCV1", nullStr),
+            Arrays.asList("2000-01-02T00:00:00.000Z", 1, "10.1", nullStr, 2.0, 2.0, "io.druid.hll.HLLCV1", nullStr)
         ),
         doPost(new SqlQuery(query, ResultFormat.ARRAY, null), new TypeReference<List<List<Object>>>() {}).rhs
     );
@@ -274,15 +278,16 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, null)).rhs;
+    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(5, lines.size());
     Assert.assertEquals(
-        ImmutableList.of("2000-01-01T00:00:00.000Z", 1, "", "a", 1.0, 1.0, "io.druid.hll.HLLCV1", ""),
+        Arrays.asList("2000-01-01T00:00:00.000Z", 1, "", "a", 1.0, 1.0, "io.druid.hll.HLLCV1", nullStr),
         JSON_MAPPER.readValue(lines.get(0), List.class)
     );
     Assert.assertEquals(
-        ImmutableList.of("2000-01-02T00:00:00.000Z", 1, "10.1", "", 2.0, 2.0, "io.druid.hll.HLLCV1", ""),
+        Arrays.asList("2000-01-02T00:00:00.000Z", 1, "10.1", nullStr, 2.0, 2.0, "io.druid.hll.HLLCV1", nullStr),
         JSON_MAPPER.readValue(lines.get(1), List.class)
     );
     Assert.assertEquals("", lines.get(2));
@@ -294,11 +299,18 @@ public class SqlResourceTest extends CalciteTestBase
   public void testObjectResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo  LIMIT 2";
+    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
+    final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
+      return Maps.transformEntries(
+          m,
+          (k, v) -> "EXPR$7".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+      );
+    };
 
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap
-                .builder()
+                .<String, Object>builder()
                 .put("__time", "2000-01-01T00:00:00.000Z")
                 .put("cnt", 1)
                 .put("dim1", "")
@@ -309,7 +321,56 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("EXPR$7", "")
                 .build(),
             ImmutableMap
-                .builder()
+                .<String, Object>builder()
+                .put("__time", "2000-01-02T00:00:00.000Z")
+                .put("cnt", 1)
+                .put("dim1", "10.1")
+                .put("dim2", "")
+                .put("m1", 2.0)
+                .put("m2", 2.0)
+                .put("unique_dim1", "io.druid.hll.HLLCV1")
+                .put("EXPR$7", "")
+                .build()
+        ).stream().map(transformer).collect(Collectors.toList()),
+        doPost(new SqlQuery(query, ResultFormat.OBJECT, null), new TypeReference<List<Map<String, Object>>>() {}).rhs
+    );
+  }
+
+  @Test
+  public void testObjectLinesResultFormat() throws Exception
+  {
+    final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
+    final String response = doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, null)).rhs;
+    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
+    final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
+      return Maps.transformEntries(
+          m,
+          (k, v) -> "EXPR$7".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+      );
+    };
+    final List<String> lines = Splitter.on('\n').splitToList(response);
+
+    Assert.assertEquals(5, lines.size());
+    Assert.assertEquals(
+        transformer.apply(
+            ImmutableMap
+                .<String, Object>builder()
+                .put("__time", "2000-01-01T00:00:00.000Z")
+                .put("cnt", 1)
+                .put("dim1", "")
+                .put("dim2", "a")
+                .put("m1", 1.0)
+                .put("m2", 1.0)
+                .put("unique_dim1", "io.druid.hll.HLLCV1")
+                .put("EXPR$7", "")
+                .build()
+        ),
+        JSON_MAPPER.readValue(lines.get(0), Object.class)
+    );
+    Assert.assertEquals(
+        transformer.apply(
+            ImmutableMap
+                .<String, Object>builder()
                 .put("__time", "2000-01-02T00:00:00.000Z")
                 .put("cnt", 1)
                 .put("dim1", "10.1")
@@ -320,44 +381,6 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("EXPR$7", "")
                 .build()
         ),
-        doPost(new SqlQuery(query, ResultFormat.OBJECT, null), new TypeReference<List<Map<String, Object>>>() {}).rhs
-    );
-  }
-
-  @Test
-  public void testObjectLinesResultFormat() throws Exception
-  {
-    final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, null)).rhs;
-    final List<String> lines = Splitter.on('\n').splitToList(response);
-
-    Assert.assertEquals(5, lines.size());
-    Assert.assertEquals(
-        ImmutableMap
-            .builder()
-            .put("__time", "2000-01-01T00:00:00.000Z")
-            .put("cnt", 1)
-            .put("dim1", "")
-            .put("dim2", "a")
-            .put("m1", 1.0)
-            .put("m2", 1.0)
-            .put("unique_dim1", "io.druid.hll.HLLCV1")
-            .put("EXPR$7", "")
-            .build(),
-        JSON_MAPPER.readValue(lines.get(0), Object.class)
-    );
-    Assert.assertEquals(
-        ImmutableMap
-            .builder()
-            .put("__time", "2000-01-02T00:00:00.000Z")
-            .put("cnt", 1)
-            .put("dim1", "10.1")
-            .put("dim2", "")
-            .put("m1", 2.0)
-            .put("m2", 2.0)
-            .put("unique_dim1", "io.druid.hll.HLLCV1")
-            .put("EXPR$7", "")
-            .build(),
         JSON_MAPPER.readValue(lines.get(1), Object.class)
     );
     Assert.assertEquals("", lines.get(2));
