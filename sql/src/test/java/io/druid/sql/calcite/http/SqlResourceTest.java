@@ -391,14 +391,14 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testCsvResultFormat() throws Exception
   {
-    final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END, 'beep \"boop\"' FROM foo LIMIT 2";
+    final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, null)).rhs;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(
         ImmutableList.of(
-            "2000-01-01T00:00:00.000Z,1,,a,1.0,1.0,io.druid.hll.HLLCV1,,\"beep \"\"boop\"\"\"",
-            "2000-01-02T00:00:00.000Z,1,10.1,,2.0,2.0,io.druid.hll.HLLCV1,,\"beep \"\"boop\"\"\"",
+            "2000-01-01T00:00:00.000Z,1,,a,1.0,1.0,io.druid.hll.HLLCV1,",
+            "2000-01-02T00:00:00.000Z,1,10.1,,2.0,2.0,io.druid.hll.HLLCV1,",
             "",
             "2",
             ""
