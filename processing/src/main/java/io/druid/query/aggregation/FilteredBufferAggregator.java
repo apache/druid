@@ -74,6 +74,23 @@ public class FilteredBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public void relocate(
+      final int oldPosition,
+      final int newPosition,
+      final ByteBuffer oldBuffer,
+      final ByteBuffer newBuffer
+  )
+  {
+    delegate.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
+  }
+
+  @Override
+  public boolean isNull(final ByteBuffer buf, final int position)
+  {
+    return delegate.isNull(buf, position);
+  }
+
+  @Override
   public void close()
   {
     delegate.close();
