@@ -358,8 +358,12 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         newPartialQuery = newPartialQuery.withHavingFilter(leftPartialQuery.getHavingFilter());
       }
 
-      if (leftPartialQuery.getPostProject() != null) {
-        newPartialQuery = newPartialQuery.withPostProject(leftPartialQuery.getPostProject());
+      if (leftPartialQuery.getAggregateProject() != null) {
+        newPartialQuery = newPartialQuery.withAggregateProject(leftPartialQuery.getAggregateProject());
+      }
+
+      if (leftPartialQuery.getSortProject() != null) {
+        newPartialQuery = newPartialQuery.withSortProject(leftPartialQuery.getSortProject());
       }
 
       if (leftPartialQuery.getSort() != null) {
