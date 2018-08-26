@@ -4051,7 +4051,7 @@ public class CalciteQueryTest extends CalciteTestBase
                                             .setVirtualColumns(
                                                 EXPRESSION_VIRTUAL_COLUMN(
                                                     "d0:v",
-                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                    "timestamp_floor(\"__time\",'P1D','','UTC')",
                                                     ValueType.LONG
                                                 )
                                             )
