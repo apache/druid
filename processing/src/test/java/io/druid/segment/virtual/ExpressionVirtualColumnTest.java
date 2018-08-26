@@ -27,6 +27,8 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
+import io.druid.math.expr.ExprEval;
+import io.druid.math.expr.Parser;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.expression.TestExprMacroTable;
@@ -77,6 +79,12 @@ public class ExpressionVirtualColumnTest
   private static final ExpressionVirtualColumn CONSTANT_LIKE = new ExpressionVirtualColumn(
       "expr",
       "like('foo', 'f%')",
+      ValueType.FLOAT,
+      TestExprMacroTable.INSTANCE
+  );
+  private static final ExpressionVirtualColumn CONSTANT_NULL_ARITHMETIC = new ExpressionVirtualColumn(
+      "expr",
+      "2.1 + null",
       ValueType.FLOAT,
       TestExprMacroTable.INSTANCE
   );
@@ -345,6 +353,55 @@ public class ExpressionVirtualColumnTest
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(1L, selector.getLong());
+  }
+
+  @Test
+  public void testLongSelectorWithConstantNullArithmetic()
+  {
+    final BaseLongColumnValueSelector selector =
+        CONSTANT_NULL_ARITHMETIC.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
+
+    CURRENT_ROW.set(ROW0);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(2L, selector.getLong());
+      Assert.assertFalse(selector.isNull());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
+  }
+
+  @Test
+  public void testFloatSelectorWithConstantNullArithmetic()
+  {
+    final BaseFloatColumnValueSelector selector =
+        CONSTANT_NULL_ARITHMETIC.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
+
+    CURRENT_ROW.set(ROW0);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(2.1f, selector.getFloat(), 0.0f);
+      Assert.assertFalse(selector.isNull());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
+  }
+
+  @Test
+  public void testExprEvalSelectorWithConstantNullArithmetic()
+  {
+    final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
+        COLUMN_SELECTOR_FACTORY,
+        Parser.parse(CONSTANT_NULL_ARITHMETIC.getExpression(), TestExprMacroTable.INSTANCE)
+    );
+
+    CURRENT_ROW.set(ROW0);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(2.1f, selector.getFloat(), 0.0f);
+      Assert.assertFalse(selector.isNull());
+      Assert.assertEquals(2.1d, selector.getObject().asDouble(), 0.0d);
+    } else {
+      Assert.assertTrue(selector.isNull());
+      Assert.assertTrue(selector.getObject().isNumericNull());
+    }
   }
 
   @Test
