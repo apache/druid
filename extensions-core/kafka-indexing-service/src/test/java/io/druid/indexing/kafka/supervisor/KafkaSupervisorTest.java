@@ -2061,6 +2061,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null
     );
 
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
@@ -2115,12 +2123,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    while (serviceEmitter.getStackTrace() != null) {
-      Thread.sleep(100);
-    }
-
-    Assert.assertNull(serviceEmitter.getStackTrace());
-    Assert.assertNull(serviceEmitter.getExceptionMessage());
+    Assert.assertNull(serviceEmitter.getStackTrace(), serviceEmitter.getStackTrace());
+    Assert.assertNull(serviceEmitter.getExceptionMessage(), serviceEmitter.getExceptionMessage());
     Assert.assertNull(serviceEmitter.getExceptionClass());
   }
 

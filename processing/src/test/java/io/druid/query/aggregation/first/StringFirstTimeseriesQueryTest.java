@@ -76,21 +76,21 @@ public class StringFirstTimeseriesQueryTest
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "0", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "0", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "1", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "1", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp1,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "0", client_type, "android")
+            ImmutableMap.of(visitor_id, "0", client_type, "android")
         )
     );
 
@@ -114,7 +114,7 @@ public class StringFirstTimeseriesQueryTest
         new Result<>(
             time,
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("last_client_type", new SerializablePairLongString(timestamp, "iphone"))
+                ImmutableMap.of("last_client_type", new SerializablePairLongString(timestamp, "iphone"))
             )
         )
     );
