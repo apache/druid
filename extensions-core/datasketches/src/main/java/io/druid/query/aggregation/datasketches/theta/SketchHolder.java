@@ -243,7 +243,7 @@ public class SketchHolder
   {
     UNION,
     INTERSECT,
-    NOT;
+    NOT
   }
 
   public static SketchHolder sketchSetOperation(Func func, int sketchSize, Object... holders)

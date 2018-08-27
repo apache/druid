@@ -123,35 +123,35 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
         new ColumnComparisonDimFilter(
             ImmutableList.of(DefaultDimensionSpec.of("dim6"), DefaultDimensionSpec.of("dim7"))
         ),
-        ImmutableList.<String>of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+        ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
     );
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(
           new ColumnComparisonDimFilter(
               ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
           ),
-          ImmutableList.<String>of("0")
+          ImmutableList.of("0")
       );
 
       assertFilterMatches(
           new ColumnComparisonDimFilter(
               ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
           ),
-          ImmutableList.<String>of("1", "2", "6", "7", "8")
+          ImmutableList.of("1", "2", "6", "7", "8")
       );
     } else {
       assertFilterMatches(
           new ColumnComparisonDimFilter(
               ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
           ),
-          ImmutableList.<String>of()
+          ImmutableList.of()
       );
 
       assertFilterMatches(
           new ColumnComparisonDimFilter(
               ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
           ),
-          ImmutableList.<String>of("1", "6", "7", "8")
+          ImmutableList.of("1", "6", "7", "8")
       );
     }
   }

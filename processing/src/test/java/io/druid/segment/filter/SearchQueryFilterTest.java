@@ -192,7 +192,7 @@ public class SearchQueryFilterTest extends BaseFilterTest
 
     assertFilterMatches(
         new SearchQueryDimFilter("dim1", specForValue("ab"), changeNullFn),
-        ImmutableList.<String>of("4", "5")
+        ImmutableList.of("4", "5")
     );
     assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("ab"), changeNullFn), ImmutableList.of("4", "5"));
 
