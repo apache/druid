@@ -19,7 +19,6 @@
 
 package io.druid.sql.http;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -88,66 +87,72 @@ public class SqlResource
       timeZone = planner.getPlannerContext().getTimeZone();
 
       // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
+      // Also store list of all column names, for X-Druid-Sql-Columns header.
       final List<RelDataTypeField> fieldList = plannerResult.rowType().getFieldList();
       final boolean[] timeColumns = new boolean[fieldList.size()];
       final boolean[] dateColumns = new boolean[fieldList.size()];
+      final String[] columnNames = new String[fieldList.size()];
+      final String[] columnTypes = new String[fieldList.size()];
+
       for (int i = 0; i < fieldList.size(); i++) {
         final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
         timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
         dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
+        columnNames[i] = fieldList.get(i).getName();
+        columnTypes[i] = sqlTypeName.getName();
       }
 
       final Yielder<Object[]> yielder0 = Yielders.each(plannerResult.run());
 
       try {
-        return Response.ok(
-            new StreamingOutput()
-            {
-              @Override
-              public void write(final OutputStream outputStream) throws IOException, WebApplicationException
-              {
-                Yielder<Object[]> yielder = yielder0;
+        return Response
+            .ok(
+                new StreamingOutput()
+                {
+                  @Override
+                  public void write(final OutputStream outputStream) throws IOException, WebApplicationException
+                  {
+                    Yielder<Object[]> yielder = yielder0;
 
-                try (final JsonGenerator jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream)) {
-                  jsonGenerator.writeStartArray();
+                    try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
+                                                                    .createFormatter(outputStream, jsonMapper)) {
+                      writer.writeResponseStart();
 
-                  while (!yielder.isDone()) {
-                    final Object[] row = yielder.get();
-                    sqlQuery.getResultFormat().writeResultStart(jsonGenerator);
-                    for (int i = 0; i < fieldList.size(); i++) {
-                      final Object value;
+                      while (!yielder.isDone()) {
+                        final Object[] row = yielder.get();
+                        writer.writeRowStart();
+                        for (int i = 0; i < fieldList.size(); i++) {
+                          final Object value;
 
-                      if (timeColumns[i]) {
-                        value = ISODateTimeFormat.dateTime().print(
-                            Calcites.calciteTimestampToJoda((long) row[i], timeZone)
-                        );
-                      } else if (dateColumns[i]) {
-                        value = ISODateTimeFormat.dateTime().print(
-                            Calcites.calciteDateToJoda((int) row[i], timeZone)
-                        );
-                      } else {
-                        value = row[i];
+                          if (timeColumns[i]) {
+                            value = ISODateTimeFormat.dateTime().print(
+                                Calcites.calciteTimestampToJoda((long) row[i], timeZone)
+                            );
+                          } else if (dateColumns[i]) {
+                            value = ISODateTimeFormat.dateTime().print(
+                                Calcites.calciteDateToJoda((int) row[i], timeZone)
+                            );
+                          } else {
+                            value = row[i];
+                          }
+
+                          writer.writeRowField(fieldList.get(i).getName(), value);
+                        }
+                        writer.writeRowEnd();
+                        yielder = yielder.next(null);
                       }
 
-                      sqlQuery.getResultFormat().writeResultField(jsonGenerator, fieldList.get(i).getName(), value);
+                      writer.writeResponseEnd();
                     }
-                    sqlQuery.getResultFormat().writeResultEnd(jsonGenerator);
-                    yielder = yielder.next(null);
+                    finally {
+                      yielder.close();
+                    }
                   }
-
-                  jsonGenerator.writeEndArray();
-                  jsonGenerator.flush();
-
-                  // End with CRLF
-                  outputStream.write('\r');
-                  outputStream.write('\n');
                 }
-                finally {
-                  yielder.close();
-                }
-              }
-            }
-        ).build();
+            )
+            .header("X-Druid-Column-Names", jsonMapper.writeValueAsString(columnNames))
+            .header("X-Druid-Column-Types", jsonMapper.writeValueAsString(columnTypes))
+            .build();
       }
       catch (Throwable e) {
         // make sure to close yielder if anything happened before starting to serialize the response.

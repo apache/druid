@@ -31,6 +31,7 @@ import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
+import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -58,6 +59,7 @@ public class CompressionUtils
   private static final String XZ_SUFFIX = ".xz";
   private static final String ZIP_SUFFIX = ".zip";
   private static final String SNAPPY_SUFFIX = ".sz";
+  private static final String ZSTD_SUFFIX = ".zst";
 
   /**
    * Zip the contents of directory into the file indicated by outputZipFile. Sub directories are skipped
@@ -567,6 +569,8 @@ public class CompressionUtils
       return new XZCompressorInputStream(in, true);
     } else if (fileName.endsWith(SNAPPY_SUFFIX)) {
       return new FramedSnappyCompressorInputStream(in);
+    } else if (fileName.endsWith(ZSTD_SUFFIX)) {
+      return new ZstdCompressorInputStream(in);
     } else if (fileName.endsWith(ZIP_SUFFIX)) {
       // This reads the first file in the archive.
       final ZipInputStream zipIn = new ZipInputStream(in, StandardCharsets.UTF_8);

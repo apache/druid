@@ -53,6 +53,9 @@ public interface SqlAggregator
    * @param project              project that should be applied before aggregation; may be null
    * @param existingAggregations existing aggregations for this query; useful for re-using aggregations. May be safely
    *                             ignored if you do not want to re-use existing aggregations.
+   * @param finalizeAggregations true if this query should include explicit finalization for all of its
+   *                             aggregators, where required. This is set for subqueries where Druid's native query
+   *                             layer does not do this automatically.
    *
    * @return aggregation, or null if the call cannot be translated
    */
@@ -64,6 +67,7 @@ public interface SqlAggregator
       String name,
       AggregateCall aggregateCall,
       Project project,
-      List<Aggregation> existingAggregations
+      List<Aggregation> existingAggregations,
+      boolean finalizeAggregations
   );
 }

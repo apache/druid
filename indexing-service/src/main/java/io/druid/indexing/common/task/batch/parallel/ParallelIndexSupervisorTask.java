@@ -268,7 +268,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     return TaskStatus.fromCode(getId(), runner.run());
   }
 
-  private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
+  private TaskStatus runSequential(TaskToolbox toolbox)
   {
     return new IndexTask(
         getId(),

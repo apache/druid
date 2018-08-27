@@ -63,11 +63,6 @@ public class ForkingTaskRunnerConfig
   private int startPort = 8100;
 
   @JsonProperty
-  @Min(1024)
-  @Max(65535)
-  private int tlsStartPort = 8300;
-
-  @JsonProperty
   @NotNull
   List<String> allowedPrefixes = Lists.newArrayList(
       "com.metamx",
@@ -110,11 +105,6 @@ public class ForkingTaskRunnerConfig
   public int getStartPort()
   {
     return startPort;
-  }
-
-  public int getTlsStartPort()
-  {
-    return tlsStartPort;
   }
 
   public List<String> getAllowedPrefixes()
