@@ -101,18 +101,22 @@ $(document).ready(function() {
     for (i = 0 ; i < dataList.length ; i++) {
       var supervisorId = encodeURIComponent(dataList[i].id)
       var supervisorSpec = dataList[i].spec;
+      var statusText = supervisorSpec && supervisorSpec.suspended ?
+       '<span style="color:#FF6000">suspended</span>' :
+       '<span style="color:#08B157">running</span>';
       data[i] = {
         "dataSource" : supervisorId,
         "more" :
           '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '">payload</a>' +
-          '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '/status">status' +
-          (supervisorSpec.suspended ? ' (suspended)' : '') + '</a>' +
+          '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '/status">status</a>' +
           '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '/history">history</a>' +
-          (supervisorSpec.suspended
-           ? '<a onclick="resumeSupervisor(\'' + supervisorId + '\');">resume</a>'
-            : '<a onclick="suspendSupervisor(\'' + supervisorId + '\');">suspend</a>') +
+          (supervisorSpec.suspended ?
+           '<a onclick="resumeSupervisor(\'' + supervisorId + '\');">resume</a>' :
+           '<a onclick="suspendSupervisor(\'' + supervisorId + '\');">suspend</a>'
+          ) +
           '<a onclick="resetSupervisor(\'' + supervisorId + '\');">reset</a>' +
-          '<a onclick="shutdownSupervisor(\'' + supervisorId + '\');">terminate</a>'
+          '<a onclick="shutdownSupervisor(\'' + supervisorId + '\');">terminate</a>',
+        "status": statusText
       }
     }
     buildTable((data), $('#supervisorsTable'));
