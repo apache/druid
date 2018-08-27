@@ -343,10 +343,7 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Comparable<?> convertObjectToType(
-      @Nullable final Object obj,
-      final ValueType type
-  )
+  public static Comparable<?> convertObjectToType(@Nullable final Object obj, final ValueType type)
   {
     return convertObjectToType(obj, Preconditions.checkNotNull(type, "type"), false);
   }
