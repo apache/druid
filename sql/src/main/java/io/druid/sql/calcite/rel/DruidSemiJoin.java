@@ -288,6 +288,8 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         new ArrayList<>(),
         new Accumulator<List<RexNode>, Object[]>()
         {
+          int numRows;
+
           @Override
           public List<RexNode> accumulate(final List<RexNode> theConditions, final Object[] row)
           {
@@ -301,14 +303,14 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
               }
               final String stringValue = DimensionHandlerUtils.convertObjectToString(value);
               values.add(stringValue);
-              if (values.size() > maxSemiJoinRowsInMemory) {
+            }
+
+            if (valuess.add(values)) {
+              if (++numRows > maxSemiJoinRowsInMemory) {
                 throw new ResourceLimitExceededException(
                     StringUtils.format("maxSemiJoinRowsInMemory[%,d] exceeded", maxSemiJoinRowsInMemory)
                 );
               }
-            }
-
-            if (valuess.add(values)) {
               final List<RexNode> subConditions = new ArrayList<>();
 
               for (int i = 0; i < values.size(); i++) {

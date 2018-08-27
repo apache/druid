@@ -39,6 +39,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -185,6 +186,13 @@ public class CalciteQueryTest extends CalciteTestBase
     public DateTimeZone getSqlTimeZone()
     {
       return DateTimes.inferTzfromString("America/Los_Angeles");
+    }
+  };
+  private static final PlannerConfig PLANNER_CONFIG_SEMI_JOIN_ROWS_LIMIT = new PlannerConfig() {
+    @Override
+    public int getMaxSemiJoinRowsInMemory()
+    {
+      return 2;
     }
   };
 
@@ -4693,6 +4701,24 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(
             new Object[]{2L}
         )
+    );
+  }
+
+  @Test
+  public void testMaxSemiJoinRowsInMemory() throws Exception
+  {
+    expectedException.expect(ResourceLimitExceededException.class);
+    expectedException.expectMessage("maxSemiJoinRowsInMemory[2] exceeded");
+    testQuery(
+        PLANNER_CONFIG_SEMI_JOIN_ROWS_LIMIT,
+        "SELECT COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+        + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 <> ''\n"
+        + ")\n",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
