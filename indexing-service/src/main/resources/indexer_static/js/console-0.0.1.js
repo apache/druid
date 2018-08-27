@@ -111,7 +111,7 @@ $(document).ready(function() {
           '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '/status">status</a>' +
           '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '/history">history</a>' +
           (supervisorSpec.suspended ?
-           '<a onclick="resumeSupervisor(\'' + supervisorId + '\');">resume</a>' :
+           '<a onclick="resumeSupervisor(\'' + supervisorId + '\');">resume</a>&nbsp;&nbsp;' :
            '<a onclick="suspendSupervisor(\'' + supervisorId + '\');">suspend</a>'
           ) +
           '<a onclick="resetSupervisor(\'' + supervisorId + '\');">reset</a>' +
