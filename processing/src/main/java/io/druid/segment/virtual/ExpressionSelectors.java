@@ -35,7 +35,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ConstantColumnValueSelector;
+import io.druid.segment.ConstantExprEvalSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.NilColumnValueSelector;
@@ -160,17 +160,7 @@ public class ExpressionSelectors
 
     if (bindings.equals(ExprUtils.nilBindings())) {
       // Optimization for constant expressions.
-      final ExprEval eval = expression.eval(bindings);
-      if (NullHandling.sqlCompatible() && eval.isNumericNull()) {
-        return NilColumnValueSelector.instance();
-      }
-      return new ConstantColumnValueSelector<>(
-          eval.asLong(),
-          (float) eval.asDouble(),
-          eval.asDouble(),
-          eval,
-          ExprEval.class
-      );
+      return new ConstantExprEvalSelector(expression.eval(bindings));
     }
 
     // No special optimization.
@@ -202,7 +192,7 @@ public class ExpressionSelectors
 
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
 
-    if (baseSelector instanceof ConstantColumnValueSelector) {
+    if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
       return DimensionSelectorUtils.constantSelector(baseSelector.getObject().asString(), extractionFn);
     } else if (baseSelector instanceof NilColumnValueSelector) {
@@ -249,26 +239,26 @@ public class ExpressionSelectors
     final Map<String, Supplier<Object>> suppliers = Maps.newHashMap();
     for (String columnName : Parser.findRequiredBindings(expression)) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
-              .getColumnCapabilities(columnName);
+          .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
         ColumnValueSelector selector = columnSelectorFactory
-                .makeColumnValueSelector(columnName);
+            .makeColumnValueSelector(columnName);
         supplier = makeNullableSupplier(selector, selector::getFloat);
       } else if (nativeType == ValueType.LONG) {
         ColumnValueSelector selector = columnSelectorFactory
-                .makeColumnValueSelector(columnName);
+            .makeColumnValueSelector(columnName);
         supplier = makeNullableSupplier(selector, selector::getLong);
       } else if (nativeType == ValueType.DOUBLE) {
         ColumnValueSelector selector = columnSelectorFactory
-                .makeColumnValueSelector(columnName);
+            .makeColumnValueSelector(columnName);
         supplier = makeNullableSupplier(selector, selector::getDouble);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
-                columnSelectorFactory
-                        .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
+            columnSelectorFactory
+                .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
         );
       } else if (nativeType == null) {
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
