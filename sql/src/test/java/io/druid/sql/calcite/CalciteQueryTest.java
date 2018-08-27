@@ -3001,6 +3001,33 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
+  public void testCountStarWithTimeMillisecondFilters() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time = TIMESTAMP '2000-01-01 00:00:00.111'\n"
+        + "OR (__time >= TIMESTAMP '2000-01-01 00:00:00.888' AND __time < TIMESTAMP '2000-01-02 00:00:00.222')",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(
+                      QSS(
+                          Intervals.of("2000-01-01T00:00:00.111/2000-01-01T00:00:00.112"),
+                          Intervals.of("2000-01-01T00:00:00.888/2000-01-02T00:00:00.222")
+                      )
+                  )
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithTimeFilterUsingStringLiterals() throws Exception
   {
     // Strings are implicitly cast to timestamps. Test a few different forms.
