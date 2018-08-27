@@ -19,46 +19,16 @@
 
 package io.druid.query.topn;
 
-import com.google.common.base.Function;
-import io.druid.java.util.common.IAE;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.Result;
 import io.druid.query.topn.types.TopNColumnSelectorStrategyFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 public class TopNMapFn
 {
-  public static Function<Object, Object> getValueTransformer(ValueType outputType)
-  {
-    switch (outputType) {
-      case STRING:
-        return STRING_TRANSFORMER;
-      case LONG:
-        return LONG_TRANSFORMER;
-      case FLOAT:
-        return FLOAT_TRANSFORMER;
-      case DOUBLE:
-        return DOUBLE_TRANSFORMER;
-      default:
-        throw new IAE("invalid type: %s", outputType);
-    }
-  }
-
-  private static Function<Object, Object> STRING_TRANSFORMER = Objects::toString;
-
-  private static Function<Object, Object> LONG_TRANSFORMER = DimensionHandlerUtils::convertObjectToLong;
-
-  private static Function<Object, Object> FLOAT_TRANSFORMER = DimensionHandlerUtils::convertObjectToFloat;
-
-  private static Function<Object, Object> DOUBLE_TRANSFORMER = DimensionHandlerUtils::convertObjectToDouble;
-
-  private static final TopNColumnSelectorStrategyFactory STRATEGY_FACTORY = new TopNColumnSelectorStrategyFactory();
-
   private final TopNQuery query;
   private final TopNAlgorithm topNAlgorithm;
 
@@ -75,7 +45,7 @@ public class TopNMapFn
   public Result<TopNResultValue> apply(final Cursor cursor, final @Nullable TopNQueryMetrics queryMetrics)
   {
     final ColumnSelectorPlus selectorPlus = DimensionHandlerUtils.createColumnSelectorPlus(
-        STRATEGY_FACTORY,
+        new TopNColumnSelectorStrategyFactory(query.getDimensionSpec().getOutputType()),
         query.getDimensionSpec(),
         cursor.getColumnSelectorFactory()
     );

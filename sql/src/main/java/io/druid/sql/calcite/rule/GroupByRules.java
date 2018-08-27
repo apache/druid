@@ -57,7 +57,8 @@ public class GroupByRules
       final Project project,
       final AggregateCall call,
       final List<Aggregation> existingAggregations,
-      final String name
+      final String name,
+      final boolean finalizeAggregations
   )
   {
     final DimFilter filter;
@@ -125,7 +126,8 @@ public class GroupByRules
         name,
         call,
         project,
-        existingAggregationsWithSameFilter
+        existingAggregationsWithSameFilter,
+        finalizeAggregations
     );
 
     if (retVal == null) {

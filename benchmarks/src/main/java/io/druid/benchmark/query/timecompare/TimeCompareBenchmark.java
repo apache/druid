@@ -22,7 +22,6 @@ package io.druid.benchmark.query.timecompare;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
@@ -96,6 +95,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,7 +117,7 @@ public class TimeCompareBenchmark
   @Param({"100"})
   private int threshold;
 
-  protected static final Map<String, String> scriptDoubleSum = Maps.newHashMap();
+  protected static final Map<String, String> scriptDoubleSum = new HashMap<>();
   static {
     scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
     scriptDoubleSum.put("fnReset", "function reset() { return 0 }");
@@ -427,10 +427,7 @@ public class TimeCompareBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndexTopN(Blackhole blackhole)
   {
-    Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(
-        QueryPlus.wrap(topNQuery),
-        Maps.<String, Object>newHashMap()
-    );
+    Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(QueryPlus.wrap(topNQuery), new HashMap<>());
     List<Result<TopNResultValue>> results = queryResult.toList();
 
     for (Result<TopNResultValue> result : results) {
@@ -446,7 +443,7 @@ public class TimeCompareBenchmark
   {
     Sequence<Result<TimeseriesResultValue>> queryResult = timeseriesRunner.run(
         QueryPlus.wrap(timeseriesQuery),
-        Maps.<String, Object>newHashMap()
+        new HashMap<>()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
 

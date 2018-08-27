@@ -117,7 +117,9 @@ public class EC2AutoScalerTest
     EasyMock.expect(runInstancesResult.getReservation()).andReturn(reservation).atLeastOnce();
     EasyMock.replay(runInstancesResult);
 
-    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(Collections.singletonList(reservation)).atLeastOnce();
+    EasyMock.expect(describeInstancesResult.getReservations())
+            .andReturn(Collections.singletonList(reservation))
+            .atLeastOnce();
     EasyMock.replay(describeInstancesResult);
 
     EasyMock.expect(reservation.getInstances()).andReturn(Collections.singletonList(instance)).atLeastOnce();
@@ -177,12 +179,8 @@ public class EC2AutoScalerTest
     Arrays.fill(chunk1, reservation);
     final Reservation[] chunk2 = new Reservation[n - EC2AutoScaler.MAX_AWS_FILTER_VALUES];
     Arrays.fill(chunk2, reservation);
-    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(
-        Lists.newArrayList(chunk1)
-    );
-    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(
-        Lists.newArrayList(chunk2)
-    );
+    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(Arrays.asList(chunk1));
+    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(Arrays.asList(chunk2));
     EasyMock.replay(describeInstancesResult);
 
     EasyMock.expect(reservation.getInstances()).andReturn(Collections.singletonList(instance)).times(n);
@@ -234,12 +232,8 @@ public class EC2AutoScalerTest
     Arrays.fill(chunk1, reservation);
     final Reservation[] chunk2 = new Reservation[n - EC2AutoScaler.MAX_AWS_FILTER_VALUES];
     Arrays.fill(chunk2, reservation);
-    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(
-        Lists.newArrayList(chunk1)
-    );
-    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(
-        Lists.newArrayList(chunk2)
-    );
+    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(Arrays.asList(chunk1));
+    EasyMock.expect(describeInstancesResult.getReservations()).andReturn(Arrays.asList(chunk2));
     EasyMock.replay(describeInstancesResult);
 
     EasyMock.expect(reservation.getInstances()).andReturn(Collections.singletonList(instance)).times(n);

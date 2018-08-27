@@ -34,7 +34,6 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.loading.CacheTestSegmentLoader;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.SegmentManager;
-import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -45,6 +44,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -98,19 +98,10 @@ public class SegmentLoadDropHandlerTest
       throw new RuntimeException(e);
     }
 
-    scheduledRunnable = Lists.newArrayList();
+    scheduledRunnable = new ArrayList<>();
 
     segmentLoader = new CacheTestSegmentLoader();
     segmentManager = new SegmentManager(segmentLoader);
-    final ZkPathsConfig zkPaths = new ZkPathsConfig()
-    {
-      @Override
-      public String getBase()
-      {
-        return "/druid";
-      }
-    };
-
     segmentsAnnouncedByMe = new ConcurrentSkipListSet<>();
     announceCount = new AtomicInteger(0);
 
@@ -377,7 +368,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertTrue(infoDir.exists());
     File[] files = infoDir.listFiles();
 
-    List<File> sortedFiles = Lists.newArrayList(files);
+    List<File> sortedFiles = Arrays.asList(files);
     Collections.sort(sortedFiles);
 
     Assert.assertEquals(segments.size(), sortedFiles.size());
@@ -478,7 +469,8 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, result.get(1).getStatus());
 
 
-    for (SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus e : segmentLoadDropHandler.processBatch(batch).get()) {
+    for (SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus e : segmentLoadDropHandler.processBatch(batch)
+                                                                                            .get()) {
       Assert.assertEquals(SegmentLoadDropHandler.Status.SUCCESS, e.getStatus());
     }
 

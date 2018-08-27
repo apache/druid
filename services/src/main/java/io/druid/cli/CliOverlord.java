@@ -34,6 +34,7 @@ import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
+import io.druid.client.indexing.HttpIndexingServiceClient;
 import io.druid.client.indexing.IndexingService;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
@@ -188,7 +189,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
-            binder.bind(IndexingServiceClient.class).toProvider(Providers.of(null));
+            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
             binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
                   .toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
