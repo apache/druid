@@ -35,7 +35,6 @@ public class CsvWriter implements ResultFormat.Writer
   private final OutputStream outputStream;
   private final CSVWriter writer;
   private final List<String> currentLine = new ArrayList<>();
-  private long numLines = 0;
 
   public CsvWriter(final OutputStream outputStream)
   {
@@ -86,7 +85,6 @@ public class CsvWriter implements ResultFormat.Writer
 
     writer.writeNext(currentLine.toArray(new String[0]), quoteEverything);
     currentLine.clear();
-    numLines++;
   }
 
   @Override

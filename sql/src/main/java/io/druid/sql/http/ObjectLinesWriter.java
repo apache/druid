@@ -31,7 +31,6 @@ public class ObjectLinesWriter implements ResultFormat.Writer
 {
   private final OutputStream outputStream;
   private final JsonGenerator jsonGenerator;
-  private int numLines = 0;
 
   public ObjectLinesWriter(final OutputStream outputStream, final ObjectMapper jsonMapper) throws IOException
   {
@@ -51,8 +50,8 @@ public class ObjectLinesWriter implements ResultFormat.Writer
   {
     jsonGenerator.flush();
 
-    // Write an extra blank line, so users can tell the response was not cut off.
-    outputStream.write('\n');
+    // Terminate the last output line, then write an extra blank line, so users can tell the response was not cut off.
+    outputStream.write(new byte[]{'\n', '\n'});
     outputStream.flush();
   }
 
@@ -73,7 +72,6 @@ public class ObjectLinesWriter implements ResultFormat.Writer
   public void writeRowEnd() throws IOException
   {
     jsonGenerator.writeEndObject();
-    numLines++;
   }
 
   @Override
