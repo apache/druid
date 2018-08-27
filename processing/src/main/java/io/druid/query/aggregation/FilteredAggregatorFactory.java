@@ -123,13 +123,14 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     return delegate.finalizeComputation(object);
   }
 
+  // See https://github.com/apache/incubator-druid/pull/6219#pullrequestreview-148919845
   @JsonProperty
   @Override
   public String getName()
   {
-    String name = delegate.getName();
+    String name = this.name;
     if (Strings.isNullOrEmpty(name)) {
-      name = this.name;
+      name = delegate.getName();
     }
     return name;
   }
