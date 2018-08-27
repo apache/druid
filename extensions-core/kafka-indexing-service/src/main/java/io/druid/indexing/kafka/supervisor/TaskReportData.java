@@ -45,7 +45,7 @@ public class TaskReportData
       String id,
       @Nullable Map<Integer, Long> startingOffsets,
       @Nullable Map<Integer, Long> currentOffsets,
-      DateTime startTime,
+      @Nullable DateTime startTime,
       Long remainingSeconds,
       TaskType type,
       @Nullable Map<Integer, Long> lag
