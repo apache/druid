@@ -27,6 +27,7 @@ import io.druid.common.config.NullHandling;
 import io.druid.hll.HLLCV1;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
@@ -101,6 +102,7 @@ import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
+import io.druid.sql.calcite.rel.CannotBuildQueryException;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
@@ -139,6 +141,13 @@ public class CalciteQueryTest extends CalciteTestBase
   private static final Logger log = new Logger(CalciteQueryTest.class);
 
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
+  private static final PlannerConfig PLANNER_CONFIG_FORCE_TIME_CONDITION = new PlannerConfig() {
+    @Override
+    public boolean isForceTimeCondition()
+    {
+      return true;
+    }
+  };
   private static final PlannerConfig PLANNER_CONFIG_NO_TOPN = new PlannerConfig()
   {
     @Override
@@ -7299,6 +7308,173 @@ public class CalciteQueryTest extends CalciteTestBase
             new Object[]{"def5.0"},
             new Object[]{"abc6.0"}
         )
+    );
+  }
+
+  @Test
+  public void testForceTimeConditionPositive() throws Exception
+  {
+    // simple timeseries
+    testQuery(
+        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        "SELECT SUM(cnt), gran FROM (\n"
+        + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "WHERE t >= '2000-01-01' and t < '2002-01-01'"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Intervals.of("2000-01-01/2002-01-01")))
+                  .granularity(Granularities.MONTH)
+                  .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L, T("2000-01-01")},
+            new Object[]{3L, T("2001-01-01")}
+        )
+    );
+
+    // nested groupby only requires time condition for inner most query
+    testQuery(
+        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo WHERE __time >= '2000-01-01' GROUP BY dim2)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("_a0", "a0"),
+                            new CountAggregatorFactory("_a1")
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{6L, 3L}
+        ) :
+        ImmutableList.of(
+            new Object[]{6L, 4L}
+        )
+    );
+
+    // semi-join requires time condition on both left and right query
+    testQuery(
+        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= '2000-01-01' AND SUBSTRING(dim2, 1, 1) IN (\n"
+        + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
+        + "  WHERE dim1 <> '' AND __time >= '2000-01-01'\n"
+        + ")",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(NOT(SELECTOR("dim1", "", null)))
+                        .setDimensions(DIMS(new ExtractionDimensionSpec(
+                            "dim1",
+                            "d0",
+                            new SubstringDimExtractionFn(0, 1)
+                        )))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build(),
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
+                  .granularity(Granularities.ALL)
+                  .filters(IN(
+                            "dim2",
+                            ImmutableList.of("1", "2", "a", "d"),
+                            new SubstringDimExtractionFn(0, 1)
+                        ))
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testForceTimeConditionSimpleQueryNegative() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("Missing __time filter");
+
+    testQuery(
+        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        "SELECT SUM(cnt), gran FROM (\n"
+        + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testForceTimeConditionSubQueryNegative() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("Missing __time filter");
+
+    testQuery(
+        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testForceTimeConditionSemiJoinNegative() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("Missing __time filter");
+
+    testQuery(
+        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+        + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
+        + "  WHERE dim1 <> '' AND __time >= '2000-01-01'\n"
+        + ")",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
