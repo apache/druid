@@ -47,7 +47,6 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final String metricName;
   private final List<PostAggregator> postAggs;
   private final PriorityQueue<DimValHolder> pQueue;
-  private final Comparator<DimValHolder> dimValHolderComparator;
   private final String[] aggFactoryNames;
   private static final Comparator<Comparable> dimValueComparator = new Comparator<Comparable>()
   {
@@ -91,7 +90,8 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
     this.threshold = threshold;
     this.metricComparator = comparator;
-    this.dimValHolderComparator = (d1, d2) -> {
+
+    final Comparator<DimValHolder> dimValHolderComparator = (d1, d2) -> {
       //noinspection unchecked
       int retVal = metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
 
