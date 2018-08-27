@@ -143,10 +143,10 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
   @Nullable
   @Override
-  public DruidQuery toDruidQuery()
+  public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     final DruidRel rel = getLeftRelWithFilter();
-    return rel != null ? rel.toDruidQuery() : null;
+    return rel != null ? rel.toDruidQuery(finalizeAggregations) : null;
   }
 
   @Override

@@ -339,21 +339,26 @@ public class Calcites
     return rexNode instanceof RexLiteral && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName());
   }
 
-  public static String findOutputNamePrefix(final String basePrefix, final NavigableSet<String> strings)
+  public static String findUnusedPrefix(final String basePrefix, final NavigableSet<String> strings)
   {
     String prefix = basePrefix;
 
-    while (!isUsablePrefix(strings, prefix)) {
+    while (!isUnusedPrefix(prefix, strings)) {
       prefix = "_" + prefix;
     }
 
     return prefix;
   }
 
-  private static boolean isUsablePrefix(final NavigableSet<String> strings, final String prefix)
+  private static boolean isUnusedPrefix(final String prefix, final NavigableSet<String> strings)
   {
     // ":" is one character after "9"
     final NavigableSet<String> subSet = strings.subSet(prefix + "0", true, prefix + ":", false);
     return subSet.isEmpty();
+  }
+
+  public static String makePrefixedName(final String prefix, final String suffix)
+  {
+    return StringUtils.format("%s:%s", prefix, suffix);
   }
 }

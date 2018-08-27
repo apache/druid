@@ -76,21 +76,21 @@ public class StringLastTimeseriesQueryTest
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "0", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "0", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "1", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "1", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp1,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "0", client_type, "android")
+            ImmutableMap.of(visitor_id, "0", client_type, "android")
         )
     );
 
@@ -99,7 +99,7 @@ public class StringLastTimeseriesQueryTest
                                   .granularity(QueryRunnerTestHelper.allGran)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
-                                      Lists.newArrayList(
+                                      Collections.singletonList(
                                           new StringLastAggregatorFactory(
                                               "last_client_type", client_type, 1024
                                           )
@@ -114,7 +114,7 @@ public class StringLastTimeseriesQueryTest
         new Result<>(
             time,
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "last_client_type",
                     new SerializablePairLongString(timestamp1, "android")
                 )

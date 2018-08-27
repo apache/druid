@@ -72,8 +72,8 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
-  private static final long PUBLISH_TIMEOUT = 10000;
-  private static final long HANDOFF_CONDITION_TIMEOUT = 1000;
+  private static final long PUBLISH_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
+  private static final long HANDOFF_CONDITION_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
 
   private static final List<InputRow> ROWS = Arrays.asList(
       new MapBasedInputRow(
@@ -144,14 +144,14 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     while (driver.getSegments().containsKey("dummy")) {
       Thread.sleep(100);
     }
 
     final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
-                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+                                                          .get(HANDOFF_CONDITION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(
@@ -194,14 +194,14 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     while (driver.getSegments().containsKey("dummy")) {
       Thread.sleep(100);
     }
 
     final SegmentsAndMetadata segmentsAndMetadata = driver.registerHandoff(published)
-                                                          .get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+                                                          .get(HANDOFF_CONDITION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
     Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndMetadata.getCommitMetadata());
   }
@@ -223,13 +223,13 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     while (driver.getSegments().containsKey("dummy")) {
       Thread.sleep(100);
     }
 
-    driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT, TimeUnit.MILLISECONDS);
+    driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
   }
 
   @Test
@@ -248,7 +248,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
           makeOkPublisher(),
           committerSupplier.get(),
           ImmutableList.of("dummy")
-      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
       Assert.assertEquals(
           ImmutableSet.of(
@@ -269,7 +269,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
           makeOkPublisher(),
           committerSupplier.get(),
           ImmutableList.of("dummy")
-      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+      ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
       Assert.assertEquals(
           ImmutableSet.of(
@@ -290,7 +290,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
-    ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(),
@@ -328,11 +328,11 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     );
 
     final SegmentsAndMetadata handedoffFromSequence0 = futureForSequence0.get(
-        HANDOFF_CONDITION_TIMEOUT,
+        HANDOFF_CONDITION_TIMEOUT_MILLIS,
         TimeUnit.MILLISECONDS
     );
     final SegmentsAndMetadata handedoffFromSequence1 = futureForSequence1.get(
-        HANDOFF_CONDITION_TIMEOUT,
+        HANDOFF_CONDITION_TIMEOUT_MILLIS,
         TimeUnit.MILLISECONDS
     );
 
