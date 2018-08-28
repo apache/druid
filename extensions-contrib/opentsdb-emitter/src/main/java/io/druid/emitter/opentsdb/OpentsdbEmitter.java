@@ -20,10 +20,13 @@
 package io.druid.emitter.opentsdb;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.core.Emitter;
 import io.druid.java.util.emitter.core.Event;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OpentsdbEmitter implements Emitter
 {
@@ -31,6 +34,7 @@ public class OpentsdbEmitter implements Emitter
 
   private final OpentsdbSender sender;
   private final EventConverter converter;
+  private final AtomicBoolean started = new AtomicBoolean(false);
 
   public OpentsdbEmitter(OpentsdbEmitterConfig config, ObjectMapper mapper)
   {
@@ -49,13 +53,21 @@ public class OpentsdbEmitter implements Emitter
   @Override
   public void start()
   {
-    log.info("Starting Opentsdb Emitter.");
-    sender.start();
+    synchronized (started) {
+      if (!started.get()) {
+        log.info("Starting Opentsdb Emitter.");
+        sender.start();
+        started.set(true);
+      }
+    }
   }
 
   @Override
   public void emit(Event event)
   {
+    if (!started.get()) {
+      throw new ISE("WTF emit was called while service is not started yet");
+    }
     if (event instanceof ServiceMetricEvent) {
       OpentsdbEvent opentsdbEvent = converter.convert((ServiceMetricEvent) event);
       if (opentsdbEvent != null) {
@@ -72,12 +84,17 @@ public class OpentsdbEmitter implements Emitter
   @Override
   public void flush()
   {
-    sender.flush();
+    if (started.get()) {
+      sender.flush();
+    }
   }
 
   @Override
   public void close()
   {
-    sender.close();
+    if (started.get()) {
+      sender.close();
+      started.set(false);
+    }
   }
 }

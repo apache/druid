@@ -51,7 +51,6 @@ public class OpentsdbSender
   private final BlockingQueue<OpentsdbEvent> eventQueue;
   private final ScheduledExecutorService scheduler;
   private final long consumeDelay;
-  private volatile boolean started = false;
   private final Client client;
   private final WebResource webResource;
 
@@ -94,36 +93,30 @@ public class OpentsdbSender
 
   public void start()
   {
-    if (!started) {
-      scheduler.scheduleWithFixedDelay(
-          new EventConsumer(),
-          consumeDelay,
-          consumeDelay,
-          TimeUnit.MILLISECONDS
-      );
-      started = true;
-    }
+    scheduler.scheduleWithFixedDelay(
+        new EventConsumer(),
+        consumeDelay,
+        consumeDelay,
+        TimeUnit.MILLISECONDS
+    );
   }
 
   public void flush()
   {
-    if (started) {
-      try {
-        Future future = scheduler.schedule(new EventConsumer(), 0, TimeUnit.MILLISECONDS);
-        future.get(FLUSH_TIMEOUT, TimeUnit.MILLISECONDS);
-      }
-      catch (Exception e) {
-        log.warn(e, e.getMessage());
-      }
-      // send remaining events which size may less than flushThreshold
-      sendEvents();
+    try {
+      Future future = scheduler.schedule(new EventConsumer(), 0, TimeUnit.MILLISECONDS);
+      future.get(FLUSH_TIMEOUT, TimeUnit.MILLISECONDS);
     }
+    catch (Exception e) {
+      log.warn(e, e.getMessage());
+    }
+    // send remaining events which size may less than flushThreshold
+    sendEvents();
   }
 
   public void close()
   {
     flush();
-    started = false;
     client.destroy();
     scheduler.shutdown();
   }
