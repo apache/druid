@@ -19,6 +19,7 @@
 
 package io.druid.query.topn.types;
 
+import com.google.common.base.Preconditions;
 import io.druid.java.util.common.IAE;
 import io.druid.query.dimension.ColumnSelectorStrategyFactory;
 import io.druid.segment.ColumnValueSelector;
@@ -27,23 +28,43 @@ import io.druid.segment.column.ValueType;
 
 public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategyFactory<TopNColumnSelectorStrategy>
 {
+  private final ValueType dimensionType;
+
+  public TopNColumnSelectorStrategyFactory(final ValueType dimensionType)
+  {
+    this.dimensionType = Preconditions.checkNotNull(dimensionType, "dimensionType");
+  }
+
   @Override
   public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
       ColumnCapabilities capabilities, ColumnValueSelector selector
   )
   {
-    ValueType type = capabilities.getType();
-    switch (type) {
+    final ValueType selectorType = capabilities.getType();
+
+    switch (selectorType) {
       case STRING:
-        return new StringTopNColumnSelectorStrategy();
+        // Return strategy that reads strings and outputs dimensionTypes.
+        return new StringTopNColumnSelectorStrategy(dimensionType);
       case LONG:
-        return new NumericTopNColumnSelectorStrategy.OfLong();
       case FLOAT:
-        return new NumericTopNColumnSelectorStrategy.OfFloat();
       case DOUBLE:
-        return new NumericTopNColumnSelectorStrategy.OfDouble();
+        // When the selector is numeric, we want to use NumericTopNColumnSelectorStrategy. It aggregates using
+        // a numeric type and then converts to the desired output type after aggregating. We must be careful not to
+        // convert to an output type that cannot represent all possible values of the input type.
+
+        if (ValueType.isNumeric(dimensionType)) {
+          // Return strategy that aggregates using the _output_ type, because this allows us to collapse values
+          // properly (numeric types cannot always represent all values of other numeric types).
+          return NumericTopNColumnSelectorStrategy.ofType(dimensionType, dimensionType);
+        } else {
+          // Return strategy that aggregates using the _input_ type. Here we are assuming that the output type can
+          // represent all possible values of the input type. This will be true for STRING, which is the only
+          // non-numeric type currently supported.
+          return NumericTopNColumnSelectorStrategy.ofType(selectorType, dimensionType);
+        }
       default:
-        throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+        throw new IAE("Cannot create query type helper from invalid type [%s]", selectorType);
     }
   }
 }

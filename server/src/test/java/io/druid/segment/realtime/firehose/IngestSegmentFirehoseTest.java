@@ -134,7 +134,7 @@ public class IngestSegmentFirehoseTest
                     .build()
             )
         .setMaxRowCount(5000)
-        .buildOnheap();
+        .buildOnheap()
     ) {
       final StorageAdapter sa = new QueryableIndexStorageAdapter(qi);
       final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
@@ -224,7 +224,7 @@ public class IngestSegmentFirehoseTest
                     .build()
             )
         .setMaxRowCount(5000)
-        .buildOnheap();
+        .buildOnheap()
     ) {
       for (String line : rows) {
         index.add(parser.parse(line));

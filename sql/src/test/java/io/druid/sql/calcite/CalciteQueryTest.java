@@ -39,6 +39,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -50,6 +51,7 @@ import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -184,6 +186,13 @@ public class CalciteQueryTest extends CalciteTestBase
     public DateTimeZone getSqlTimeZone()
     {
       return DateTimes.inferTzfromString("America/Los_Angeles");
+    }
+  };
+  private static final PlannerConfig PLANNER_CONFIG_SEMI_JOIN_ROWS_LIMIT = new PlannerConfig() {
+    @Override
+    public int getMaxSemiJoinRowsInMemory()
+    {
+      return 2;
     }
   };
 
@@ -2560,8 +2569,10 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
-                        .setAggregatorSpecs(new FloatMinAggregatorFactory("a0", "m1"),
-                                            new FloatMaxAggregatorFactory("a1", "m1"))
+                        .setAggregatorSpecs(
+                            new FloatMinAggregatorFactory("a0", "m1"),
+                            new FloatMaxAggregatorFactory("a1", "m1")
+                        )
                         .setPostAggregatorSpecs(ImmutableList.of(EXPRESSION_POST_AGG("p0", "(\"a0\" + \"a1\")")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
@@ -2602,8 +2613,10 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
-                        .setAggregatorSpecs(new FloatMinAggregatorFactory("a0", "m1"),
-                                            new FloatMaxAggregatorFactory("a1", "m1"))
+                        .setAggregatorSpecs(
+                            new FloatMinAggregatorFactory("a0", "m1"),
+                            new FloatMaxAggregatorFactory("a1", "m1")
+                        )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
                                 EXPRESSION_POST_AGG("p0", "(\"a0\" + \"a1\")")
@@ -4385,6 +4398,74 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
+  public void testAvgDailyCountDistinct() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  AVG(u)\n"
+        + "FROM (SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT(cnt) AS u FROM druid.foo GROUP BY 1)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setVirtualColumns(
+                                                EXPRESSION_VIRTUAL_COLUMN(
+                                                    "d0:v",
+                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                    ValueType.LONG
+                                                )
+                                            )
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                                            .setAggregatorSpecs(
+                                                AGGS(
+                                                    new CardinalityAggregatorFactory(
+                                                        "a0:a",
+                                                        null,
+                                                        DIMS(new DefaultDimensionSpec("cnt", "cnt", ValueType.LONG)),
+                                                        false,
+                                                        true
+                                                    )
+                                                )
+                                            )
+                                            .setPostAggregatorSpecs(
+                                                ImmutableList.of(
+                                                    new HyperUniqueFinalizingPostAggregator("a0", "a0:a")
+                                                )
+                                            )
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("_a0:sum", "a0"),
+                            new CountAggregatorFactory("_a0:count")
+                        ))
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ArithmeticPostAggregator(
+                                    "_a0",
+                                    "quotient",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "_a0:sum"),
+                                        new FieldAccessPostAggregator(null, "_a0:count")
+                                    )
+                                )
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{1L})
+    );
+  }
+
+  @Test
   public void testTopNFilterJoin() throws Exception
   {
     DimFilter filter = NullHandling.replaceWithDefault() ?
@@ -4577,7 +4658,7 @@ public class CalciteQueryTest extends CalciteTestBase
         + "  FROM druid.foo\n"
         + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
         + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 <> ''\n"
-        + "  )\n"
+        + "  ) AND __time >= '2000-01-01' AND __time < '2002-01-01'\n"
         + ")",
         ImmutableList.of(
             GroupByQuery.builder()
@@ -4597,7 +4678,7 @@ public class CalciteQueryTest extends CalciteTestBase
                             new QueryDataSource(
                                 GroupByQuery.builder()
                                             .setDataSource(CalciteTests.DATASOURCE1)
-                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setInterval(QSS(Intervals.of("2000-01-01/2002-01-01")))
                                             .setGranularity(Granularities.ALL)
                                             .setDimFilter(IN(
                                                 "dim2",
@@ -4620,6 +4701,24 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(
             new Object[]{2L}
         )
+    );
+  }
+
+  @Test
+  public void testMaxSemiJoinRowsInMemory() throws Exception
+  {
+    expectedException.expect(ResourceLimitExceededException.class);
+    expectedException.expectMessage("maxSemiJoinRowsInMemory[2] exceeded");
+    testQuery(
+        PLANNER_CONFIG_SEMI_JOIN_ROWS_LIMIT,
+        "SELECT COUNT(*)\n"
+        + "FROM druid.foo\n"
+        + "WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+        + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 <> ''\n"
+        + ")\n",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
@@ -6897,7 +6996,10 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setAggregatorSpecs(
                             AGGS(new CountAggregatorFactory("a0"), new DoubleSumAggregatorFactory("a1", "m2"))
                         )
-                        .setPostAggregatorSpecs(Collections.singletonList(EXPRESSION_POST_AGG("p0", "(\"a1\" / \"a0\")")))
+                        .setPostAggregatorSpecs(Collections.singletonList(EXPRESSION_POST_AGG(
+                            "p0",
+                            "(\"a1\" / \"a0\")"
+                        )))
                         .setLimitSpec(
                             new DefaultLimitSpec(
                                 Collections.singletonList(

@@ -343,7 +343,23 @@ public class AggregationTestHelper implements Closeable
   ) throws Exception
   {
     File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
+    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
+    return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
+  }
+
+  public Sequence<Row> createIndexAndRunQueryOnSegment(
+      File inputDataFile,
+      String parserJson,
+      String aggregators,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      boolean rollup,
+      String groupByQueryJson
+  ) throws Exception
+  {
+    File segmentDir = tempFolder.newFolder();
+    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, rollup);
     return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
@@ -357,8 +373,31 @@ public class AggregationTestHelper implements Closeable
       String groupByQueryJson
   ) throws Exception
   {
+    return createIndexAndRunQueryOnSegment(
+        inputDataStream,
+        parserJson,
+        aggregators,
+        minTimestamp,
+        gran,
+        maxRowCount,
+        true,
+        groupByQueryJson
+    );
+  }
+
+  public Sequence<Row> createIndexAndRunQueryOnSegment(
+      InputStream inputDataStream,
+      String parserJson,
+      String aggregators,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      boolean rollup,
+      String groupByQueryJson
+  ) throws Exception
+  {
     File segmentDir = tempFolder.newFolder();
-    createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
+    createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount, rollup);
     return runQueryOnSegments(Collections.singletonList(segmentDir), groupByQueryJson);
   }
 
@@ -379,7 +418,31 @@ public class AggregationTestHelper implements Closeable
         outDir,
         minTimestamp,
         gran,
-        maxRowCount
+        maxRowCount,
+        true
+    );
+  }
+
+  public void createIndex(
+      File inputDataFile,
+      String parserJson,
+      String aggregators,
+      File outDir,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      boolean rollup
+  ) throws Exception
+  {
+    createIndex(
+        new FileInputStream(inputDataFile),
+        parserJson,
+        aggregators,
+        outDir,
+        minTimestamp,
+        gran,
+        maxRowCount,
+        rollup
     );
   }
 
@@ -390,7 +453,8 @@ public class AggregationTestHelper implements Closeable
       File outDir,
       long minTimestamp,
       Granularity gran,
-      int maxRowCount
+      int maxRowCount,
+      boolean rollup
   ) throws Exception
   {
     try {
@@ -412,7 +476,8 @@ public class AggregationTestHelper implements Closeable
           minTimestamp,
           gran,
           true,
-          maxRowCount
+          maxRowCount,
+          rollup
       );
     }
     finally {
@@ -428,7 +493,8 @@ public class AggregationTestHelper implements Closeable
       long minTimestamp,
       Granularity gran,
       boolean deserializeComplexMetrics,
-      int maxRowCount
+      int maxRowCount,
+      boolean rollup
   ) throws Exception
   {
     IncrementalIndex index = null;
@@ -441,6 +507,7 @@ public class AggregationTestHelper implements Closeable
                   .withMinTimestamp(minTimestamp)
                   .withQueryGranularity(gran)
                   .withMetrics(metrics)
+                  .withRollup(rollup)
                   .build()
           )
           .setDeserializeComplexMetrics(deserializeComplexMetrics)
@@ -460,6 +527,7 @@ public class AggregationTestHelper implements Closeable
                       .withMinTimestamp(minTimestamp)
                       .withQueryGranularity(gran)
                       .withMetrics(metrics)
+                      .withRollup(rollup)
                       .build()
               )
               .setDeserializeComplexMetrics(deserializeComplexMetrics)
@@ -484,7 +552,7 @@ public class AggregationTestHelper implements Closeable
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, true, metrics, outDir, new IndexSpec(), null);
+        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, new IndexSpec(), null);
 
         for (QueryableIndex qi : indexes) {
           qi.close();

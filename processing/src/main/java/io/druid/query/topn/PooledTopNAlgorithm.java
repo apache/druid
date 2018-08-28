@@ -20,7 +20,6 @@
 package io.druid.query.topn;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
@@ -37,7 +36,6 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FilteredOffset;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
 import io.druid.segment.historical.HistoricalColumnSelector;
@@ -736,10 +734,6 @@ public class PooledTopNAlgorithm
     final int[] aggregatorSizes = params.getAggregatorSizes();
     final DimensionSelector dimSelector = params.getDimSelector();
 
-    final ValueType outType = query.getDimensionSpec().getOutputType();
-    final boolean needsResultConversion = outType != ValueType.STRING;
-    final Function<Object, Object> valueTransformer = TopNMapFn.getValueTransformer(outType);
-
     for (int i = 0; i < positions.length; i++) {
       int position = positions[i];
       if (position >= 0) {
@@ -749,14 +743,9 @@ public class PooledTopNAlgorithm
           position += aggregatorSizes[j];
         }
 
-        Object retVal = dimSelector.lookupName(i);
-        if (needsResultConversion) {
-          retVal = valueTransformer.apply(retVal);
-        }
-
-
+        // Output type must be STRING in order for PooledTopNAlgorithm to make sense; so no need to convert value.
         resultBuilder.addEntry(
-            (Comparable) retVal,
+            dimSelector.lookupName(i),
             i,
             vals
         );
@@ -853,18 +842,6 @@ public class PooledTopNAlgorithm
       private int numBytesPerRecord;
       private int numValuesPerPass;
       private TopNMetricSpecBuilder<int[]> arrayProvider;
-
-      public Builder()
-      {
-        selectorPlus = null;
-        cursor = null;
-        resultsBufHolder = null;
-        resultsBuf = null;
-        aggregatorSizes = null;
-        numBytesPerRecord = 0;
-        numValuesPerPass = 0;
-        arrayProvider = null;
-      }
 
       public Builder withSelectorPlus(ColumnSelectorPlus selectorPlus)
       {

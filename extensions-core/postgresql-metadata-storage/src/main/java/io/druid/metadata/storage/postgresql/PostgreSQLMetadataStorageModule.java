@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.guice.SQLMetadataStorageDruidModule;
@@ -56,6 +57,8 @@ public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModu
   public void configure(Binder binder)
   {
     super.configure(binder);
+
+    JsonConfigProvider.bind(binder, "druid.metadata.postgres.ssl", PostgreSQLConnector.class);
 
     PolyBind
         .optionBinder(binder, Key.get(MetadataStorageProvider.class))

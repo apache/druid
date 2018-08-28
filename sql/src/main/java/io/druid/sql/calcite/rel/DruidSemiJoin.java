@@ -44,6 +44,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 import javax.annotation.Nullable;
@@ -143,10 +144,10 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 
   @Nullable
   @Override
-  public DruidQuery toDruidQuery()
+  public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     final DruidRel rel = getLeftRelWithFilter();
-    return rel != null ? rel.toDruidQuery() : null;
+    return rel != null ? rel.toDruidQuery(finalizeAggregations) : null;
   }
 
   @Override
@@ -288,6 +289,8 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         new ArrayList<>(),
         new Accumulator<List<RexNode>, Object[]>()
         {
+          int numRows;
+
           @Override
           public List<RexNode> accumulate(final List<RexNode> theConditions, final Object[] row)
           {
@@ -301,14 +304,14 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
               }
               final String stringValue = DimensionHandlerUtils.convertObjectToString(value);
               values.add(stringValue);
-              if (values.size() > maxSemiJoinRowsInMemory) {
+            }
+
+            if (valuess.add(values)) {
+              if (++numRows > maxSemiJoinRowsInMemory) {
                 throw new ResourceLimitExceededException(
                     StringUtils.format("maxSemiJoinRowsInMemory[%,d] exceeded", maxSemiJoinRowsInMemory)
                 );
               }
-            }
-
-            if (valuess.add(values)) {
               final List<RexNode> subConditions = new ArrayList<>();
 
               for (int i = 0; i < values.size(); i++) {
@@ -343,12 +346,15 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         newWhereFilter = whereFilter.copy(
             whereFilter.getTraitSet(),
             whereFilter.getInput(),
-            makeAnd(ImmutableList.of(whereFilter.getCondition(), makeOr(conditions)))
+            RexUtil.flatten(
+                getCluster().getRexBuilder(),
+                makeAnd(ImmutableList.of(whereFilter.getCondition(), makeOr(conditions)))
+            )
         );
       } else {
         newWhereFilter = LogicalFilter.create(
             leftPartialQuery.getScan(),
-            makeOr(conditions)
+            makeOr(conditions) // already in flattened form
         );
       }
 

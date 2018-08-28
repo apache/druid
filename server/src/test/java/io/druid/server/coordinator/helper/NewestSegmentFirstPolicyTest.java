@@ -22,7 +22,6 @@ package io.druid.server.coordinator.helper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Comparators;
@@ -37,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -405,7 +405,7 @@ public class NewestSegmentFirstPolicyTest
 
     final String version = DateTimes.nowUtc().toString();
 
-    final List<SegmentGenerateSpec> orderedSpecs = Lists.newArrayList(specs);
+    final List<SegmentGenerateSpec> orderedSpecs = Arrays.asList(specs);
     orderedSpecs.sort((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.totalInterval, s2.totalInterval));
     Collections.reverse(orderedSpecs);
 

@@ -131,7 +131,8 @@ public class DruidQuery
       final DataSource dataSource,
       final RowSignature sourceRowSignature,
       final PlannerContext plannerContext,
-      final RexBuilder rexBuilder
+      final RexBuilder rexBuilder,
+      final boolean finalizeAggregations
   )
   {
     this.dataSource = dataSource;
@@ -142,7 +143,7 @@ public class DruidQuery
     // Now the fun begins.
     this.filter = computeWhereFilter(partialQuery, sourceRowSignature, plannerContext);
     this.selectProjection = computeSelectProjection(partialQuery, plannerContext, sourceRowSignature);
-    this.grouping = computeGrouping(partialQuery, plannerContext, sourceRowSignature, rexBuilder);
+    this.grouping = computeGrouping(partialQuery, plannerContext, sourceRowSignature, rexBuilder, finalizeAggregations);
 
     final RowSignature sortingInputRowSignature;
 
@@ -222,7 +223,7 @@ public class DruidQuery
     final List<VirtualColumn> virtualColumns = new ArrayList<>();
     final List<String> rowOrder = new ArrayList<>();
 
-    final String virtualColumnPrefix = Calcites.findOutputNamePrefix(
+    final String virtualColumnPrefix = Calcites.findUnusedPrefix(
         "v",
         new TreeSet<>(sourceRowSignature.getRowOrder())
     );
@@ -254,7 +255,8 @@ public class DruidQuery
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
       final RowSignature sourceRowSignature,
-      final RexBuilder rexBuilder
+      final RexBuilder rexBuilder,
+      final boolean finalizeAggregations
   )
   {
     final Aggregate aggregate = partialQuery.getAggregate();
@@ -269,7 +271,8 @@ public class DruidQuery
         partialQuery,
         plannerContext,
         sourceRowSignature,
-        rexBuilder
+        rexBuilder,
+        finalizeAggregations
     );
 
     final RowSignature aggregateRowSignature = RowSignature.from(
@@ -428,7 +431,7 @@ public class DruidQuery
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<DimensionExpression> dimensions = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findOutputNamePrefix("d", new TreeSet<>(sourceRowSignature.getRowOrder()));
+    final String outputNamePrefix = Calcites.findUnusedPrefix("d", new TreeSet<>(sourceRowSignature.getRowOrder()));
     int outputNameCounter = 0;
 
     for (int i : aggregate.getGroupSet()) {
@@ -460,10 +463,13 @@ public class DruidQuery
   /**
    * Returns aggregations corresponding to {@code aggregate.getAggCallList()}, in the same order.
    *
-   * @param partialQuery       partial query
-   * @param plannerContext     planner context
-   * @param sourceRowSignature source row signature
-   * @param rexBuilder         calcite RexBuilder
+   * @param partialQuery         partial query
+   * @param plannerContext       planner context
+   * @param sourceRowSignature   source row signature
+   * @param rexBuilder           calcite RexBuilder
+   * @param finalizeAggregations true if this query should include explicit finalization for all of its
+   *                             aggregators, where required. Useful for subqueries where Druid's native query layer
+   *                             does not do this automatically.
    *
    * @return aggregations
    *
@@ -473,12 +479,13 @@ public class DruidQuery
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
       final RowSignature sourceRowSignature,
-      final RexBuilder rexBuilder
+      final RexBuilder rexBuilder,
+      final boolean finalizeAggregations
   )
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<Aggregation> aggregations = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findOutputNamePrefix("a", new TreeSet<>(sourceRowSignature.getRowOrder()));
+    final String outputNamePrefix = Calcites.findUnusedPrefix("a", new TreeSet<>(sourceRowSignature.getRowOrder()));
 
     for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
       final String aggName = outputNamePrefix + i;
@@ -490,7 +497,8 @@ public class DruidQuery
           partialQuery.getSelectProject(),
           aggCall,
           aggregations,
-          aggName
+          aggName,
+          finalizeAggregations
       );
 
       if (aggregation == null) {
