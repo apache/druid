@@ -32,6 +32,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
   private boolean hasMultipleValues = false;
+  private boolean filterable = false;
 
   @Override
   @JsonProperty
@@ -43,6 +44,13 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setType(ValueType type)
   {
     this.type = type;
+    if (type == ValueType.STRING ||
+        type == ValueType.LONG ||
+        type == ValueType.FLOAT ||
+        type == ValueType.DOUBLE
+    ) {
+      this.filterable = true;
+    }
     return this;
   }
 
@@ -99,6 +107,19 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return hasMultipleValues;
   }
 
+  @Override
+  @JsonProperty("filterable")
+  public boolean isFilterable()
+  {
+    return filterable;
+  }
+
+  public ColumnCapabilitiesImpl setFilterable(boolean filterable)
+  {
+    this.filterable = filterable;
+    return this;
+  }
+
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
     this.hasMultipleValues = hasMultipleValues;
@@ -124,5 +145,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.hasInvertedIndexes |= other.hasBitmapIndexes();
     this.hasSpatialIndexes |= other.hasSpatialIndexes();
     this.hasMultipleValues |= other.hasMultipleValues();
+    this.filterable &= other.isFilterable();
   }
 }
