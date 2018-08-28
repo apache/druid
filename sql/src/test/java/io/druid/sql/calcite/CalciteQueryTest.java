@@ -4398,6 +4398,69 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
+  public void testMinMaxAvgDailyCountWithLimit() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM ("
+        + "  SELECT max(cnt), min(cnt), avg(cnt), TIME_EXTRACT(max(t), 'EPOCH') last_time, count(1) num_days FROM (\n"
+        + "      SELECT TIME_FLOOR(__time, 'P1D') AS t, count(1) cnt\n"
+        + "      FROM \"foo\"\n"
+        + "      GROUP BY 1\n"
+        + "  )"
+        + ") LIMIT 1\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setVirtualColumns(
+                                                EXPRESSION_VIRTUAL_COLUMN(
+                                                    "d0:v",
+                                                    "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                    ValueType.LONG
+                                                )
+                                            )
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                                            .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongMaxAggregatorFactory("_a0", "a0"),
+                            new LongMinAggregatorFactory("_a1", "a0"),
+                            new LongSumAggregatorFactory("_a2:sum", "a0"),
+                            new CountAggregatorFactory("_a2:count"),
+                            new LongMaxAggregatorFactory("_a3", "d0"),
+                            new CountAggregatorFactory("_a4")
+                        ))
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ArithmeticPostAggregator(
+                                    "_a2",
+                                    "quotient",
+                                    ImmutableList.of(
+                                        new FieldAccessPostAggregator(null, "_a2:sum"),
+                                        new FieldAccessPostAggregator(null, "_a2:count")
+                                    )
+                                ),
+                                EXPRESSION_POST_AGG("s0", "timestamp_extract(\"_a3\",'EPOCH','UTC')")
+                            )
+                        )
+                        .setLimit(1)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(new Object[]{1L, 1L, 1L, 978480000L, 6L})
+    );
+  }
+
+  @Test
   public void testAvgDailyCountDistinct() throws Exception
   {
     testQuery(
@@ -6997,7 +7060,7 @@ public class CalciteQueryTest extends CalciteTestBase
                             AGGS(new CountAggregatorFactory("a0"), new DoubleSumAggregatorFactory("a1", "m2"))
                         )
                         .setPostAggregatorSpecs(Collections.singletonList(EXPRESSION_POST_AGG(
-                            "p0",
+                            "s0",
                             "(\"a1\" / \"a0\")"
                         )))
                         .setLimitSpec(
