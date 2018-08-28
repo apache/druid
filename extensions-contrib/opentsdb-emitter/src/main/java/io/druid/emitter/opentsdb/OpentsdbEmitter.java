@@ -40,7 +40,8 @@ public class OpentsdbEmitter implements Emitter
         config.getConnectionTimeout(),
         config.getReadTimeout(),
         config.getFlushThreshold(),
-        config.getMaxQueueSize()
+        config.getMaxQueueSize(),
+        config.getConsumeDelay()
     );
     this.converter = new EventConverter(mapper, config.getMetricMapPath());
   }
@@ -48,6 +49,8 @@ public class OpentsdbEmitter implements Emitter
   @Override
   public void start()
   {
+    log.info("Starting Opentsdb Emitter.");
+    sender.start();
   }
 
   @Override
