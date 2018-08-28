@@ -70,7 +70,7 @@ Following are main parts to a groupBy query:
 |aggregations|See [Aggregations](../querying/aggregations.html)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.html)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
-|subtotalsSpec| A JSON array of arrays to return additional result sets for groupings of subsets of top level `dimensions`. It is described later in more detail.|no|
+|subtotalsSpec| A JSON array of arrays to return additional result sets for groupings of subsets of top level `dimensions`. It is [described later](groupbyquery.html#more-on-subtotalsspec) in more detail.|no|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
 To pull it all together, the above query would return *n\*m* data points, up to a maximum of 5000 points, where n is the cardinality of the `country` dimension, m is the cardinality of the `device` dimension, each day between 2012-01-01 and 2012-01-03, from the `sample_datasource` table. Each data point contains the (long) sum of `total_usage` if the value of the data point is greater than 100, the (double) sum of `data_transfer` and the (double) result of `total_usage` divided by `data_transfer` for the filter set for a particular grouping of `country` and `device`. The output looks like this:
@@ -115,14 +115,14 @@ improve performance.
 See [Multi-value dimensions](multi-value-dimensions.html) for more details.
 
 ### More on subtotalsSpec
-you can have a groupBy query that looks something like below...
+The subtotals feature allows computation of multiple sub-groupings in a single query. To use this feature, add a "subtotalsSpec" to your query, which should be a list of subgroup dimension sets. It should contain the "outputName" from dimensions in your "dimensions" attribute, in the same order as they appear in the "dimensions" attribute (although, of course, you may skip some). For example, consider a groupBy query like this one:
 
 ```json
 {
 "type": "groupBy",
  ...
  ...
-"dimenstions": [
+"dimensions": [
   {
   "type" : "default",
   "dimension" : "d1col",
@@ -200,8 +200,6 @@ Response for above query would look something like below...
 ]
 ```
 
-Note that "subtotalsSpec" must contain subsets of "outputName" from various `DimensionSpec` json blobs in `dimensions` attribute and also ordering of dimensions inside subtotal spec must be same as that inside top level "dimensions" attribute e.g. ["D2", "D1"] subtotal spec is not valid as it is not in same order.
-
 ### Implementation details
 
 #### Strategies
@@ -270,6 +268,10 @@ disk space.
 With groupBy v2, cluster operators should make sure that the off-heap hash tables and on-heap merging dictionaries
 will not exceed available memory for the maximum possible concurrent query load (given by
 druid.processing.numMergeBuffers). See [How much direct memory does Druid use?](../operations/performance-faq.html) for more details.
+
+Brokers do not need merge buffers for basic groupBy queries. Queries with subqueries (using a "query" [dataSource](datasource.html#query-data-source)) require one merge buffer if there is a single subquery, or two merge buffers if there is more than one layer of nested subqueries. Queries with [subtotals](groupbyquery.html#more-on-subtotalsspec) need one merge buffer. These can stack on top of each other: a groupBy query with multiple layers of nested subqueries, and that also uses subtotals, will need three merge buffers.
+
+Historicals and ingestion tasks need one merge buffer for each groupBy query, unless [parallel combination](groupbyquery.html#parallel-combine) is enabled, in which case they need two merge buffers per query.
 
 When using groupBy v1, all aggregation is done on-heap, and resource limits are done through the parameter
 druid.query.groupBy.maxResults. This is a cap on the maximum number of results in a result set. Queries that exceed
