@@ -128,7 +128,7 @@ cp /tmp/shared/hadoop_xml/*.xml {PATH_TO_DRUID}/quickstart/tutorial/conf/druid/_
 
 In your favorite text editor, open `quickstart/tutorial/conf/druid/_common/common.runtime.properties`, and make the following edits:
 
-#### Disable local deep storage and enable HDFS deep stroage
+#### Disable local deep storage and enable HDFS deep storage
 
 ```
 #

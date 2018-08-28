@@ -278,10 +278,11 @@ public class PartialDruidQuery
       final DataSource dataSource,
       final RowSignature sourceRowSignature,
       final PlannerContext plannerContext,
-      final RexBuilder rexBuilder
+      final RexBuilder rexBuilder,
+      final boolean finalizeAggregations
   )
   {
-    return new DruidQuery(this, dataSource, sourceRowSignature, plannerContext, rexBuilder);
+    return new DruidQuery(this, dataSource, sourceRowSignature, plannerContext, rexBuilder, finalizeAggregations);
   }
 
   public boolean canAccept(final Stage stage)
