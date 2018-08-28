@@ -89,7 +89,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -298,7 +297,7 @@ public class DruidQuery
           plannerContext,
           aggregateRowSignature,
           aggregateProject,
-          0
+          "p"
       );
       projectRowOrderAndPostAggregations.postAggregations.forEach(
           postAggregator -> aggregations.add(Aggregation.create(postAggregator))
@@ -337,17 +336,11 @@ public class DruidQuery
     if (sortProject == null) {
       return null;
     } else {
-      final List<PostAggregator> postAggregators = grouping.getPostAggregators();
-      final OptionalInt maybeMaxCounter = postAggregators
-          .stream()
-          .mapToInt(postAggregator -> Integer.parseInt(postAggregator.getName().substring(1)))
-          .max();
-
       final ProjectRowOrderAndPostAggregations projectRowOrderAndPostAggregations = computePostAggregations(
           plannerContext,
           sortingInputRowSignature,
           sortProject,
-          maybeMaxCounter.orElse(-1) + 1 // 0 if max doesn't exist
+          "s"
       );
 
       return new SortProject(
@@ -374,12 +367,17 @@ public class DruidQuery
       PlannerContext plannerContext,
       RowSignature inputRowSignature,
       Project project,
-      int outputNameCounter
+      String basePrefix
   )
   {
     final List<String> rowOrder = new ArrayList<>();
     final List<PostAggregator> aggregations = new ArrayList<>();
+    final String outputNamePrefix = Calcites.findUnusedPrefix(
+        basePrefix,
+        new TreeSet<>(inputRowSignature.getRowOrder())
+    );
 
+    int outputNameCounter = 0;
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
       // Attempt to convert to PostAggregator.
       final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
@@ -397,7 +395,7 @@ public class DruidQuery
         // (There might be a SQL-level type cast that we don't care about)
         rowOrder.add(postAggregatorExpression.getDirectColumn());
       } else {
-        final String postAggregatorName = "p" + outputNameCounter++;
+        final String postAggregatorName = outputNamePrefix + outputNameCounter++;
         final PostAggregator postAggregator = new ExpressionPostAggregator(
             postAggregatorName,
             postAggregatorExpression.getExpression(),
