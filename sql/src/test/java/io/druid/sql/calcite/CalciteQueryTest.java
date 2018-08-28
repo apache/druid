@@ -4658,7 +4658,7 @@ public class CalciteQueryTest extends CalciteTestBase
         + "  FROM druid.foo\n"
         + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
         + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 <> ''\n"
-        + "  )\n"
+        + "  ) AND __time >= '2000-01-01' AND __time < '2002-01-01'\n"
         + ")",
         ImmutableList.of(
             GroupByQuery.builder()
@@ -4678,7 +4678,7 @@ public class CalciteQueryTest extends CalciteTestBase
                             new QueryDataSource(
                                 GroupByQuery.builder()
                                             .setDataSource(CalciteTests.DATASOURCE1)
-                                            .setInterval(QSS(Filtration.eternity()))
+                                            .setInterval(QSS(Intervals.of("2000-01-01/2002-01-01")))
                                             .setGranularity(Granularities.ALL)
                                             .setDimFilter(IN(
                                                 "dim2",

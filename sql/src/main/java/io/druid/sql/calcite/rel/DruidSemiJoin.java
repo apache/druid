@@ -44,6 +44,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 import javax.annotation.Nullable;
@@ -345,12 +346,15 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         newWhereFilter = whereFilter.copy(
             whereFilter.getTraitSet(),
             whereFilter.getInput(),
-            makeAnd(ImmutableList.of(whereFilter.getCondition(), makeOr(conditions)))
+            RexUtil.flatten(
+                getCluster().getRexBuilder(),
+                makeAnd(ImmutableList.of(whereFilter.getCondition(), makeOr(conditions)))
+            )
         );
       } else {
         newWhereFilter = LogicalFilter.create(
             leftPartialQuery.getScan(),
-            makeOr(conditions)
+            makeOr(conditions) // already in flattened form
         );
       }
 
