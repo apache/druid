@@ -19,6 +19,7 @@
 
 package io.druid.emitter.opentsdb;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -49,8 +50,16 @@ public class OpentsdbSender
   private final WebResource webResource;
   private final ExecutorService executor = Executors.newFixedThreadPool(1);
   private volatile boolean running = true;
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
-  public OpentsdbSender(String host, int port, int connectionTimeout, int readTimeout, int flushThreshold, int maxQueueSize)
+  public OpentsdbSender(
+      String host,
+      int port,
+      int connectionTimeout,
+      int readTimeout,
+      int flushThreshold,
+      int maxQueueSize
+  )
   {
     this.flushThreshold = flushThreshold;
     events = new ArrayList<>(flushThreshold);
@@ -110,12 +119,15 @@ public class OpentsdbSender
     public void run()
     {
       while (running) {
-        if (!eventQueue.isEmpty()) {
-          OpentsdbEvent event = eventQueue.poll();
+        try {
+          OpentsdbEvent event = eventQueue.take();
           events.add(event);
-          if (events.size() >= flushThreshold) {
-            sendEvents();
-          }
+        }
+        catch (InterruptedException e) {
+          log.error(e, "consumer take event failed!");
+        }
+        if (events.size() >= flushThreshold) {
+          sendEvents();
         }
       }
     }
