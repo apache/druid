@@ -45,7 +45,7 @@ public class LifecycleForkJoinPool extends ForkJoinPool
     LOG.info("Shutting down ForkJoinPool [%s]", this);
     shutdown();
     try {
-      // Should this be configurable?
+      // This should be configurable https://github.com/apache/incubator-druid/issues/6264
       if (!awaitTermination(1, TimeUnit.MINUTES)) {
         LOG.warn("Failed to complete all tasks in FJP [%s]", this);
       }
