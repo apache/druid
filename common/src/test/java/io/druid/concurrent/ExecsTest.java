@@ -55,7 +55,7 @@ public class ExecsTest
   }
 
   @Test
-  public void testNameFormatGood() throws Exception
+  public void testNameFormatGood()
   {
     Execs.checkThreadNameFormat("good-%s");
     Execs.checkThreadNameFormat("good-%d");
@@ -63,7 +63,7 @@ public class ExecsTest
   }
 
   @Test(expected = IllegalFormatException.class)
-  public void testNameForamtBad() throws Exception
+  public void testNameForamtBad()
   {
     Execs.checkThreadNameFormat("%");
   }

@@ -27,12 +27,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.JodaUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.logger.Logger;
-import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -41,8 +40,6 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -114,11 +111,13 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
           {
             // Make it a List<> to materialize all of the values (so that it will submit everything to the executor)
             final ListenableFuture<List<Iterable<T>>> futures = GuavaUtils.allFuturesAsList(
-                queryables.peek(
+                queryables.map(
+                    // Don't use peek here: https://github.com/apache/incubator-druid/pull/5913#discussion_r213472699
                     queryRunner -> {
                       if (queryRunner == null) {
                         throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                       }
+                      return queryRunner;
                     }
                 ).map(
                     queryRunner -> new AbstractPrioritizedCallable<Iterable<T>>(priority)
@@ -154,35 +153,18 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQuery(query, futures);
 
             try {
-              final DateTime deadline;
+              final List<Iterable<T>> result;
               if (QueryContexts.hasTimeout(query)) {
-                deadline = DateTimes.nowUtc().plusMillis((int) QueryContexts.getTimeout(query));
+                result = Execs.futureManagedBlockGet(
+                    futures,
+                    DateTimes.nowUtc().plusMillis((int) QueryContexts.getTimeout(query))
+                );
               } else {
-                deadline = DateTimes.utc(JodaUtils.MAX_INSTANT);
+                result = Execs.futureManagedBlockGet(futures);
               }
-              ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker()
-              {
-                @Override
-                public boolean block() throws InterruptedException
-                {
-                  try {
-                    futures.get(JodaUtils.timeoutForDeadline(deadline), TimeUnit.MILLISECONDS);
-                  }
-                  catch (ExecutionException | TimeoutException e) {
-                    // Will get caught later
-                  }
-                  return true;
-                }
-
-                @Override
-                public boolean isReleasable()
-                {
-                  return futures.isDone() || deadline.isBefore(DateTimes.nowUtc());
-                }
-              });
               return new MergeIterable<>(
                   ordering.nullsFirst(),
-                  futures.get(JodaUtils.timeoutForDeadline(deadline), TimeUnit.MILLISECONDS)
+                  result
               ).iterator();
             }
             catch (InterruptedException e) {

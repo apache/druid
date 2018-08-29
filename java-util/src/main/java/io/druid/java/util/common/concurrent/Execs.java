@@ -22,16 +22,21 @@ package io.druid.java.util.common.concurrent;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,6 +44,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -156,10 +162,7 @@ public class Execs
 
   public static ForkJoinWorkerThread makeWorkerThread(String name, ForkJoinPool pool)
   {
-    final ForkJoinWorkerThread t = new ForkJoinWorkerThread(pool)
-    {
-      // No special handling in subclass
-    };
+    final ForkJoinWorkerThread t = ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
     t.setDaemon(true);
     final long threadNumber = fjpWorkerThreadCount.incrementAndGet();
     t.setName(StringUtils.nonStrictFormat(name, threadNumber));
@@ -174,10 +177,93 @@ public class Execs
    * Note that LACK of any argument in the format string still renders a valid name
    *
    * @param format The name format to check
+   *
    * @throws java.util.IllegalFormatException if the format passed in does is not able to take a single thread parameter
    */
   public static void checkThreadNameFormat(String format)
   {
     StringUtils.format(format, DUMMY_THREAD_NUMBER);
+  }
+
+  /**
+   * Get the result for the future (without timeout), but do so in a way safe for running in a ForkJoinPool
+   *
+   * @param future The future to block on completion
+   * @param <T>    The type of the return value
+   *
+   * @return The result of the future if successfully completed, or one of the exceptions if not
+   *
+   * @throws InterruptedException If the call to future.get() was interrupted
+   * @throws ExecutionException   If the future completed with an exception
+   */
+  public static <T> T futureManagedBlockGet(final Future<? extends T> future)
+      throws InterruptedException, ExecutionException
+  {
+    ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker()
+    {
+      @Override
+      public boolean block() throws InterruptedException
+      {
+        try {
+          future.get();
+        }
+        catch (ExecutionException e) {
+          // Ignore, will be caught when get is called below
+        }
+        return true;
+      }
+
+      @Override
+      public boolean isReleasable()
+      {
+        return future.isDone();
+      }
+    });
+    return future.get();
+  }
+
+  /**
+   * Attempt to get the result of the future before the deadline, but do so in a way safe to run in a ForkJoinPool.
+   * The deadline is best effort. It is possible the future completes, but the deadline is exceeded before the result
+   * can be returned. In such a scenario a TimeoutException will be thrown.
+   *
+   * The caller is responsible for handling the state of the Future in the case of an exception being thrown.
+   * Specifically, if an InterruptedException or a TimeoutException is thrown, there is no attempt in this method
+   * to change the behavior of the future. The caller should handle the potentially still active future as they see fit.
+   *
+   * @param future   The future to await completion
+   * @param deadline Best effort deadline for the completion of the future.
+   * @param <T>      The future's yielded type
+   *
+   * @return The yield of the future or else a thrown exception
+   *
+   * @throws InterruptedException If the call to future.get is interrupted
+   * @throws TimeoutException     If the deadline is exceeded
+   * @throws ExecutionException   If the future completed with an exception
+   */
+  public static <T> T futureManagedBlockGet(final Future<? extends T> future, final DateTime deadline)
+      throws InterruptedException, TimeoutException, ExecutionException
+  {
+    ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker()
+    {
+      @Override
+      public boolean block() throws InterruptedException
+      {
+        try {
+          future.get(JodaUtils.timeoutForDeadline(deadline), TimeUnit.MILLISECONDS);
+        }
+        catch (ExecutionException | TimeoutException e) {
+          // Will get caught later
+        }
+        return true;
+      }
+
+      @Override
+      public boolean isReleasable()
+      {
+        return future.isDone() || deadline.isBefore(DateTimes.nowUtc());
+      }
+    });
+    return future.get(JodaUtils.timeoutForDeadline(deadline), TimeUnit.MILLISECONDS);
   }
 }

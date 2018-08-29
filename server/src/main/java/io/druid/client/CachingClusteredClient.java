@@ -324,7 +324,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Nullable
       final byte[] queryCacheKey = computeQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
-        // Materialize then re-stream
+        // Materialize for computeCurrentEtag, then re-stream
         final List<ServerToSegment> materializedSegments = segments.collect(Collectors.toList());
         segments = materializedSegments.stream();
 
@@ -704,10 +704,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
           // Query granularity in a segment may be higher fidelity than the segment as a file,
           // so this might have multiple results
           return StreamSupport
-              .stream(Spliterators.spliteratorUnknownSize(
-                  objectMapper.readValues(objectMapper.getFactory().createParser(cachedResult), cacheObjectClazz),
-                  0
-              ), false)
+              .stream(
+                  Spliterators.spliteratorUnknownSize(
+                      objectMapper.readValues(objectMapper.getFactory().createParser(cachedResult), cacheObjectClazz),
+                      0
+                  ),
+                  false
+              )
               .map(pullFromCacheFunction)
               .map(obj -> Pair.of(cachedResultPair.getLhs(), Optional.ofNullable(obj)));
         }

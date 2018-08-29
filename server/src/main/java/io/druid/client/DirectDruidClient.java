@@ -36,6 +36,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
@@ -84,7 +85,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -591,28 +591,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     {
       if (jp == null) {
         try {
-          // Safety for if we are in a FJP
-          ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker()
-          {
-            @Override
-            public boolean block() throws InterruptedException
-            {
-              try {
-                future.get();
-              }
-              catch (ExecutionException e) {
-                // Ignore, will be caught when get is called below
-              }
-              return true;
-            }
-
-            @Override
-            public boolean isReleasable()
-            {
-              return future.isDone();
-            }
-          });
-          InputStream is = future.get();
+          final InputStream is = Execs.futureManagedBlockGet(future);
           if (is == null) {
             throw new QueryInterruptedException(
                 new ResourceLimitExceededException(

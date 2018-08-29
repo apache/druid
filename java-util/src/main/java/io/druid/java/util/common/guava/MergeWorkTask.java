@@ -43,16 +43,18 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
 
   /**
    * Take a stream of sequences, split them as possible, and do intermediate merges. If the input stream is not
-   * a parallel stream, do a traditional merge. The stream attempts to use groups of {@code batchSize} to do its work, but this
-   * goal is on a best effort basis. Input streams that cannot be split or are not sized or not subsized might not be
-   * elligable for this parallelization. The intermediate merges are done in the passed in ForkJoinPool, but the final
-   * merge is still done when the returned sequence accumulated. The intermediate merges are yielded in the order
-   * in which they are ready.
+   * a parallel stream, do a traditional merge. The stream attempts to use groups of {@code batchSize} to do its work,
+   * but this goal is on a best effort basis. Input streams that cannot be split or are not sized or not subsized
+   * might not be elligable for this parallelization. The intermediate merges are done in the passed in ForkJoinPool,
+   * but the final merge is still done when the returned sequence accumulated. The intermediate merges are yielded
+   * in the order in which they are ready.
    *
    * Exceptions that happen during execution of the merge are passed through and bubbled up during the resulting sequence
    * iteration
    *
-   * @param mergerFn      The function that will merge a stream of sequences into a single sequence. If the baseSequences stream is parallel, this work will be done in the FJP, otherwise it will be called directly.
+   * @param mergerFn      The function that will merge a stream of sequences into a single sequence. If the
+   *                     baseSequences stream is parallel, this work will be done in the FJP, otherwise it
+   *                     will be called directly.
    * @param baseSequences The sequences that need merged
    * @param batchSize     The input stream should be split down to this number if possible. This sets the target number of segments per merge thread work
    * @param fjp           The ForkJoinPool to do the intermediate merges in.
