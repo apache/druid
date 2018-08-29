@@ -916,7 +916,6 @@ public class RowBasedGrouperHelper
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
   {
-    private static final int DICTIONARY_INITIAL_CAPACITY = 10000;
     private static final int UNKNOWN_DICTIONARY_ID = -1;
 
     private final boolean includeTimestamp;
@@ -962,9 +961,9 @@ public class RowBasedGrouperHelper
       this.valueTypes = valueTypes;
       this.limitSpec = limitSpec;
       this.enableRuntimeDictionaryGeneration = dictionary == null;
-      this.dictionary = enableRuntimeDictionaryGeneration ? new ArrayList<>(DICTIONARY_INITIAL_CAPACITY) : dictionary;
+      this.dictionary = enableRuntimeDictionaryGeneration ? new ArrayList<>() : dictionary;
       this.reverseDictionary = enableRuntimeDictionaryGeneration ?
-                               new Object2IntOpenHashMap<>(DICTIONARY_INITIAL_CAPACITY) :
+                               new Object2IntOpenHashMap<>() :
                                new Object2IntOpenHashMap<>(dictionary.size());
       this.reverseDictionary.defaultReturnValue(UNKNOWN_DICTIONARY_ID);
       this.maxDictionarySize = maxDictionarySize;
