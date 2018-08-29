@@ -76,6 +76,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -410,6 +411,16 @@ public class RowBasedGrouperHelper
       final Closeable closeable
   )
   {
+    return makeGrouperIterator(grouper, query, null, closeable);
+  }
+
+  public static CloseableGrouperIterator<RowBasedKey, Row> makeGrouperIterator(
+      final Grouper<RowBasedKey> grouper,
+      final GroupByQuery query,
+      final List<String> dimsToInclude,
+      final Closeable closeable
+  )
+  {
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
 
     return new CloseableGrouperIterator<>(
@@ -435,12 +446,27 @@ public class RowBasedGrouperHelper
             }
 
             // Add dimensions.
-            for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
-              Object dimVal = entry.getKey().getKey()[i];
-              theMap.put(
-                  query.getDimensions().get(i - dimStart).getOutputName(),
-                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
-              );
+            if (dimsToInclude == null) {
+              for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
+                Object dimVal = entry.getKey().getKey()[i];
+                theMap.put(
+                    query.getDimensions().get(i - dimStart).getOutputName(),
+                    dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
+                );
+              }
+            } else {
+              Map<String, Object> dimensions = new HashMap<>();
+              for (int i = dimStart; i < entry.getKey().getKey().length; i++) {
+                Object dimVal = entry.getKey().getKey()[i];
+                dimensions.put(
+                    query.getDimensions().get(i - dimStart).getOutputName(),
+                    dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
+                );
+              }
+
+              for (String dimToInclude : dimsToInclude) {
+                theMap.put(dimToInclude, dimensions.get(dimToInclude));
+              }
             }
 
             // Add aggregations.

@@ -218,9 +218,31 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         finalizingResults = subqueryResult;
       }
 
-      return groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults);
+      if (query.getSubtotalsSpec() != null) {
+        return groupByStrategy.processSubtotalsSpec(
+            query,
+            resource,
+            groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults)
+        );
+      } else {
+        return groupByStrategy.applyPostProcessing(groupByStrategy.processSubqueryResult(
+            subquery,
+            query,
+            resource,
+            finalizingResults
+        ), query);
+      }
+
     } else {
-      return groupByStrategy.mergeResults(runner, query, context);
+      if (query.getSubtotalsSpec() != null) {
+        return groupByStrategy.processSubtotalsSpec(
+            query,
+            resource,
+            groupByStrategy.mergeResults(runner, query.withSubtotalsSpec(null), context)
+        );
+      } else {
+        return groupByStrategy.applyPostProcessing(groupByStrategy.mergeResults(runner, query, context), query);
+      }
     }
   }
 

@@ -22,7 +22,6 @@ package io.druid.query.groupby.epinephelinae;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 import io.druid.collections.ResourceHolder;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.data.input.Row;
@@ -30,7 +29,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.BaseSequence;
-import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.FilteredSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.Query;
@@ -58,7 +56,7 @@ import java.util.UUID;
 
 public class GroupByRowProcessor
 {
-  public static Sequence<Row> process(
+  public static Grouper createGrouper(
       final Query queryParam,
       final Sequence<Row> rows,
       final Map<String, ValueType> rowSignature,
@@ -66,7 +64,8 @@ public class GroupByRowProcessor
       final GroupByQueryResource resource,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final List<Closeable> closeOnExit
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -122,75 +121,59 @@ public class GroupByRowProcessor
         }
     );
 
+    final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
+        temporaryStorageDirectory,
+        querySpecificConfig.getMaxOnDiskStorage()
+    );
+
+    closeOnExit.add(temporaryStorage);
+
+    Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
+        query,
+        true,
+        rowSignature,
+        querySpecificConfig,
+        new Supplier<ByteBuffer>()
+        {
+          @Override
+          public ByteBuffer get()
+          {
+            final ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getMergeBuffer();
+            closeOnExit.add(mergeBufferHolder);
+            return mergeBufferHolder.get();
+          }
+        },
+        temporaryStorage,
+        spillMapper,
+        aggregatorFactories,
+        mergeBufferSize
+    );
+    final Grouper<RowBasedKey> grouper = pair.lhs;
+    final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
+    closeOnExit.add(grouper);
+
+    final AggregateResult retVal = filteredSequence.accumulate(AggregateResult.ok(), accumulator);
+    if (!retVal.isOk()) {
+      throw new ResourceLimitExceededException(retVal.getReason());
+    }
+
+    return grouper;
+  }
+
+  public static Sequence<Row> getRowsFromGrouper(GroupByQuery query, List<String> subtotalSpec, Supplier<Grouper> grouper)
+  {
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Row, CloseableGrouperIterator<RowBasedKey, Row>>()
         {
           @Override
           public CloseableGrouperIterator<RowBasedKey, Row> make()
           {
-            // This contains all closeable objects which are closed when the returned iterator iterates all the elements,
-            // or an exceptions is thrown. The objects are closed in their reverse order.
-            final List<Closeable> closeOnExit = Lists.newArrayList();
-
-            try {
-              final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
-                  temporaryStorageDirectory,
-                  querySpecificConfig.getMaxOnDiskStorage()
-              );
-
-              closeOnExit.add(temporaryStorage);
-
-              Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
-                  query,
-                  true,
-                  rowSignature,
-                  querySpecificConfig,
-                  new Supplier<ByteBuffer>()
-                  {
-                    @Override
-                    public ByteBuffer get()
-                    {
-                      final ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getMergeBuffer();
-                      closeOnExit.add(mergeBufferHolder);
-                      return mergeBufferHolder.get();
-                    }
-                  },
-                  temporaryStorage,
-                  spillMapper,
-                  aggregatorFactories,
-                  mergeBufferSize
-              );
-              final Grouper<RowBasedKey> grouper = pair.lhs;
-              final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
-              closeOnExit.add(grouper);
-
-              final AggregateResult retVal = filteredSequence.accumulate(AggregateResult.ok(), accumulator);
-              if (!retVal.isOk()) {
-                throw new ResourceLimitExceededException(retVal.getReason());
-              }
-
-              return RowBasedGrouperHelper.makeGrouperIterator(
-                  grouper,
-                  query,
-                  new Closeable()
-                  {
-                    @Override
-                    public void close()
-                    {
-                      for (Closeable closeable : Lists.reverse(closeOnExit)) {
-                        CloseQuietly.close(closeable);
-                      }
-                    }
-                  }
-              );
-            }
-            catch (Throwable e) {
-              // Exception caught while setting up the iterator; release resources.
-              for (Closeable closeable : Lists.reverse(closeOnExit)) {
-                CloseQuietly.close(closeable);
-              }
-              throw e;
-            }
+            return RowBasedGrouperHelper.makeGrouperIterator(
+                grouper.get(),
+                query,
+                subtotalSpec,
+                () -> {}
+            );
           }
 
           @Override

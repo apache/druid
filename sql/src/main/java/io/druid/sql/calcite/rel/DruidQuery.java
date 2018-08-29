@@ -924,6 +924,7 @@ public class DruidQuery
         postAggregators,
         grouping.getHavingFilter() != null ? new DimFilterHavingSpec(grouping.getHavingFilter(), true) : null,
         limitSpec,
+        null,
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
