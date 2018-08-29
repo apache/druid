@@ -145,6 +145,31 @@ public class ForkingTaskRunnerConfigTest
     );
   }
 
+  @Test
+  public void testPorts() throws JsonProcessingException
+  {
+    final List<Integer> ports = ImmutableList.of(1024, 1025);
+    Assert.assertEquals(
+        ports,
+        buildFromProperties(
+            IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".ports",
+            MAPPER.writeValueAsString(ports)
+        ).getPorts()
+    );
+  }
+
+  @Test(expected = ProvisionException.class)
+  public void testExceptionalPorts()
+  {
+    buildFromProperties(IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".ports", "not an Integer");
+  }
+
+  @Test(expected = ProvisionException.class)
+  public void testExceptionalPorts2()
+  {
+    buildFromProperties(IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".ports", "1024"); // not an array
+  }
+
   @Test(expected = ProvisionException.class)
   public void testExceptionalJavaOptArray()
   {

@@ -62,6 +62,14 @@ public class ForkingTaskRunnerConfig
   @Max(65535)
   private int startPort = 8100;
 
+  /**
+   * Task ports your services are going to use. If non-empty, ports for one task will be chosed from these ports.
+   * Otherwise, using startPort to generate ports.
+   */
+  @JsonProperty
+  @NotNull
+  private List<Integer> ports = ImmutableList.of();
+
   @JsonProperty
   @NotNull
   List<String> allowedPrefixes = Lists.newArrayList(
@@ -105,6 +113,11 @@ public class ForkingTaskRunnerConfig
   public int getStartPort()
   {
     return startPort;
+  }
+
+  public List<Integer> getPorts()
+  {
+    return ports;
   }
 
   public List<String> getAllowedPrefixes()
