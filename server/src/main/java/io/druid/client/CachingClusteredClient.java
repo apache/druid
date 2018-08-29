@@ -337,10 +337,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // 3. Per server (including the ALREADY_CACHED_SERVER) create the appropriate Sequence results - cached results
       // are handled in their own merge
       final Stream<Pair<ServerToSegment, Optional<T>>> cacheResolvedResults = deserializeFromCache(
-          maybeFetchCacheResults(
-              queryCacheKey,
-              segments
-          )
+          maybeFetchCacheResults(queryCacheKey, segments)
       );
       return groupCachedResultsByServer(cacheResolvedResults)
           .map(this::runOnServer)
@@ -639,11 +636,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return new ServerMaybeSegmentMaybeCache<>(ALREADY_CACHED_SERVER, null, null);
       }
       final DruidServer server = queryableDruidServer.getServer();
-      return new ServerMaybeSegmentMaybeCache<>(
-          server,
-          serverToSegment.getSegmentDescriptor(),
-          null
-      );
+      return new ServerMaybeSegmentMaybeCache<>(server, serverToSegment.getSegmentDescriptor(), null);
     }
 
     /**
