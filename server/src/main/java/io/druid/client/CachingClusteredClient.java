@@ -195,11 +195,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
       final QueryToolChest<T, Query<T>> toolChest = queryRunnerFactory.getToolchest();
       return (queryPlus, responseContext) -> {
-        final Stream<? extends Sequence<T>> sequences = run(
-            queryPlus,
-            responseContext,
-            timelineConverter
-        );
+        final Stream<? extends Sequence<T>> sequences = run(queryPlus, responseContext, timelineConverter);
         return MergeWorkTask.parallelMerge(
             sequences.parallel(),
             sequenceStream ->
