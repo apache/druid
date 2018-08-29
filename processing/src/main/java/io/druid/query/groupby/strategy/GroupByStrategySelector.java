@@ -21,6 +21,7 @@ package io.druid.query.groupby.strategy;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -55,6 +56,11 @@ public class GroupByStrategySelector
         return strategyV2;
 
       case STRATEGY_V1:
+        // Fail early if subtotals were asked from GroupBy V1
+        if (query.getSubtotalsSpec() != null) {
+          throw new IAE("GroupBy Strategy [%s] does not support subtotalsSpec.", STRATEGY_V1);
+        }
+
         return strategyV1;
 
       default:

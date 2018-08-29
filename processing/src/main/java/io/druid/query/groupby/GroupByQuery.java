@@ -21,6 +21,7 @@ package io.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -100,6 +101,7 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  private final List<List<String>> subtotalsSpec;
 
   private final boolean applyLimitPushDown;
   private final Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
@@ -116,6 +118,7 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("having") HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
+      @JsonProperty("subtotalsSpec") List<List<String>> subtotalsSpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -130,6 +133,7 @@ public class GroupByQuery extends BaseQuery<Row>
         postAggregatorSpecs,
         havingSpec,
         limitSpec,
+        subtotalsSpec,
         null,
         context
     );
@@ -172,6 +176,7 @@ public class GroupByQuery extends BaseQuery<Row>
       final List<PostAggregator> postAggregatorSpecs,
       final HavingSpec havingSpec,
       final LimitSpec limitSpec,
+      final @Nullable List<List<String>> subtotalsSpec,
       final @Nullable Function<Sequence<Row>, Sequence<Row>> postProcessingFn,
       final Map<String, Object> context
   )
@@ -194,6 +199,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
 
+    this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, dimensions);
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
@@ -204,6 +210,40 @@ public class GroupByQuery extends BaseQuery<Row>
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
     this.applyLimitPushDown = determineApplyLimitPushDown();
+  }
+
+  private List<List<String>> verifySubtotalsSpec(List<List<String>> subtotalsSpec, List<DimensionSpec> dimensions)
+  {
+    // if subtotalsSpec exists then validate that all are subsets of dimensions spec and are in same order.
+    // For example if we had {D1, D2, D3} in dimensions spec then
+    // {D2}, {D1, D2}, {D1, D3}, {D2, D3} etc are valid in subtotalsSpec while
+    // {D2, D1} is not as it is not in same order.
+    // {D4} is not as its not a subset.
+    // This restriction as enforced because implementation does sort merge on the results of top-level query
+    // results and expects that ordering of events does not change when dimension columns are removed from
+    // results of top level query.
+    if (subtotalsSpec != null) {
+      for (List<String> subtotalSpec : subtotalsSpec) {
+        int i = 0;
+        for (String s : subtotalSpec) {
+          boolean found = false;
+          for (; i < dimensions.size(); i++) {
+            if (s.equals(dimensions.get(i).getOutputName())) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            throw new IAE(
+                "Subtotal spec %s is either not a subset or items are in different order than in dimensions.",
+                subtotalSpec
+            );
+          }
+        }
+      }
+    }
+
+    return subtotalsSpec;
   }
 
   @JsonProperty
@@ -247,6 +287,13 @@ public class GroupByQuery extends BaseQuery<Row>
   public LimitSpec getLimitSpec()
   {
     return limitSpec;
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonProperty("subtotalsSpec")
+  public List<List<String>> getSubtotalsSpec()
+  {
+    return subtotalsSpec;
   }
 
   @Override
@@ -329,6 +376,10 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public boolean determineApplyLimitPushDown()
   {
+    if (subtotalsSpec != null) {
+      return false;
+    }
+
     final boolean forceLimitPushDown = validateAndGetForceLimitPushDown();
 
     if (limitSpec instanceof DefaultLimitSpec) {
@@ -628,6 +679,16 @@ public class GroupByQuery extends BaseQuery<Row>
     return new Builder(this).setLimitSpec(limitSpec).build();
   }
 
+  public GroupByQuery withAggregatorSpecs(final List<AggregatorFactory> aggregatorSpecs)
+  {
+    return new Builder(this).setAggregatorSpecs(aggregatorSpecs).build();
+  }
+
+  public GroupByQuery withSubtotalsSpec(final List<List<String>> subtotalsSpec)
+  {
+    return new Builder(this).setSubtotalsSpec(subtotalsSpec).build();
+  }
+
   public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
     return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
@@ -687,6 +748,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
     private Map<String, Object> context;
 
+    private List<List<String>> subtotalsSpec = null;
     private LimitSpec limitSpec = null;
     private Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
@@ -708,6 +770,7 @@ public class GroupByQuery extends BaseQuery<Row>
       postAggregatorSpecs = query.getPostAggregatorSpecs();
       havingSpec = query.getHavingSpec();
       limitSpec = query.getLimitSpec();
+      subtotalsSpec = query.subtotalsSpec;
       postProcessingFn = query.postProcessingFn;
       context = query.getContext();
     }
@@ -785,6 +848,12 @@ public class GroupByQuery extends BaseQuery<Row>
       ensureExplicitLimitSpecNotSet();
       this.limit = limit;
       this.postProcessingFn = null;
+      return this;
+    }
+
+    public Builder setSubtotalsSpec(List<List<String>> subtotalsSpec)
+    {
+      this.subtotalsSpec = subtotalsSpec;
       return this;
     }
 
@@ -962,6 +1031,7 @@ public class GroupByQuery extends BaseQuery<Row>
           postAggregatorSpecs,
           havingSpec,
           theLimitSpec,
+          subtotalsSpec,
           postProcessingFn,
           context
       );

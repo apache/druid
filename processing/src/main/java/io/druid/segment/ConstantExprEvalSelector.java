@@ -20,31 +20,33 @@
 package io.druid.segment;
 
 import com.google.common.base.Preconditions;
+import io.druid.common.config.NullHandling;
+import io.druid.math.expr.ExprEval;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-public class ConstantColumnValueSelector<T> implements ColumnValueSelector<T>
+public class ConstantExprEvalSelector implements ColumnValueSelector<ExprEval>
 {
-  private long longValue;
-  private float floatValue;
-  private double doubleValue;
+  private final long longValue;
+  private final float floatValue;
+  private final double doubleValue;
+  private final ExprEval eval;
+  private final boolean isNull;
 
-  private T objectValue;
-
-  private Class<T> objectClass;
-
-  public ConstantColumnValueSelector(
-      final long longValue,
-      final float floatValue,
-      final double doubleValue,
-      final T objectValue,
-      final Class<T> objectClass
-  )
+  public ConstantExprEvalSelector(final ExprEval eval)
   {
-    this.longValue = longValue;
-    this.floatValue = floatValue;
-    this.doubleValue = doubleValue;
-    this.objectValue = objectValue;
-    this.objectClass = Preconditions.checkNotNull(objectClass, "objectClass");
+    this.eval = Preconditions.checkNotNull(eval, "eval");
+
+    if (NullHandling.sqlCompatible() && eval.isNumericNull()) {
+      longValue = 0L;
+      floatValue = 0f;
+      doubleValue = 0d;
+      isNull = true;
+    } else {
+      longValue = eval.asLong();
+      doubleValue = eval.asDouble();
+      floatValue = (float) doubleValue;
+      isNull = false;
+    }
   }
 
   @Override
@@ -66,27 +68,26 @@ public class ConstantColumnValueSelector<T> implements ColumnValueSelector<T>
   }
 
   @Override
-  public T getObject()
+  public ExprEval getObject()
   {
-    return objectValue;
+    return eval;
   }
 
   @Override
-  public Class<T> classOfObject()
+  public Class<ExprEval> classOfObject()
   {
-    return objectClass;
+    return ExprEval.class;
   }
 
   @Override
   public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
   {
-    // Nothing here: objectValue is nullable but getObject is not @CalledFromHotLoop
+    // Nothing here: eval's class can vary, but getObject is not @CalledFromHotLoop
   }
 
   @Override
   public boolean isNull()
   {
-    // return false always as the primitive values for this selector can never be null.
-    return false;
+    return isNull;
   }
 }
