@@ -29,8 +29,8 @@ import io.druid.java.util.common.collect.Utils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public abstract class AbstractFlatTextFormatParser implements Parser<String, Object>
 {
@@ -127,7 +127,8 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   }
 
   @Override
-  public Map<String, Object> parseToMap(final String input)
+  @Nullable
+  public LinkedHashMap<String, Object> parseToMap(final String input)
   {
     if (!supportSkipHeaderRows && (hasHeaderRow || maxSkipHeaderRows > 0)) {
       throw new UnsupportedOperationException("hasHeaderRow or maxSkipHeaderRows is not supported. "

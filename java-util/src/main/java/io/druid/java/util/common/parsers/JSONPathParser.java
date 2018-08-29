@@ -22,6 +22,8 @@ package io.druid.java.util.common.parsers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -64,11 +66,13 @@ public class JSONPathParser implements Parser<String, Object>
    * @return A map of field names and values
    */
   @Override
-  public Map<String, Object> parseToMap(String input)
+  @Nullable
+  public LinkedHashMap<String, Object> parseToMap(String input)
   {
     try {
       JsonNode document = mapper.readValue(input, JsonNode.class);
-      return flattener.flatten(document);
+      Map<String, Object> mapFromFlattener = flattener.flatten(document);
+      return mapFromFlattener != null ? new LinkedHashMap<>(mapFromFlattener) : null;
     }
     catch (Exception e) {
       throw new ParseException(e, "Unable to parse row [%s]", input);

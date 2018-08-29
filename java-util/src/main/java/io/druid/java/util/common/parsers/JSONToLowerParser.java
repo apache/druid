@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -109,10 +108,10 @@ public class JSONToLowerParser implements Parser<String, Object>
   }
 
   @Override
-  public Map<String, Object> parseToMap(String input)
+  public LinkedHashMap<String, Object> parseToMap(String input)
   {
     try {
-      Map<String, Object> map = new LinkedHashMap<>();
+      LinkedHashMap<String, Object> map = new LinkedHashMap<>();
       JsonNode root = objectMapper.readTree(input);
 
       Iterator<String> keysIter = (fieldNames == null ? root.fieldNames() : fieldNames.iterator());

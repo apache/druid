@@ -30,9 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
@@ -53,6 +51,7 @@ import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -214,7 +213,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public Map<String, String> parseToMap(String input)
+    public LinkedHashMap<String, String> parseToMap(String input)
     {
       final Map<String, Object> inner = delegate.parseToMap(input);
       final String k = Preconditions.checkNotNull(
@@ -224,11 +223,14 @@ public class UriExtractionNamespace implements ExtractionNamespace
           input
       ).toString(); // Just in case is long
       final Object val = inner.get(value);
-      if (val == null) {
-        // Skip null or missing values, treat them as if there were no row at all.
-        return ImmutableMap.of();
+      // The map returned from parseToMap() should be mutable, therefore using a HashMap instead of an ImmutableMap or
+      // Collections.emptyMap().
+      LinkedHashMap<String, String> result = new LinkedHashMap<>(1);
+      // Skip null or missing values, treat them as if there were no row at all.
+      if (val != null) {
+        result.put(k, val.toString());
       }
-      return ImmutableMap.of(k, val.toString());
+      return result;
     }
 
     @Override
@@ -613,13 +615,16 @@ public class UriExtractionNamespace implements ExtractionNamespace
       parser = new Parser<String, String>()
       {
         @Override
-        public Map<String, String> parseToMap(String input)
+        @Nullable
+        public LinkedHashMap<String, String> parseToMap(String input)
         {
           try {
-            return jsonFactory.createParser(input).readValueAs(JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING);
+            Map<String, String> mapFromJackson =
+                jsonFactory.createParser(input).readValueAs(JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING);
+            return mapFromJackson != null ? new LinkedHashMap<>(mapFromJackson) : null;
           }
           catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
         }
 
