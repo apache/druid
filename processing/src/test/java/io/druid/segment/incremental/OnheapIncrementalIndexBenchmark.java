@@ -158,30 +158,15 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected Aggregator[] concurrentGet(int offset)
-    {
-      // All get operations should be fine
-      return indexedMap.get(offset);
-    }
-
-    @Override
-    protected void concurrentSet(int offset, Aggregator[] value)
-    {
-      indexedMap.put(offset, value);
-    }
-
-    @Override
     protected AddToFactsResult addToFacts(
-        AggregatorFactory[] metrics,
-        boolean deserializeComplexMetrics,
-        boolean reportParseExceptions,
-        InputRow row,
-        AtomicInteger numEntries,
-        AtomicLong sizeInBytes,
-        IncrementalIndexRow key,
-        ThreadLocal<InputRow> rowContainer,
-        Supplier<InputRow> rowSupplier,
-        boolean skipMaxRowsInMemoryCheck // ignore for benchmark
+            boolean reportParseExceptions,
+            InputRow row,
+            AtomicInteger numEntries,
+            AtomicLong sizeInBytes,
+            IncrementalIndexRow key,
+            ThreadLocal<InputRow> rowContainer,
+            Supplier<InputRow> rowSupplier,
+            boolean skipMaxRowsInMemoryCheck // ignore for benchmark
     ) throws IndexSizeExceededException
     {
 
@@ -190,26 +175,26 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
       Aggregator[] aggs;
 
       if (null != priorIdex) {
-        aggs = indexedMap.get(priorIdex);
+        aggs = aggsManager.concurrentGet(priorIdex);
       } else {
-        aggs = new Aggregator[metrics.length];
+        aggs = new Aggregator[aggsManager.metrics.length];
 
-        for (int i = 0; i < metrics.length; i++) {
-          final AggregatorFactory agg = metrics[i];
+        for (int i = 0; i < aggsManager.metrics.length; i++) {
+          final AggregatorFactory agg = aggsManager.metrics[i];
           aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+                  aggsManager.makeColumnSelectorFactory(agg, rowSupplier, aggsManager.deserializeComplexMetrics)
           );
         }
         Integer rowIndex;
 
         do {
           rowIndex = indexIncrement.incrementAndGet();
-        } while (null != indexedMap.putIfAbsent(rowIndex, aggs));
+        } while (null != aggsManager.concurrentPutIfAbsent(rowIndex, aggs));
 
 
         // Last ditch sanity checks
         if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
-            && getFacts().getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
+                && getFacts().getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
           throw new IndexSizeExceededException("Maximum number of rows or max bytes reached");
         }
         final int prev = getFacts().putIfAbsent(key, rowIndex);
@@ -218,9 +203,9 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           sizeInBytes.incrementAndGet();
         } else {
           // We lost a race
-          aggs = indexedMap.get(prev);
+          aggs = aggsManager.concurrentGet(prev);
           // Free up the misfire
-          indexedMap.remove(rowIndex);
+          aggsManager.concurrentRemove(rowIndex);
           // This is expected to occur ~80% of the time in the worst scenarios
         }
       }
