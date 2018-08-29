@@ -84,8 +84,9 @@ public class OnheapIncrementalIndexTest
       public void run()
       {
         while (!Thread.interrupted()) {
-          for (IncrementalIndexRow row : index.getFacts().keySet()) {
-            if (index.getMetricLongValue(row.getRowIndex(), 0) != 1) {
+          Iterable<IncrementalIndexRow> iterKeySet = index.keySet();
+          for (IncrementalIndexRow row : iterKeySet) {
+            if (index.getMetricLongValue(row, 0) != 1) {
               checkFailedCount.addAndGet(1);
             }
           }
@@ -127,7 +128,7 @@ public class OnheapIncrementalIndexTest
     ));
 
     // override the aggregators with the mocks
-    index.concurrentGet(0)[0] = mockedAggregator;
+    index.aggsManager.concurrentGet(0)[0] = mockedAggregator;
 
     // close the indexer and validate the expectations
     EasyMock.replay(mockedAggregator);
