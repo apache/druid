@@ -79,6 +79,34 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
     if (batchSize < 1) {
       throw new IllegalArgumentException("Batch size must be greater than 0");
     }
+
+    // At first glance this looks like an alternative implementation for a RecursiveTask because it does the following:
+    //  1. Divides the input work up into batches
+    //  2. Joins the results in a merging operation
+    //
+    // While these are true, there are some differences in this implementation and a raw RecursiveTask that are worth
+    // calling out. First, the results are fed into a BlockingQueue so that the final merge can accumulate as soon as
+    // the first intermediate result is available. This design constraint makes a RecursiveTask rather odd since the
+    // intended use case would have intermediate merges chain up to the top merge, rather than a single top merge
+    // accumulating the total results. This does not preclude a RecursiveAction that can feed the results into a
+    // blocking queue.
+    //
+    // But in such an implementation the total needed queue size is not known until all the recursive actions are
+    // forked off similar to the implementation here. The difference being the implementation below has a dedicated
+    // action submitted to the fjp for joining the result and feeding it into the result stream. Since this dedicated
+    // feeder work is submitted after all the tasks are launched, the total queue size needed is known ahead of time,
+    // and the blocking queue can be pre-allocated with the correct capacity to ensure submission to the queue never
+    // blocks.
+    //
+    // In addition, there exists an ability in this implementation to cancel all the forked tasks if the stream is
+    // closed (like on the case of query cancellation).
+    //
+    // Since there is a desire to
+    //   1. Ensure the intermediate results do not block when being fed into the final merge queue
+    //   2. Have the ability to cancel outstanding work tasks if the resulting Sequence is cancelled
+    // this implementation deviates from a straight up RecursiveTask or RecursiveAction implementation to attempt to
+    // provide an easy to follow and reason about workflow.
+
     @SuppressWarnings("unchecked") // Wildcard erasure is fine here
     final Spliterator<? extends Sequence<T>> baseSpliterator = (Spliterator<? extends Sequence<T>>) baseSequences.spliterator();
 
@@ -87,6 +115,7 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
     final long totalResults = baseSpliterator.estimateSize();
     long dequeueInitialCapacity = totalResults / batchSize + 1;
     if (dequeueInitialCapacity < 16) {
+      // 16 is the default element count size in ArrayDeque at the time of this writing.
       dequeueInitialCapacity = 16;
     }
     final Deque<Spliterator<? extends Sequence<T>>> spliteratorStack = new ArrayDeque<>((int) dequeueInitialCapacity);
@@ -114,6 +143,8 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
 
     // We guarantee enough space to put all the results so that the FJP doesn't block waiting for results to come in
     final BlockingQueue<Pair<Sequence<T>, Throwable>> readyForFinalMerge = new ArrayBlockingQueue<>(tasks.size());
+    // Submit a simple feeder into the final merge queue. Since readyForFinalMerge is sized to the number of tasks,
+    // the readyForFinalMerge.add call should never block.
     tasks.forEach(task -> fjp.submit(() -> {
       try {
         readyForFinalMerge.add(Pair.of(task.join(), null));
@@ -139,7 +170,7 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
                   }
 
                   @Override
-                  public Sequence<? extends T> next() throws NoSuchElementException
+                  public Sequence<? extends T> next()
                   {
                     if (taken >= totalAdditions) {
                       throw new NoSuchElementException();
