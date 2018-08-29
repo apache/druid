@@ -222,15 +222,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       };
     } else {
       return (queryPlus, responseContext) -> {
-        final Stream<? extends Sequence<T>> sequences = run(
-            queryPlus,
-            responseContext,
-            timelineConverter
-        );
-        return new MergeSequence<>(
-            query.getResultOrdering(),
-            Sequences.fromStream(sequences)
-        );
+        final Stream<? extends Sequence<T>> sequences = run(queryPlus, responseContext, timelineConverter);
+        return new MergeSequence<>(query.getResultOrdering(), Sequences.fromStream(sequences));
       };
     }
   }
