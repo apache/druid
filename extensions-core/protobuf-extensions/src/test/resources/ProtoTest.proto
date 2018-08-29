@@ -1,6 +1,6 @@
 syntax = "proto2";
 package prototest;
-option java_package = "io.druid.data.input.protobuf";
+option java_package = "org.apache.druid.data.input.protobuf";
 option java_outer_classname = "ProtoTestEventWrapper";
 
 

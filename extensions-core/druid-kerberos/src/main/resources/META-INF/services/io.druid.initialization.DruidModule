@@ -1,1 +1,1 @@
-io.druid.security.kerberos.DruidKerberosModule
+org.apache.druid.security.kerberos.DruidKerberosModule

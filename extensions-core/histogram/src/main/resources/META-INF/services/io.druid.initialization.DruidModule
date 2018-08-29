@@ -1,1 +1,1 @@
-io.druid.query.aggregation.histogram.ApproximateHistogramDruidModule
+org.apache.druid.query.aggregation.histogram.ApproximateHistogramDruidModule

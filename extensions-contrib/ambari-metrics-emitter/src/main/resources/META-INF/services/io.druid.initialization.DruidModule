@@ -1,1 +1,1 @@
-io.druid.emitter.ambari.metrics.AmbariMetricsEmitterModule
+org.apache.druid.emitter.ambari.metrics.AmbariMetricsEmitterModule

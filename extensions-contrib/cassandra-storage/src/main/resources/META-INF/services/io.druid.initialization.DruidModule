@@ -1,1 +1,1 @@
-io.druid.storage.cassandra.CassandraDruidModule
+org.apache.druid.storage.cassandra.CassandraDruidModule

@@ -1,1 +1,1 @@
-io.druid.firehose.kafka.KafkaEightDruidModule
+org.apache.druid.firehose.kafka.KafkaEightDruidModule

@@ -1,1 +1,1 @@
-io.druid.https.SSLContextModule
+org.apache.druid.https.SSLContextModule

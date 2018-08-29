@@ -1,1 +1,1 @@
-io.druid.initialization.InitializationTest$TestDruidModule
+org.apache.druid.initialization.InitializationTest$TestDruidModule

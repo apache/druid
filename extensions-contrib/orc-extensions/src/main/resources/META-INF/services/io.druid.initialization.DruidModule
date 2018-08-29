@@ -1,1 +1,1 @@
-io.druid.data.input.orc.OrcExtensionsModule
+org.apache.druid.data.input.orc.OrcExtensionsModule

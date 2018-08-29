@@ -1,1 +1,1 @@
-io.druid.query.aggregation.stats.DruidStatsModule
+org.apache.druid.query.aggregation.stats.DruidStatsModule

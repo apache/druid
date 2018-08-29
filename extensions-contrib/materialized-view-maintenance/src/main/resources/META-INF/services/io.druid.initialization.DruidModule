@@ -1,1 +1,1 @@
-io.druid.indexing.materializedview.MaterializedViewMaintenanceDruidModule
+org.apache.druid.indexing.materializedview.MaterializedViewMaintenanceDruidModule

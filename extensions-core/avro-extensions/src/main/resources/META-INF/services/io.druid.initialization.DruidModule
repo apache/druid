@@ -1,1 +1,1 @@
-io.druid.data.input.avro.AvroExtensionsModule
+org.apache.druid.data.input.avro.AvroExtensionsModule

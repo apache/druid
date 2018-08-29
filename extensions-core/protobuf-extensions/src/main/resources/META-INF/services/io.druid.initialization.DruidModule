@@ -1,1 +1,1 @@
-io.druid.data.input.protobuf.ProtobufExtensionsModule
+org.apache.druid.data.input.protobuf.ProtobufExtensionsModule

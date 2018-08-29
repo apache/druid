@@ -17,4 +17,4 @@
 # under the License.
 #
 
-io.druid.storage.google.GoogleStorageDruidModule
+org.apache.druid.storage.google.GoogleStorageDruidModule

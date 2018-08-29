@@ -1,2 +1,2 @@
-io.druid.storage.s3.S3StorageDruidModule
-io.druid.firehose.s3.S3FirehoseDruidModule
+org.apache.druid.storage.s3.S3StorageDruidModule
+org.apache.druid.firehose.s3.S3FirehoseDruidModule

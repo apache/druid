@@ -1,1 +1,1 @@
-io.druid.query.aggregation.distinctcount.DistinctCountDruidModule
+org.apache.druid.query.aggregation.distinctcount.DistinctCountDruidModule

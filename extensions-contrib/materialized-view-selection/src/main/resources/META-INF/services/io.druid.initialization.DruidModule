@@ -1,1 +1,1 @@
-io.druid.query.materializedview.MaterializedViewSelectionDruidModule
+org.apache.druid.query.materializedview.MaterializedViewSelectionDruidModule

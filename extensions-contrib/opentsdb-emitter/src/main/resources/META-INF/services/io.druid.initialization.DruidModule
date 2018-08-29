@@ -1,1 +1,1 @@
-io.druid.emitter.opentsdb.OpentsdbEmitterModule
+org.apache.druid.emitter.opentsdb.OpentsdbEmitterModule

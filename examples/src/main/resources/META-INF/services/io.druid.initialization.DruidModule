@@ -1,1 +1,1 @@
-io.druid.examples.ExamplesDruidModule
+org.apache.druid.examples.ExamplesDruidModule

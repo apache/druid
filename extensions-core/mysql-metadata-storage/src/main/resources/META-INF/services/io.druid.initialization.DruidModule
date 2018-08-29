@@ -1,1 +1,1 @@
-io.druid.metadata.storage.mysql.MySQLMetadataStorageModule
+org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule

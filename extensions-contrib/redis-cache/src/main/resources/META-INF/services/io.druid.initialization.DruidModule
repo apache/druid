@@ -1,1 +1,1 @@
-io.druid.client.cache.RedisDruidModule
+org.apache.druid.client.cache.RedisDruidModule

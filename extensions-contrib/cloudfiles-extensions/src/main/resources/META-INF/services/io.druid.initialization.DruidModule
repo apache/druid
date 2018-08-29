@@ -15,5 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-io.druid.storage.cloudfiles.CloudFilesStorageDruidModule
-io.druid.firehose.cloudfiles.CloudFilesFirehoseDruidModule
+org.apache.druid.storage.cloudfiles.CloudFilesStorageDruidModule
+org.apache.druid.firehose.cloudfiles.CloudFilesFirehoseDruidModule

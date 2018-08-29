@@ -1,1 +1,1 @@
-io.druid.indexing.kafka.KafkaIndexTaskModule
+org.apache.druid.indexing.kafka.KafkaIndexTaskModule

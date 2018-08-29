@@ -1,1 +1,1 @@
-io.druid.segment.DruidVirtualColumnsModule
+org.apache.druid.segment.DruidVirtualColumnsModule

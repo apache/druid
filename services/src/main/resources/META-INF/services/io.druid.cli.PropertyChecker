@@ -17,4 +17,4 @@
 # under the License.
 #
 
-io.druid.cli.Log4JShutdownPropertyChecker
+org.apache.druid.cli.Log4JShutdownPropertyChecker

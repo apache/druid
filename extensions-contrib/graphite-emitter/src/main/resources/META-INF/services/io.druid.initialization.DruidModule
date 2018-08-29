@@ -1,1 +1,1 @@
-io.druid.emitter.graphite.GraphiteEmitterModule
+org.apache.druid.emitter.graphite.GraphiteEmitterModule

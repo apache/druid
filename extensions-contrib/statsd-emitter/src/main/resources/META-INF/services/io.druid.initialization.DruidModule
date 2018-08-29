@@ -1,1 +1,1 @@
-io.druid.emitter.statsd.StatsDEmitterModule
+org.apache.druid.emitter.statsd.StatsDEmitterModule

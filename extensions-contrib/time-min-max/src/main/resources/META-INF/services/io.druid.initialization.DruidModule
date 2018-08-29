@@ -1,1 +1,1 @@
-io.druid.query.aggregation.TimestampMinMaxModule
+org.apache.druid.query.aggregation.TimestampMinMaxModule

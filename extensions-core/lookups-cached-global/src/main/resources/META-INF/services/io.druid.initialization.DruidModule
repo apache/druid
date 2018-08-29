@@ -17,4 +17,4 @@
 # under the License.
 #
 
-io.druid.server.lookup.namespace.NamespaceExtractionModule
+org.apache.druid.server.lookup.namespace.NamespaceExtractionModule

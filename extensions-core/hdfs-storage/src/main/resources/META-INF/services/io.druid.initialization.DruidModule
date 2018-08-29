@@ -1,1 +1,1 @@
-io.druid.storage.hdfs.HdfsStorageDruidModule
+org.apache.druid.storage.hdfs.HdfsStorageDruidModule

@@ -1,1 +1,1 @@
-io.druid.emitter.kafka.KafkaEmitterModule
+org.apache.druid.emitter.kafka.KafkaEmitterModule
