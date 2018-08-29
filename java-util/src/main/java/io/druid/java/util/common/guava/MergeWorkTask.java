@@ -22,10 +22,10 @@ package io.druid.java.util.common.guava;
 import com.google.common.annotations.VisibleForTesting;
 import io.druid.java.util.common.Pair;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
@@ -53,8 +53,8 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
    * iteration
    *
    * @param mergerFn      The function that will merge a stream of sequences into a single sequence. If the
-   *                     baseSequences stream is parallel, this work will be done in the FJP, otherwise it
-   *                     will be called directly.
+   *                      baseSequences stream is parallel, this work will be done in the FJP, otherwise it
+   *                      will be called directly.
    * @param baseSequences The sequences that need merged
    * @param batchSize     The input stream should be split down to this number if possible. This sets the target number of segments per merge thread work
    * @param fjp           The ForkJoinPool to do the intermediate merges in.
@@ -76,12 +76,20 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
       // Don't even try.
       return mergerFn.apply(baseSequences);
     }
+    if (batchSize < 1) {
+      throw new IllegalArgumentException("Batch size must be greater than 0");
+    }
     @SuppressWarnings("unchecked") // Wildcard erasure is fine here
     final Spliterator<? extends Sequence<T>> baseSpliterator = (Spliterator<? extends Sequence<T>>) baseSequences.spliterator();
 
     // Accumulate a list of forked off tasks
     final List<ForkJoinTask<Sequence<T>>> tasks = new ArrayList<>();
-    final Deque<Spliterator<? extends Sequence<T>>> spliteratorStack = new LinkedList<>();
+    final long totalResults = baseSpliterator.estimateSize();
+    long dequeueInitialCapacity = totalResults / batchSize + 1;
+    if (dequeueInitialCapacity < 16) {
+      dequeueInitialCapacity = 16;
+    }
+    final Deque<Spliterator<? extends Sequence<T>>> spliteratorStack = new ArrayDeque<>((int) dequeueInitialCapacity);
 
     // Push the base spliterator onto the stack, keep splitting until we can't or splits are small
     spliteratorStack.push(baseSpliterator);
