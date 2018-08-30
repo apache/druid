@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.indexing.kafka.supervisor;
+package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
