@@ -4096,8 +4096,8 @@ public class CalciteQueryTest extends CalciteTestBase
                                             .setInterval(QSS(Filtration.eternity()))
                                             .setGranularity(Granularities.ALL)
                                             .setDimensions(DIMS(
-                                                new DefaultDimensionSpec("dim1", "d0"),
-                                                new DefaultDimensionSpec("dim2", "d1")
+                                                new DefaultDimensionSpec("dim2", "d0"),
+                                                new DefaultDimensionSpec("dim1", "d1")
                                             ))
                                             .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                                             .setContext(QUERY_CONTEXT_DEFAULT)
@@ -4106,12 +4106,12 @@ public class CalciteQueryTest extends CalciteTestBase
                         )
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d1", "_d0")))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("d0", "_d0")))
                         .setAggregatorSpecs(AGGS(
                             new LongSumAggregatorFactory("_a0", "a0"),
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("_a1"),
-                                NOT(SELECTOR("d0", null, null))
+                                NOT(SELECTOR("d1", null, null))
                             )
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -4236,8 +4236,8 @@ public class CalciteQueryTest extends CalciteTestBase
                                         .setInterval(QSS(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(DIMS(
-                                            new DefaultDimensionSpec("dim1", "d0"),
-                                            new DefaultDimensionSpec("m2", "d1", ValueType.DOUBLE)
+                                            new DefaultDimensionSpec("m2", "d0", ValueType.DOUBLE),
+                                            new DefaultDimensionSpec("dim1", "d1")
                                         ))
                                         .setDimFilter(new SelectorDimFilter("m1", "5.0", null))
                                         .setAggregatorSpecs(AGGS(new LongMaxAggregatorFactory("a0", "__time")))
@@ -4255,7 +4255,7 @@ public class CalciteQueryTest extends CalciteTestBase
                         )
                         .setDimensions(DIMS(
                             new DefaultDimensionSpec("_d0:v", "_d0", ValueType.LONG),
-                            new DefaultDimensionSpec("d0", "_d1", ValueType.STRING)
+                            new DefaultDimensionSpec("d1", "_d1", ValueType.STRING)
                         ))
                         .setAggregatorSpecs(AGGS(
                             new CountAggregatorFactory("_a0")
@@ -7154,8 +7154,8 @@ public class CalciteQueryTest extends CalciteTestBase
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(DIMS(
                                             new DefaultDimensionSpec("__time", "d0", ValueType.LONG),
-                                            new DefaultDimensionSpec("dim1", "d1"),
-                                            new DefaultDimensionSpec("m2", "d2", ValueType.DOUBLE)
+                                            new DefaultDimensionSpec("m2", "d1", ValueType.DOUBLE),
+                                            new DefaultDimensionSpec("dim1", "d2")
                                         ))
                                         .setContext(QUERY_CONTEXT_DEFAULT)
                                         .build()
@@ -7164,7 +7164,7 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setGranularity(Granularities.ALL)
                         .setDimensions(DIMS(
                             new DefaultDimensionSpec("d0", "_d0", ValueType.LONG),
-                            new DefaultDimensionSpec("d1", "_d1", ValueType.STRING)
+                            new DefaultDimensionSpec("d2", "_d1", ValueType.STRING)
                         ))
                         .setAggregatorSpecs(AGGS(
                             new CountAggregatorFactory("a0")
