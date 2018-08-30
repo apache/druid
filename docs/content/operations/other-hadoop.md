@@ -195,25 +195,25 @@ If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat j
 
  ```xml
  <dependency>
-      <groupId>io.druid.extensions</groupId>
+      <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-avro-extensions</artifactId>
       <version>${project.parent.version}</version>
   </dependency>
 
   <dependency>
-      <groupId>io.druid.extensions.contrib</groupId>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
       <artifactId>druid-parquet-extensions</artifactId>
       <version>${project.parent.version}</version>
   </dependency>
 
   <dependency>
-      <groupId>io.druid.extensions</groupId>
+      <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-hdfs-storage</artifactId>
       <version>${project.parent.version}</version>
   </dependency>
 
   <dependency>
-      <groupId>io.druid.extensions</groupId>
+      <groupId>org.apache.druid.extensions</groupId>
       <artifactId>mysql-metadata-storage</artifactId>
       <version>${project.parent.version}</version>
   </dependency>
@@ -274,6 +274,6 @@ java -Xmx32m \
   -Dfile.encoding=UTF-8 -Duser.timezone=UTC \
   -classpath config/hadoop:config/overlord:config/_common:$SELF_CONTAINED_JAR:$HADOOP_DISTRIBUTION/etc/hadoop \
   -Djava.security.krb5.conf=$KRB5 \
-  io.druid.cli.Main index hadoop \
+  org.apache.druid.cli.Main index hadoop \
   $config_path
 ```
