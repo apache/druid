@@ -193,11 +193,17 @@ existing publishing tasks and will create new tasks starting at the offsets the 
 
 Seamless schema migrations can thus be achieved by simply submitting the new schema using this endpoint.
 
-#### Shutdown Supervisor
+#### Shutdown Specified Supervisor
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown
 ```
 Note that this will cause all indexing tasks managed by this supervisor to immediately stop and begin publishing their segments.
+
+#### Shutdown All Supervisor
+```
+POST /druid/indexer/v1/supervisor/shutdownAll
+```
+Shutdown all supervisors at a time.
 
 #### Get Supervisor IDs
 ```
