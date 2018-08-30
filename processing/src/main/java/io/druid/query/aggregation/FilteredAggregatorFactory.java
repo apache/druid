@@ -36,6 +36,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class FilteredAggregatorFactory extends AggregatorFactory
 {
@@ -245,15 +246,6 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String toString()
-  {
-    return "FilteredAggregatorFactory{" +
-           "delegate=" + delegate +
-           ", filter=" + filter +
-           '}';
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -262,24 +254,25 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     FilteredAggregatorFactory that = (FilteredAggregatorFactory) o;
-
-    if (delegate != null ? !delegate.equals(that.delegate) : that.delegate != null) {
-      return false;
-    }
-    if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(delegate, that.delegate) &&
+           Objects.equals(filter, that.filter) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    int result = delegate != null ? delegate.hashCode() : 0;
-    result = 31 * result + (filter != null ? filter.hashCode() : 0);
-    return result;
+    return Objects.hash(delegate, filter, name);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "FilteredAggregatorFactory{" +
+           "delegate=" + delegate +
+           ", filter=" + filter +
+           ", name='" + name + '\'' +
+           '}';
   }
 }
