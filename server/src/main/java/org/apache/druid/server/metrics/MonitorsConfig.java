@@ -42,14 +42,17 @@ public class MonitorsConfig
 
   /**
    * Prior to 0.12.0, Druid used Monitor classes from the `com.metamx.metrics` package.
-   * In 0.12.0, these Monitor classes were moved into Druid under `org.apache.druid.java.util.metrics`.
-   * See https://github.com/apache/incubator-druid/pull/5289 for details.
+   * In 0.12.0, these Monitor classes were moved to the Druid repo under `org.apache.druid.java.util.metrics`.
+   * In 0.13.0, they were moved again to `org.apache.druid.java.util.metrics`.
+   * See https://github.com/apache/incubator-druid/pull/5289 and https://github.com/apache/incubator-druid/pull/6266
+   * for details.
    *
-   * We automatically adjust old `com.metamx.metrics` package references to `org.apache.druid.java.util.metrics`
-   * for backwards compatibility purposes, easing the upgrade process for users.
+   * We automatically adjust old package references to `org.apache.druid.java.util.metrics` for backwards
+   * compatibility purposes, easing the upgrade process for users.
    */
-  public static final String OLD_METAMX_PACKAGE_NAME = "com.metamx.metrics";
-  public static final String NEW_DRUID_PACKAGE_NAME = "org.apache.druid.java.util.metrics";
+  public static final String METAMX_PACKAGE = "com.metamx.metrics";
+  public static final String IO_DRUID_PACKAGE = "io.druid.java.util.metrics";
+  public static final String APACHE_DRUID_PACKAGE_NAME = "org.apache.druid.java.util.metrics";
 
   @JsonProperty("monitors")
   @NotNull
@@ -115,13 +118,14 @@ public class MonitorsConfig
     }
     try {
       for (String monitorName : monitorNames) {
-        String effectiveMonitorName = monitorName.replace(OLD_METAMX_PACKAGE_NAME, NEW_DRUID_PACKAGE_NAME);
+        String effectiveMonitorName = monitorName
+            .replace(METAMX_PACKAGE, APACHE_DRUID_PACKAGE_NAME)
+            .replace(IO_DRUID_PACKAGE, APACHE_DRUID_PACKAGE_NAME);
         if (!effectiveMonitorName.equals(monitorName)) {
           log.warn(
-              "Deprecated Monitor class name [%s] found, please use package %s instead of %s",
+              "Deprecated Monitor class name[%s] found, please use name[%s] instead.",
               monitorName,
-              NEW_DRUID_PACKAGE_NAME,
-              OLD_METAMX_PACKAGE_NAME
+              effectiveMonitorName
           );
         }
         Class<? extends Monitor> monitorClass = (Class<? extends Monitor>) Class.forName(effectiveMonitorName);
