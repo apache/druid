@@ -245,6 +245,39 @@ public class SupervisorResource
     );
   }
 
+  @POST
+  @Path("/shutdownAll")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response shutdownAll()
+  {
+    return asLeaderWithSupervisorManager(
+        new Function<SupervisorManager, Response>()
+        {
+          @Override
+          public Response apply(SupervisorManager manager)
+          {
+            Set<String> supervisorIds = manager.getSupervisorIds();
+            List<String> successes = new ArrayList<>();
+            List<String> errors = new ArrayList<>();
+
+            for (String id : supervisorIds) {
+              if (manager.stopAndRemoveSupervisor(id)) {
+                successes.add(id);
+              } else {
+                errors.add(id);
+              }
+            }
+            return Response.ok(ImmutableMap.of(
+                "success",
+                String.join(",", successes),
+                "error",
+                StringUtils.format("[%s] do not exist", String.join(",", errors))
+            )).build();
+          }
+        }
+    );
+  }
+
   @GET
   @Path("/history")
   @Produces(MediaType.APPLICATION_JSON)
