@@ -197,7 +197,7 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/mem/used`|Used memory.|memKind.|< max memory|
 |`jvm/mem/committed`|Committed memory.|memKind.|close to max memory|
 |`jvm/gc/count`|Garbage collection count.|gcName.|< 100|
-|`jvm/gc/time`|Garbage collection time.|gcName.|< 1s|	
+|`jvm/gc/cpu`|Cpu time in Nanoseconds spent on garbage collection.|gcName.|< 1s|
 
 ### EventReceiverFirehose
 
