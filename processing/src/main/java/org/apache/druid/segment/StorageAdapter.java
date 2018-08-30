@@ -39,8 +39,8 @@ public interface StorageAdapter extends CursorFactory
   Iterable<String> getAvailableMetrics();
 
   /**
-   * Returns the number of distinct values for the given column if known, or {@link Integer#MAX_VALUE} is unknown or
-   * the column is numeric. If the column doesn't exist, returns 0.
+   * Returns the number of distinct values for the given column if known, or {@link Integer#MAX_VALUE} if unknown,
+   * e. g. the column is numeric. If the column doesn't exist, returns 0.
    */
   int getDimensionCardinality(String column);
   DateTime getMinTime();

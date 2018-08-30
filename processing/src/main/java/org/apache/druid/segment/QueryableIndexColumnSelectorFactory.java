@@ -98,6 +98,8 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       if (col instanceof DictionaryEncodedColumn) {
         return closer.register(col);
       } else {
+        // Return null from the lambda in computeIfAbsent() results in no recorded value in the columnCache and
+        // the column variable is set to null.
         return null;
       }
     });
