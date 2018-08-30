@@ -14,7 +14,7 @@ Running
 -------
 
 ```
-io.druid.cli.Main server middleManager
+org.apache.druid.cli.Main server middleManager
 ```
 
 HTTP Endpoints

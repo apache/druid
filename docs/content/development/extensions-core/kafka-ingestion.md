@@ -327,4 +327,4 @@ events for the interval 13:00 - 14:00 may be split across previous and new set o
 one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
 Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.html).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
-Hadoop (see [here](https://github.com/druid-io/druid/pull/5102)).
+Hadoop (see [here](https://github.com/apache/incubator-druid/pull/5102)).

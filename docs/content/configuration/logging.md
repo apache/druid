@@ -26,7 +26,7 @@ An example log4j2.xml ships with Druid under config/_common/log4j2.xml, and a sa
     </Root>
 
     <!-- Uncomment to enable logging of all HTTP requests
-    <Logger name="io.druid.jetty.RequestLog" additivity="false" level="DEBUG">
+    <Logger name="org.apache.druid.jetty.RequestLog" additivity="false" level="DEBUG">
         <AppenderRef ref="Console"/>
     </Logger>
     -->

@@ -147,7 +147,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 #### CSV ParseSpec
 
-Use this with the String Parser to load CSV. Strings are parsed using the net.sf.opencsv library.
+Use this with the String Parser to load CSV. Strings are parsed using the com.opencsv library.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
