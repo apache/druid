@@ -22,13 +22,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.druid.extensions</groupId>
+  <groupId>org.apache.druid.extensions</groupId>
   <artifactId>druid-kerberos</artifactId>
   <name>druid-kerberos</name>
   <description>druid-kerberos</description>
 
   <parent>
-    <groupId>io.druid</groupId>
+    <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
     <version>0.13.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
@@ -36,13 +36,13 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
@@ -165,7 +165,7 @@
 
     <!-- Tests -->
     <dependency>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>

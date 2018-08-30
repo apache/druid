@@ -150,7 +150,7 @@ export CLASSPATH=$TDIR/dependency/*:$TDIR/druid-integration-tests-$VER.jar:$TDIR
 ### Run the test
 
 ```
-java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.test.config.type=configFile -Ddruid.test.config.configFile=<pathname of configuration file> org.testng.TestNG -testrunfactory org.testng.DruidTestRunnerFactory -testclass io.druid.tests.hadoop.ITHadoopIndexTest
+java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.test.config.type=configFile -Ddruid.test.config.configFile=<pathname of configuration file> org.testng.TestNG -testrunfactory org.testng.DruidTestRunnerFactory -testclass org.apache.druid.tests.hadoop.ITHadoopIndexTest
 ```
 
 Writing a New Test

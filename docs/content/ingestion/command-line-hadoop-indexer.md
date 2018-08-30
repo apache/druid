@@ -7,7 +7,7 @@ layout: doc_page
 To run:
 
 ```
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_dir> io.druid.cli.Main index hadoop <spec_file>
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_dir> org.apache.druid.cli.Main index hadoop <spec_file>
 ```
 
 ## Options

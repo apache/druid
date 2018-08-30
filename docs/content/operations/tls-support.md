@@ -52,7 +52,7 @@ Since, there are various ways to configure SSLContext, by default, Druid looks f
 while creating the HttpClient. This binding can be achieved writing a [Druid extension](../development/extensions.html)
 which can provide an instance of SSLContext. Druid comes with a simple extension present [here](../development/extensions-core/simple-client-sslcontext.html)
 which should be useful enough for most simple cases, see [this](./including-extensions.html) for how to include extensions.
-If this extension does not satisfy the requirements then please follow the extension [implementation](https://github.com/druid-io/druid/tree/master/extensions-core/simple-client-sslcontext)
+If this extension does not satisfy the requirements then please follow the extension [implementation](https://github.com/apache/incubator-druid/tree/master/extensions-core/simple-client-sslcontext)
 to create your own extension.
 
 # Upgrading Clients that interact with Overlord or Coordinator
