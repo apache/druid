@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package org.apache.druid.query.aggregation;
 
 import io.druid.query.filter.TrueDimFilter;
 import org.junit.Assert;
