@@ -30,13 +30,13 @@
 
     <parent>
         <artifactId>druid</artifactId>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <version>0.13.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
@@ -68,7 +68,7 @@
                                 <argument>
                                     -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                 </argument>
-                                <argument>io.druid.cli.Main</argument>
+                                <argument>org.apache.druid.cli.Main</argument>
                                 <argument>tools</argument>
                                 <argument>pull-deps</argument>
                                 <argument>--clean</argument>
@@ -79,41 +79,41 @@
                                 <argument>-h</argument>
                                 <argument>org.apache.hadoop:hadoop-client:${hadoop.compile.version}</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-avro-extensions</argument>
+                                <argument>org.apache.druid.extensions:druid-avro-extensions</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-datasketches</argument>
+                                <argument>org.apache.druid.extensions:druid-datasketches</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-hdfs-storage</argument>
+                                <argument>org.apache.druid.extensions:druid-hdfs-storage</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-histogram</argument>
+                                <argument>org.apache.druid.extensions:druid-histogram</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-kafka-eight</argument>
+                                <argument>org.apache.druid.extensions:druid-kafka-eight</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-kafka-extraction-namespace</argument>
+                                <argument>org.apache.druid.extensions:druid-kafka-extraction-namespace</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-kafka-indexing-service</argument>
+                                <argument>org.apache.druid.extensions:druid-kafka-indexing-service</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-lookups-cached-global</argument>
+                                <argument>org.apache.druid.extensions:druid-lookups-cached-global</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-lookups-cached-single</argument>
+                                <argument>org.apache.druid.extensions:druid-lookups-cached-single</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-protobuf-extensions</argument>
+                                <argument>org.apache.druid.extensions:druid-protobuf-extensions</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:mysql-metadata-storage</argument>
+                                <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:postgresql-metadata-storage</argument>
+                                <argument>org.apache.druid.extensions:postgresql-metadata-storage</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-kerberos</argument>
+                                <argument>org.apache.druid.extensions:druid-kerberos</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-s3-extensions</argument>
+                                <argument>org.apache.druid.extensions:druid-s3-extensions</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-stats</argument>
+                                <argument>org.apache.druid.extensions:druid-stats</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-examples</argument>
+                                <argument>org.apache.druid.extensions:druid-examples</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:simple-client-sslcontext</argument>
+                                <argument>org.apache.druid.extensions:simple-client-sslcontext</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-basic-security</argument>
+                                <argument>org.apache.druid.extensions:druid-basic-security</argument>
                                 <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>
@@ -199,7 +199,7 @@
                                         <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                         </argument>
-                                        <argument>io.druid.cli.Main</argument>
+                                        <argument>org.apache.druid.cli.Main</argument>
                                         <argument>tools</argument>
                                         <argument>pull-deps</argument>
                                         <argument>--defaultVersion</argument>
@@ -208,47 +208,47 @@
                                         <argument>${settings.localRepository}</argument>
                                         <argument>--no-default-hadoop</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:ambari-metrics-emitter</argument>
+                                        <argument>org.apache.druid.extensions.contrib:ambari-metrics-emitter</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-azure-extensions</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-azure-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-cassandra-storage</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-cassandra-storage</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-cloudfiles-extensions</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-cloudfiles-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-distinctcount</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-distinctcount</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-rocketmq</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-rocketmq</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-google-extensions</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-google-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-kafka-eight-simple-consumer</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-kafka-eight-simple-consumer</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:graphite-emitter</argument>
+                                        <argument>org.apache.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-opentsdb-emitter</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-opentsdb-emitter</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-orc-extensions</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-orc-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-parquet-extensions</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-parquet-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-rabbitmq</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-rabbitmq</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-redis-cache</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-redis-cache</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:sqlserver-metadata-storage</argument>
+                                        <argument>org.apache.druid.extensions.contrib:sqlserver-metadata-storage</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:statsd-emitter</argument>
+                                        <argument>org.apache.druid.extensions.contrib:statsd-emitter</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-thrift-extensions</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-thrift-extensions</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-time-min-max</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:druid-virtual-columns</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:materialized-view-maintenance</argument>
+                                        <argument>org.apache.druid.extensions.contrib:materialized-view-maintenance</argument>
                                         <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:materialized-view-selection</argument>
+                                        <argument>org.apache.druid.extensions.contrib:materialized-view-selection</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

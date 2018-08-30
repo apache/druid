@@ -5,7 +5,7 @@
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetInputFormat",
         "paths": "example/284a0e001476716b-56d5676f53bd6e85_115466471_data.0.parq"
       },
       "metadataUpdateSpec": {

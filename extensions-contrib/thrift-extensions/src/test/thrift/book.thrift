@@ -1,4 +1,4 @@
-namespace java io.druid.data.input.thrift
+namespace java org.apache.druid.data.input.thrift
 
 struct Author {
   1: string firstName;
