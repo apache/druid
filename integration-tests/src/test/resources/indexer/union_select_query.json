@@ -75,7 +75,7 @@
                         }
                     },
                     {
-                        "segmentId": "wikipedia_index_test0_2013-08-31T0io.druid.java.util.common.ISE: one or more twitter  queries failed0:00:00.000Z_2013-09-01T00:00:00.000Z_2014-05-01T15:27:43.993Z",
+                        "segmentId": "wikipedia_index_test0_2013-08-31T0org.apache.druid.java.util.common.ISE: one or more twitter  queries failed0:00:00.000Z_2013-09-01T00:00:00.000Z_2014-05-01T15:27:43.993Z",
                         "offset": 0,
                         "event": {
                             "timestamp": "2013-08-31T03:32:45.000Z",

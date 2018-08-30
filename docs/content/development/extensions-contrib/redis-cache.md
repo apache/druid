@@ -8,9 +8,14 @@ Druid Redis Cache
 A cache implementation for Druid based on [Redis](https://github.com/antirez/redis).
 
 # Configuration
-Below are the configuration options known to this module:
+Below are the configuration options known to this module.
 
-|`runtime.properties`|Description|Default|Required|
+Note that just adding these properties does not enable the cache. You still need to add the `druid.<nodetype>.cache.useCache` and `druid.<nodetype>.cache.populateCache` properties for the nodes you want to enable the cache on as described in the [cache configuration docs](../../configuration/caching.html).
+
+A possible configuration would be to keep the properties below in your `common.runtime.properties` file (present on all nodes) and then add `druid.<nodetype>.cache.useCache` and `druid.<nodetype>.cache.populateCache` in the `runtime.properties` file of the node types you want to enable caching on.
+
+
+|`common.runtime.properties`|Description|Default|Required|
 |--------------------|-----------|-------|--------|
 |`druid.cache.host`|Redis server host|None|yes|
 |`druid.cache.port`|Redis server port|None|yes|

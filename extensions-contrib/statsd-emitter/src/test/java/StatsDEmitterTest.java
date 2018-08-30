@@ -18,11 +18,11 @@
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.StatsDClient;
-import io.druid.emitter.statsd.StatsDEmitter;
-import io.druid.emitter.statsd.StatsDEmitterConfig;
-import io.druid.java.util.common.DateTimes;
+import org.apache.druid.emitter.statsd.StatsDEmitter;
+import org.apache.druid.emitter.statsd.StatsDEmitterConfig;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Test;
 
 import static org.easymock.EasyMock.createMock;

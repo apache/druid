@@ -31,7 +31,7 @@ You may want to use another version of thrift, change the dependency in pom and 
         "granularitySpec": {          },
         "parser": {
           "type": "thrift",
-          "thriftClass": "io.druid.data.input.thrift.Book",
+          "thriftClass": "org.apache.druid.data.input.thrift.Book",
           "protocol": "compact",
           "parseSpec": {
             "format": "json",
@@ -73,7 +73,7 @@ This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inp
       "parser": {
         "type": "thrift",
         "jarPath": "book.jar",
-        "thriftClass": "io.druid.data.input.thrift.Book",
+        "thriftClass": "org.apache.druid.data.input.thrift.Book",
         "protocol": "compact",
         "parseSpec": {
           "format": "json",

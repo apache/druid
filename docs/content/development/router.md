@@ -11,7 +11,7 @@ Running
 -------
 
 ```
-io.druid.cli.Main server router
+org.apache.druid.cli.Main server router
 ```
 
 Example Production Configuration

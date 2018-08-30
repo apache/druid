@@ -8,18 +8,18 @@
       <item index="3" class="java.lang.String" itemvalue="com.google.inject.Inject" />
       <item index="4" class="java.lang.String" itemvalue="com.google.inject.Provides" />
       <item index="5" class="java.lang.String" itemvalue="io.airlift.airline.Command" />
-      <item index="6" class="java.lang.String" itemvalue="io.druid.annotations.UsedByJUnitParamsRunner" />
-      <item index="7" class="java.lang.String" itemvalue="io.druid.annotations.UsedInGeneratedCode" />
-      <item index="8" class="java.lang.String" itemvalue="io.druid.guice.annotations.ExtensionPoint" />
-      <item index="9" class="java.lang.String" itemvalue="io.druid.guice.annotations.PublicApi" />
-      <item index="10" class="java.lang.String" itemvalue="io.druid.java.util.common.lifecycle.LifecycleStart" />
-      <item index="11" class="java.lang.String" itemvalue="io.druid.java.util.common.lifecycle.LifecycleStop" />
+      <item index="6" class="java.lang.String" itemvalue="org.apache.druid.annotations.UsedByJUnitParamsRunner" />
+      <item index="7" class="java.lang.String" itemvalue="org.apache.druid.annotations.UsedInGeneratedCode" />
+      <item index="8" class="java.lang.String" itemvalue="org.apache.druid.guice.annotations.ExtensionPoint" />
+      <item index="9" class="java.lang.String" itemvalue="org.apache.druid.guice.annotations.PublicApi" />
+      <item index="10" class="java.lang.String" itemvalue="org.apache.druid.java.util.common.lifecycle.LifecycleStart" />
+      <item index="11" class="java.lang.String" itemvalue="org.apache.druid.java.util.common.lifecycle.LifecycleStop" />
       <item index="12" class="java.lang.String" itemvalue="javax.inject.Inject" />
       <item index="13" class="java.lang.String" itemvalue="org.openjdk.jmh.annotations.Benchmark" />
     </list>
-    <pattern value="io.druid.cli.GuiceRunnable" hierarchically="true" method="run" />
-    <pattern value="io.druid.cli.GuiceRunnable" hierarchically="true" />
-    <pattern value="io.druid.initialization.DruidModule" hierarchically="true" method="getJacksonModules" />
+    <pattern value="org.apache.druid.cli.GuiceRunnable" hierarchically="true" method="run" />
+    <pattern value="org.apache.druid.cli.GuiceRunnable" hierarchically="true" />
+    <pattern value="org.apache.druid.initialization.DruidModule" hierarchically="true" method="getJacksonModules" />
     <writeAnnotations>
       <writeAnnotation name="com.fasterxml.jackson.annotation.JacksonInject" />
       <writeAnnotation name="com.fasterxml.jackson.annotation.JsonProperty" />

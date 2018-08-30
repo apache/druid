@@ -88,6 +88,9 @@ Available Metrics
 |`*/averageByte`|Average cache entry byte size.||Varies.|
 |`*/timeouts`|Number of cache timeouts.||0|
 |`*/errors`|Number of cache errors.||0|
+|`*/put/ok`|Number of new cache entries successfully cached.||Varies, but more than zero.|
+|`*/put/error`|Number of new cache entries that could not be cached due to errors.||Varies, but more than zero.|
+|`*/put/oversized`|Number of potential new cache entries that were skipped due to being too large (based on `druid.{broker,historical,realtime}.cache.maxEntrySize` properties).||Varies.|
 
 #### Memcached only metrics
 
@@ -162,7 +165,7 @@ These metrics are for the Druid coordinator and are reset each time the coordina
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
 
-If `emitBalancingStats` is set to `true` in the coordinator [dynamic configuration](../configuration/coordinator.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `io.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
+If `emitBalancingStats` is set to `true` in the coordinator [dynamic configuration](../configuration/coordinator.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
 
 ## General Health
 
@@ -194,7 +197,7 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/mem/used`|Used memory.|memKind.|< max memory|
 |`jvm/mem/committed`|Committed memory.|memKind.|close to max memory|
 |`jvm/gc/count`|Garbage collection count.|gcName.|< 100|
-|`jvm/gc/time`|Garbage collection time.|gcName.|< 1s|	
+|`jvm/gc/cpu`|Cpu time in Nanoseconds spent on garbage collection.|gcName.|< 1s|
 
 ### EventReceiverFirehose
 
