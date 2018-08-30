@@ -19,7 +19,9 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -27,27 +29,66 @@ import java.net.ServerSocket;
 
 public class PortFinderTest
 {
-  private final PortFinder finder = new PortFinder(1200);
+  private PortFinder finderUseStartPort;
+  private PortFinder finderUseCandidatePorts;
+
+  @Before
+  public void setUp()
+  {
+    finderUseStartPort = new PortFinder(1200, ImmutableList.of());
+    // find two unused port for 'finderUseCandidatePorts'
+    for (int i = 1024; i <= 0xFFFF; ++i) {
+      try {
+        new ServerSocket(i).close();
+        new ServerSocket(i + 1).close();
+        finderUseCandidatePorts = new PortFinder(1200, ImmutableList.of(i, i + 1));
+        break;
+      }
+      catch (Exception e) {
+        // do nothing
+      }
+    }
+  }
 
   @Test
-  public void testUsedPort() throws IOException
+  public void testUseStartPort() throws IOException
   {
-    final int port1 = finder.findUnusedPort();
+    final int port1 = finderUseStartPort.findUnusedPort();
     // verify that the port is free
     ServerSocket socket1 = new ServerSocket(port1);
-    finder.markPortUnused(port1);
-    final int port2 = finder.findUnusedPort();
+    finderUseStartPort.markPortUnused(port1);
+    final int port2 = finderUseStartPort.findUnusedPort();
     Assert.assertNotEquals("Used port is not reallocated", port1, port2);
     // verify that port2 is free
     ServerSocket socket2 = new ServerSocket(port2);
 
     socket1.close();
     // Now port1 should get recycled
-    Assert.assertEquals(port1, finder.findUnusedPort());
+    Assert.assertEquals(port1, finderUseStartPort.findUnusedPort());
 
     socket2.close();
-    finder.markPortUnused(port1);
-    finder.markPortUnused(port2);
+    finderUseStartPort.markPortUnused(port1);
+    finderUseStartPort.markPortUnused(port2);
+  }
 
+  @Test
+  public void testUseCandidatePorts() throws IOException
+  {
+    final int port1 = finderUseCandidatePorts.findUnusedPort();
+    // verify that the port is free
+    ServerSocket socket1 = new ServerSocket(port1);
+    finderUseCandidatePorts.markPortUnused(port1);
+    final int port2 = finderUseCandidatePorts.findUnusedPort();
+    Assert.assertNotEquals("Used port is not reallocated", port1, port2);
+    // verify that port2 is free
+    ServerSocket socket2 = new ServerSocket(port2);
+
+    socket1.close();
+    // Now port1 should get recycled
+    Assert.assertEquals(port1, finderUseCandidatePorts.findUnusedPort());
+
+    socket2.close();
+    finderUseCandidatePorts.markPortUnused(port1);
+    finderUseCandidatePorts.markPortUnused(port2);
   }
 }

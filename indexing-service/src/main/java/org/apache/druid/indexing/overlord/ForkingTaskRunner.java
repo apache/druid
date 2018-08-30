@@ -128,7 +128,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.taskLogPusher = taskLogPusher;
     this.jsonMapper = jsonMapper;
     this.node = node;
-    this.portFinder = new PortFinder(config.getStartPort());
+    this.portFinder = new PortFinder(config.getStartPort(), config.getPorts());
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -236,7 +236,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                         if (node.isEnablePlaintextPort()) {
                           if (config.isSeparateIngestionEndpoint()) {
-                            Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
+                            Pair<Integer, Integer> portPair = portFinder.findTwoUnusedPorts();
                             childPort = portPair.lhs;
                             childChatHandlerPort = portPair.rhs;
                           } else {

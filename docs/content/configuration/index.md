@@ -1040,6 +1040,7 @@ Middle managers pass their configurations down to their child peons. The middle 
 |`druid.indexer.runner.javaOptsArray`|A json array of strings to be passed in as options to the peon's jvm. This is additive to javaOpts and is recommended for properly handling arguments which contain quotes or spaces like `["-XX:OnOutOfMemoryError=kill -9 %p"]`|`[]`|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
 |`druid.indexer.runner.startPort`|Starting port used for peon processes, should be greater than 1023.|8100|
+|`druid.indexer.runner.ports`|A json array of integers to specify ports that used for peon processes. This property is an alternative to `druid.indexer.runner.startPort`. If specified and non-empty, ports for one peon process will be chosen from these ports rather than using `druid.indexer.runner.startPort` to allocate ports.|`[]`|
 |`druid.indexer.runner.separateIngestionEndpoint`|*Deprecated.* Use separate server and consequently separate jetty thread pool for ingesting events. Not supported with TLS.|false|
 |`druid.worker.ip`|The IP of the worker.|localhost|
 |`druid.worker.version`|Version identifier for the middle manager.|0|
