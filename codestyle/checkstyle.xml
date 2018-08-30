@@ -112,7 +112,7 @@
     <module name="Regexp">
       <property name="format" value="com\.google\.common\.io\.Closer"/>
       <property name="illegalPattern" value="true"/>
-      <property name="message" value="Use io.druid.java.util.common.io.Closer instead of Guava's Closer"/>
+      <property name="message" value="Use org.apache.druid.java.util.common.io.Closer instead of Guava's Closer"/>
     </module>
     <module name="Regexp">
       <property name="format" value="^// {2}"/>
@@ -162,7 +162,7 @@
     <module name="Regexp">
       <property name="format" value="com\.metamx\.common\.logger"/>
       <property name="illegalPattern" value="true"/>
-      <property name="message" value="Use io.druid.java.util.common.logger.Logger instead"/>
+      <property name="message" value="Use org.apache.druid.java.util.common.logger.Logger instead"/>
     </module>
 
     <module name="Regexp">
@@ -186,12 +186,12 @@
     <module name="Regexp">
       <property name="format" value="Strings.emptyToNull"/>
       <property name="illegalPattern" value="true"/>
-      <property name="message" value="Use io.druid.common.config.NullHandling.emptyToNullIfNeeded instead"/>
+      <property name="message" value="Use org.apache.druid.common.config.NullHandling.emptyToNullIfNeeded instead"/>
     </module>
     <module name="Regexp">
       <property name="format" value="Strings.nullToEmpty"/>
       <property name="illegalPattern" value="true"/>
-      <property name="message" value="Use io.druid.common.config.NullHandling.nullToEmptyIfNeeded instead"/>
+      <property name="message" value="Use org.apache.druid.common.config.NullHandling.nullToEmptyIfNeeded instead"/>
     </module>
   </module>
 </module>

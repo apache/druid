@@ -12,7 +12,7 @@ Running
 -------
 
 ```
-io.druid.cli.Main server broker
+org.apache.druid.cli.Main server broker
 ```
 
 Forwarding Queries
