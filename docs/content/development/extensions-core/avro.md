@@ -64,7 +64,7 @@ This decoder can be used if all the input events can be read using the same sche
   "type": "schema_inline",
   "schema": {
     //your schema goes here, for example
-    "namespace": "io.druid.data",
+    "namespace": "org.apache.druid.data",
     "name": "User",
     "type": "record",
     "fields": [
@@ -87,7 +87,7 @@ This decoder can be used if different input events can have different read schem
   "schemas": {
     //your id -> schema map goes here, for example
     "1": {
-      "namespace": "io.druid.data",
+      "namespace": "org.apache.druid.data",
       "name": "User",
       "type": "record",
       "fields": [
@@ -96,7 +96,7 @@ This decoder can be used if different input events can have different read schem
       ]
     },
     "2": {
-      "namespace": "io.druid.otherdata",
+      "namespace": "org.apache.druid.otherdata",
       "name": "UserIdentity",
       "type": "record",
       "fields": [
@@ -118,7 +118,7 @@ Note that it is essentially a map of integer schema ID to avro schema object. Th
 
 ##### SchemaRepo Based Avro Bytes Decoder
 
-This Avro bytes decoder first extract `subject` and `id` from input message bytes, then use them to lookup the Avro schema with which to decode Avro record from bytes. Details can be found in [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. Towards schema registration on the message producer side, you can refer to `io.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
+This Avro bytes decoder first extract `subject` and `id` from input message bytes, then use them to lookup the Avro schema with which to decode Avro record from bytes. Details can be found in [schema repo](https://github.com/schema-repo/schema-repo) and [AVRO-1124](https://issues.apache.org/jira/browse/AVRO-1124). You will need an http service like schema repo to hold the avro schema. Towards schema registration on the message producer side, you can refer to `org.apache.druid.data.input.AvroStreamInputRowParserTest#testParse()`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -155,7 +155,7 @@ Details can be found in Schema Registry [documentation](http://docs.confluent.io
 
 ### Avro Hadoop Parser
 
-This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"io.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, eg: `"avro.schema.input.value.path": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "io.druid.extensions:druid-avro-extensions" as an extension.
+This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, eg: `"avro.schema.input.value.path": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "org.apache.druid.extensions:druid-avro-extensions" as an extension.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -188,7 +188,7 @@ For example, using Avro Hadoop parser with custom reader's schema file:
       "type" : "hadoop",
       "inputSpec" : {
         "type" : "static",
-        "inputFormat": "io.druid.data.input.avro.AvroValueInputFormat",
+        "inputFormat": "org.apache.druid.data.input.avro.AvroValueInputFormat",
         "paths" : ""
       }
     },
