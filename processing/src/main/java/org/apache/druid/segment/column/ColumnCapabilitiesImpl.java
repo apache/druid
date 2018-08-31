@@ -105,7 +105,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Override
-  @JsonIgnore
   public boolean isFilterable()
   {
     return type == ValueType.STRING ||
@@ -115,7 +114,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
            filterable;
   }
 
-  @JsonIgnore
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)
   {
     this.filterable = filterable;
