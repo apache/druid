@@ -22,6 +22,7 @@ package io.druid.security.basic.authentication;
 import io.druid.java.util.http.client.response.ClientResponse;
 import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.java.util.http.client.response.HttpResponseHandler;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
@@ -36,7 +37,7 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
         null
     );
 
-    holder.addChunk(response.getContent().array());
+    holder.addChunk(getContentBytes(response.getContent()));
 
     return ClientResponse.unfinished(
         holder
@@ -55,7 +56,7 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
       return ClientResponse.finished(null);
     }
 
-    holder.addChunk(chunk.getContent().array());
+    holder.addChunk(getContentBytes(chunk.getContent()));
     return response;
   }
 
@@ -71,5 +72,12 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
   )
   {
     // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
+  }
+
+  private byte[] getContentBytes(ChannelBuffer content)
+  {
+    byte[] contentBytes = new byte[content.readableBytes()];
+    content.readBytes(contentBytes);
+    return contentBytes;
   }
 }
