@@ -2444,7 +2444,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         Collections.emptyMap(),
         null,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        objectMapper
     );
   }
 

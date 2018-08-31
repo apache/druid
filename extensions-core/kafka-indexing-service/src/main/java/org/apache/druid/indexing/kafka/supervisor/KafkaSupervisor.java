@@ -75,6 +75,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -93,7 +94,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
@@ -951,21 +951,35 @@ public class KafkaSupervisor implements Supervisor
     return suffix.toString();
   }
 
-  private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
+  private KafkaConsumer<byte[], byte[]> getKafkaConsumer() throws IOException
   {
-    final Properties props = new Properties();
+    final Map<String, Object> configs = new HashMap<>();
 
-    props.setProperty("metadata.max.age.ms", "10000");
-    props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", getRandomId()));
+    configs.put("metadata.max.age.ms", "10000");
+    configs.put("group.id", StringUtils.format("kafka-supervisor-%s", getRandomId()));
 
-    props.putAll(ioConfig.getConsumerProperties());
+    // Extract passwords before SSL connection to Kafka
+    for (Map.Entry<String, Object> entry : ioConfig.getConsumerProperties().entrySet()) {
+      String propertyKey = entry.getKey();
+      if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+        PasswordProvider configPasswordProvider = sortingMapper.readValue(
+            sortingMapper.writeValueAsString(entry.getValue()),
+            PasswordProvider.class
+        );
+        configs.put(propertyKey, (configPasswordProvider.getPassword()));
+      } else {
+        configs.put(propertyKey, entry.getValue());
+      }
+    }
 
-    props.setProperty("enable.auto.commit", "false");
+    configs.put("enable.auto.commit", "false");
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      return new KafkaConsumer<>(props, new ByteArrayDeserializer(), new ByteArrayDeserializer());
+      return new KafkaConsumer<>(configs, new ByteArrayDeserializer(), new ByteArrayDeserializer());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
@@ -1841,7 +1855,7 @@ public class KafkaSupervisor implements Supervisor
     }
     TaskGroup group = taskGroups.get(groupId);
 
-    Map<String, String> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
+    Map<String, Object> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
     DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
     DateTime maximumMessageTime = taskGroups.get(groupId).maximumMessageTime.orNull();
 
@@ -1878,7 +1892,8 @@ public class KafkaSupervisor implements Supervisor
           context,
           null,
           null,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          sortingMapper
       );
 
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();

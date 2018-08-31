@@ -39,7 +39,7 @@ public class KafkaIOConfig implements IOConfig
   private final String baseSequenceName;
   private final KafkaPartitions startPartitions;
   private final KafkaPartitions endPartitions;
-  private final Map<String, String> consumerProperties;
+  private final Map<String, Object> consumerProperties;
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
@@ -51,7 +51,7 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") KafkaPartitions startPartitions,
       @JsonProperty("endPartitions") KafkaPartitions endPartitions,
-      @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
+      @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
@@ -114,7 +114,7 @@ public class KafkaIOConfig implements IOConfig
   }
 
   @JsonProperty
-  public Map<String, String> getConsumerProperties()
+  public Map<String, Object> getConsumerProperties()
   {
     return consumerProperties;
   }

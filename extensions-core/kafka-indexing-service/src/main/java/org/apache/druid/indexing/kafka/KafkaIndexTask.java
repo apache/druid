@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -40,10 +41,12 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -60,9 +63,10 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -93,6 +97,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final KafkaIOConfig ioConfig;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
   private final KafkaIndexTaskRunner runner;
+  private final ObjectMapper configMapper;
 
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
@@ -107,7 +112,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject ObjectMapper configMapper
   )
   {
     super(
@@ -123,6 +129,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
+    this.configMapper = configMapper;
     final CircularBuffer<Throwable> savedParseExceptions;
     if (tuningConfig.getMaxSavedParseExceptions() > 0) {
       savedParseExceptions = new CircularBuffer<>(tuningConfig.getMaxSavedParseExceptions());
@@ -282,24 +289,36 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  KafkaConsumer<byte[], byte[]> newConsumer()
+  KafkaConsumer<byte[], byte[]> newConsumer() throws IOException
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-      final Properties props = new Properties();
+      final Map<String, Object> configs = new HashMap<>();
 
-      for (Map.Entry<String, String> entry : ioConfig.getConsumerProperties().entrySet()) {
-        props.setProperty(entry.getKey(), entry.getValue());
+      // Extract passwords before SSL connection to Kafka
+      for (Map.Entry<String, Object> entry : ioConfig.getConsumerProperties().entrySet()) {
+        String propertyKey = entry.getKey();
+        if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
+            || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
+            || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+          PasswordProvider configPasswordProvider = configMapper.readValue(
+              configMapper.writeValueAsString(entry.getValue()),
+              PasswordProvider.class
+          );
+          configs.put(propertyKey, (configPasswordProvider.getPassword()));
+        } else {
+          configs.put(propertyKey, entry.getValue());
+        }
       }
 
-      props.setProperty("enable.auto.commit", "false");
-      props.setProperty("auto.offset.reset", "none");
-      props.setProperty("key.deserializer", ByteArrayDeserializer.class.getName());
-      props.setProperty("value.deserializer", ByteArrayDeserializer.class.getName());
+      configs.put("enable.auto.commit", "false");
+      configs.put("auto.offset.reset", "none");
+      configs.put("key.deserializer", ByteArrayDeserializer.class.getName());
+      configs.put("value.deserializer", ByteArrayDeserializer.class.getName());
 
-      return new KafkaConsumer<>(props);
+      return new KafkaConsumer<>(configs);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

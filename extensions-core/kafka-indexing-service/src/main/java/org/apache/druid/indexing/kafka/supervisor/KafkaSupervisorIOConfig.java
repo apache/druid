@@ -32,12 +32,15 @@ import java.util.Map;
 public class KafkaSupervisorIOConfig
 {
   public static final String BOOTSTRAP_SERVERS_KEY = "bootstrap.servers";
+  public static final String TRUST_STORE_PASSWORD_KEY = "ssl.truststore.password";
+  public static final String KEY_STORE_PASSWORD_KEY = "ssl.keystore.password";
+  public static final String KEY_PASSWORD_KEY = "ssl.key.password";
 
   private final String topic;
   private final Integer replicas;
   private final Integer taskCount;
   private final Duration taskDuration;
-  private final Map<String, String> consumerProperties;
+  private final Map<String, Object> consumerProperties;
   private final Duration startDelay;
   private final Duration period;
   private final boolean useEarliestOffset;
@@ -52,7 +55,7 @@ public class KafkaSupervisorIOConfig
       @JsonProperty("replicas") Integer replicas,
       @JsonProperty("taskCount") Integer taskCount,
       @JsonProperty("taskDuration") Period taskDuration,
-      @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
+      @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
       @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
@@ -110,7 +113,7 @@ public class KafkaSupervisorIOConfig
   }
 
   @JsonProperty
-  public Map<String, String> getConsumerProperties()
+  public Map<String, Object> getConsumerProperties()
   {
     return consumerProperties;
   }
