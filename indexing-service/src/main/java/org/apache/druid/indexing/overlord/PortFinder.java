@@ -103,7 +103,7 @@ public class PortFinder
         return port;
       }
     }
-    throw new ISE("All ports are Used..");
+    throw new ISE("All ports are used...");
   }
 
   private int chooseNext(int start)
@@ -114,7 +114,7 @@ public class PortFinder
         return i;
       }
     }
-    throw new ISE("All ports are Used..");
+    throw new ISE("All ports are used...");
   }
 }
 

@@ -63,7 +63,7 @@ public class ForkingTaskRunnerConfig
   private int startPort = 8100;
 
   /**
-   * Task ports your services are going to use. If non-empty, ports for one task will be chosed from these ports.
+   * Task ports your services are going to use. If non-empty, ports for one task will be chosen from these ports.
    * Otherwise, using startPort to generate ports.
    */
   @JsonProperty
