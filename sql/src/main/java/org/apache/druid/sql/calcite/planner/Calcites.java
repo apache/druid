@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import io.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.java.util.common.DateTimes;
