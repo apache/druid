@@ -10,7 +10,7 @@ This extension enables Druid to ingest and understand the Apache Parquet data fo
 
 ## Parquet Hadoop Parser
 
-This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of `inputSpec` in `ioConfig` must be set to `"io.druid.data.input.parquet.DruidParquetInputFormat"`.
+This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.parquet.DruidParquetInputFormat"`.
 
 |Field     | Type        | Description                                                                            | Required|
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
@@ -32,7 +32,7 @@ When posting the index job to the overlord, setting the correct `inputFormat` is
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetInputFormat",
         "paths": "no_metrics"
       }
     },
@@ -86,7 +86,7 @@ HADOOP_CLASS_PATH=`hadoop classpath | sed s/*.jar/*/g`
 
 java -Xmx32m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
   -classpath config/overlord:config/_common:lib/*:$HADOOP_CLASS_PATH:extensions/druid-avro-extensions/*  \
-  io.druid.cli.Main index hadoop \
+  org.apache.druid.cli.Main index hadoop \
   wikipedia_hadoop_parquet_job.json
 ```
 
@@ -100,7 +100,7 @@ An example index json when using the standalone JVM:
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetInputFormat",
         "paths": "no_metrics"
       },
       "metadataUpdateSpec": {

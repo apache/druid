@@ -14,7 +14,7 @@ Before any unassigned segments are serviced by historical nodes, the available h
 ### Running
 
 ```
-io.druid.cli.Main server coordinator
+org.apache.druid.cli.Main server coordinator
 ```
 
 Rules

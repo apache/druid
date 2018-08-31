@@ -26,29 +26,29 @@
     <description>A module that is everything required to understands Druid Segments</description>
 
     <parent>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
         <version>0.13.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-common</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-          <groupId>io.druid</groupId>
+          <groupId>org.apache.druid</groupId>
           <artifactId>java-util</artifactId>
           <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-hll</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>extendedset</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
@@ -119,7 +119,7 @@
 
         <!-- Tests -->
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-common</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
@@ -171,13 +171,13 @@
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
-                            <groupId>io.druid</groupId>
+                            <groupId>org.apache.druid</groupId>
                             <artifactId>druid-common</artifactId>
                             <version>${project.parent.version}</version>
                         </path>
                     </annotationProcessorPaths>
                     <annotationProcessors>
-                        <annotationProcessor>io.druid.annotations.SubclassesMustBePublicAnnotationProcessor</annotationProcessor>
+                        <annotationProcessor>org.apache.druid.annotations.SubclassesMustBePublicAnnotationProcessor</annotationProcessor>
                     </annotationProcessors>
                 </configuration>
             </plugin>
@@ -206,12 +206,12 @@
                         -Dfile.encoding=UTF-8
                         -Duser.timezone=UTC
                         -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                        <!--@TODO After fixing https://github.com/druid-io/druid/issues/4964 remove this parameter-->
+                        <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
                         -Ddruid.indexing.doubleStorage=double
                     </argLine>
                     <!-- our tests are very verbose, let's keep the volume down -->
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                    <excludedGroups>io.druid.collections.test.annotation.Benchmark</excludedGroups>
+                    <excludedGroups>org.apache.druid.collections.test.annotation.Benchmark</excludedGroups>
                 </configuration>
             </plugin>
         </plugins>
@@ -226,8 +226,8 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <argLine>-server -Xms3G -Xmx3G -Djub.consumers=CONSOLE,H2 -Djub.db.file=benchmarks/benchmarks</argLine>
-                            <groups>io.druid.collections.test.annotation.Benchmark</groups>
-                            <excludedGroups>io.druid.collections.test.annotation.Dummy</excludedGroups>
+                            <groups>org.apache.druid.collections.test.annotation.Benchmark</groups>
+                            <excludedGroups>org.apache.druid.collections.test.annotation.Dummy</excludedGroups>
                         </configuration>
                     </plugin>
                 </plugins>

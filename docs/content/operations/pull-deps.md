@@ -10,7 +10,7 @@ layout: doc_page
 
 `-c` or `--coordinate` (Can be specified multiply times)
 
-Extension coordinate to pull down, followed by a maven coordinate, e.g. io.druid.extensions:mysql-metadata-storage
+Extension coordinate to pull down, followed by a maven coordinate, e.g. org.apache.druid.extensions:mysql-metadata-storage
 
 `-h` or `--hadoop-coordinate` (Can be specified multiply times)
 
@@ -38,7 +38,7 @@ Don't use the default remote repositories, only use the repositories provided di
 
 `-d` or `--defaultVersion`
 
-Version to use for extension coordinate that doesn't have a version information. For example, if extension coordinate is `io.druid.extensions:mysql-metadata-storage`, and default version is `#{DRUIDVERSION}`, then this coordinate will be treated as `io.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`
+Version to use for extension coordinate that doesn't have a version information. For example, if extension coordinate is `org.apache.druid.extensions:mysql-metadata-storage`, and default version is `#{DRUIDVERSION}`, then this coordinate will be treated as `org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`
 
 `--use-proxy`
 
@@ -72,10 +72,10 @@ To run `pull-deps`, you should
 
 Example:
 
-Suppose you want to download ```druid-rabbitmq```, ```mysql-metadata-storage``` and ```hadoop-client```(both 2.3.0 and 2.4.0) with a specific version, you can run `pull-deps` command with `-c io.druid.extensions:druid-examples:#{DRUIDVERSION}`, `-c io.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`, `-h org.apache.hadoop:hadoop-client:2.3.0` and `-h org.apache.hadoop:hadoop-client:2.4.0`, an example command would be:
+Suppose you want to download ```druid-rabbitmq```, ```mysql-metadata-storage``` and ```hadoop-client```(both 2.3.0 and 2.4.0) with a specific version, you can run `pull-deps` command with `-c org.apache.druid.extensions:druid-examples:#{DRUIDVERSION}`, `-c org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`, `-h org.apache.hadoop:hadoop-client:2.3.0` and `-h org.apache.hadoop:hadoop-client:2.4.0`, an example command would be:
 
 ```
-java -classpath "/my/druid/lib/*" io.druid.cli.Main tools pull-deps --clean -c io.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION} -c io.druid.extensions.contrib:druid-rabbitmq:#{DRUIDVERSION} -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --clean -c org.apache.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION} -c org.apache.druid.extensions.contrib:druid-rabbitmq:#{DRUIDVERSION} -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 Because `--clean` is supplied, this command will first remove the directories specified at `druid.extensions.directory` and `druid.extensions.hadoopDependenciesDir`, then recreate them and start downloading the extensions there. After finishing downloading, if you go to the extension directories you specified, you will see
@@ -123,11 +123,11 @@ hadoop-dependencies/
 Note that if you specify `--defaultVersion`, you don't have to put version information in the coordinate. For example, if you want both `druid-rabbitmq` and `mysql-metadata-storage` to use version `#{DRUIDVERSION}`,  you can change the command above to
 
 ```
-java -classpath "/my/druid/lib/*" io.druid.cli.Main tools pull-deps --defaultVersion #{DRUIDVERSION} --clean -c io.druid.extensions:mysql-metadata-storage -c io.druid.extensions.contrib:druid-rabbitmq -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --defaultVersion #{DRUIDVERSION} --clean -c org.apache.druid.extensions:mysql-metadata-storage -c org.apache.druid.extensions.contrib:druid-rabbitmq -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 <div class="note info">
 Please note to use the pull-deps tool you must know the Maven groupId, artifactId, and version of your extension.
 
-For Druid community extensions listed <a href="../development/extensions.html">here</a>, the groupId is "io.druid.extensions.contrib" and the artifactId is the name of the extension.
+For Druid community extensions listed <a href="../development/extensions.html">here</a>, the groupId is "org.apache.druid.extensions.contrib" and the artifactId is the name of the extension.
 </div>
