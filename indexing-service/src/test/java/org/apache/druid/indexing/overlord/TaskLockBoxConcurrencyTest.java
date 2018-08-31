@@ -31,7 +31,12 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -39,6 +44,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -46,6 +52,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class TaskLockBoxConcurrencyTest
 {
@@ -56,6 +64,7 @@ public class TaskLockBoxConcurrencyTest
   private ExecutorService service;
   private TaskStorage taskStorage;
   private TaskLockbox lockbox;
+  private IndexerSQLMetadataStorageCoordinator coordinator;
 
   @Before
   public void setup()
@@ -74,6 +83,21 @@ public class TaskLockBoxConcurrencyTest
 
     lockbox = new TaskLockbox(taskStorage);
     service = Executors.newFixedThreadPool(2);
+
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final AtomicLong metadataUpdateCounter = new AtomicLong();
+
+    mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class);
+    derbyConnector.createDataSourceTable();
+    derbyConnector.createTaskTables();
+    derbyConnector.createSegmentTable();
+    derbyConnector.createPendingSegmentsTable();
+    metadataUpdateCounter.set(0);
+    coordinator = new IndexerSQLMetadataStorageCoordinator(
+        mapper,
+        derby.metadataTablesConfigSupplier().get(),
+        derbyConnector
+    );
   }
 
   @After
@@ -229,5 +253,40 @@ public class TaskLockBoxConcurrencyTest
 
     Assert.assertEquals(1, future1.get().intValue());
     Assert.assertEquals(2, future2.get().intValue());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testAllocatePendingSegment() throws Exception
+  {
+    final String dataSource = "myDataSource";
+    final Interval interval = Intervals.of("2017-01-01/2017-01-02");
+    final Task task = NoopTask.create(dataSource);
+    lockbox.add(task);
+    final LockResult result = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval);
+    Assert.assertFalse(result.isRevoked());
+    Assert.assertTrue(result.isOk());
+
+    List<Future<SegmentIdentifier>> list = new ArrayList<>();
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    for (int i = 0; i < 100; i++) {
+      list.add(service.submit(() -> {
+        latch.await();
+        String sequnceName = "sequnceName" + ThreadLocalRandom.current().nextLong(10000);
+        return coordinator.allocatePendingSegment(
+            dataSource,
+            sequnceName,
+            null,
+            interval,
+            result.getTaskLock().getVersion(),
+            true,
+            result.getTaskLock());
+      }));
+    }
+
+    latch.countDown();
+    for (Future<SegmentIdentifier> future : list) {
+      future.get();
+    }
   }
 }

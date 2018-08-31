@@ -273,7 +273,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
           previousSegmentId,
           tryInterval,
           lockResult.getTaskLock().getVersion(),
-          skipSegmentLineageCheck
+          skipSegmentLineageCheck,
+          lockResult.getTaskLock()
       );
       if (identifier != null) {
         return identifier;

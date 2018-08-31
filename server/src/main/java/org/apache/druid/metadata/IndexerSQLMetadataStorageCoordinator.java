@@ -35,6 +35,7 @@ import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.SegmentLock;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -379,13 +380,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable final String previousSegmentId,
       final Interval interval,
       final String maxVersion,
-      final boolean skipSegmentLineageCheck
+      final boolean skipSegmentLineageCheck,
+      final SegmentLock segmentLock
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(sequenceName, "sequenceName");
     Preconditions.checkNotNull(interval, "interval");
     Preconditions.checkNotNull(maxVersion, "maxVersion");
+    Preconditions.checkNotNull(segmentLock, "segmentLock");
 
     return connector.retryTransaction(
         new TransactionCallback<SegmentIdentifier>()
@@ -394,15 +397,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           public SegmentIdentifier inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
             return skipSegmentLineageCheck ?
-                   allocatePendingSegment(handle, dataSource, sequenceName, interval, maxVersion) :
-                   allocatePendingSegmentWithSegmentLineageCheck(
-                       handle,
-                       dataSource,
-                       sequenceName,
-                       previousSegmentId,
-                       interval,
-                       maxVersion
-                   );
+                allocatePendingSegment(handle, dataSource, sequenceName, interval, maxVersion, segmentLock) :
+                allocatePendingSegmentWithSegmentLineageCheck(
+                    handle,
+                    dataSource,
+                    sequenceName,
+                    previousSegmentId,
+                    interval,
+                    maxVersion,
+                    segmentLock
+                );
           }
         },
         ALLOCATE_SEGMENT_QUIET_TRIES,
@@ -417,7 +421,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String sequenceName,
       @Nullable final String previousSegmentId,
       final Interval interval,
-      final String maxVersion
+      final String maxVersion,
+      final SegmentLock segmentLock
   ) throws IOException
   {
     final String previousSegmentIdNotNull = previousSegmentId == null ? "" : previousSegmentId;
@@ -444,15 +449,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return result.segmentIdentifier;
     }
 
-    final SegmentIdentifier newIdentifier = createNewSegment(handle, dataSource, interval, maxVersion);
-    if (newIdentifier == null) {
-      return null;
-    }
-
-    // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
-    // Avoiding ON DUPLICATE KEY since it's not portable.
-    // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-
     // UNIQUE key for the row, ensuring sequences do not fork in two directions.
     // Using a single column instead of (sequence_name, sequence_prev_id) as some MySQL storage engines
     // have difficulty with large unique keys (see https://github.com/apache/incubator-druid/issues/2319)
@@ -466,15 +462,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .asBytes()
     );
 
-    insertToMetastore(
-        handle,
-        newIdentifier,
-        dataSource,
-        interval,
-        previousSegmentIdNotNull,
-        sequenceName,
-        sequenceNamePrevIdSha1
-    );
+    final SegmentIdentifier newIdentifier;
+    synchronized (segmentLock) {
+      newIdentifier = createNewSegment(handle, dataSource, interval, maxVersion);
+      if (newIdentifier == null) {
+        return null;
+      }
+
+      insertToMetastore(
+          handle,
+          newIdentifier,
+          dataSource,
+          interval,
+          previousSegmentIdNotNull,
+          sequenceName,
+          sequenceNamePrevIdSha1
+      );
+    }
     return newIdentifier;
   }
 
@@ -484,7 +488,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String dataSource,
       final String sequenceName,
       final Interval interval,
-      final String maxVersion
+      final String maxVersion,
+      final SegmentLock segmentLock
   ) throws IOException
   {
     final CheckExistingSegmentIdResult result = checkAndGetExistingSegmentId(
@@ -513,15 +518,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return result.segmentIdentifier;
     }
 
-    final SegmentIdentifier newIdentifier = createNewSegment(handle, dataSource, interval, maxVersion);
-    if (newIdentifier == null) {
-      return null;
-    }
-
-    // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
-    // Avoiding ON DUPLICATE KEY since it's not portable.
-    // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-
     // UNIQUE key for the row, ensuring we don't have more than one segment per sequence per interval.
     // Using a single column instead of (sequence_name, sequence_prev_id) as some MySQL storage engines
     // have difficulty with large unique keys (see https://github.com/apache/incubator-druid/issues/2319)
@@ -536,9 +532,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .asBytes()
     );
 
-    // always insert empty previous sequence id
-    insertToMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
+    final SegmentIdentifier newIdentifier;
+    synchronized (segmentLock) {
+      newIdentifier = createNewSegment(handle, dataSource, interval, maxVersion);
+      if (newIdentifier == null) {
+        return null;
+      }
 
+      // always insert empty previous sequence id
+      insertToMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
+    }
     log.info(
         "Allocated pending segment [%s] for sequence[%s] in DB",
         newIdentifier.getIdentifierAsString(),

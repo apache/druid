@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.overlord.SegmentLock;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -30,7 +31,7 @@ import javax.annotation.Nullable;
 /**
  * Represents a lock held by some task. Immutable.
  */
-public class TaskLock
+public class TaskLock implements SegmentLock
 {
   private final TaskLockType type;
   private final String groupId;

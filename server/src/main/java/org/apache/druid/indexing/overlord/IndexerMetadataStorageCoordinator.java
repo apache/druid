@@ -106,7 +106,8 @@ public interface IndexerMetadataStorageCoordinator
       String previousSegmentId,
       Interval interval,
       String maxVersion,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      SegmentLock segmentLock
   );
 
   /**
