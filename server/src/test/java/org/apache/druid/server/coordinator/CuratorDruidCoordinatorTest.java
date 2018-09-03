@@ -57,7 +57,10 @@ import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -102,8 +105,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private CountDownLatch segmentRemovedLatch;
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
-
-  private CountDownLatch testFinished;
 
   public CuratorDruidCoordinatorTest()
   {
@@ -231,29 +232,11 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector()
     );
-    testFinished = new CountDownLatch(1);
-    Thread deadLockWatcher = new Thread(() -> {
-      try {
-        if (!testFinished.await(50, TimeUnit.SECONDS)) {
-          Thread.getAllStackTraces().forEach((thread, stackTrace) -> {
-            Throwable t = new Throwable(thread.getName());
-            t.setStackTrace(stackTrace);
-            t.printStackTrace();
-          });
-        }
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    });
-    deadLockWatcher.setDaemon(true);
-    deadLockWatcher.start();
   }
 
   @After
   public void tearDown() throws Exception
   {
-    testFinished.countDown();
     baseView.stop();
     sourceLoadQueuePeon.stop();
     sourceLoadQueueChildrenCache.close();
@@ -261,7 +244,11 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     tearDownServerAndCurator();
   }
 
-  @Test(timeout = 60_000L)
+  @Rule
+  public final TestRule timeout =
+      Timeout.builder().withTimeout(60, TimeUnit.SECONDS).withLookingForStuckThread(true).build();
+
+  @Test
   public void testMoveSegment() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
