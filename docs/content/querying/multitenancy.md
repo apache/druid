@@ -45,7 +45,7 @@ With realtime indexing, you have a couple of options.
 1. Partition on tenant_id upfront. You'd do this by tweaking the stream you send to Druid. If you're using Kafka then
 you can have your Kafka producer partition your topic by a hash of tenant_id. If you're using Tranquility then you can
 define a custom [Partitioner](http://static.druid.io/tranquility/api/latest/#com.metamx.tranquility.partition.Partitioner).
-2. Reindex your older data periodically. You can do this with the ["dataSource" input spec](../ingestion/batch-ingestion.html#datasource).
+2. Reindex your older data periodically. You can do this with the ["dataSource" input spec](../ingestion/hadoop.html#datasource).
 You can use this in concert with single-dimension partitioning to repartition your data.
 
 ## Customizing data distribution

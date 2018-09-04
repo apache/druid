@@ -47,7 +47,7 @@ The following built-in functions are available.
 |----|-----------|
 |concat|concatenate a list of strings|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
-|lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](lookups.html)|
+|lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.html)|
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
