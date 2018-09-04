@@ -396,6 +396,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           1024,
           cacheCapacity,
           fetchCapacity,
+          60_000, // fetch timeout
           3,
           0,
           0,
@@ -504,7 +505,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
         long prefetchTriggerThreshold,
         long maxCacheCapacityBytes,
         long maxFetchCapacityBytes,
-        long timeout,
+        long fetchTimeout,
         int maxRetry,
         int numOpenExceptions,
         int maxConnectionResets,
@@ -515,7 +516,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           maxCacheCapacityBytes,
           maxFetchCapacityBytes,
           prefetchTriggerThreshold,
-          timeout,
+          fetchTimeout,
           maxRetry
       );
       this.numOpenExceptions = numOpenExceptions;
