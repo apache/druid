@@ -116,7 +116,7 @@ public class LikeDimFilter implements DimFilter
       SuffixMatch suffixMatch = SuffixMatch.MATCH_EMPTY;
       for (int i = 0; i < likePattern.length(); i++) {
         final char c = likePattern.charAt(i);
-        if (escapeChar != null && c == escapeChar) {
+        if (escapeChar != null && c == escapeChar && !escaping) {
           escaping = true;
         } else if (c == '%' && !escaping) {
           inPrefix = false;
