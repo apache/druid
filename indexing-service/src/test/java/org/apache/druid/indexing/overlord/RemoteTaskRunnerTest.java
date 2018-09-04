@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -51,7 +52,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -75,8 +75,7 @@ public class RemoteTaskRunnerTest
   private Worker worker;
 
   @Rule
-  public final TestRule timeout =
-      Timeout.builder().withTimeout(60, TimeUnit.SECONDS).withLookingForStuckThread(true).build();
+  public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
 
   @Before
   public void setUp() throws Exception

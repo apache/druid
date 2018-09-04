@@ -50,6 +50,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -60,7 +61,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -245,8 +245,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   }
 
   @Rule
-  public final TestRule timeout =
-      Timeout.builder().withTimeout(60, TimeUnit.SECONDS).withLookingForStuckThread(true).build();
+  public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
 
   @Test
   public void testMoveSegment() throws Exception
