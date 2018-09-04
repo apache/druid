@@ -379,15 +379,18 @@ public class KafkaSupervisor implements Supervisor
               {
                 try {
                   while (!Thread.currentThread().isInterrupted()) {
-                    final Notice notice = notices.take();
+                    synchronized (notices) {
+                      final Notice notice = notices.take();
 
-                    try {
-                      notice.handle();
-                    }
-                    catch (Throwable e) {
-                      log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
-                         .addData("noticeClass", notice.getClass().getSimpleName())
-                         .emit();
+                      try {
+                        notice.handle();
+                        notices.notifyAll();
+                      }
+                      catch (Throwable e) {
+                        log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
+                           .addData("noticeClass", notice.getClass().getSimpleName())
+                           .emit();
+                      }
                     }
                   }
                 }
@@ -2382,9 +2385,13 @@ public class KafkaSupervisor implements Supervisor
   }
 
   @VisibleForTesting
-  int getNoticesQueueSize()
+  void awaitAllNoticesHandled() throws InterruptedException
   {
-    return notices.size();
+    synchronized (notices) {
+      while (!notices.isEmpty()) {
+        notices.wait();
+      }
+    }
   }
 
   private static class StatsFromTaskResult
