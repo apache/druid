@@ -156,7 +156,8 @@ final class DeadlockDetectingFailOnTimeout extends Statement
   }
 
   @Nullable
-  private Exception getStuckThreadException(Thread mainThread) {
+  private Exception getStuckThreadException(Thread mainThread)
+  {
     final Thread stuckThread = getStuckThread(mainThread);
     if (stuckThread == null) {
       return null;
