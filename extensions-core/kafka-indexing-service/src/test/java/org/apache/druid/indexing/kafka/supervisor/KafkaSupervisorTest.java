@@ -2117,7 +2117,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, fakeCheckpoints))
     );
 
-    supervisor.awaitAllNoticesHandled();
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
 
     verifyAll();
 
@@ -2185,7 +2187,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, Collections.emptyMap()))
     );
 
-    supervisor.awaitAllNoticesHandled();
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
 
     verifyAll();
 
@@ -2281,7 +2285,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new KafkaDataSourceMetadata(new KafkaPartitions(topic, newCheckpoints.get(0)))
     );
 
-    supervisor.awaitAllNoticesHandled();
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
 
     verifyAll();
   }
