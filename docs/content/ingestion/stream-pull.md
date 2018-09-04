@@ -2,6 +2,10 @@
 layout: doc_page
 ---
 
+<div class="note info">
+NOTE: Realtime nodes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead. 
+</div>
+
 Stream Pull Ingestion
 =====================
 

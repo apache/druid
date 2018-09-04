@@ -5,7 +5,7 @@ layout: doc_page
 # Hadoop-based Batch Ingestion
 
 Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running
-instance of a Druid [overlord](../design/indexing-service.html). 
+instance of a Druid [overlord](../design/overlord.html). 
 
 ## Command Line Hadoop Indexer
 
@@ -83,15 +83,15 @@ A sample task is shown below:
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be "index_hadoop".|yes|
-|spec|A Hadoop Index Spec. See [Batch Ingestion](../ingestion/batch-ingestion.html)|yes|
+|spec|A Hadoop Index Spec. See [Ingestion](../ingestion/ingestion-spec.html)|yes|
 |hadoopDependencyCoordinates|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`|no|
 |classpathPrefix|Classpath that will be pre-appended for the peon process.|no|
 
-also note that, druid automatically computes the classpath for hadoop job containers that run in hadoop cluster. But, in case of conflicts between hadoop and druid's dependencies, you can manually specify the classpath by setting `druid.extensions.hadoopContainerDruidClasspath` property. See the extensions config in [base druid configuration](../configuration/index.html).
+also note that, druid automatically computes the classpath for hadoop job containers that run in hadoop cluster. But, in case of conflicts between hadoop and druid's dependencies, you can manually specify the classpath by setting `druid.extensions.hadoopContainerDruidClasspath` property. See the extensions config in [base druid configuration](../configuration/index.html#extensions).
 
 ## DataSchema
 
-This field is required. See [Ingestion](../ingestion/index.html).
+This field is required. See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema).
 
 ## IOConfig
 
@@ -102,7 +102,7 @@ This field is required.
 |type|String|This should always be 'hadoop'.|yes|
 |inputSpec|Object|A specification of where to pull the data in from. See below.|yes|
 |segmentOutputPath|String|The path to dump segments into.|yes|
-|metadataUpdateSpec|Object|A specification of how to update the metadata for the druid cluster these segments belong to.|yes|
+|metadataUpdateSpec|Object|A specification of how to update the metadata for the druid cluster these segments belong to.|Only used by the [CLI Hadoop Indexer](../ingestion/command-line-hadoop-indexer.html). This field must be null otherwise.|
 
 ### InputSpec specification
 
@@ -156,7 +156,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|workingPath|String|The working path to use for intermediate results (results between Hadoop jobs).|no (default == '/tmp/druid-indexing')|
+|workingPath|String|The working path to use for intermediate results (results between Hadoop jobs).|Only used by the [CLI Hadoop Indexer](../ingestion/command-line-hadoop-indexer.html). The default is '/tmp/druid-indexing'. This field must be null otherwise.|
 |version|String|The version of created segments. Ignored for HadoopIndexTask unless useExplicitVersion is set to true|no (default == datetime that indexing starts at)|
 |partitionsSpec|Object|A specification of how to partition each time bucket into segments. Absence of this property means no partitioning will occur. See 'Partitioning specification' below.|no (default == 'hashed')|
 |maxRowsInMemory|Integer|The number of rows to aggregate before persisting. Note that this is the number of post-aggregation rows which may not be equal to the number of input events due to roll-up. This is used to manage the required JVM heap size.|no (default == 75000)|

@@ -6,7 +6,7 @@ layout: doc_page
 Druid can interact with Hadoop in two ways:
 
 1. [Use HDFS for deep storage](../development/extensions-core/hdfs.html) using the druid-hdfs-storage extension.
-2. [Batch-load data from Hadoop](../ingestion/batch-ingestion.html) using Map/Reduce jobs.
+2. [Batch-load data from Hadoop](../ingestion/hadoop.html) using Map/Reduce jobs.
 
 These are not necessarily linked together; you can load data with Hadoop jobs into a non-HDFS deep storage (like S3),
 and you can use HDFS for deep storage even if you're loading data from streams rather than using Hadoop jobs.
@@ -34,7 +34,7 @@ Generally, you should only set one of these parameters, not both.
 
 These properties can be set in either one of the following ways:
 
-- Using the task definition, e.g. add `"mapreduce.job.classloader": "true"` to the `jobProperties` of the `tuningConfig` of your indexing task (see the [batch ingestion documentation](../ingestion/batch-ingestion.html)).
+- Using the task definition, e.g. add `"mapreduce.job.classloader": "true"` to the `jobProperties` of the `tuningConfig` of your indexing task (see the [Hadoop batch ingestion documentation](../ingestion/hadoop.html)).
 - Using system properties, e.g. on the middleManager set `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.classloader=true`.
 
 ### Overriding specific classes
@@ -67,7 +67,7 @@ classloader.
 
 1. HDFS deep storage uses jars from `extensions/druid-hdfs-storage/` to read and write Druid data on HDFS.
 2. Batch ingestion uses jars from `hadoop-dependencies/` to submit Map/Reduce jobs (location customizable via the
-`druid.extensions.hadoopDependenciesDir` runtime property; see [Configuration](../configuration/index.html)).
+`druid.extensions.hadoopDependenciesDir` runtime property; see [Configuration](../configuration/index.html#extensions)).
 
 `hadoop-client:2.3.0` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
 many Hadoop distributions (the version does not necessarily need to match), but if you run into issues, you can instead
@@ -83,7 +83,7 @@ the main Druid pom.xml and rebuilding the distribution by running `mvn package`.
 If you have issues with Map/Reduce jobs, you can switch your Hadoop client libraries without rebuilding Druid. You can
 do this by adding a new set of libraries to the `hadoop-dependencies/` directory (or another directory specified by
 druid.extensions.hadoopDependenciesDir) and then using `hadoopDependencyCoordinates` in the
-[Hadoop Index Task](../ingestion/batch-ingestion.html) to specify the Hadoop dependencies you want Druid to load.
+[Hadoop Index Task](../ingestion/hadoop.html) to specify the Hadoop dependencies you want Druid to load.
 
 Example:
 
@@ -114,7 +114,7 @@ hadoop-dependencies/
 
 As you can see, under `hadoop-client`, there are two sub-directories, each denotes a version of `hadoop-client`.
 
-Next, use `hadoopDependencyCoordinates` in [Hadoop Index Task](../ingestion/batch-ingestion.html) to specify the Hadoop dependencies you want Druid to load.
+Next, use `hadoopDependencyCoordinates` in [Hadoop Index Task](../ingestion/hadoop.html) to specify the Hadoop dependencies you want Druid to load.
 
 For example, in your Hadoop Index Task spec file, you can write:
 

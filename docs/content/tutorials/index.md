@@ -111,7 +111,7 @@ bin/init
 
 For the following data loading tutorials, we have included a sample data file containing Wikipedia page edit events that occurred on 2015-09-12.
 
-This sample data is located at `quickstart/wikipedia-2015-09-12-sampled.json.gz` from the Druid package root. The page edit events are stored as JSON objects in a text file.
+This sample data is located at `quickstart/wikiticker-2015-09-12-sampled.json.gz` from the Druid package root. The page edit events are stored as JSON objects in a text file.
 
 The sample data has the following columns, and an example event is shown below:
 
