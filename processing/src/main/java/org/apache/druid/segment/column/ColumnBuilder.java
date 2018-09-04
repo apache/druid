@@ -61,6 +61,7 @@ public class ColumnBuilder
     return this;
   }
 
+  @SuppressWarnings("unused")
   public ColumnBuilder setFilterable(boolean filterable)
   {
     this.filterable = filterable;
