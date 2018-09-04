@@ -37,12 +37,13 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.hamcrest.CoreMatchers;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -62,8 +63,6 @@ import java.util.concurrent.TimeoutException;
 
 public class PrefetchableTextFilesFirehoseFactoryTest
 {
-  private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
-  private static File TEST_DIR;
   private static long FILE_SIZE = -1;
 
   private static final StringInputRowParser parser = new StringInputRowParser(
@@ -86,16 +85,17 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       StandardCharsets.UTF_8.name()
   );
 
+  @ClassRule
+  public static TemporaryFolder tempDir = new TemporaryFolder();
+  private static File TEST_DIR;
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @BeforeClass
   public static void setup() throws IOException
   {
-    TEST_DIR = File.createTempFile(PrefetchableTextFilesFirehoseFactoryTest.class.getSimpleName(), "testDir");
-    FileUtils.forceDelete(TEST_DIR);
-    FileUtils.forceMkdir(TEST_DIR);
-
+    TEST_DIR = tempDir.newFolder();
     for (int i = 0; i < 100; i++) {
       try (
           CountingOutputStream cos = new CountingOutputStream(
@@ -115,15 +115,6 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           Assert.assertEquals(FILE_SIZE, cos.getCount());
         }
       }
-    }
-  }
-
-  @AfterClass
-  public static void teardown() throws IOException
-  {
-    FileUtils.forceDelete(TEST_DIR);
-    for (File dir : FIREHOSE_TMP_DIRS) {
-      FileUtils.forceDelete(dir);
     }
   }
 
@@ -160,16 +151,9 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     Assert.assertEquals(expectedNumFiles, files.length);
   }
 
-  private static File createFirehoseTmpDir(String dirSuffix) throws IOException
+  private static File createFirehoseTmpDir(String dirPrefix) throws IOException
   {
-    final File firehoseTempDir = File.createTempFile(
-        PrefetchableTextFilesFirehoseFactoryTest.class.getSimpleName(),
-        dirSuffix
-    );
-    FileUtils.forceDelete(firehoseTempDir);
-    FileUtils.forceMkdir(firehoseTempDir);
-    FIREHOSE_TMP_DIRS.add(firehoseTempDir);
-    return firehoseTempDir;
+    return Files.createTempDirectory(tempDir.getRoot().toPath(), dirPrefix).toFile();
   }
 
   @Test
