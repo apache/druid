@@ -79,6 +79,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     hasFilters(query);
     duration(query);
     queryId(query);
+    sqlId(query);
   }
 
   @Override

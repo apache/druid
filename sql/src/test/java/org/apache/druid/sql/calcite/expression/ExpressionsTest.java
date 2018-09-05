@@ -72,7 +72,8 @@ public class ExpressionsTest extends CalciteTestBase
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      CalciteTests.REGULAR_USER_AUTH_RESULT
   );
   private final RowSignature rowSignature = RowSignature
       .builder()

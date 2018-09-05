@@ -20,20 +20,24 @@
 package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.SqlLifecycle;
+import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidPlanner;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -58,18 +62,19 @@ import java.util.List;
 public class SqlResource
 {
   private static final Logger log = new Logger(SqlResource.class);
+  private static final Joiner joiner = Joiner.on(",");
 
   private final ObjectMapper jsonMapper;
-  private final PlannerFactory plannerFactory;
+  private final SqlLifecycleFactory sqlLifecycleFactory;
 
   @Inject
   public SqlResource(
       @Json ObjectMapper jsonMapper,
-      PlannerFactory plannerFactory
+      SqlLifecycleFactory sqlLifecycleFactory
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
-    this.plannerFactory = Preconditions.checkNotNull(plannerFactory, "connection");
+    this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
   }
 
   @POST
@@ -80,16 +85,21 @@ public class SqlResource
       @Context final HttpServletRequest req
   ) throws IOException
   {
-    final PlannerResult plannerResult;
-    final DateTimeZone timeZone;
+    final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    final String sqlId = lifecycle.initialize(sqlQuery);
+    final String remoteAddr = req.getRemoteAddr();
+    final String currThreadName = Thread.currentThread().getName();
 
-    try (final DruidPlanner planner = plannerFactory.createPlanner(sqlQuery.getContext())) {
-      plannerResult = planner.plan(sqlQuery.getQuery(), req);
-      timeZone = planner.getPlannerContext().getTimeZone();
+    try {
+      Thread.currentThread()
+            .setName(StringUtils.format("sql[%s]", sqlId));
+
+      final PlannerContext plannerContext = lifecycle.planAndAuthorize(req);
+      final DateTimeZone timeZone = plannerContext.getTimeZone();
 
       // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
       // Also store list of all column names, for X-Druid-Sql-Columns header.
-      final List<RelDataTypeField> fieldList = plannerResult.rowType().getFieldList();
+      final List<RelDataTypeField> fieldList = lifecycle.rowType().getFieldList();
       final boolean[] timeColumns = new boolean[fieldList.size()];
       final boolean[] dateColumns = new boolean[fieldList.size()];
       final String[] columnNames = new String[fieldList.size()];
@@ -103,7 +113,7 @@ public class SqlResource
         columnTypes[i] = sqlTypeName.getName();
       }
 
-      final Yielder<Object[]> yielder0 = Yielders.each(plannerResult.run());
+      final Yielder<Object[]> yielder0 = Yielders.each(lifecycle.execute());
 
       try {
         return Response
@@ -113,10 +123,12 @@ public class SqlResource
                   @Override
                   public void write(final OutputStream outputStream) throws IOException, WebApplicationException
                   {
+                    Exception e = null;
+                    CountingOutputStream os = new CountingOutputStream(outputStream);
                     Yielder<Object[]> yielder = yielder0;
 
                     try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
-                                                                    .createFormatter(outputStream, jsonMapper)) {
+                                                                    .createFormatter(os, jsonMapper)) {
                       writer.writeResponseStart();
 
                       while (!yielder.isDone()) {
@@ -145,12 +157,20 @@ public class SqlResource
 
                       writer.writeResponseEnd();
                     }
+                    catch (Exception ex) {
+                      e = ex;
+                      log.error(ex, "Unable to send sql response [%s]", sqlId);
+                      throw Throwables.propagate(ex);
+                    }
                     finally {
                       yielder.close();
+                      lifecycle.emitLogsAndMetrics(e, remoteAddr, os.getCount());
                     }
                   }
                 }
             )
+            .header("X-Druid-SQL-Id", sqlId)
+            .header("X-Druid-Native-Query-Ids", joiner.join(plannerContext.getNativeQueryIds()))
             .header("X-Druid-Column-Names", jsonMapper.writeValueAsString(columnNames))
             .header("X-Druid-Column-Types", jsonMapper.writeValueAsString(columnTypes))
             .build();
@@ -166,6 +186,7 @@ public class SqlResource
     }
     catch (Exception e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
+      lifecycle.emitLogsAndMetrics(e, remoteAddr, -1);
 
       final Exception exceptionToReport;
 
@@ -179,6 +200,9 @@ public class SqlResource
                      .type(MediaType.APPLICATION_JSON_TYPE)
                      .entity(jsonMapper.writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(exceptionToReport)))
                      .build();
+    }
+    finally {
+      Thread.currentThread().setName(currThreadName);
     }
   }
 }

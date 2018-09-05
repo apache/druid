@@ -110,6 +110,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       return 4;
     }
   };
+  private static final String FIXED_SQL_ID = "261e608b-0c99-45a9-8048-ad2871fb4d5f";
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -175,14 +176,16 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         )
     );
     druidMeta = new DruidMeta(
-        new PlannerFactory(
-            druidSchema,
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            operatorTable,
-            macroTable,
-            plannerConfig,
-            CalciteTests.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+        CalciteTests.createSqlLifecycleFactory(
+          new PlannerFactory(
+              druidSchema,
+              CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+              operatorTable,
+              macroTable,
+              plannerConfig,
+              CalciteTests.TEST_AUTHORIZER_MAPPER,
+              CalciteTests.getJsonMapper()
+          )
         ),
         AVATICA_CONFIG,
         injector
@@ -207,6 +210,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
     propertiesLosAngeles.setProperty("user", "regularUserLA");
+    propertiesLosAngeles.setProperty("sqlId", FIXED_SQL_ID);
     clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
   }
 
@@ -323,7 +327,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testExplainSelectCount() throws Exception
   {
-    final ResultSet resultSet = client.createStatement().executeQuery(
+    final ResultSet resultSet = clientLosAngeles.createStatement().executeQuery(
         "EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo"
     );
 
@@ -331,7 +335,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true}}], signature=[{a0:LONG}])\n"
+                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n", FIXED_SQL_ID)
             )
         ),
         getRows(resultSet)
@@ -756,14 +760,16 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
-        new PlannerFactory(
-            druidSchema,
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            operatorTable,
-            macroTable,
-            plannerConfig,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+        CalciteTests.createSqlLifecycleFactory(
+          new PlannerFactory(
+              druidSchema,
+              CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+              operatorTable,
+              macroTable,
+              plannerConfig,
+              AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+              CalciteTests.getJsonMapper()
+          )
         ),
         smallFrameConfig,
         injector

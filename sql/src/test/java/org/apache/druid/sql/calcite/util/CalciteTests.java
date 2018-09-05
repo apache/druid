@@ -110,10 +110,12 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -430,6 +432,15 @@ public class CalciteTests
         new NoopRequestLogger(),
         new AuthConfig(),
         TEST_AUTHORIZER_MAPPER
+    );
+  }
+
+  public static SqlLifecycleFactory createSqlLifecycleFactory(final PlannerFactory plannerFactory)
+  {
+    return new SqlLifecycleFactory(
+        plannerFactory,
+        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
+        plannerFactory.getAuthorizerMapper()
     );
   }
 

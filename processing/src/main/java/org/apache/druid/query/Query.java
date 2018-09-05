@@ -108,6 +108,16 @@ public interface Query<T>
 
   String getId();
 
+  default Query<T> withSqlId(String sqlId)
+  {
+    return this;
+  }
+
+  default String getSqlId()
+  {
+    return null;
+  }
+
   Query<T> withDataSource(DataSource dataSource);
 
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)

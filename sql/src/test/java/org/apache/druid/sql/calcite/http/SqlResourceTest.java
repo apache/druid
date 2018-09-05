@@ -132,14 +132,16 @@ public class SqlResourceTest extends CalciteTestBase
 
     resource = new SqlResource(
         JSON_MAPPER,
-        new PlannerFactory(
-            druidSchema,
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            operatorTable,
-            macroTable,
-            plannerConfig,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+        CalciteTests.createSqlLifecycleFactory(
+          new PlannerFactory(
+              druidSchema,
+              CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+              operatorTable,
+              macroTable,
+              plannerConfig,
+              AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+              CalciteTests.getJsonMapper()
+          )
         )
     );
   }
