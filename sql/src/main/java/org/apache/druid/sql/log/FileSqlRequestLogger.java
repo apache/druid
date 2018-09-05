@@ -17,69 +17,71 @@
  * under the License.
  */
 
-package org.apache.druid.server.log;
+package org.apache.druid.sql.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
+import com.google.common.base.Charsets;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.log.AbstractFileRequestLogger;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ScheduledExecutorService;
 
-/**
- */
-public class FileRequestLogger extends AbstractFileRequestLogger implements RequestLogger
+public class FileSqlRequestLogger extends AbstractFileRequestLogger implements SqlRequestLogger
 {
   private final ObjectMapper objectMapper;
 
-  public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
+  public FileSqlRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
   {
     super(exec, baseDir);
     this.objectMapper = objectMapper;
-  }
-
-  @LifecycleStart
-  @Override
-  public void start()
-  {
-    super.start();
   }
 
   @Override
   protected OutputStreamWriter getFileWriter() throws FileNotFoundException
   {
     return new OutputStreamWriter(
-        new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
-        StandardCharsets.UTF_8
+        new FileOutputStream(new File(baseDir, currentDay.toString("'sql.'yyyy-MM-dd'.log'")), true),
+        Charsets.UTF_8
     );
   }
 
-  @LifecycleStop
   @Override
+  @LifecycleStart
+  public void start()
+  {
+    super.start();
+  }
+
+  @Override
+  public void log(SqlRequestLogLine sqlRequestLogLine) throws IOException
+  {
+    String message = "# " + String.valueOf(sqlRequestLogLine.getTimestamp()) + " "
+                     + sqlRequestLogLine.getRemoteAddr() + " "
+                     + objectMapper.writeValueAsString(sqlRequestLogLine.getQueryStats()) + "\n"
+                     + sqlRequestLogLine.getSql() + "\n";
+
+    logToFile(message);
+  }
+
+  @Override
+  @LifecycleStop
   public void stop()
   {
     super.stop();
   }
 
   @Override
-  public void log(RequestLogLine requestLogLine) throws IOException
-  {
-    String message = StringUtils.format("%s%n", requestLogLine.getLine(objectMapper));
-    logToFile(message);
-  }
-
-  @Override
   public String toString()
   {
-    return "FileRequestLogger{" +
+    return "FileSqlRequestLogger{" +
            "baseDir=" + baseDir +
            '}';
   }
 }
+

@@ -17,46 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.sql.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
-import org.apache.druid.query.Query;
+import org.apache.druid.server.QueryStats;
+import org.apache.druid.server.RequestLogLineBase;
 import org.joda.time.DateTime;
 
-import java.util.Arrays;
 import java.util.Objects;
 
-public class RequestLogLine extends RequestLogLineBase
+public class SqlRequestLogLine extends RequestLogLineBase
 {
-  private static final Joiner JOINER = Joiner.on("\t");
+  private final String sql;
 
-  private final Query query;
-
-  public RequestLogLine(DateTime timestamp, String remoteAddr, Query query, QueryStats queryStats)
+  public SqlRequestLogLine(DateTime timestamp, String remoteAddr, String sql, QueryStats queryStats)
   {
     super(timestamp, remoteAddr, queryStats);
-    this.query = query;
+    this.sql = sql;
   }
 
-  public String getLine(ObjectMapper objectMapper) throws JsonProcessingException
+  @JsonProperty("sql")
+  public String getSql()
   {
-    return JOINER.join(
-        Arrays.asList(
-            timestamp,
-            remoteAddr,
-            objectMapper.writeValueAsString(query),
-            objectMapper.writeValueAsString(queryStats)
-        )
-    );
-  }
-
-  @JsonProperty("query")
-  public Query getQuery()
-  {
-    return query;
+    return sql;
   }
 
   @Override
@@ -65,31 +48,32 @@ public class RequestLogLine extends RequestLogLineBase
     if (this == o) {
       return true;
     }
-    if (!(o instanceof RequestLogLine)) {
+    if (!(o instanceof SqlRequestLogLine)) {
       return false;
     }
     if (!super.equals(o)) {
       return false;
     }
-    RequestLogLine that = (RequestLogLine) o;
-    return Objects.equals(query, that.query);
+    SqlRequestLogLine that = (SqlRequestLogLine) o;
+    return Objects.equals(sql, that.sql);
   }
 
   @Override
   public int hashCode()
   {
 
-    return Objects.hash(super.hashCode(), query);
+    return Objects.hash(super.hashCode(), sql);
   }
 
   @Override
   public String toString()
   {
-    return "RequestLogLine{" +
-           "timestamp=" + timestamp +
+    return "SqlRequestLogLine{" +
+           "sql='" + sql + '\'' +
+           ", timestamp=" + timestamp +
            ", remoteAddr='" + remoteAddr + '\'' +
-           ", query=" + query +
            ", queryStats=" + queryStats +
            '}';
   }
 }
+

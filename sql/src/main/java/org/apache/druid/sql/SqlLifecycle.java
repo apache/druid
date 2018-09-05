@@ -26,12 +26,17 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -42,12 +47,16 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.sql.log.SqlRequestLogLine;
+import org.apache.druid.sql.log.SqlRequestLogger;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.servlet.http.HttpServletRequest;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @ThreadSafe
 public class SqlLifecycle
@@ -56,6 +65,7 @@ public class SqlLifecycle
 
   private final PlannerFactory plannerFactory;
   private final ServiceEmitter emitter;
+  private final SqlRequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
   private final long startMs;
   private final long startNs;
@@ -74,6 +84,7 @@ public class SqlLifecycle
   public SqlLifecycle(
       PlannerFactory plannerFactory,
       ServiceEmitter emitter,
+      SqlRequestLogger requestLogger,
       AuthorizerMapper authorizerMapper,
       long startMs,
       long startNs
@@ -81,6 +92,7 @@ public class SqlLifecycle
   {
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
+    this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
     this.startMs = startMs;
     this.startNs = startNs;
@@ -280,7 +292,53 @@ public class SqlLifecycle
 
       final boolean success = e == null;
       final long queryTimeNs = System.nanoTime() - startNs;
-      // TODO emit metrics and request log
+
+      try {
+        ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+        if (plannerContext != null) {
+          metricBuilder.setDimension("id", plannerContext.getSqlId());
+          metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+        }
+        if (plannerResult != null) {
+          metricBuilder.setDimension("dataSource", plannerResult.datasourceNames().toString());
+        }
+        metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));
+        metricBuilder.setDimension("success", String.valueOf(success));
+        emitter.emit(metricBuilder.build("sql/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
+        if (bytesWritten >= 0) {
+          emitter.emit(metricBuilder.build("sql/bytes", bytesWritten));
+        }
+
+        final Map<String, Object> statsMap = new LinkedHashMap<>();
+        statsMap.put("sql/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
+        statsMap.put("sql/bytes", bytesWritten);
+        statsMap.put("success", success);
+        statsMap.put("context", queryContext);
+        if (plannerContext != null) {
+          statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
+          queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+        }
+        if (e != null) {
+          statsMap.put("exception", e.toString());
+
+          if (e instanceof QueryInterruptedException) {
+            statsMap.put("interrupted", true);
+            statsMap.put("reason", e.toString());
+          }
+        }
+
+        requestLogger.log(
+            new SqlRequestLogLine(
+                DateTimes.utc(startMs),
+                StringUtils.nullToEmptyNonDruidDataString(remoteAddress),
+                sql,
+                new QueryStats(statsMap)
+            )
+        );
+      }
+      catch (Exception ex) {
+        log.error(ex, "Unable to log sql [%s]!", sql);
+      }
     }
   }
 
