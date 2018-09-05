@@ -101,8 +101,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private BatchServerInventoryView baseView;
   private CoordinatorServerView serverView;
   private CountDownLatch segmentViewInitLatch;
-  private CountDownLatch segmentAddedLatch;
-  private CountDownLatch segmentRemovedLatch;
+  /**
+   * The following two fields are changed during {@link #testMoveSegment()}, the change might not be visible from the
+   * thread, that runs the callback, registered in {@link #setupView()}. volatile modificator doesn't guarantee
+   * visibility either, but somewhat increases the chances.
+   */
+  private volatile CountDownLatch segmentAddedLatch;
+  private volatile CountDownLatch segmentRemovedLatch;
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
 
@@ -436,7 +441,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
       {
         super.registerSegmentCallback(
-            exec, new SegmentCallback()
+            exec,
+            new SegmentCallback()
             {
               @Override
               public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
