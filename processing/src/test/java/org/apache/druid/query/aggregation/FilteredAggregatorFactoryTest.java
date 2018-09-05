@@ -19,14 +19,15 @@
 
 package org.apache.druid.query.aggregation;
 
-import io.druid.query.filter.TrueDimFilter;
+import org.apache.druid.query.filter.TrueDimFilter;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class FilteredAggregatorFactoryTest
 {
   @Test
-  public void testSimpleNaming() {
+  public void testSimpleNaming()
+  {
     Assert.assertEquals("overrideName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("foo"),
         new TrueDimFilter(),
