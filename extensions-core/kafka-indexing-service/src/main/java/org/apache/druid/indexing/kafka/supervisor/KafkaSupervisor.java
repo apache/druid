@@ -101,6 +101,7 @@ import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -416,6 +417,7 @@ public class KafkaSupervisor implements Supervisor
             ioConfig.getStartDelay(),
             spec.toString()
         );
+
       }
       catch (Exception e) {
         if (consumer != null) {
@@ -1187,6 +1189,7 @@ public class KafkaSupervisor implements Supervisor
     // List<TaskId, Map -> {SequenceId, Checkpoints}>
     final List<Pair<String, TreeMap<Integer, Map<Integer, Long>>>> taskSequences = new CopyOnWriteArrayList<>();
     final List<ListenableFuture<TreeMap<Integer, Map<Integer, Long>>>> futures = new ArrayList<>();
+    final CountDownLatch callbackDoneSignal = new CountDownLatch(taskGroup.taskIds().size());
 
     for (String taskId : taskGroup.taskIds()) {
       final ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> checkpointsFuture = taskClient.getCheckpointsAsync(
@@ -1206,6 +1209,7 @@ public class KafkaSupervisor implements Supervisor
               } else {
                 log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
               }
+              callbackDoneSignal.countDown();
             }
 
             @Override
@@ -1214,13 +1218,14 @@ public class KafkaSupervisor implements Supervisor
               log.error(t, "Problem while getting checkpoints for task [%s], killing the task", taskId);
               killTask(taskId);
               taskGroup.tasks.remove(taskId);
+              callbackDoneSignal.countDown();
             }
           }
       );
     }
 
     try {
-      Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      callbackDoneSignal.await(futureTimeoutInSeconds, TimeUnit.SECONDS);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
