@@ -185,7 +185,7 @@ For more details, please see [Deep storage dependency](../dependencies/deep-stor
 
 The metadata storage holds various system metadata such as segment availability information and task information.
 
-For more details, please see [Metadata storage dependency](..dependencies/metadata-storage.html)
+For more details, please see [Metadata storage dependency](../dependencies/metadata-storage.html)
 
 ## Zookeeper
 

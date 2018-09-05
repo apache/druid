@@ -197,7 +197,7 @@ Enables all segments of datasource which are not overshadowed by others.
 
 Enables a segment.
 
-#### DELETE
+#### DELETE<a name="coordinator-delete"></a>
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
@@ -283,7 +283,6 @@ Returns total size and count for each interval within given isointerval.
 
 Returns total size and count for each datasource for each interval within given isointerval.
 
-
 ## Overlord
 
 ### Leadership
@@ -300,7 +299,7 @@ This returns a JSON object with field "leader", either true or false. In additio
 server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you
 only want the active leader to be considered in-service at the load balancer.
 
-### Tasks
+### Tasks<a name="overlord-tasks"></a> 
 
 #### GET
 

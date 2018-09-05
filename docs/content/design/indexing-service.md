@@ -4,15 +4,14 @@ layout: doc_page
 Indexing Service
 ================
 
-For Indexing Service Configuration, see [Indexing Service Configuration](../configuration/indexing-service.html).
+The indexing service is a highly-available, distributed service that runs indexing related tasks. 
 
-The indexing service is a highly-available, distributed service that runs indexing related tasks. Indexing service [tasks](../ingestion/tasks.html) create (and sometimes destroy) Druid [segments](../design/segments.html). The indexing service has a master/slave like architecture.
+Indexing tasks [tasks](../ingestion/tasks.html) create (and sometimes destroy) Druid [segments](../design/segments.html). The indexing service has a master/slave like architecture.
 
-The indexing service is composed of three main components: a peon component that can run a single task, a [Middle Manager](../design/middlemanager.html) component that manages peons, and an overlord component that manages task distribution to middle managers.
-Overlords and middle managers may run on the same node or across multiple nodes while middle managers and [Peons](../design/peons.html) always run on the same node.
+The indexing service is composed of three main components: a [Peon](../design/peons.html) component that can run a single task, a [Middle Manager](../design/middlemanager.html) component that manages peons, and an [Overlord](../design/overlord.html) component that manages task distribution to middle managers.
+Overlords and middle managers may run on the same node or across multiple nodes while middle managers and peons always run on the same node.
 
-Indexing Service Overview
--------------------------
+Tasks are managed using API endpoints on the Overlord service. Please see [Overlord Task API](../operations/api-reference.html#overlord-tasks) for more information.
 
 ![Indexing Service](../../img/indexing_service.png "Indexing Service")
 
@@ -25,44 +24,10 @@ The truth is, the indexing service is an experience that is difficult to charact
 The indexing service is philosophical transcendence, an infallible truth that will shape your soul, mold your character, and define your reality. The indexing service is creating world peace, playing with puppies, unwrapping presents on Christmas morning, cradling a loved one, and beating Goro in Mortal Kombat for the first time. The indexing service is sustainable economic growth, global propensity, and a world of transparent financial transactions. The indexing service is a true belieber. The indexing service is panicking because you forgot you signed up for a course and the big exam is in a few minutes, only to wake up and realize it was all a dream. What is the indexing service? More like what isn’t the indexing service. The indexing service is here and it is ready, but are you?
 -->
 
-Overlord Node
--------------
+Overlord
+--------------
 
-The overlord node is responsible for accepting tasks, coordinating task distribution, creating locks around tasks, and returning statuses to callers. Overlord can be configured to run in one of two modes - local or remote (local being default).
-In local mode overlord is also responsible for creating peons for executing tasks. When running the overlord in local mode, all middle manager and peon configurations must be provided as well.
-Local mode is typically used for simple workflows.  In remote mode, the overlord and middle manager are run in separate processes and you can run each on a different server.
-This mode is recommended if you intend to use the indexing service as the single endpoint for all Druid indexing.
-
-#### HTTP Endpoints
-
-For a list of API endpoints supported by the Overlord, please see the [API reference](../operations/api-reference.html#overlord).
-
-
-#### Overlord Console
-
-The overlord console can be used to view pending tasks, running tasks, available workers, and recent worker creation and termination. The console can be accessed at:
-
-```
-http://<OVERLORD_IP>:<port>/console.html
-```
-
-#### Blacklisted Workers
-If the workers fail tasks above a threshold, the overlord will blacklist these workers. No more than 20% of the nodes can be blacklisted. Blacklisted nodes will be periodically whitelisted.
-
-The following vairables can be used to set the threshold and blacklist timeouts.
-
-```
-druid.indexer.runner.maxRetriesBeforeBlacklist
-druid.indexer.runner.workerBlackListBackoffTime
-druid.indexer.runner.workerBlackListCleanupPeriod
-druid.indexer.runner.maxPercentageBlacklistWorkers
-```
-
-#### Autoscaling
-
-The Autoscaling mechanisms currently in place are tightly coupled with our deployment infrastructure but the framework should be in place for other implementations. We are highly open to new implementations or extensions of the existing mechanisms. In our own deployments, middle manager nodes are Amazon AWS EC2 nodes and they are provisioned to register themselves in a [galaxy](https://github.com/ning/galaxy) environment.
-
-If autoscaling is enabled, new middle managers may be added when a task has been in pending state for too long. Middle managers may be terminated if they have not run any tasks for a period of time.
+See [Overlord](../design/overlord.html).
 
 Middle Managers
 ---------------

@@ -248,7 +248,7 @@ Following table contains non-mandatory advanced configuration options, use cauti
 |`druid.client.https.trustStoreType`|The type of the key store where trusted root certificates are stored.|`java.security.KeyStore.getDefaultType()`|no|
 |`druid.client.https.trustStorePath`|The file path or URL of the TLS/SSL Key store where trusted root certificates are stored.|none|yes|
 |`druid.client.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
-|`druid.client.https.trustStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the Trust Store.|none|yes|
+|`druid.client.https.trustStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Trust Store.|none|yes|
 
 This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.
@@ -1064,7 +1064,7 @@ If the peon is running in remote mode, there must be an overlord up and running.
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|60|
 
-##### SegmentWriteOutMediumFactory
+#### SegmentWriteOutMediumFactory
 
 When new segments are created, Druid temporarily stores some pre-processed data in some buffers. Currently two types of
 *medium* exist for those buffers: *temporary files* and *off-heap memory*.
@@ -1127,7 +1127,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to historical and real-time processes. If there are more queries than this number that all need to speak to the same node, then they will queue up.|20|
 |`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with historical and real-time processes. May be "gzip" or "identity".|gzip|
 |`druid.broker.http.readTimeout`|The timeout for data reads from historical and real-time processes.|PT15M|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
+|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks. |8 * 1024|
 
 
@@ -1256,7 +1256,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5m|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
+|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 
 #### Processing

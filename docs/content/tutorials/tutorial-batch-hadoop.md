@@ -55,7 +55,7 @@ On the host machine, add the following entry to `/etc/hosts`:
 Once the `/tmp/shared` folder has been created and the `etc/hosts` entry has been added, run the following command to start the Hadoop container.
 
 ```bash
-docker run -it  -h druid-hadoop-demo -p 50010:50010 -p 50020:50020 -p 50075:50075 -p 50090:50090 -p 8020:8020 -p 10020:10020 -p 19888:19888 -p 8030:8030 -p 8031:8031 -p 8032:8032 -p 8033:8033 -p 8040:8040 -p 8042:8042 -p 8088:8088 -p 8443:8443 -p 2049:2049 -p 9000:9000 -p 49707:49707 -p 2122:2122  -p 34455:34455 -v /tmp/shared:/shared druid-hadoop-demo:2.7.3 /etc/bootstrap.sh -bash
+docker run -it  -h druid-hadoop-demo --name druid-hadoop-demo -p 50010:50010 -p 50020:50020 -p 50075:50075 -p 50090:50090 -p 8020:8020 -p 10020:10020 -p 19888:19888 -p 8030:8030 -p 8031:8031 -p 8032:8032 -p 8033:8033 -p 8040:8040 -p 8042:8042 -p 8088:8088 -p 8443:8443 -p 2049:2049 -p 9000:9000 -p 49707:49707 -p 2122:2122  -p 34455:34455 -v /tmp/shared:/shared druid-hadoop-demo:2.7.3 /etc/bootstrap.sh -bash
 ```
 
 Once the container is started, your terminal will attach to a bash shell running inside the container:
@@ -77,6 +77,14 @@ bash-4.1#
 ```
 
 The `Unable to load native-hadoop library for your platform... using builtin-java classes where applicable` warning messages can be safely ignored.
+
+#### Accessing the Hadoop container shell
+
+To open another shell to the Hadoop container, run the following command:
+
+```
+docker exec -it druid-hadoop-demo bash
+```
 
 ### Copy input data to the Hadoop container
 

@@ -17,8 +17,9 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop
 
 ## Spec file
 
-The spec file needs to contain a JSON object where the contents are the same as the "spec" field in the Hadoop index task. 
-In addition, the following fields need to be added to the ioConfig:
+The spec file needs to contain a JSON object where the contents are the same as the "spec" field in the Hadoop index task. See [Hadoop Batch Ingestion](../ingestion/hadoop.html) for details on the spec format. 
+
+In addition, a `metadataUpdateSpec` and `segmentOutputPath` field needs to be added to the ioConfig:
 
 ```
       "ioConfig" : {
@@ -34,7 +35,7 @@ In addition, the following fields need to be added to the ioConfig:
       },
 ```    
 
-and the following field need to be added to the tuningConfig:
+and a `workingPath` field needs to be added to the tuningConfig:
 
 ```
   "tuningConfig" : {

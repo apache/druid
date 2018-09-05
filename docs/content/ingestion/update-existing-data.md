@@ -28,7 +28,7 @@ segments and avoid the overhead of rebuilding new segments with reindexing, you 
 ### Reindexing and Delta Ingestion with Hadoop Batch Ingestion
 
 This section assumes the reader understands how to do batch ingestion using Hadoop. See 
-[batch-ingestion](batch-ingestion.html) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
+[Hadoop batch ingestion](./hadoop.html) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
 
 Druid uses an `inputSpec` in the `ioConfig` to know where the data to be ingested is located and how to read it. 
 For simple Hadoop batch ingestion, `static` or `granularity` spec types allow you to read data stored in deep storage.
@@ -130,9 +130,9 @@ POST `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
 Request Body: [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
 
 
-### Reindexing without Hadoop Batch Ingestion
+### Reindexing with Native Batch Ingestion
 
-This section assumes the reader understands how to do batch ingestion without Hadoop using the [IndexTask](../ingestion/tasks.html#index-task),  
+This section assumes the reader understands how to do batch ingestion without Hadoop using [Native Batch Indexing](../ingestion/native-batch.html),
 which uses a "firehose" to know where and how to read the input data. [IngestSegmentFirehose](firehose.html#ingestsegmentfirehose) 
 can be used to read data from segments inside Druid. Note that IndexTask is to be used for prototyping purposes only as 
 it has to do all processing inside a single process and can't scale. Please use Hadoop batch ingestion for production 

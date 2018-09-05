@@ -10,14 +10,14 @@ layout: toc
     * [Datasources & Segments](/docs/VERSION/design/index.html#datasources-and-segments)
     * [Query processing](/docs/VERSION/design/index.html#query-processing)
     * [External dependencies](/docs/VERSION/design/index.html#external-dependencies)
-    * [Ingestion overview](/docs/VERSION/ingestion/overview.html)
+    * [Ingestion overview](/docs/VERSION/ingestion/index.html)
   * [Quickstart](/docs/VERSION/tutorials/index.html)
     * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
     * [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
     * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
     * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
     * [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html)
-  * [Further tutorials](/docs/VERSION/tutorials/advanced.html)
+  * Further tutorials
     * [Tutorial: Rollup](/docs/VERSION/tutorials/tutorial-rollup.html)
     * [Tutorial: Configuring retention](/docs/VERSION/tutorials/tutorial-retention.html)
     * [Tutorial: Updating existing data](/docs/VERSION/tutorials/tutorial-update-data.html)
@@ -28,21 +28,26 @@ layout: toc
   * [Clustering](/docs/VERSION/tutorials/cluster.html)
 
 ## Data Ingestion
-  * [Ingestion overview](/docs/VERSION/ingestion/overview.html)
+  * [Ingestion overview](/docs/VERSION/ingestion/index.html)
   * [Data Formats](/docs/VERSION/ingestion/data-formats.html)
-  * [Data Schema](/docs/VERSION/ingestion/index.html)
+  * [Tasks Overview](/docs/VERSION/ingestion/tasks.html)
+  * [Ingestion Spec](/docs/VERSION/ingestion/ingestion-spec.html)
+    * [Transform Specs](/docs/VERSION/ingestion/transform-spec.html)
+    * [Firehoses](/docs/VERSION/ingestion/firehose.html)
   * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
   * [Schema Changes](/docs/VERSION/ingestion/schema-changes.html)
   * [Batch File Ingestion](/docs/VERSION/ingestion/batch-ingestion.html)
     * [Native Batch Ingestion](/docs/VERSION/ingestion/native-batch.html)
     * [Hadoop Batch Ingestion](/docs/VERSION/ingestion/hadoop.html)
   * [Stream Ingestion](/docs/VERSION/ingestion/stream-ingestion.html)
+    * [Kafka Indexing Service (Stream Pull)](/docs/VERSION/development/extensions-core/kafka-ingestion.html)
     * [Stream Push](/docs/VERSION/ingestion/stream-push.html)
-    * [Stream Pull](/docs/VERSION/ingestion/stream-pull.html)
+  * [Compaction](/docs/VERSION/ingestion/compaction.html)
   * [Updating Existing Data](/docs/VERSION/ingestion/update-existing-data.html)
-  * [Ingestion Tasks](/docs/VERSION/ingestion/tasks.html)
-  * [Transform Specs](/docs/VERSION/ingestion/transform-spec.html)
+  * [Deleting Data](/docs/VERSION/ingestion/delete-data.html)
+  * [Task Locking & Priority](/docs/VERSION/ingestion/locking-and-priority.html)
   * [FAQ](/docs/VERSION/ingestion/faq.html)
+  * [Misc. Tasks](/docs/VERSION/ingestion/misc-tasks.html)
 
 ## Querying
   * [Overview](/docs/VERSION/querying/querying.html)
@@ -73,7 +78,7 @@ layout: toc
   * [Virtual Columns](/docs/VERSION/querying/virtual-columns.html)
 
 ## Design
-  * [Overview](/docs/VERSION/design/design.html)
+  * [Overview](/docs/VERSION/design/index.html)
   * Storage
     * [Segments](/docs/VERSION/design/segments.html)
   * Node Types
@@ -81,7 +86,10 @@ layout: toc
     * [Broker](/docs/VERSION/design/broker.html)
     * [Coordinator](/docs/VERSION/design/coordinator.html)
     * [Indexing Service](/docs/VERSION/design/indexing-service.html)
-    * [Realtime](/docs/VERSION/design/realtime.html)
+      * [Overlord](/docs/VERSION/design/overlord.html)
+      * [MiddleManager](/docs/VERSION/design/middlemanager.html)
+      * [Peons](/docs/VERSION/design/peon.html)
+    * [Realtime (Deprecated)](/docs/VERSION/design/realtime.html)
   * Dependencies
     * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)
     * [Metadata Storage](/docs/VERSION/dependencies/metadata-storage.html)
@@ -139,7 +147,6 @@ layout: toc
     * [Geographic Queries](/docs/VERSION/development/geo.html)
     * [Router](/docs/VERSION/development/router.html)
     * [Kafka Indexing Service](/docs/VERSION/development/extensions-core/kafka-ingestion.html)
-
 
 ## Misc
   * [Druid Expressions Language](/docs/VERSION/misc/math-expr.html)

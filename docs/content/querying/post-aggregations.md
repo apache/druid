@@ -72,7 +72,7 @@ The constant post-aggregator always returns the specified value.
 The difference between the `doubleMax` aggregator and the `doubleGreatest` post-aggregator is that `doubleMax` returns the highest value of
 all rows for one specific column while `doubleGreatest` returns the highest value of multiple columns in one row. These are similar to the
 SQL [MAX](https://dev.mysql.com/doc/refman/5.7/en/group-by-functions.html#function_max) and
-[GREATEST](shttp://dev.mysql.com/doc/refman/5.7/en/comparison-operators.html#function_greatest) functions.
+[GREATEST](https://dev.mysql.com/doc/refman/5.7/en/comparison-operators.html#function_greatest) functions.
 
 Example:
 
