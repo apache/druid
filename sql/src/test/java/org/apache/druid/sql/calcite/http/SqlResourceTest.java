@@ -29,6 +29,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryInterruptedException;
@@ -75,6 +76,7 @@ import java.util.stream.Collectors;
 public class SqlResourceTest extends CalciteTestBase
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  private static final String DUMMY_SQL_ID = "dummy";
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -116,6 +118,10 @@ public class SqlResourceTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getRemoteAddr()).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
@@ -418,15 +424,16 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testExplainCountStar() throws Exception
   {
+    Map<String, Object> queryContext = ImmutableMap.of(PlannerContext.CTX_SQL_ID, DUMMY_SQL_ID);
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", ResultFormat.OBJECT, null)
+        new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", ResultFormat.OBJECT, queryContext)
     ).rhs;
 
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.<String, Object>of(
                 "PLAN",
-                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true}}], signature=[{a0:LONG}])\n"
+                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlId\":\"%s\"}}], signature=[{a0:LONG}])\n", DUMMY_SQL_ID)
             )
         ),
         rows
