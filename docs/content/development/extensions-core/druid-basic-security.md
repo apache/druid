@@ -10,7 +10,7 @@ This extension adds:
 
 Make sure to [include](../../operations/including-extensions.html) `druid-basic-security` as an extension.
 
-Please see [Authentication and Authorization](../../configuration/auth.html) for more information on the extension interfaces being implemented.
+Please see [Authentication and Authorization](../../design/auth.html) for more information on the extension interfaces being implemented.
 
 ## Configuration
 

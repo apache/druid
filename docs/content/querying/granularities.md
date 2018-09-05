@@ -159,7 +159,7 @@ Having a query granularity smaller than the ingestion granularity doesn't make s
 because information about that smaller granularity is not present in the indexed data.
 So, if the query granularity is smaller than the ingestion granularity, druid produces
 results that are equivalent to having set the query granularity to the ingestion granularity.
-See `queryGranularity` in [Ingestion Spec](../ingestion/index.html).
+See `queryGranularity` in [Ingestion Spec](../ingestion/ingestion-spec.html#granularityspec).
 
 
 If you change the granularity to `all`, you will get everything aggregated in 1 bucket,

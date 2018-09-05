@@ -33,7 +33,7 @@ See [Dimension Schema](../ingestion/index.html#dimension-schema) for more inform
 ## High cardinality dimensions (e.g. unique IDs)
 
 In practice, we see that exact counts for unique IDs are often not required. Storing unique IDs as a column will kill 
-[roll-up](../design/index.html), and impact compression. Instead, storing a sketch of the number of the unique IDs seen, and using that 
+[roll-up](../ingestion/index.html#rollup), and impact compression. Instead, storing a sketch of the number of the unique IDs seen, and using that 
 sketch as part of aggregations, will greatly improve performance (up to orders of magnitude performance improvement), and significantly reduce storage. 
 Druid's `hyperUnique` aggregator is based off of Hyperloglog and can be used for unique counts on a high cardinality dimension. 
 For more information, see [here](https://www.youtube.com/watch?v=Hpd3f_MLdXo).
@@ -52,6 +52,8 @@ then before indexing it, you should transform it to:
 ```
 {"foo_bar": 3}
 ```
+
+Druid is capable of flattening JSON input data, please see [Flatten JSON](../ingestion/flatten-json.html) for more details.
 
 ## Counting the number of ingested events
 
