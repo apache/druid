@@ -221,21 +221,24 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
             }
 
             final OpenedObject<T> openedObject = fetcher.next();
-            final InputStream stream;
             try {
-              stream = wrapObjectStream(
-                  openedObject.getObject(),
-                  openedObject.getObjectStream()
+              return new ResourceCloseableLineIterator(
+                  new InputStreamReader(
+                      wrapObjectStream(openedObject.getObject(), openedObject.getObjectStream()),
+                      StandardCharsets.UTF_8
+                  ),
+                  openedObject.getResourceCloser()
               );
             }
             catch (IOException e) {
+              try {
+                openedObject.getResourceCloser().close();
+              }
+              catch (Throwable t) {
+                e.addSuppressed(t);
+              }
               throw new RuntimeException(e);
             }
-
-            return new ResourceCloseableLineIterator(
-                new InputStreamReader(stream, StandardCharsets.UTF_8),
-                openedObject.getResourceCloser()
-            );
           }
         },
         firehoseParser,
@@ -288,9 +291,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
     @Override
     public void close()
     {
-      super.close();
-      try {
-        resourceCloser.close();
+      try (Closeable ignore = this.resourceCloser) {
+        super.close();
       }
       catch (IOException e) {
         throw new RuntimeException(e);
