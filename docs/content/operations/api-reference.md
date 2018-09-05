@@ -203,7 +203,7 @@ Enables all segments of datasource which are not overshadowed by others.
 
 Enables a segment of a datasource.
 
-#### DELETE
+#### DELETE<a name="coordinator-delete"></a>
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
@@ -312,7 +312,7 @@ will be set for them.
 
 * `/druid/coordinator/v1/config/compaction/{dataSource}`
 
-Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/coordinator.html#compaction-configuration) for configuration details.
+Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
 
 #### DELETE
 
@@ -356,7 +356,7 @@ This returns a JSON object with field "leader", either true or false. In additio
 server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you
 only want the active leader to be considered in-service at the load balancer.
 
-### Tasks
+### Tasks<a name="overlord-tasks"></a> 
 
 #### GET
 
@@ -391,7 +391,6 @@ The MiddleManager does not have any API endpoints beyond the [common endpoints](
 The Peon does not have any API endpoints beyond the [common endpoints](#common).
 
 ## Broker
-
 
 ### Datasource Information
 

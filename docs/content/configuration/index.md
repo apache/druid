@@ -135,7 +135,7 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.modules.excludeList`|A JSON array of canonical class names (e. g. `"io.druid.somepackage.SomeModule"`) of module classes which shouldn't be loaded, even if they are found in extensions specified by `druid.extensions.loadList`, or in the list of core modules specified to be loaded on a particular Druid node type. Useful when some useful extension contains some module, which shouldn't be loaded on some Druid node type because some dependencies of that module couldn't be satisfied.|[]|
+|`druid.modules.excludeList`|A JSON array of canonical class names (e. g. `"org.apache.druid.somepackage.SomeModule"`) of module classes which shouldn't be loaded, even if they are found in extensions specified by `druid.extensions.loadList`, or in the list of core modules specified to be loaded on a particular Druid node type. Useful when some useful extension contains some module, which shouldn't be loaded on some Druid node type because some dependencies of that module couldn't be satisfied.|[]|
 
 ### Zookeeper
 We recommend just setting the base ZK path and the ZK service host, but all ZK paths that Druid uses can be overwritten to absolute paths.
@@ -254,7 +254,7 @@ These properties apply to the SSLContext that will be provided to the internal H
 |`druid.client.https.trustStoreType`|The type of the key store where trusted root certificates are stored.|`java.security.KeyStore.getDefaultType()`|no|
 |`druid.client.https.trustStorePath`|The file path or URL of the TLS/SSL Key store where trusted root certificates are stored.|none|yes|
 |`druid.client.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
-|`druid.client.https.trustStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the Trust Store.|none|yes|
+|`druid.client.https.trustStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Trust Store.|none|yes|
 
 This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.
@@ -292,7 +292,7 @@ All nodes that can serve queries can also log the query requests they see.
 |--------|-----------|-------|
 |`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing. How to log every query request.|noop|
 
-Note that, you can enable sending all the HTTP requests to log by setting  "io.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
+Note that, you can enable sending all the HTTP requests to log by setting  "org.apache.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
 #### File Request Logging
 
@@ -312,7 +312,7 @@ Every request is emitted to some external location.
 
 #### SLF4J Request Logging
 
-Every request is logged via SLF4J. Queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `io.druid.server.log.LoggingRequestLogger`.
+Every request is logged via SLF4J. Queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -354,23 +354,23 @@ Druid nodes periodically emit metrics and different metrics monitors can be incl
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.monitoring.emissionPeriod`|How often metrics are emitted.|PT1M|
-|`druid.monitoring.monitors`|Sets list of Druid monitors used by a node. See below for names and more information. For example, you can specify monitors for a Broker with `druid.monitoring.monitors=["io.druid.java.util.metrics.SysMonitor","io.druid.java.util.metrics.JvmMonitor"]`.|none (no monitors)|
+|`druid.monitoring.monitors`|Sets list of Druid monitors used by a node. See below for names and more information. For example, you can specify monitors for a Broker with `druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]`.|none (no monitors)|
 
 The following monitors are available:
 
 |Name|Description|
 |----|-----------|
-|`io.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker nodes. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|
-|`io.druid.java.util.metrics.SysMonitor`|This uses the [SIGAR library](https://github.com/hyperic/sigar) to report on various system activities and statuses.|
-|`io.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical nodes.|
-|`io.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|
-|`io.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|
-|`io.druid.java.util.metrics.CpuAcctDeltaMonitor`|Reports consumed CPU as per the cpuacct cgroup.|
-|`io.druid.java.util.metrics.JvmThreadsMonitor`|Reports Thread statistics in the JVM, like numbers of total, daemon, started, died threads.|
-|`io.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime nodes.|
-|`io.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
-|`io.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
-|`io.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/druid-io/druid/pull/4973.|
+|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker nodes. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|
+|`org.apache.druid.java.util.metrics.SysMonitor`|This uses the [SIGAR library](https://github.com/hyperic/sigar) to report on various system activities and statuses.|
+|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical nodes.|
+|`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|
+|`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|
+|`org.apache.druid.java.util.metrics.CpuAcctDeltaMonitor`|Reports consumed CPU as per the cpuacct cgroup.|
+|`org.apache.druid.java.util.metrics.JvmThreadsMonitor`|Reports Thread statistics in the JVM, like numbers of total, daemon, started, died threads.|
+|`org.apache.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime nodes.|
+|`org.apache.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
+|`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
+|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/incubator-druid/pull/4973.|
 
 
 ### Emitting Metrics
@@ -416,7 +416,7 @@ The following properties allow the Http Emitter to use its own truststore config
 |`druid.emitter.http.ssl.trustStorePath`|The file path or URL of the TLS/SSL Key store where trusted root certificates are stored. If this is unspecified, the Http Emitter will use the same SSLContext as Druid's internal HTTP client, as described in the beginning of this section, and all other properties below are ignored.|null|
 |`druid.emitter.http.ssl.trustStoreType`|The type of the key store where trusted root certificates are stored.|`java.security.KeyStore.getDefaultType()`|
 |`druid.emitter.http.ssl.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|
-|`druid.emitter.http.ssl.trustStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the Trust Store.|none|
+|`druid.emitter.http.ssl.trustStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Trust Store.|none|
 |`druid.emitter.http.ssl.protocol`|TLS protocol to use.|"TLSv1.2"|
 
 #### Parametrized Http Emitter Module
@@ -1032,7 +1032,7 @@ Middle managers pass their configurations down to their child peons. The middle 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "io.druid", "user.timezone", "file.encoding", "java.io.tmpdir", "hadoop"|
+|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "org.apache.druid", "user.timezone", "file.encoding", "java.io.tmpdir", "hadoop"|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the middle managers should compress Znodes.|true|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
@@ -1119,7 +1119,7 @@ If the peon is running in remote mode, there must be an overlord up and running.
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|60|
 
-##### SegmentWriteOutMediumFactory
+#### SegmentWriteOutMediumFactory
 
 When new segments are created, Druid temporarily stores some pre-processed data in some buffers. Currently two types of
 *medium* exist for those buffers: *temporary files* and *off-heap memory*.
@@ -1319,7 +1319,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete.|`PT0S` (do not wait)|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for zookeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
+|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 
 #### Processing
@@ -1412,7 +1412,7 @@ Below are the configuration options known to this module:
 
 Here are the possible values for `druid.cache.cacheExecutorFactory`, which controls how maintenance tasks are run
 
-* `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/druid-io/druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
+* `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/apache/incubator-druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
 * `SINGLE_THREAD` Use a single-threaded executor.
 * `SAME_THREAD` Cache maintenance is done eagerly.
 

@@ -16,7 +16,7 @@ JVM Flags:
 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Dorg.jboss.logging.provider=slf4j
 -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.SLF4JLogger
--Dlog4j.shutdownCallbackRegistry=io.druid.common.config.Log4jShutdown
+-Dlog4j.shutdownCallbackRegistry=org.apache.druid.common.config.Log4jShutdown
 -Dlog4j.shutdownHookEnabled=true
 -XX:+PrintGCDetails
 -XX:+PrintGCDateStamps
