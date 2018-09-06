@@ -87,6 +87,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1173,7 +1174,24 @@ public class KafkaSupervisor implements Supervisor
     log.debug("Found [%d] Kafka indexing tasks for dataSource [%s]", taskCount, dataSource);
 
     // make sure the checkpoints are consistent with each other and with the metadata store
-    taskGroupsToVerify.values().forEach(this::verifyAndMergeCheckpoints);
+    verifyAndMergeCheckpoints(taskGroupsToVerify.values());
+  }
+
+  private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
+  {
+    final List<ListenableFuture<Boolean>> futures = new ArrayList<>();
+    for (TaskGroup taskGroup : taskGroupsToVerify) {
+      futures.add(workerExec.submit(() -> {
+        verifyAndMergeCheckpoints(taskGroup);
+        return true;
+      }));
+    }
+    try {
+      Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    }
+    catch (InterruptedException | ExecutionException | TimeoutException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -1770,10 +1788,12 @@ public class KafkaSupervisor implements Supervisor
   void createNewTasks() throws JsonProcessingException
   {
     // update the checkpoints in the taskGroup to latest ones so that new tasks do not read what is already published
-    taskGroups.entrySet()
+    verifyAndMergeCheckpoints(
+        taskGroups.values()
               .stream()
-              .filter(taskGroup -> taskGroup.getValue().tasks.size() < ioConfig.getReplicas())
-              .forEach(taskGroup -> verifyAndMergeCheckpoints(taskGroup.getValue()));
+              .filter(taskGroup -> taskGroup.tasks.size() < ioConfig.getReplicas())
+              .collect(Collectors.toList())
+    );
 
     // check that there is a current task group for each group of partitions in [partitionGroups]
     for (Integer groupId : partitionGroups.keySet()) {
