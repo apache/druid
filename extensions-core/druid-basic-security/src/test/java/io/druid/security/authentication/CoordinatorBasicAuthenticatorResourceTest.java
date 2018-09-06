@@ -32,6 +32,7 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
+import io.druid.metadata.DefaultPasswordProvider;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.security.basic.BasicAuthCommonCacheConfig;
@@ -95,8 +96,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 null,
                 AUTHENTICATOR_NAME,
                 "test",
-                "druid",
-                "druid",
+                new DefaultPasswordProvider("druid"),
+                new DefaultPasswordProvider("druid"),
                 null,
                 null,
                 null
@@ -106,8 +107,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 null,
                 AUTHENTICATOR_NAME2,
                 "test",
-                "druid",
-                "druid",
+                new DefaultPasswordProvider("druid"),
+                new DefaultPasswordProvider("druid"),
                 null,
                 null,
                 null
