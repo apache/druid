@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 
 import org.apache.druid.java.util.common.ISE;
@@ -34,15 +35,18 @@ public class PortFinder
 {
   private final Set<Integer> usedPorts = Sets.newHashSet();
   private final int startPort;
+  private final int endPort;
   private final List<Integer> candidatePorts;
 
-  public PortFinder(int startPort, List<Integer> candidatePorts)
+  public PortFinder(int startPort, int endPort, List<Integer> candidatePorts)
   {
     this.startPort = startPort;
+    this.endPort = endPort;
     this.candidatePorts = candidatePorts;
   }
 
-  private static boolean canBind(int portNum)
+  @VisibleForTesting
+  boolean canBind(int portNum)
   {
     try {
       new ServerSocket(portNum).close();
@@ -108,8 +112,8 @@ public class PortFinder
 
   private int chooseNext(int start)
   {
-    // up to unsigned short max (65535)
-    for (int i = start; i <= 0xFFFF; i++) {
+    // up to endPort (which default value is 65535)
+    for (int i = start; i <= endPort; i++) {
       if (!usedPorts.contains(i)) {
         return i;
       }

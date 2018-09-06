@@ -128,7 +128,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.taskLogPusher = taskLogPusher;
     this.jsonMapper = jsonMapper;
     this.node = node;
-    this.portFinder = new PortFinder(config.getStartPort(), config.getPorts());
+    this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
