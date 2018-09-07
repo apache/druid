@@ -20,13 +20,18 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
+import org.apache.calcite.linq4j.DefaultEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -35,7 +40,7 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
@@ -45,23 +50,30 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
+import org.apache.druid.java.util.http.client.response.ClientResponse;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.DateTime;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 
 public class SystemSchema extends AbstractSchema
 {
@@ -72,7 +84,6 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVERS_TABLE = "servers";
   private static final String SEGMENT_SERVERS_TABLE = "segment_servers";
   private static final String TASKS_TABLE = "tasks";
-  private static final int SEGMENTS_TABLE_SIZE;
   private static final int SEGMENT_SERVERS_TABLE_SIZE;
 
   private static final RowSignature SEGMENTS_SIGNATURE = RowSignature
@@ -85,6 +96,7 @@ public class SystemSchema extends AbstractSchema
       .add("version", ValueType.STRING)
       .add("partition_num", ValueType.STRING)
       .add("num_replicas", ValueType.LONG)
+      .add("num_rows", ValueType.LONG)
       .add("is_published", ValueType.LONG)
       .add("is_available", ValueType.LONG)
       .add("is_realtime", ValueType.LONG)
@@ -124,12 +136,12 @@ public class SystemSchema extends AbstractSchema
   private final Map<String, Table> tableMap;
 
   static {
-    SEGMENTS_TABLE_SIZE = SEGMENTS_SIGNATURE.getRowOrder().size();
     SEGMENT_SERVERS_TABLE_SIZE = SERVERSEGMENTS_SIGNATURE.getRowOrder().size();
   }
 
   @Inject
   public SystemSchema(
+      final DruidSchema druidSchema,
       final TimelineServerView serverView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
@@ -139,7 +151,7 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(serverView, coordinatorDruidLeaderClient, jsonMapper),
+        SEGMENTS_TABLE, new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper),
         SERVERS_TABLE, new ServersTable(serverView),
         SEGMENT_SERVERS_TABLE, new ServerSegmentsTable(serverView),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper)
@@ -154,17 +166,17 @@ public class SystemSchema extends AbstractSchema
 
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
-    private final TimelineServerView serverView;
+    private final DruidSchema druidSchema;
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
 
     public SegmentsTable(
-        TimelineServerView serverView,
+        DruidSchema druidSchemna,
         DruidLeaderClient druidLeaderClient,
         ObjectMapper jsonMapper
     )
     {
-      this.serverView = serverView;
+      this.druidSchema = druidSchemna;
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
     }
@@ -184,187 +196,135 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      final List<Object[]> rows = new ArrayList<>();
-      final List<ImmutableDruidDataSource> druidDataSourceList = getMetadataSegments(druidLeaderClient, jsonMapper);
-      final List<DataSegment> metadataSegments = druidDataSourceList
-          .stream()
-          .flatMap(t -> t.getSegments().stream())
-          .collect(Collectors.toList());
-      final Map<String, DataSegment> publishedSegments = metadataSegments
-          .stream()
-          .collect(Collectors.toMap(
-              DataSegment::getIdentifier,
-              Function.identity()
-          ));
-      final Map<String, DataSegment> availableSegments = new HashMap<>();
-      final Map<String, QueryableDruidServer> serverViewClients = serverView.getClients();
-      for (QueryableDruidServer queryableDruidServer : serverViewClients.values()) {
-        final DruidServer druidServer = queryableDruidServer.getServer();
-        final ServerType type = druidServer.getType();
-        final Map<String, DataSegment> segments = new HashMap<>(druidServer.getSegments());
-        final long isRealtime = druidServer.segmentReplicatable() ? 0 : 1;
-        for (Map.Entry<String, DataSegment> segmentEntry : segments.entrySet()) {
-          String segmentId = segmentEntry.getKey();
-          DataSegment segment = segmentEntry.getValue();
-          int numReplicas = 1;
-          if (availableSegments.containsKey(segmentId)) {
-            //do not create new row if a segmentId has been seen previously
-            // but increment the replica count and update row
-            numReplicas++;
-            updateRow(segmentId, numReplicas, rows);
-            continue;
-          }
-          availableSegments.putIfAbsent(segmentId, segment);
-          long isAvailable = 0;
-          final long isPublished = publishedSegments.containsKey(segmentId) ? 1 : 0;
-          if (type.toString().equals(ServerType.HISTORICAL.toString())
-              || type.toString().equals(ServerType.REALTIME.toString())
-              || type.toString().equals(ServerType.INDEXER_EXECUTOR.toString())) {
-            isAvailable = 1;
-          }
-          String payload;
-          try {
-            payload = jsonMapper.writeValueAsString(segment);
-          }
-          catch (JsonProcessingException e) {
-            log.error(e, "Error getting segment payload for segment %s", segmentId);
-            throw new RuntimeException(e);
-          }
-          final Object[] row = createRow(
-              segment.getIdentifier(),
-              segment.getDataSource(),
-              segment.getInterval().getStart(),
-              segment.getInterval().getEnd(),
-              segment.getSize(),
-              segment.getVersion(),
-              segment.getShardSpec().getPartitionNum(),
-              numReplicas,
-              isPublished,
-              isAvailable,
-              isRealtime,
-              payload
-          );
-          rows.add(row);
-        }
-      }
-      //process publishedSegments
-      for (Map.Entry<String, DataSegment> segmentEntry : publishedSegments.entrySet()) {
-        String segmentId = segmentEntry.getKey();
-        //skip the published segments which are already processed
-        if (availableSegments.containsKey(segmentId)) {
-          continue;
-        }
-        DataSegment segment = segmentEntry.getValue();
-        String payload;
-        try {
-          payload = jsonMapper.writeValueAsString(segment);
-        }
-        catch (JsonProcessingException e) {
-          log.error(e, "Error getting segment payload for segment %s", segmentId);
-          throw new RuntimeException(e);
-        }
-        final Object[] row = createRow(
-            segment.getIdentifier(),
-            segment.getDataSource(),
-            segment.getInterval().getStart(),
-            segment.getInterval().getEnd(),
-            segment.getSize(),
-            segment.getVersion(),
-            segment.getShardSpec().getPartitionNum(),
-            0,
-            1,
-            0,
-            0,
-            payload
-        );
-        rows.add(row);
-      }
-      return Linq4j.asEnumerable(rows);
-    }
 
-    private void updateRow(String segmentId, int replicas, List<Object[]> rows)
-    {
-      Object[] oldRow = null;
-      Object[] newRow = null;
-      for (Object[] row : rows) {
-        if (row[0].equals(segmentId)) {
-          oldRow = row;
-          row[7] = replicas;
-          newRow = row;
-          break;
-        }
+      //get available segments from druidSchema
+      Map<String, ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder>> getSegmentMetadataInfo = druidSchema.getSegmentMetadataInfo();
+      final Map<DataSegment, SegmentMetadataHolder> availableSegmentMetadata = new HashMap<>();
+      for (ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder> val : getSegmentMetadataInfo.values()) {
+        availableSegmentMetadata.putAll(val);
       }
-      if (oldRow == null || newRow == null) {
-        log.error("Cannot update row if the segment[%s] is not present in the existing rows", segmentId);
-        throw new RuntimeException("No row exists with segmentId " + segmentId);
-      }
-      rows.remove(oldRow);
-      rows.add(newRow);
-    }
+      final Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries = availableSegmentMetadata.entrySet()
+                                                                                                                  .iterator();
 
-    private Object[] createRow(
-        String identifier,
-        String dataSource,
-        DateTime start,
-        DateTime end,
-        long size,
-        String version,
-        int partitionNum,
-        int numReplicas,
-        long isPublished,
-        long isAvailable,
-        long isRealtime,
-        String payload
-    )
-    {
-      final Object[] row = new Object[SEGMENTS_TABLE_SIZE];
-      row[0] = identifier;
-      row[1] = dataSource;
-      row[2] = start;
-      row[3] = end;
-      row[4] = size;
-      row[5] = version;
-      row[6] = partitionNum;
-      row[7] = numReplicas;
-      row[8] = isPublished;
-      row[9] = isAvailable;
-      row[10] = isRealtime;
-      row[11] = payload;
-      return row;
+      //get published segments from coordinator
+      final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
+          druidLeaderClient,
+          jsonMapper
+      );
+
+      Set<String> availableSegmentIds = new HashSet<>();
+      final FluentIterable<Object[]> availableSegments = FluentIterable
+          .from(() -> availableSegmentEntries)
+          .transform(val -> {
+            try {
+              if (!availableSegmentIds.contains(val.getKey().getIdentifier())) {
+                availableSegmentIds.add(val.getKey().getIdentifier());
+              }
+              return new Object[]{
+                  val.getKey().getIdentifier(),
+                  val.getKey().getDataSource(),
+                  val.getKey().getInterval().getStart(),
+                  val.getKey().getInterval().getEnd(),
+                  val.getKey().getSize(),
+                  val.getKey().getVersion(),
+                  val.getKey().getShardSpec().getPartitionNum(),
+                  val.getValue().getNumReplicas(),
+                  val.getValue().getNumRows(),
+                  val.getValue().isPublished(),
+                  val.getValue().isAvailable(),
+                  val.getValue().isRealtime(),
+                  jsonMapper.writeValueAsString(val.getKey())
+              };
+            }
+            catch (JsonProcessingException e) {
+              log.error(e, "Error getting segment payload for segment %s", val.getKey().getIdentifier());
+              throw new RuntimeException(e);
+            }
+          });
+
+      final FluentIterable<Object[]> publishedSegments = FluentIterable
+          .from(() -> metadataSegments)
+          .transform(val -> {
+            try {
+              if (availableSegmentIds.contains(val.getIdentifier())) {
+                return null;
+              }
+              return new Object[]{
+                  val.getIdentifier(),
+                  val.getDataSource(),
+                  val.getInterval().getStart(),
+                  val.getInterval().getEnd(),
+                  val.getSize(),
+                  val.getVersion(),
+                  val.getShardSpec().getPartitionNum(),
+                  0,
+                  -1,
+                  1,
+                  0,
+                  0,
+                  jsonMapper.writeValueAsString(val)
+              };
+            }
+            catch (JsonProcessingException e) {
+              log.error(e, "Error getting segment payload for segment %s", val.getIdentifier());
+              throw new RuntimeException(e);
+            }
+          });
+
+      Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
+          Iterables.concat(availableSegments, publishedSegments));
+
+      return Linq4j.asEnumerable(allSegments);
+
     }
 
     // Note that coordinator must be up to get segments
-    List<ImmutableDruidDataSource> getMetadataSegments(
+    JsonParserIterator<DataSegment> getMetadataSegments(
         DruidLeaderClient coordinatorClient,
         ObjectMapper jsonMapper
     )
     {
-      try {
-        FullResponseHolder response = coordinatorClient.go(
-            coordinatorClient.makeRequest(
-                HttpMethod.GET,
-                StringUtils.format(
-                    "/druid/coordinator/v1/datasources?full"
-                )
-            )
-        );
 
-        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-          throw new ISE(
-              "Error while fetching metadata segments status[%s] content[%s]",
-              response.getStatus(),
-              response.getContent()
-          );
-        }
-        return jsonMapper.readValue(
-            response.getContent(), new TypeReference<List<ImmutableDruidDataSource>>()
-            {
-            }
+      Request request;
+      try {
+        request = coordinatorClient.makeRequest(
+            HttpMethod.GET,
+            StringUtils.format("/druid/coordinator/v1/metadata/segments")
         );
       }
-      catch (Exception e) {
+      catch (IOException e) {
         throw new RuntimeException(e);
       }
+      BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
+      ListenableFuture<InputStream> future = coordinatorClient.goStream(
+          request,
+          responseHandler
+      );
+      try {
+        future.get();
+      }
+      catch (InterruptedException | ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+      if (responseHandler.status != HttpServletResponse.SC_OK) {
+        throw new ISE(
+            "Error while fetching metadata segments status[%s] description[%s]",
+            responseHandler.status,
+            responseHandler.description
+        );
+      }
+      final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
+      {
+      });
+      JsonParserIterator<DataSegment> iterator = new JsonParserIterator<>(
+          typeRef,
+          future,
+          request.getUrl().toString(),
+          null,
+          request.getUrl().getHost(),
+          jsonMapper
+      );
+      return iterator;
     }
   }
 
@@ -476,62 +436,137 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      final List<TaskStatusPlus> tasks = getTasks(druidLeaderClient, jsonMapper);
-      final FluentIterable<Object[]> results = FluentIterable
-          .from(tasks)
-          .transform(
-              task -> new Object[]{
-                  task.getId(),
-                  task.getType(),
-                  task.getDataSource(),
-                  task.getCreatedTime(),
-                  task.getQueueInsertionTime(),
-                  task.getState(),
-                  task.getRunnerTaskState(),
-                  task.getDuration(),
-                  task.getLocation() != null
-                    ? task.getLocation().getHost() + ":" + (task.getLocation().getTlsPort()
-                                                          == -1
-                                                          ? task.getLocation()
-                                                                .getPort()
-                                                          : task.getLocation().getTlsPort())
-                    : null,
-                  task.getErrorMsg()
-              }
-          );
+      class TasksEnumerable extends DefaultEnumerable<Object[]>
+      {
+        private final JsonParserIterator<TaskStatusPlus> it;
 
-      return Linq4j.asEnumerable(results);
+        public TasksEnumerable(JsonParserIterator<TaskStatusPlus> tasks)
+        {
+          this.it = tasks;
+        }
+
+        @Override
+        public Iterator<Object[]> iterator()
+        {
+          throw new UnsupportedOperationException("Do not use iterator(), it cannot be closed.");
+        }
+
+        @Override
+        public Enumerator<Object[]> enumerator()
+        {
+          return new Enumerator<Object[]>()
+          {
+            @Override
+            public Object[] current()
+            {
+              TaskStatusPlus task = it.next();
+              return new Object[]{task.getId(), task.getType(),
+                                  task.getDataSource(),
+                                  task.getCreatedTime(),
+                                  task.getQueueInsertionTime(),
+                                  task.getState(),
+                                  task.getRunnerTaskState(),
+                                  task.getDuration(),
+                                  task.getLocation() != null
+                                  ? task.getLocation().getHost() + ":" + (task.getLocation().getTlsPort()
+                                                                          == -1
+                                                                          ? task.getLocation()
+                                                                                .getPort()
+                                                                          : task.getLocation().getTlsPort())
+                                  : null,
+                                  task.getErrorMsg()};
+            }
+
+            @Override
+            public boolean moveNext()
+            {
+              return it.hasNext();
+            }
+
+            @Override
+            public void reset()
+            {
+
+            }
+
+            @Override
+            public void close()
+            {
+              try {
+                it.close();
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            }
+          };
+        }
+      }
+
+      return new TasksEnumerable(getTasks(druidLeaderClient, jsonMapper));
     }
 
     //Note that overlord must be up to get tasks
-    private List<TaskStatusPlus> getTasks(
+    private JsonParserIterator<TaskStatusPlus> getTasks(
         DruidLeaderClient indexingServiceClient,
         ObjectMapper jsonMapper
     )
     {
+
+      Request request;
       try {
-        final FullResponseHolder response = indexingServiceClient.go(
-            indexingServiceClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/tasks"))
-        );
-
-        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-          throw new ISE(
-              "Error while fetching tasks status[%s] content[%s]",
-              response.getStatus(),
-              response.getContent()
-          );
-        }
-
-        return jsonMapper.readValue(
-            response.getContent(),
-            new TypeReference<List<TaskStatusPlus>>()
-            {
-            }
+        request = indexingServiceClient.makeRequest(
+            HttpMethod.GET,
+            StringUtils.format("/druid/indexer/v1/tasks")
         );
       }
-      catch (IOException | InterruptedException e) {
+      catch (IOException e) {
         throw new RuntimeException(e);
       }
+      BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
+      ListenableFuture<InputStream> future = indexingServiceClient.goStream(
+          request,
+          responseHandler
+      );
+      try {
+        future.get();
+      }
+      catch (InterruptedException | ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+      if (responseHandler.status != HttpServletResponse.SC_OK) {
+        throw new ISE(
+            "Error while fetching tasks status[%s] description[%s]",
+            responseHandler.status,
+            responseHandler.description
+        );
+      }
+      final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
+      {
+      });
+      JsonParserIterator<TaskStatusPlus> iterator = new JsonParserIterator<>(
+          typeRef,
+          future,
+          request.getUrl().toString(),
+          null,
+          request.getUrl().getHost(),
+          jsonMapper
+      );
+      return iterator;
+    }
+  }
+
+  static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
+  {
+    private int status;
+    private String description;
+
+    @Override
+    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response)
+    {
+      status = response.getStatus().getCode();
+      description = response.getStatus().getReasonPhrase();
+      return ClientResponse.unfinished(super.handleResponse(response).getObj());
     }
   }
 }

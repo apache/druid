@@ -50,6 +50,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -134,6 +135,23 @@ public class MetadataResource
     }
 
     return Response.status(Response.Status.OK).entity(dataSource).build();
+  }
+
+  @GET
+  @Path("/segments")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getDatabaseSegmentSegments()
+  {
+    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getInventory();
+    final Set<DataSegment> metadataSegments = druidDataSources
+        .stream()
+        .flatMap(t -> t.getSegments().stream())
+        .collect(Collectors.toSet());
+
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    return builder.entity(metadataSegments).build();
+
   }
 
   @GET

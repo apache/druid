@@ -21,6 +21,7 @@ package org.apache.druid.discovery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.selector.Server;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
@@ -131,6 +132,17 @@ public class DruidLeaderClient
   public FullResponseHolder go(Request request) throws IOException, InterruptedException
   {
     return go(request, new FullResponseHandler(StandardCharsets.UTF_8));
+  }
+
+  public <Intermediate, Final> ListenableFuture<Final> goStream(
+      final Request request,
+      final HttpResponseHandler<Intermediate, Final> handler
+  )
+  {
+    return httpClient.go(
+        request,
+        handler
+    );
   }
 
   /**
