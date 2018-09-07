@@ -29,10 +29,8 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.GenericColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
-import org.apache.druid.segment.filter.Filters;
 
 import java.util.Iterator;
 
@@ -142,7 +140,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     final Column column = index.getColumn(dimension);
-    if (column == null || !columnSupportsFiltering(column)) {
+    if (column == null || !column.getCapabilities().isFilterable()) {
       // for missing columns and columns with types that do not support filtering,
       // treat the column as if it were a String column full of nulls.
       // Create a BitmapIndex so that filters applied to null columns can use
@@ -212,7 +210,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     final Column column = index.getColumn(dimension);
-    if (column == null || !columnSupportsFiltering(column)) {
+    if (column == null || !column.getCapabilities().isFilterable()) {
       if (NullHandling.isNullOrEquivalent(value)) {
         return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
       } else {
@@ -246,11 +244,5 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   private boolean isVirtualColumn(final String columnName)
   {
     return virtualColumns.getVirtualColumn(columnName) != null;
-  }
-
-  private static boolean columnSupportsFiltering(Column column)
-  {
-    ValueType columnType = column.getCapabilities().getType();
-    return Filters.FILTERABLE_TYPES.contains(columnType);
   }
 }

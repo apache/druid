@@ -97,13 +97,13 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       ResourceCollection staticResources;
       if (beOverlord) {
         staticResources = new ResourceCollection(
-            Resource.newClassPathResource("org/apache/druid/console"),
+            Resource.newClassPathResource("io/druid/console"),
             Resource.newClassPathResource("static"),
             Resource.newClassPathResource("indexer_static")
         );
       } else {
         staticResources = new ResourceCollection(
-            Resource.newClassPathResource("org/apache/druid/console"),
+            Resource.newClassPathResource("io/druid/console"),
             Resource.newClassPathResource("static")
         );
       }
