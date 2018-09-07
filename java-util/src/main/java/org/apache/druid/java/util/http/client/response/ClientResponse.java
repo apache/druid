@@ -19,29 +19,42 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class ClientResponse<T>
 {
   private final boolean finished;
+  private final boolean continueReading;
+
+  @Nullable
   private final T obj;
 
   public static <T> ClientResponse<T> finished(T obj)
   {
-    return new ClientResponse<T>(true, obj);
+    return new ClientResponse<>(true, true, obj);
+  }
+
+  public static <T> ClientResponse<T> finished(T obj, boolean continueReading)
+  {
+    return new ClientResponse<>(true, continueReading, obj);
   }
 
   public static <T> ClientResponse<T> unfinished(T obj)
   {
-    return new ClientResponse<T>(false, obj);
+    return new ClientResponse<>(false, true, obj);
   }
 
-  protected ClientResponse(
-      boolean finished,
-      T obj
-  )
+  public static <T> ClientResponse<T> unfinished(T obj, boolean continueReading)
+  {
+    return new ClientResponse<>(false, continueReading, obj);
+  }
+
+  public ClientResponse(final boolean finished, final boolean continueReading, @Nullable final T obj)
   {
     this.finished = finished;
+    this.continueReading = continueReading;
     this.obj = obj;
   }
 
@@ -50,6 +63,12 @@ public class ClientResponse<T>
     return finished;
   }
 
+  public boolean isContinueReading()
+  {
+    return continueReading;
+  }
+
+  @Nullable
   public T getObj()
   {
     return obj;
