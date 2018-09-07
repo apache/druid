@@ -44,6 +44,7 @@ FROM table
 [ HAVING expr ]
 [ ORDER BY expr [ ASC | DESC ], expr [ ASC | DESC ], ... ]
 [ LIMIT limit ]
+[ UNION ALL <another query> ]
 ```
 
 The FROM clause refers to either a Druid datasource, like `druid.foo`, an [INFORMATION_SCHEMA table](#retrieving-metadata), a
@@ -73,6 +74,9 @@ to data nodes for queries that run with the native TopN query type, but not the 
 versions of Druid will support pushing down limits using the native GroupBy query type as well. If you notice that
 adding a limit doesn't change performance very much, then it's likely that Druid didn't push down the limit for your
 query.
+
+The "UNION ALL" operator can be used to fuse multiple queries together. Their results will be concatenated, and each
+query will run separately, back to back (not in parallel). Druid does not currently support "UNION" without "ALL".
 
 Add "EXPLAIN PLAN FOR" to the beginning of any query to see how it would be run as a native Druid query. In this case,
 the query will not actually be executed.
