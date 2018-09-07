@@ -1264,10 +1264,12 @@ public class KafkaSupervisor implements Supervisor
     int taskIndex = 0;
 
     while (taskIndex < taskSequences.size()) {
+      TreeMap<Integer, Map<Integer, Long>> taskCheckpoints = taskSequences.get(taskIndex).rhs;
+      String taskId = taskSequences.get(taskIndex).lhs;
       if (earliestConsistentSequenceId.get() == -1) {
         // find the first replica task with earliest sequenceId consistent with datasource metadata in the metadata
         // store
-        if (taskSequences.get(taskIndex).rhs.entrySet().stream().anyMatch(
+        if (taskCheckpoints.entrySet().stream().anyMatch(
             sequenceCheckpoint -> sequenceCheckpoint.getValue().entrySet().stream().allMatch(
                 partitionOffset -> Longs.compare(
                     partitionOffset.getValue(),
@@ -1276,9 +1278,9 @@ public class KafkaSupervisor implements Supervisor
                     latestOffsetsFromDb.getOrDefault(partitionOffset.getKey(), partitionOffset.getValue())
                 ) == 0) && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
                 pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() > 0
-                && earliestConsistentSequenceId.compareAndSet(-1, taskSequences.get(taskIndex).rhs.firstKey()))) {
+                && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))) {
           final SortedMap<Integer, Map<Integer, Long>> latestCheckpoints = new TreeMap<>(
-              taskSequences.get(taskIndex).rhs.tailMap(earliestConsistentSequenceId.get())
+              taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
           );
           log.info("Setting taskGroup sequences to [%s] for group [%d]", latestCheckpoints, groupId);
           taskGroup.sequenceOffsets.clear();
@@ -1286,26 +1288,26 @@ public class KafkaSupervisor implements Supervisor
         } else {
           log.debug(
               "Adding task [%s] to kill list, checkpoints[%s], latestoffsets from DB [%s]",
-              taskSequences.get(taskIndex).lhs,
-              taskSequences.get(taskIndex).rhs,
+              taskId,
+              taskCheckpoints,
               latestOffsetsFromDb
           );
-          tasksToKill.add(taskSequences.get(taskIndex).lhs);
+          tasksToKill.add(taskId);
         }
       } else {
         // check consistency with taskGroup sequences
-        if (taskSequences.get(taskIndex).rhs.get(taskGroup.sequenceOffsets.firstKey()) == null
-            || !(taskSequences.get(taskIndex).rhs.get(taskGroup.sequenceOffsets.firstKey())
+        if (taskCheckpoints.get(taskGroup.sequenceOffsets.firstKey()) == null
+            || !(taskCheckpoints.get(taskGroup.sequenceOffsets.firstKey())
                                                  .equals(taskGroup.sequenceOffsets.firstEntry().getValue()))
-            || taskSequences.get(taskIndex).rhs.tailMap(taskGroup.sequenceOffsets.firstKey()).size()
+            || taskCheckpoints.tailMap(taskGroup.sequenceOffsets.firstKey()).size()
                != taskGroup.sequenceOffsets.size()) {
           log.debug(
               "Adding task [%s] to kill list, checkpoints[%s], taskgroup checkpoints [%s]",
-              taskSequences.get(taskIndex).lhs,
-              taskSequences.get(taskIndex).rhs,
+              taskId,
+              taskCheckpoints,
               taskGroup.sequenceOffsets
           );
-          tasksToKill.add(taskSequences.get(taskIndex).lhs);
+          tasksToKill.add(taskId);
         }
       }
       taskIndex++;
