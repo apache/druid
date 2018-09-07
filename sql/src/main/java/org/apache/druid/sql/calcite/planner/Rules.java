@@ -76,7 +76,6 @@ import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidSemiJoinRule;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
-import org.apache.druid.sql.calcite.rule.DruidUnionRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 
