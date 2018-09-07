@@ -1204,10 +1204,9 @@ public class KafkaSupervisor implements Supervisor
   private void verifyAndMergeCheckpoints(final TaskGroup taskGroup)
   {
     final int groupId = taskGroup.groupId;
-    // List<TaskId, Map -> {SequenceId, Checkpoints}>
-    final List<Pair<String, TreeMap<Integer, Map<Integer, Long>>>> taskSequences = new CopyOnWriteArrayList<>();
+    final List<Pair<String, TreeMap<Integer, Map<Integer, Long>>>> taskSequences = new ArrayList<>();
     final List<ListenableFuture<TreeMap<Integer, Map<Integer, Long>>>> futures = new ArrayList<>();
-    final CountDownLatch callbackDoneSignal = new CountDownLatch(taskGroup.taskIds().size());
+    final List<String> taskIds = new ArrayList<>();
 
     for (String taskId : taskGroup.taskIds()) {
       final ListenableFuture<TreeMap<Integer, Map<Integer, Long>>> checkpointsFuture = taskClient.getCheckpointsAsync(
@@ -1215,35 +1214,29 @@ public class KafkaSupervisor implements Supervisor
           true
       );
       futures.add(checkpointsFuture);
-      Futures.addCallback(
-          checkpointsFuture,
-          new FutureCallback<TreeMap<Integer, Map<Integer, Long>>>()
-          {
-            @Override
-            public void onSuccess(TreeMap<Integer, Map<Integer, Long>> checkpoints)
-            {
-              if (!checkpoints.isEmpty()) {
-                taskSequences.add(new Pair<>(taskId, checkpoints));
-              } else {
-                log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
-              }
-              callbackDoneSignal.countDown();
-            }
-
-            @Override
-            public void onFailure(Throwable t)
-            {
-              log.error(t, "Problem while getting checkpoints for task [%s], killing the task", taskId);
-              killTask(taskId);
-              taskGroup.tasks.remove(taskId);
-              callbackDoneSignal.countDown();
-            }
-          }
-      );
+      taskIds.add(taskId);
     }
 
     try {
-      callbackDoneSignal.await(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      List<TreeMap<Integer, Map<Integer, Long>>> futuresResult =
+          Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      for (int i = 0; i < futuresResult.size(); i++) {
+        final TreeMap<Integer, Map<Integer, Long>> checkpoints = futuresResult.get(i);
+        final String taskId = taskIds.get(i);
+        if (checkpoints == null) {
+          try {
+            futures.get(i).get(1, TimeUnit.NANOSECONDS);
+          } catch (Exception e) {
+            log.error(e,"Problem while getting checkpoints for task [%s], killing the task", taskId);
+            killTask(taskId);
+            taskGroup.tasks.remove(taskId);
+          }
+        } else if (checkpoints.isEmpty()) {
+          log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
+        } else {
+          taskSequences.add(new Pair<>(taskId, checkpoints));
+        }
+      }
     }
     catch (Exception e) {
       throw new RuntimeException(e);
