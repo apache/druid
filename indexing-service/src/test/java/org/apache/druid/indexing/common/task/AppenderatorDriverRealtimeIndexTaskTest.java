@@ -102,7 +102,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -158,7 +157,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -505,6 +503,73 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     awaitHandoffs();
 
+    for (DataSegment publishedSegment : publishedSegments) {
+      Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
+          new SegmentDescriptor(
+              publishedSegment.getInterval(),
+              publishedSegment.getVersion(),
+              publishedSegment.getShardSpec().getPartitionNum()
+          )
+      );
+      Assert.assertNotNull(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          executorRunnablePair
+      );
+
+      // Simulate handoff.
+      executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
+    }
+    handOffCallbacks.clear();
+
+    // Wait for the task to finish.
+    final TaskStatus taskStatus = statusFuture.get();
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testMaxTotalRows() throws Exception
+  {
+    // Expect 2 segments as we will hit maxTotalRows
+    expectPublishedSegments(2);
+
+    final AppenderatorDriverRealtimeIndexTask task =
+        makeRealtimeTask(null, Integer.MAX_VALUE, 1500L);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    // maxTotalRows is 1500
+    for (int i = 0; i < 2000; i++) {
+      firehose.addRows(
+          ImmutableList.of(
+              ImmutableMap.of("t", now.getMillis(), "dim1", "foo-" + i, "met1", "1")
+          )
+      );
+    }
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for publish.
+    Collection<DataSegment> publishedSegments = awaitSegments();
+
+    // Check metrics.
+    Assert.assertEquals(2000, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
+
+    // Do some queries.
+    Assert.assertEquals(2000, sumMetric(task, null, "rows").longValue());
+    Assert.assertEquals(2000, sumMetric(task, null, "met1").longValue());
+
+    awaitHandoffs();
+
+    Assert.assertEquals(2, publishedSegments.size());
     for (DataSegment publishedSegment : publishedSegments) {
       Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
           new SegmentDescriptor(
@@ -1209,22 +1274,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     taskLockbox.syncFromStorage();
     final TaskToolbox toolbox = taskToolboxFactory.build(task);
     return taskExec.submit(
-        new Callable<TaskStatus>()
-        {
-          @Override
-          public TaskStatus call() throws Exception
-          {
-            try {
-              if (task.isReady(toolbox.getTaskActionClient())) {
-                return task.run(toolbox);
-              } else {
-                throw new ISE("Task is not ready");
-              }
+        () -> {
+          try {
+            if (task.isReady(toolbox.getTaskActionClient())) {
+              return task.run(toolbox);
+            } else {
+              throw new ISE("Task is not ready");
             }
-            catch (Exception e) {
-              log.warn(e, "Task failed");
-              throw e;
-            }
+          }
+          catch (Exception e) {
+            log.warn(e, "Task failed");
+            throw e;
           }
         }
     );
@@ -1232,12 +1292,47 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
   private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(final String taskId)
   {
-    return makeRealtimeTask(taskId, TransformSpec.NONE, true, 0, true, 0, 1);
+    return makeRealtimeTask(
+        taskId,
+        TransformSpec.NONE,
+        true,
+        0,
+        true,
+        0,
+        1
+    );
+  }
+
+  private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
+      final String taskId,
+      final Integer maxRowsPerSegment,
+      final Long maxTotalRows
+  )
+  {
+    return makeRealtimeTask(
+        taskId,
+        TransformSpec.NONE,
+        true,
+        0,
+        true,
+        0,
+        1,
+        maxRowsPerSegment,
+        maxTotalRows
+    );
   }
 
   private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions)
   {
-    return makeRealtimeTask(taskId, TransformSpec.NONE, reportParseExceptions, 0, true, null, 1);
+    return makeRealtimeTask(
+        taskId,
+        TransformSpec.NONE,
+        reportParseExceptions,
+        0,
+        true,
+        null,
+        1
+    );
   }
 
   private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
@@ -1248,6 +1343,32 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       final Boolean logParseExceptions,
       final Integer maxParseExceptions,
       final Integer maxSavedParseExceptions
+  )
+  {
+
+    return makeRealtimeTask(
+        taskId,
+        transformSpec,
+        reportParseExceptions,
+        handoffTimeout,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions,
+        1000,
+        null
+    );
+  }
+
+  private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
+      final String taskId,
+      final TransformSpec transformSpec,
+      final boolean reportParseExceptions,
+      final long handoffTimeout,
+      final Boolean logParseExceptions,
+      final Integer maxParseExceptions,
+      final Integer maxSavedParseExceptions,
+      final Integer maxRowsPerSegment,
+      final Long maxTotalRows
   )
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -1284,8 +1405,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     );
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
         1000,
-        1000,
         null,
+        maxRowsPerSegment,
+        maxTotalRows,
         null,
         null,
         null,
@@ -1425,49 +1547,37 @@ public class AppenderatorDriverRealtimeIndexTaskTest
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
                 new TimeseriesQueryEngine(),
-                new QueryWatcher()
-                {
-                  @Override
-                  public void registerQuery(Query query, ListenableFuture future)
-                  {
-                    // do nothing
-                  }
+                (query, future) -> {
+                  // do nothing
                 }
             )
         )
     );
     handOffCallbacks = new ConcurrentHashMap<>();
-    final SegmentHandoffNotifierFactory handoffNotifierFactory = new SegmentHandoffNotifierFactory()
+    final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
     {
       @Override
-      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+      public boolean registerSegmentHandoffCallback(
+          SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+      )
       {
-        return new SegmentHandoffNotifier()
-        {
-          @Override
-          public boolean registerSegmentHandoffCallback(
-              SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
-          )
-          {
-            handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));
-            handoffLatch.countDown();
-            return true;
-          }
-
-          @Override
-          public void start()
-          {
-            //Noop
-          }
-
-          @Override
-          public void close()
-          {
-            //Noop
-          }
-
-        };
+        handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));
+        handoffLatch.countDown();
+        return true;
       }
+
+      @Override
+      public void start()
+      {
+        //Noop
+      }
+
+      @Override
+      public void close()
+      {
+        //Noop
+      }
+
     };
     final TestUtils testUtils = new TestUtils();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();

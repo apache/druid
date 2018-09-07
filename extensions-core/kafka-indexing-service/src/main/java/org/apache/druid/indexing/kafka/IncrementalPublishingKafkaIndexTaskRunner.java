@@ -431,9 +431,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           // if stop is requested or task's end offset is set by call to setEndOffsets method with finish set to true
           if (stopRequested.get() || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
-          }
-
-          if (stopRequested.get()) {
             break;
           }
 
@@ -530,10 +527,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
                     if (addResult.isOk()) {
                       // If the number of rows in the segment exceeds the threshold after adding a row,
                       // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
-                      if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
-                        if (!sequenceToUse.isCheckpointed()) {
-                          sequenceToCheckpoint = sequenceToUse;
-                        }
+                      if (addResult.isPushRequired(tuningConfig) && !sequenceToUse.isCheckpointed()) {
+                        sequenceToCheckpoint = sequenceToUse;
                       }
                       isPersistRequired |= addResult.isPersistRequired();
                     } else {
