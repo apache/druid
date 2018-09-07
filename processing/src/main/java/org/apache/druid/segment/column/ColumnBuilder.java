@@ -29,6 +29,7 @@ public class ColumnBuilder
 {
   private ValueType type = null;
   private boolean hasMultipleValues = false;
+  private boolean filterable = false;
 
   private Supplier<? extends BaseColumn> columnSupplier = null;
   private boolean dictionaryEncoded = false;
@@ -66,6 +67,13 @@ public class ColumnBuilder
     return this;
   }
 
+  @SuppressWarnings("unused")
+  public ColumnBuilder setFilterable(boolean filterable)
+  {
+    this.filterable = filterable;
+    return this;
+  }
+
   public ColumnBuilder setComplexColumnSupplier(Supplier<? extends ComplexColumn> columnSupplier)
   {
     this.columnSupplier = columnSupplier;
@@ -100,7 +108,8 @@ public class ColumnBuilder
             .setDictionaryEncoded(dictionaryEncoded)
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
-            .setHasMultipleValues(hasMultipleValues),
+            .setHasMultipleValues(hasMultipleValues)
+            .setFilterable(filterable),
         columnSupplier,
         bitmapIndex,
         spatialIndex

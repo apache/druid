@@ -19,19 +19,21 @@
 
 package org.apache.druid.security.basic;
 
+import org.apache.druid.metadata.PasswordProvider;
+
 public class BasicAuthDBConfig
 {
   public static final long DEFAULT_CACHE_NOTIFY_TIMEOUT_MS = 5000;
 
-  private final String initialAdminPassword;
-  private final String initialInternalClientPassword;
+  private final PasswordProvider initialAdminPassword;
+  private final PasswordProvider initialInternalClientPassword;
   private final boolean enableCacheNotifications;
   private final long cacheNotificationTimeout;
   private final int iterations;
 
   public BasicAuthDBConfig(
-      final String initialAdminPassword,
-      final String initialInternalClientPassword,
+      final PasswordProvider initialAdminPassword,
+      final PasswordProvider initialInternalClientPassword,
       final Boolean enableCacheNotifications,
       final Long cacheNotificationTimeout,
       final int iterations
@@ -44,12 +46,12 @@ public class BasicAuthDBConfig
     this.iterations = iterations;
   }
 
-  public String getInitialAdminPassword()
+  public PasswordProvider getInitialAdminPassword()
   {
     return initialAdminPassword;
   }
 
-  public String getInitialInternalClientPassword()
+  public PasswordProvider getInitialInternalClientPassword()
   {
     return initialInternalClientPassword;
   }

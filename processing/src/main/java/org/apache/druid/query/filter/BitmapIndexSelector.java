@@ -39,6 +39,7 @@ public interface BitmapIndexSelector
   int getNumRows();
   BitmapFactory getBitmapFactory();
   BitmapIndex getBitmapIndex(String dimension);
+  @Nullable
   ImmutableBitmap getBitmapIndex(String dimension, String value);
   ImmutableRTree getSpatialIndex(String dimension);
 }

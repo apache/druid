@@ -51,7 +51,7 @@ You only have to install the extension once. Then, add `"druid-example-extension
 `druid.extensions.loadList` in common.runtime.properties to instruct Druid to load the extension.
 
 <div class="note info">
-Please make sure all the Extensions related configuration properties listed <a href="../configuration/index.html">here</a> are set correctly.
+Please make sure all the Extensions related configuration properties listed <a href="../configuration/index.html#extensions">here</a> are set correctly.
 </div>
 
 <div class="note info">
