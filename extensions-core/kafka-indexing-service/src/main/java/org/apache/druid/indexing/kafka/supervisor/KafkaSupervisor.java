@@ -37,7 +37,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
-import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -644,8 +643,10 @@ public class KafkaSupervisor implements Supervisor
 
   private class CheckpointNotice implements Notice
   {
-    @Nullable private final Integer nullableTaskGroupId;
-    @Deprecated private final String baseSequenceName;
+    @Nullable
+    private final Integer nullableTaskGroupId;
+    @Deprecated
+    private final String baseSequenceName;
     private final KafkaDataSourceMetadata previousCheckpoint;
     private final KafkaDataSourceMetadata currentCheckpoint;
 
@@ -1225,8 +1226,9 @@ public class KafkaSupervisor implements Supervisor
         if (checkpoints == null) {
           try {
             futures.get(i).get(1, TimeUnit.NANOSECONDS);
-          } catch (Exception e) {
-            log.error(e,"Problem while getting checkpoints for task [%s], killing the task", taskId);
+          }
+          catch (Exception e) {
+            log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
             killTask(taskId);
             taskGroup.tasks.remove(taskId);
           }
@@ -1297,7 +1299,7 @@ public class KafkaSupervisor implements Supervisor
         // check consistency with taskGroup sequences
         if (taskCheckpoints.get(taskGroup.sequenceOffsets.firstKey()) == null
             || !(taskCheckpoints.get(taskGroup.sequenceOffsets.firstKey())
-                                                 .equals(taskGroup.sequenceOffsets.firstEntry().getValue()))
+                                .equals(taskGroup.sequenceOffsets.firstEntry().getValue()))
             || taskCheckpoints.tailMap(taskGroup.sequenceOffsets.firstKey()).size()
                != taskGroup.sequenceOffsets.size()) {
           log.debug(
@@ -1784,9 +1786,9 @@ public class KafkaSupervisor implements Supervisor
     // update the checkpoints in the taskGroup to latest ones so that new tasks do not read what is already published
     verifyAndMergeCheckpoints(
         taskGroups.values()
-              .stream()
-              .filter(taskGroup -> taskGroup.tasks.size() < ioConfig.getReplicas())
-              .collect(Collectors.toList())
+                  .stream()
+                  .filter(taskGroup -> taskGroup.tasks.size() < ioConfig.getReplicas())
+                  .collect(Collectors.toList())
     );
 
     // check that there is a current task group for each group of partitions in [partitionGroups]
@@ -1868,7 +1870,12 @@ public class KafkaSupervisor implements Supervisor
     {
     }).writeValueAsString(taskGroups.get(groupId).sequenceOffsets);
     final Map<String, Object> context = spec.getContext() == null
-                                        ? ImmutableMap.of("checkpoints", checkpoints, IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
+                                        ? ImmutableMap.of(
+        "checkpoints",
+        checkpoints,
+        IS_INCREMENTAL_HANDOFF_SUPPORTED,
+        true
+    )
                                         : ImmutableMap.<String, Object>builder()
                                             .put("checkpoints", checkpoints)
                                             .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
@@ -2118,7 +2125,8 @@ public class KafkaSupervisor implements Supervisor
       for (TaskGroup taskGroup : taskGroups.values()) {
         for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
           String taskId = entry.getKey();
-          @Nullable DateTime startTime = entry.getValue().startTime;
+          @Nullable
+          DateTime startTime = entry.getValue().startTime;
           Map<Integer, Long> currentOffsets = entry.getValue().currentOffsets;
           Long remainingSeconds = null;
           if (startTime != null) {
@@ -2145,7 +2153,8 @@ public class KafkaSupervisor implements Supervisor
         for (TaskGroup taskGroup : taskGroups) {
           for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
             String taskId = entry.getKey();
-            @Nullable DateTime startTime = entry.getValue().startTime;
+            @Nullable
+            DateTime startTime = entry.getValue().startTime;
             Map<Integer, Long> currentOffsets = entry.getValue().currentOffsets;
             Long remainingSeconds = null;
             if (taskGroup.completionTimeout != null) {
@@ -2314,7 +2323,8 @@ public class KafkaSupervisor implements Supervisor
    * @throws ExecutionException
    * @throws TimeoutException
    */
-  private Map<String, Map<String, Object>> getCurrentTotalStats() throws InterruptedException, ExecutionException, TimeoutException
+  private Map<String, Map<String, Object>> getCurrentTotalStats()
+      throws InterruptedException, ExecutionException, TimeoutException
   {
     Map<String, Map<String, Object>> allStats = Maps.newHashMap();
     final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
