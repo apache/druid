@@ -92,6 +92,9 @@
         <repoOrgId>org-apache-id</repoOrgId>
         <repoOrgName>org-apache-name</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/content/repositories/public/</repoOrgUrl>
+
+        <!-- Allow the handful of flaky tests with transient failures to pass. -->
+        <surefire.rerunFailingTestsCount>1</surefire.rerunFailingTestsCount>
     </properties>
 
     <modules>
