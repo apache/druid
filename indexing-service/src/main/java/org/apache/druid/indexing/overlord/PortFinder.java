@@ -21,9 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
-
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -73,25 +71,6 @@ public class PortFinder
       }
       usedPorts.add(port);
       return port;
-    }
-  }
-
-  public synchronized Pair<Integer, Integer> findTwoUnusedPorts()
-  {
-    if (candidatePorts != null && !candidatePorts.isEmpty()) {
-      int firstPort = chooseFromCandidates();
-      int secondPort = chooseFromCandidates();
-      usedPorts.add(firstPort);
-      usedPorts.add(secondPort);
-      return new Pair<>(firstPort, secondPort);
-    } else {
-      int firstPort = chooseNext(startPort);
-      while (!canBind(firstPort) || !canBind(firstPort + 1)) {
-        firstPort = chooseNext(firstPort + 1);
-      }
-      usedPorts.add(firstPort);
-      usedPorts.add(firstPort + 1);
-      return new Pair<>(firstPort, firstPort + 1);
     }
   }
 
