@@ -36,7 +36,7 @@ public class FullResponseHandler implements HttpResponseHandler<FullResponseHold
   }
 
   @Override
-  public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response)
+  public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     return ClientResponse.unfinished(
         new FullResponseHolder(
@@ -50,7 +50,8 @@ public class FullResponseHandler implements HttpResponseHandler<FullResponseHold
   @Override
   public ClientResponse<FullResponseHolder> handleChunk(
       ClientResponse<FullResponseHolder> response,
-      HttpChunk chunk
+      HttpChunk chunk,
+      long chunkNum
   )
   {
     final StringBuilder builder = response.getObj().getBuilder();

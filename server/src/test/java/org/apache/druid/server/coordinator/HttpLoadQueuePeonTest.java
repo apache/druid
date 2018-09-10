@@ -208,7 +208,7 @@ public class HttpLoadQueuePeonTest
     {
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       httpResponse.setContent(ChannelBuffers.buffer(0));
-      httpResponseHandler.handleResponse(httpResponse);
+      httpResponseHandler.handleResponse(httpResponse, null);
       try {
         List<DataSegmentChangeRequest> changeRequests = ServerTestHelper.MAPPER.readValue(
             request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>()
