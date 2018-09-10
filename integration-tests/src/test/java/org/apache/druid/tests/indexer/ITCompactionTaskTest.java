@@ -111,7 +111,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void checkCompactionFinished(int numExpectedSegments) throws Exception
+  private void checkCompactionFinished(int numExpectedSegments)
   {
     RetryUtil.retryUntilTrue(
         () -> {
@@ -123,7 +123,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     );
   }
 
-  private void checkCompactionIntervals(List<String> expectedIntervals) throws Exception
+  private void checkCompactionIntervals(List<String> expectedIntervals)
   {
     RetryUtil.retryUntilTrue(
         () -> {
