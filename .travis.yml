@@ -94,7 +94,7 @@ matrix:
         - docker
       env:
         - NAME="integration test part 1"
-        - DOCKER_IP=172.17.0.1
+        - DOCKER_IP=127.0.0.1
       install:
         # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
         - mvn install -q -ff -DskipTests -B
@@ -115,7 +115,7 @@ matrix:
         - docker
       env:
         - NAME="integration test part 2"
-        - DOCKER_IP=172.17.0.1
+        - DOCKER_IP=127.0.0.1
       install:
         # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
         - mvn install -q -ff -DskipTests -B
