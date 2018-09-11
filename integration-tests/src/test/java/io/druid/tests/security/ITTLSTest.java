@@ -42,6 +42,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.joda.time.Duration;
 import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -56,6 +57,8 @@ import java.nio.charset.StandardCharsets;
 public class ITTLSTest
 {
   private static final Logger LOG = new Logger(ITTLSTest.class);
+
+  private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
 
   @Inject
   IntegrationTestingConfig config;
@@ -294,6 +297,7 @@ public class ITTLSTest
 
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
+        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
         .withSslContext(certlessClientSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
@@ -328,6 +332,7 @@ public class ITTLSTest
 
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
+        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
         .withSslContext(certlessClientSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
@@ -362,6 +367,7 @@ public class ITTLSTest
 
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
+        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
         .withSslContext(wrongHostnameSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
@@ -396,6 +402,7 @@ public class ITTLSTest
 
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
+        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
         .withSslContext(expiredSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
@@ -430,6 +437,7 @@ public class ITTLSTest
 
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
+        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
         .withSslContext(wrongRootSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
@@ -464,6 +472,7 @@ public class ITTLSTest
 
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
+        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
         .withSslContext(wrongRootSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
@@ -498,6 +507,7 @@ public class ITTLSTest
 
     final HttpClientConfig.Builder builder = HttpClientConfig
         .builder()
+        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
         .withSslContext(wrongRootSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
