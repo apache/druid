@@ -96,7 +96,7 @@ public class SystemSchema extends AbstractSchema
       .add("version", ValueType.STRING)
       .add("partition_num", ValueType.STRING)
       .add("num_replicas", ValueType.LONG)
-      .add("num_rows", ValueType.STRING)
+      .add("num_rows", ValueType.LONG)
       .add("is_published", ValueType.LONG)
       .add("is_available", ValueType.LONG)
       .add("is_realtime", ValueType.LONG)
@@ -565,11 +565,11 @@ public class SystemSchema extends AbstractSchema
     private String description;
 
     @Override
-    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response)
+    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
     {
       status = response.getStatus().getCode();
       description = response.getStatus().getReasonPhrase();
-      return ClientResponse.unfinished(super.handleResponse(response).getObj());
+      return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
     }
   }
 }
