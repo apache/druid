@@ -274,7 +274,7 @@ public class SystemSchema extends AbstractSchema
       Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
           Iterables.concat(availableSegments, publishedSegments));
 
-      return Linq4j.asEnumerable(allSegments);
+      return Linq4j.asEnumerable(allSegments).where(t -> t != null);
 
     }
 

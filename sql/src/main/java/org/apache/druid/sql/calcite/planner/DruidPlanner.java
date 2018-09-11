@@ -321,7 +321,7 @@ public class DruidPlanner implements Closeable
             @Override
             public CloseableEnumerableIterator make()
             {
-              final Enumerable enumerable = theRel.bind(dataContext).where(t -> t != null);
+              final Enumerable enumerable = theRel.bind(dataContext);
               final Enumerator enumerator = enumerable.enumerator();
               return new CloseableEnumerableIterator(new Iterator<Object[]>()
               {
