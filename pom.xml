@@ -94,7 +94,7 @@
         <repoOrgUrl>https://repository.apache.org/content/repositories/public/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
-        <surefire.rerunFailingTestsCount>2</surefire.rerunFailingTestsCount>
+        <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
     </properties>
 
     <modules>
