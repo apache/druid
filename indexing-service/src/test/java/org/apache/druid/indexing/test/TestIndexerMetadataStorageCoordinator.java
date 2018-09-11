@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.SegmentLock;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -70,7 +71,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     return false;
   }
-  
+
   @Override
   public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
   {
@@ -82,7 +83,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     return ImmutableList.of();
   }
-  
+
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(
       String dataSource, List<Interval> intervals
@@ -129,7 +130,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       String previousSegmentId,
       Interval interval,
       String maxVersion,
-      boolean skipSegmentLineageCheck
+      boolean skipSegmentLineageCheck,
+      SegmentLock segmentLock
   )
   {
     throw new UnsupportedOperationException();

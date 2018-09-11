@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
+import org.apache.druid.indexing.overlord.SegmentLock;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -841,13 +842,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    final SegmentLock segmentLock = new SegmentLock() {};
     final SegmentIdentifier identifier = coordinator.allocatePendingSegment(
         dataSource,
         "seq",
         null,
         interval,
         "version",
-        false
+        false,
+        segmentLock
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
@@ -858,7 +861,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         identifier.toString(),
         interval,
         identifier.getVersion(),
-        false
+        false,
+        segmentLock
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
@@ -869,7 +873,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         identifier1.toString(),
         interval,
         identifier1.getVersion(),
-        false
+        false,
+        segmentLock
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
@@ -880,7 +885,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         identifier1.toString(),
         interval,
         identifier1.getVersion(),
-        false
+        false,
+        segmentLock
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier3.toString());
@@ -892,7 +898,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         interval,
         "version",
-        false
+        false,
+        segmentLock
     );
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_3", identifier4.toString());
@@ -904,6 +911,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     String prevSegmentId = null;
+    final SegmentLock segmentLock = new SegmentLock() {};
 
     final DateTime begin = DateTimes.nowUtc();
 
@@ -914,7 +922,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           prevSegmentId,
           interval,
           "version",
-          false
+          false,
+          segmentLock
       );
       prevSegmentId = identifier.toString();
     }
@@ -928,7 +937,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           prevSegmentId,
           interval,
           "version",
-          false
+          false,
+          segmentLock
       );
       prevSegmentId = identifier.toString();
     }
