@@ -29,7 +29,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 public class BytesFullResponseHandler implements HttpResponseHandler<FullResponseHolder, FullResponseHolder>
 {
   @Override
-  public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response)
+  public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     BytesFullResponseHolder holder = new BytesFullResponseHolder(
         response.getStatus(),
@@ -47,7 +47,8 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
   @Override
   public ClientResponse<FullResponseHolder> handleChunk(
       ClientResponse<FullResponseHolder> response,
-      HttpChunk chunk
+      HttpChunk chunk,
+      long chunkNum
   )
   {
     BytesFullResponseHolder holder = (BytesFullResponseHolder) response.getObj();

@@ -33,12 +33,15 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.inject.Inject;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -70,7 +73,6 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
-import org.apache.commons.codec.binary.Base64;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -97,6 +99,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final CachePopulator cachePopulator;
   private final CacheConfig cacheConfig;
+  private final DruidHttpClientConfig httpClientConfig;
 
   @Inject
   public CachingClusteredClient(
@@ -105,7 +108,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Cache cache,
       @Smile ObjectMapper objectMapper,
       CachePopulator cachePopulator,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      @Client DruidHttpClientConfig httpClientConfig
   )
   {
     this.warehouse = warehouse;
@@ -114,6 +118,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.objectMapper = objectMapper;
     this.cachePopulator = cachePopulator;
     this.cacheConfig = cacheConfig;
+    this.httpClientConfig = httpClientConfig;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -543,13 +548,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
         final MultipleSpecificSegmentSpec segmentsOfServerSpec = new MultipleSpecificSegmentSpec(segmentsOfServer);
 
-        Sequence<T> serverResults;
+        // Divide user-provided maxQueuedBytes by the number of servers, and limit each server to that much.
+        final long maxQueuedBytes = QueryContexts.getMaxQueuedBytes(query, httpClientConfig.getMaxQueuedBytes());
+        final long maxQueuedBytesPerServer = maxQueuedBytes / segmentsByServer.size();
+        final Sequence<T> serverResults;
+
         if (isBySegment) {
-          serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec);
+          serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec, maxQueuedBytesPerServer);
         } else if (!server.segmentReplicatable() || !populateCache) {
-          serverResults = getSimpleServerResults(serverRunner, segmentsOfServerSpec);
+          serverResults = getSimpleServerResults(serverRunner, segmentsOfServerSpec, maxQueuedBytesPerServer);
         } else {
-          serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
+          serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec, maxQueuedBytesPerServer);
         }
         listOfSequences.add(serverResults);
       });
@@ -558,11 +567,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
     @SuppressWarnings("unchecked")
     private Sequence<T> getBySegmentServerResults(
         final QueryRunner serverRunner,
-        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec,
+        long maxQueuedBytesPerServer
     )
     {
       Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner
-          .run(queryPlus.withQuerySegmentSpec(segmentsOfServerSpec), responseContext);
+          .run(
+              queryPlus.withQuerySegmentSpec(segmentsOfServerSpec).withMaxQueuedBytes(maxQueuedBytesPerServer),
+              responseContext
+          );
       // bySegment results need to be de-serialized, see DirectDruidClient.run()
       return (Sequence<T>) resultsBySegments
           .map(result -> result.map(
@@ -575,22 +588,28 @@ public class CachingClusteredClient implements QuerySegmentWalker
     @SuppressWarnings("unchecked")
     private Sequence<T> getSimpleServerResults(
         final QueryRunner serverRunner,
-        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec,
+        long maxQueuedBytesPerServer
     )
     {
-      return serverRunner.run(queryPlus.withQuerySegmentSpec(segmentsOfServerSpec), responseContext);
+      return serverRunner.run(
+          queryPlus.withQuerySegmentSpec(segmentsOfServerSpec).withMaxQueuedBytes(maxQueuedBytesPerServer),
+          responseContext
+      );
     }
 
     private Sequence<T> getAndCacheServerResults(
         final QueryRunner serverRunner,
-        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec,
+        long maxQueuedBytesPerServer
     )
     {
       @SuppressWarnings("unchecked")
       final Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner.run(
           queryPlus
               .withQuery((Query<Result<BySegmentResultValueClass<T>>>) downstreamQuery)
-              .withQuerySegmentSpec(segmentsOfServerSpec),
+              .withQuerySegmentSpec(segmentsOfServerSpec)
+              .withMaxQueuedBytes(maxQueuedBytesPerServer),
           responseContext
       );
       final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache();
