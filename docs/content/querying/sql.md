@@ -542,7 +542,7 @@ Segments table provides details on all Druid segments, whether they are publishe
 |version|Version number (generally an ISO8601 timestamp corresponding to when the segment set was first started)|
 |partition_num|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
 |num_replicas|Number replicas of this segment currently being served|
-|num_rows|Number rows in current segment|
+|num_rows|Number of rows in current segment, this value could be null if unkown to broker at query time|
 |is_published|True if this segment has been published to the metadata store|
 |is_available|True if this segment is currently being served by any server|
 |is_realtime|True if this segment is being served on a realtime server|

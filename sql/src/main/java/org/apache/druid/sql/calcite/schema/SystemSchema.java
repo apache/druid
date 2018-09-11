@@ -96,7 +96,7 @@ public class SystemSchema extends AbstractSchema
       .add("version", ValueType.STRING)
       .add("partition_num", ValueType.STRING)
       .add("num_replicas", ValueType.LONG)
-      .add("num_rows", ValueType.LONG)
+      .add("num_rows", ValueType.STRING)
       .add("is_published", ValueType.LONG)
       .add("is_available", ValueType.LONG)
       .add("is_realtime", ValueType.LONG)
@@ -154,7 +154,7 @@ public class SystemSchema extends AbstractSchema
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper),
         SERVERS_TABLE, new ServersTable(serverView),
         SEGMENT_SERVERS_TABLE, new ServerSegmentsTable(serverView),
-        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper)
+        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, new BytesAccumulatingResponseHandler())
     );
   }
 
@@ -411,14 +411,17 @@ public class SystemSchema extends AbstractSchema
   {
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
+    private final BytesAccumulatingResponseHandler responseHandler;
 
     public TasksTable(
         DruidLeaderClient druidLeaderClient,
-        ObjectMapper jsonMapper
+        ObjectMapper jsonMapper,
+        BytesAccumulatingResponseHandler responseHandler
     )
     {
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
+      this.responseHandler = responseHandler;
     }
 
     @Override
@@ -503,13 +506,14 @@ public class SystemSchema extends AbstractSchema
         }
       }
 
-      return new TasksEnumerable(getTasks(druidLeaderClient, jsonMapper));
+      return new TasksEnumerable(getTasks(druidLeaderClient, jsonMapper, responseHandler));
     }
 
     //Note that overlord must be up to get tasks
-    private JsonParserIterator<TaskStatusPlus> getTasks(
+    protected JsonParserIterator<TaskStatusPlus> getTasks(
         DruidLeaderClient indexingServiceClient,
-        ObjectMapper jsonMapper
+        ObjectMapper jsonMapper,
+        BytesAccumulatingResponseHandler responseHandler
     )
     {
 
@@ -523,7 +527,6 @@ public class SystemSchema extends AbstractSchema
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-      BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = indexingServiceClient.goStream(
           request,
           responseHandler
@@ -558,7 +561,7 @@ public class SystemSchema extends AbstractSchema
 
   static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
   {
-    private int status;
+    protected int status;
     private String description;
 
     @Override

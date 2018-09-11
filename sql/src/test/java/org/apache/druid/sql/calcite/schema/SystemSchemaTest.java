@@ -39,6 +39,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.QueryableDruidServer;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -55,7 +56,15 @@ import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.ReflectionQueryToolChestWarehouse;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -67,6 +76,7 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -79,6 +89,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -87,6 +99,18 @@ import java.util.Map;
 public class SystemSchemaTest extends CalciteTestBase
 {
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
+
+  private static final List<InputRow> ROWS1 = ImmutableList.of(
+      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
+      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "dim1", "10.1")),
+      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "dim1", "2"))
+  );
+
+  private static final List<InputRow> ROWS2 = ImmutableList.of(
+      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "dim2", ImmutableList.of("a"))),
+      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "dim2", ImmutableList.of("abc"))),
+      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0"))
+  );
 
   private SystemSchema schema;
   private SpecificSegmentsQuerySegmentWalker walker;
@@ -118,7 +142,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Before
-  public void setUp() throws InterruptedException
+  public void setUp() throws Exception
   {
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     client = EasyMock.createMock(DruidLeaderClient.class);
@@ -126,6 +150,62 @@ public class SystemSchemaTest extends CalciteTestBase
     responseHolder = EasyMock.createMock(FullResponseHolder.class);
     responseHandler = EasyMock.createMock(SystemSchema.BytesAccumulatingResponseHandler.class);
     request = EasyMock.createMock(Request.class);
+
+    final File tmpDir = temporaryFolder.newFolder();
+    final QueryableIndex index1 = IndexBuilder.create()
+                                              .tmpDir(new File(tmpDir, "1"))
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                                              .schema(
+                                                  new IncrementalIndexSchema.Builder()
+                                                      .withMetrics(
+                                                          new CountAggregatorFactory("cnt"),
+                                                          new DoubleSumAggregatorFactory("m1", "m1"),
+                                                          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+                                                      )
+                                                      .withRollup(false)
+                                                      .build()
+                                              )
+                                              .rows(ROWS1)
+                                              .buildMMappedIndex();
+
+    final QueryableIndex index2 = IndexBuilder.create()
+                                              .tmpDir(new File(tmpDir, "2"))
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                                              .schema(
+                                                  new IncrementalIndexSchema.Builder()
+                                                      .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
+                                                      .withRollup(false)
+                                                      .build()
+                                              )
+                                              .rows(ROWS2)
+                                              .buildMMappedIndex();
+
+    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.DATASOURCE1)
+                   .interval(Intervals.of("2000/P1Y"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        index1
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.DATASOURCE1)
+                   .interval(Intervals.of("2001/P1Y"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        index2
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.DATASOURCE2)
+                   .interval(index2.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        index2
+    );
+
     DruidSchema druidShema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments()),
@@ -298,13 +378,25 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   @Test
-  @Ignore
   public void testGetTableMap()
   {
     Assert.assertEquals(ImmutableSet.of("segments", "servers", "segment_servers", "tasks"), schema.getTableNames());
 
     final Map<String, Table> tableMap = schema.getTableMap();
     Assert.assertEquals(ImmutableSet.of("segments", "servers", "segment_servers", "tasks"), tableMap.keySet());
+    final SystemSchema.SegmentsTable segmentsTable = (SystemSchema.SegmentsTable) schema.getTableMap().get("segments");
+    final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
+    final List<RelDataTypeField> fields = rowType.getFieldList();
+
+    Assert.assertEquals(13, fields.size());
+
+    final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
+    final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
+    final List<RelDataTypeField> sysFields = sysRowType.getFieldList();
+    Assert.assertEquals(10, sysFields.size());
+
+    Assert.assertEquals("task_id", sysFields.get(0).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, sysFields.get(0).getType().getSqlTypeName());
   }
 
   @Test
@@ -321,12 +413,14 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(12, fields.size());
+    Assert.assertEquals(13, fields.size());
 
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/datasources?full"))
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments"))
             .andReturn(request)
             .once();
-    EasyMock.expect(client.go(request)).andReturn(responseHolder).once();
+    //EasyMock.expect(client.go(request)).andReturn(responseHolder).once();
+    ListenableFuture<InputStream> future = EasyMock.createMock(ListenableFuture.class);
+    EasyMock.expect(client.goStream(request, responseHandler)).andReturn(future).once();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).once();
     String jsonValue = mapper.writeValueAsString(ImmutableList.of(dataSource1, dataSource2, dataSource3));
     EasyMock.expect(responseHolder.getContent()).andReturn(jsonValue).once();
@@ -387,7 +481,6 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  @Ignore
   public void testServersTable()
   {
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
@@ -442,22 +535,19 @@ public class SystemSchemaTest extends CalciteTestBase
   @Ignore
   public void testTasksTable() throws Exception
   {
-    final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
-    final RelDataType rowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
-    final List<RelDataTypeField> fields = rowType.getFieldList();
-    Assert.assertEquals(10, fields.size());
 
-    Assert.assertEquals("task_id", fields.get(0).getName());
-    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(0).getType().getSqlTypeName());
+    SystemSchema.TasksTable tasksTable = EasyMock.createMockBuilder(SystemSchema.TasksTable.class).withConstructor(client, mapper, responseHandler).createMock();
+
+    EasyMock.replay(tasksTable);
 
     EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks")).andReturn(request).anyTimes();
     ListenableFuture<InputStream> future = EasyMock.createMock(ListenableFuture.class);
-    EasyMock.replay(responseHandler);
-    //EasyMock.expect(responseHandler).andReturn(responseHandler).once();
     EasyMock.expect(client.goStream(request, responseHandler)).andReturn(future);
-    //EasyMock.expect(responseHandler.status).andReturn(HttpResponseStatus.OK).once();
-    //String jsonValue = mapper.writeValueAsString(ImmutableList.of(task1, task2, task3));
-    //EasyMock.expect(responseHolder.getContent()).andReturn(jsonValue).once();
+    EasyMock.expect(responseHandler.status).andReturn(HttpServletResponse.SC_OK).once();
+
+    String jsonValue = mapper.writeValueAsString(ImmutableList.of(task1, task2, task3));
+
+    EasyMock.expect(responseHolder.getContent()).andReturn(jsonValue).once();
     EasyMock.replay(client, request, responseHolder, responseHandler);
     DataContext dataContext = new DataContext()
     {
