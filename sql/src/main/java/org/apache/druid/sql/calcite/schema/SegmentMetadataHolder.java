@@ -29,7 +29,7 @@ public class SegmentMetadataHolder
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-  private int numReplicas;
+  private long numReplicas;
   @Nullable
   private Long numRows;
 
@@ -39,7 +39,7 @@ public class SegmentMetadataHolder
       long isPublished,
       long isAvailable,
       long isRealtime,
-      int numReplicas,
+      long numReplicas,
       @Nullable Long numRows
   )
   {
@@ -73,7 +73,7 @@ public class SegmentMetadataHolder
     }
   }
 
-  public int getNumReplicas()
+  public long getNumReplicas()
   {
     synchronized (lock) {
       return numReplicas;
@@ -81,7 +81,7 @@ public class SegmentMetadataHolder
   }
 
   @Nullable
-  public long getNumRows()
+  public Long getNumRows()
   {
     synchronized (lock) {
       return numRows;
@@ -104,7 +104,7 @@ public class SegmentMetadataHolder
     }
   }
 
-  public void setNumRows(long rows)
+  public void setNumRows(Long rows)
   {
     synchronized (lock) {
       this.numRows = rows;
@@ -113,7 +113,7 @@ public class SegmentMetadataHolder
   }
 
 
-  public void setNumReplicas(int replicas)
+  public void setNumReplicas(long replicas)
   {
     synchronized (lock) {
       this.numReplicas = replicas;
