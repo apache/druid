@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Client;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.guice.http.LifecycleUtils;
 import org.apache.druid.https.SSLClientConfig;
 import org.apache.druid.java.util.common.ISE;
@@ -50,6 +51,7 @@ import org.testng.annotations.Test;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
@@ -59,6 +61,8 @@ public class ITTLSTest
   private static final Logger LOG = new Logger(ITTLSTest.class);
 
   private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
+
+  private static final int MAX_BROKEN_PIPE_RETRIES = 30;
 
   @Inject
   IntegrationTestingConfig config;
@@ -72,6 +76,10 @@ public class ITTLSTest
   @Inject
   @Client
   HttpClient httpClient;
+
+  @Inject
+  @Client
+  DruidHttpClientConfig httpClientConfig;
 
   StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
 
@@ -113,7 +121,10 @@ public class ITTLSTest
   public void testTLSNodeAccessWithIntermediate()
   {
     LOG.info("---------Testing TLS resource access with 3-part cert chain---------");
-    HttpClient intermediateCertClient = makeIntermediateCertClient();
+    HttpClient intermediateCertClient = makeCustomHttpClient(
+        "client_tls/intermediate_ca_client.jks",
+        "intermediate_ca_client"
+    );
     makeRequest(intermediateCertClient, HttpMethod.GET, config.getCoordinatorTLSUrl() + "/status", null);
     makeRequest(intermediateCertClient, HttpMethod.GET, config.getIndexerTLSUrl() + "/status", null);
     makeRequest(intermediateCertClient, HttpMethod.GET, config.getBrokerTLSUrl() + "/status", null);
@@ -141,7 +152,10 @@ public class ITTLSTest
   public void checkAccessWithWrongHostname()
   {
     LOG.info("---------Testing TLS resource access when client certificate has non-matching hostnames---------");
-    HttpClient wrongHostnameClient = makeWrongHostnameClient();
+    HttpClient wrongHostnameClient = makeCustomHttpClient(
+        "client_tls/invalid_hostname_client.jks",
+        "invalid_hostname_client"
+    );
     checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
     checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getIndexerTLSUrl());
     checkFailedAccessWrongHostname(wrongHostnameClient, HttpMethod.GET, config.getBrokerTLSUrl());
@@ -155,7 +169,10 @@ public class ITTLSTest
   public void checkAccessWithWrongRoot()
   {
     LOG.info("---------Testing TLS resource access when client certificate is signed by a non-trusted root CA---------");
-    HttpClient wrongRootClient = makeWrongRootClient();
+    HttpClient wrongRootClient = makeCustomHttpClient(
+        "client_tls/client_another_root.jks",
+        "druid_another_root"
+    );
     checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
     checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getIndexerTLSUrl());
     checkFailedAccessWrongRoot(wrongRootClient, HttpMethod.GET, config.getBrokerTLSUrl());
@@ -169,7 +186,10 @@ public class ITTLSTest
   public void checkAccessWithRevokedCert()
   {
     LOG.info("---------Testing TLS resource access when client certificate has been revoked---------");
-    HttpClient revokedClient = makeRevokedClient();
+    HttpClient revokedClient = makeCustomHttpClient(
+        "client_tls/revoked_client.jks",
+        "revoked_druid"
+    );
     checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
     checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getIndexerTLSUrl());
     checkFailedAccessRevoked(revokedClient, HttpMethod.GET, config.getBrokerTLSUrl());
@@ -183,7 +203,10 @@ public class ITTLSTest
   public void checkAccessWithExpiredCert()
   {
     LOG.info("---------Testing TLS resource access when client certificate has expired---------");
-    HttpClient expiredClient = makeExpiredClient();
+    HttpClient expiredClient = makeCustomHttpClient(
+        "client_tls/expired_client.jks",
+        "expired_client"
+    );
     checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
     checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getIndexerTLSUrl());
     checkFailedAccessExpired(expiredClient, HttpMethod.GET, config.getBrokerTLSUrl());
@@ -196,8 +219,12 @@ public class ITTLSTest
   @Test
   public void checkAccessWithNotCASignedCert()
   {
-    LOG.info("---------Testing TLS resource access when client certificate is signed by a non-CA intermediate cert---------");
-    HttpClient notCAClient = makeNotCAClient();
+    LOG.info(
+        "---------Testing TLS resource access when client certificate is signed by a non-CA intermediate cert---------");
+    HttpClient notCAClient = makeCustomHttpClient(
+        "client_tls/invalid_ca_client.jks",
+        "invalid_ca_client"
+    );
     checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getCoordinatorTLSUrl());
     checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getIndexerTLSUrl());
     checkFailedAccessNotCA(notCAClient, HttpMethod.GET, config.getBrokerTLSUrl());
@@ -279,26 +306,38 @@ public class ITTLSTest
     );
   }
 
-  private HttpClient makeIntermediateCertClient()
+  private HttpClientConfig.Builder getHttpClientConfigBuilder(SSLContext sslContext)
   {
-    SSLContext certlessClientSSLContext = TLSUtils.createSSLContext(
+    return HttpClientConfig
+        .builder()
+        .withNumConnections(httpClientConfig.getNumConnections())
+        .withReadTimeout(httpClientConfig.getReadTimeout())
+        .withWorkerCount(httpClientConfig.getNumMaxThreads())
+        .withCompressionCodec(
+            HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(httpClientConfig.getCompressionCodec()))
+        )
+        .withUnusedConnectionTimeoutDuration(httpClientConfig.getUnusedConnectionTimeout())
+        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
+        .withSslContext(sslContext);
+  }
+
+  private HttpClient makeCustomHttpClient(String keystorePath, String certAlias)
+  {
+    SSLContext intermediateClientSSLContext = TLSUtils.createSSLContext(
         sslClientConfig.getProtocol(),
         sslClientConfig.getTrustStoreType(),
         sslClientConfig.getTrustStorePath(),
         sslClientConfig.getTrustStoreAlgorithm(),
         sslClientConfig.getTrustStorePasswordProvider(),
         sslClientConfig.getKeyStoreType(),
-        "client_tls/intermediate_ca_client.jks",
+        keystorePath,
         sslClientConfig.getKeyManagerFactoryAlgorithm(),
-        "intermediate_ca_client",
+        certAlias,
         sslClientConfig.getKeyStorePasswordProvider(),
         sslClientConfig.getKeyManagerPasswordProvider()
     );
 
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
-        .withSslContext(certlessClientSSLContext);
+    final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(intermediateClientSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
 
@@ -330,10 +369,7 @@ public class ITTLSTest
         null
     );
 
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
-        .withSslContext(certlessClientSSLContext);
+    final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(certlessClientSSLContext);
 
     final Lifecycle lifecycle = new Lifecycle();
 
@@ -349,204 +385,50 @@ public class ITTLSTest
     return adminClient;
   }
 
-  private HttpClient makeWrongHostnameClient()
+  private void checkFailedAccess(
+      HttpClient httpClient,
+      HttpMethod method,
+      String url,
+      String clientDesc,
+      Class expectedException,
+      String expectedExceptionMsg
+  )
   {
-    SSLContext wrongHostnameSSLContext = TLSUtils.createSSLContext(
-        sslClientConfig.getProtocol(),
-        sslClientConfig.getTrustStoreType(),
-        sslClientConfig.getTrustStorePath(),
-        sslClientConfig.getTrustStoreAlgorithm(),
-        sslClientConfig.getTrustStorePasswordProvider(),
-        sslClientConfig.getKeyStoreType(),
-        "client_tls/invalid_hostname_client.jks",
-        sslClientConfig.getKeyManagerFactoryAlgorithm(),
-        "invalid_hostname_client",
-        sslClientConfig.getKeyStorePasswordProvider(),
-        sslClientConfig.getKeyManagerPasswordProvider()
-    );
+    int retries = 0;
+    while (true) {
+      try {
+        makeRequest(httpClient, method, url, null, -1);
+      }
+      catch (RuntimeException re) {
+        Throwable rootCause = Throwables.getRootCause(re);
 
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
-        .withSslContext(wrongHostnameSSLContext);
+        if (rootCause instanceof IOException && "Broken pipe".equals(rootCause.getMessage())) {
+          if (retries > MAX_BROKEN_PIPE_RETRIES) {
+            Assert.fail(StringUtils.format(
+                "Broken pipe retries exhausted, test failed, did not get %s.",
+                expectedException
+            ));
+          } else {
+            retries += 1;
+            continue;
+          }
+        }
 
-    final Lifecycle lifecycle = new Lifecycle();
+        Assert.assertTrue(
+            expectedException.isInstance(rootCause),
+            StringUtils.format("Expected %s but found %s instead.", expectedException, rootCause)
+        );
 
-    HttpClient client = HttpClientInit.createClient(
-        builder.build(),
-        LifecycleUtils.asMmxLifecycle(lifecycle)
-    );
+        Assert.assertEquals(
+            rootCause.getMessage(),
+            expectedExceptionMsg
+        );
 
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        client
-    );
-    return adminClient;
-  }
-
-  private HttpClient makeExpiredClient()
-  {
-    SSLContext expiredSSLContext = TLSUtils.createSSLContext(
-        sslClientConfig.getProtocol(),
-        sslClientConfig.getTrustStoreType(),
-        sslClientConfig.getTrustStorePath(),
-        sslClientConfig.getTrustStoreAlgorithm(),
-        sslClientConfig.getTrustStorePasswordProvider(),
-        sslClientConfig.getKeyStoreType(),
-        "client_tls/expired_client.jks",
-        sslClientConfig.getKeyManagerFactoryAlgorithm(),
-        "expired_client",
-        sslClientConfig.getKeyStorePasswordProvider(),
-        sslClientConfig.getKeyManagerPasswordProvider()
-    );
-
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
-        .withSslContext(expiredSSLContext);
-
-    final Lifecycle lifecycle = new Lifecycle();
-
-    HttpClient client = HttpClientInit.createClient(
-        builder.build(),
-        LifecycleUtils.asMmxLifecycle(lifecycle)
-    );
-
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        client
-    );
-    return adminClient;
-  }
-
-  private HttpClient makeWrongRootClient()
-  {
-    SSLContext wrongRootSSLContext = TLSUtils.createSSLContext(
-        sslClientConfig.getProtocol(),
-        sslClientConfig.getTrustStoreType(),
-        sslClientConfig.getTrustStorePath(),
-        sslClientConfig.getTrustStoreAlgorithm(),
-        sslClientConfig.getTrustStorePasswordProvider(),
-        sslClientConfig.getKeyStoreType(),
-        "client_tls/client_another_root.jks",
-        sslClientConfig.getKeyManagerFactoryAlgorithm(),
-        "druid_another_root",
-        sslClientConfig.getKeyStorePasswordProvider(),
-        sslClientConfig.getKeyManagerPasswordProvider()
-    );
-
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
-        .withSslContext(wrongRootSSLContext);
-
-    final Lifecycle lifecycle = new Lifecycle();
-
-    HttpClient client = HttpClientInit.createClient(
-        builder.build(),
-        LifecycleUtils.asMmxLifecycle(lifecycle)
-    );
-
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        client
-    );
-    return adminClient;
-  }
-
-  private HttpClient makeRevokedClient()
-  {
-    SSLContext wrongRootSSLContext = TLSUtils.createSSLContext(
-        sslClientConfig.getProtocol(),
-        sslClientConfig.getTrustStoreType(),
-        sslClientConfig.getTrustStorePath(),
-        sslClientConfig.getTrustStoreAlgorithm(),
-        sslClientConfig.getTrustStorePasswordProvider(),
-        sslClientConfig.getKeyStoreType(),
-        "client_tls/revoked_client.jks",
-        sslClientConfig.getKeyManagerFactoryAlgorithm(),
-        "revoked_druid",
-        sslClientConfig.getKeyStorePasswordProvider(),
-        sslClientConfig.getKeyManagerPasswordProvider()
-    );
-
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
-        .withSslContext(wrongRootSSLContext);
-
-    final Lifecycle lifecycle = new Lifecycle();
-
-    HttpClient client = HttpClientInit.createClient(
-        builder.build(),
-        LifecycleUtils.asMmxLifecycle(lifecycle)
-    );
-
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        client
-    );
-    return adminClient;
-  }
-
-  private HttpClient makeNotCAClient()
-  {
-    SSLContext wrongRootSSLContext = TLSUtils.createSSLContext(
-        sslClientConfig.getProtocol(),
-        sslClientConfig.getTrustStoreType(),
-        sslClientConfig.getTrustStorePath(),
-        sslClientConfig.getTrustStoreAlgorithm(),
-        sslClientConfig.getTrustStorePasswordProvider(),
-        sslClientConfig.getKeyStoreType(),
-        "client_tls/invalid_ca_client.jks",
-        sslClientConfig.getKeyManagerFactoryAlgorithm(),
-        "invalid_ca_client",
-        sslClientConfig.getKeyStorePasswordProvider(),
-        sslClientConfig.getKeyManagerPasswordProvider()
-    );
-
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
-        .withSslContext(wrongRootSSLContext);
-
-    final Lifecycle lifecycle = new Lifecycle();
-
-    HttpClient client = HttpClientInit.createClient(
-        builder.build(),
-        LifecycleUtils.asMmxLifecycle(lifecycle)
-    );
-
-    HttpClient adminClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
-        client
-    );
-    return adminClient;
-  }
-
-  private void checkFailedAccess(HttpClient httpClient, HttpMethod method, String url, String clientDesc, Class expectedException, String expectedExceptionMsg)
-  {
-    try {
-      makeRequest(httpClient, method, url, null, -1);
+        LOG.info("%s client [%s] request failed as expected when accessing [%s]", clientDesc, method, url);
+        return;
+      }
+      Assert.fail(StringUtils.format("Test failed, did not get %s.", expectedException));
     }
-    catch (RuntimeException re) {
-
-      Throwable rootCause = Throwables.getRootCause(re);
-
-      Assert.assertTrue(
-          expectedException.isInstance(rootCause),
-          StringUtils.format("Expected %s but found %s instead.", expectedException, rootCause)
-      );
-
-      Assert.assertEquals(
-          rootCause.getMessage(),
-          expectedExceptionMsg
-      );
-
-      LOG.info("%s client [%s] request failed as expected when accessing [%s]", clientDesc, method, url);
-      return;
-    }
-    Assert.fail(StringUtils.format("Test failed, did not get %s.", expectedException));
   }
 
   private StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)
@@ -554,7 +436,13 @@ public class ITTLSTest
     return makeRequest(httpClient, method, url, content, 4);
   }
 
-  private StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content, int maxRetries)
+  private StatusResponseHolder makeRequest(
+      HttpClient httpClient,
+      HttpMethod method,
+      String url,
+      byte[] content,
+      int maxRetries
+  )
   {
     try {
       Request request = new Request(method, new URL(url));
