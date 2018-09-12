@@ -19,10 +19,10 @@
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import io.druid.emitter.statsd.DimensionConverter;
-import io.druid.emitter.statsd.StatsDMetric;
-import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.emitter.statsd.DimensionConverter;
+import org.apache.druid.emitter.statsd.StatsDMetric;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

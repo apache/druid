@@ -26,7 +26,7 @@
     <description>druid-integration-tests</description>
 
     <parent>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
         <version>0.13.0-SNAPSHOT</version>
     </parent>
@@ -37,22 +37,22 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-common</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-s3-extensions</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-datasketches</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-kafka-eight</artifactId>
             <version>${project.parent.version}</version>
             <exclusions>
@@ -63,17 +63,17 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-histogram</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>mysql-metadata-storage</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-kafka-indexing-service</artifactId>
             <version>${project.parent.version}</version>
             <exclusions>
@@ -84,17 +84,17 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-basic-security</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>

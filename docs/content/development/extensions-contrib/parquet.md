@@ -10,7 +10,7 @@ This extension enables Druid to ingest and understand the Apache Parquet data fo
 
 ## Parquet Hadoop Parser
 
-This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of `inputSpec` in `ioConfig` must be set to `"io.druid.data.input.parquet.DruidParquetInputFormat"`.
+This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.parquet.DruidParquetInputFormat"`.
 
 |Field     | Type        | Description                                                                            | Required|
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
@@ -18,7 +18,7 @@ This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of `in
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
 | binaryAsString | Boolean | Specifies if the bytes parquet column should be converted to strings. | no(default == false) |
 
-When the time dimension is a [DateType column](https://github.com/Parquet/parquet-format/blob/master/LogicalTypes.md), a format should not be supplied. When the format is UTF8 (String), either `auto` or a explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) is required.
+When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md), a format should not be supplied. When the format is UTF8 (String), either `auto` or a explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) is required.
 
 ### Example json for overlord
 
@@ -32,7 +32,7 @@ When posting the index job to the overlord, setting the correct `inputFormat` is
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetInputFormat",
         "paths": "no_metrics"
       }
     },
@@ -86,7 +86,7 @@ HADOOP_CLASS_PATH=`hadoop classpath | sed s/*.jar/*/g`
 
 java -Xmx32m -Duser.timezone=UTC -Dfile.encoding=UTF-8 \
   -classpath config/overlord:config/_common:lib/*:$HADOOP_CLASS_PATH:extensions/druid-avro-extensions/*  \
-  io.druid.cli.Main index hadoop \
+  org.apache.druid.cli.Main index hadoop \
   wikipedia_hadoop_parquet_job.json
 ```
 
@@ -100,7 +100,7 @@ An example index json when using the standalone JVM:
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetInputFormat",
         "paths": "no_metrics"
       },
       "metadataUpdateSpec": {
