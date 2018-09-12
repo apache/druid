@@ -125,6 +125,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     for (File dir : FIREHOSE_TMP_DIRS) {
       FileUtils.forceDelete(dir);
     }
+    FIREHOSE_TMP_DIRS.clear(); // cleanup after ourselves (resolve issue with retries)
   }
 
   private static void assertResult(List<Row> rows)
