@@ -385,15 +385,7 @@ public class SupervisorResource
                            .build();
           }
 
-          if (!(spec.get() instanceof SuspendableSupervisorSpec)) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] is not suspendable", id)))
-                           .build();
-          }
-
-          SuspendableSupervisorSpec suspendableSupervisorSpec = (SuspendableSupervisorSpec) spec.get();
-
-          if (suspendableSupervisorSpec.isSuspended() == suspend) {
+          if (spec.get().isSuspended() == suspend) {
             final String errMsg =
                 StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running");
             return Response.status(Response.Status.BAD_REQUEST)

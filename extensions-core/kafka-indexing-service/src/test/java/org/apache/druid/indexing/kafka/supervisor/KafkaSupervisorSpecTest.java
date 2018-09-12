@@ -132,7 +132,6 @@ public class KafkaSupervisorSpecTest
     Assert.assertFalse(spec.isSuspended());
     String serialized = mapper.writeValueAsString(spec);
 
-    System.out.println(serialized);
     // expect default values populated in reserialized string
     Assert.assertTrue(serialized.contains("\"tuningConfig\":{"));
     Assert.assertTrue(serialized.contains("\"indexSpec\":{"));
@@ -143,5 +142,93 @@ public class KafkaSupervisorSpecTest
     String stable = mapper.writeValueAsString(spec2);
 
     Assert.assertEquals(serialized, stable);
+  }
+
+  @Test
+  public void testSuspendResume() throws IOException
+  {
+    String json = "{\n"
+                  + "  \"type\": \"kafka\",\n"
+                  + "  \"dataSchema\": {\n"
+                  + "    \"dataSource\": \"metrics-kafka\",\n"
+                  + "    \"parser\": {\n"
+                  + "      \"type\": \"string\",\n"
+                  + "      \"parseSpec\": {\n"
+                  + "        \"format\": \"json\",\n"
+                  + "        \"timestampSpec\": {\n"
+                  + "          \"column\": \"timestamp\",\n"
+                  + "          \"format\": \"auto\"\n"
+                  + "        },\n"
+                  + "        \"dimensionsSpec\": {\n"
+                  + "          \"dimensions\": [],\n"
+                  + "          \"dimensionExclusions\": [\n"
+                  + "            \"timestamp\",\n"
+                  + "            \"value\"\n"
+                  + "          ]\n"
+                  + "        }\n"
+                  + "      }\n"
+                  + "    },\n"
+                  + "    \"metricsSpec\": [\n"
+                  + "      {\n"
+                  + "        \"name\": \"count\",\n"
+                  + "        \"type\": \"count\"\n"
+                  + "      },\n"
+                  + "      {\n"
+                  + "        \"name\": \"value_sum\",\n"
+                  + "        \"fieldName\": \"value\",\n"
+                  + "        \"type\": \"doubleSum\"\n"
+                  + "      },\n"
+                  + "      {\n"
+                  + "        \"name\": \"value_min\",\n"
+                  + "        \"fieldName\": \"value\",\n"
+                  + "        \"type\": \"doubleMin\"\n"
+                  + "      },\n"
+                  + "      {\n"
+                  + "        \"name\": \"value_max\",\n"
+                  + "        \"fieldName\": \"value\",\n"
+                  + "        \"type\": \"doubleMax\"\n"
+                  + "      }\n"
+                  + "    ],\n"
+                  + "    \"granularitySpec\": {\n"
+                  + "      \"type\": \"uniform\",\n"
+                  + "      \"segmentGranularity\": \"HOUR\",\n"
+                  + "      \"queryGranularity\": \"NONE\"\n"
+                  + "    }\n"
+                  + "  },\n"
+                  + "  \"ioConfig\": {\n"
+                  + "    \"topic\": \"metrics\",\n"
+                  + "    \"consumerProperties\": {\n"
+                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
+                  + "    },\n"
+                  + "    \"taskCount\": 1\n"
+                  + "  }\n"
+                  + "}";
+    KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
+
+    Assert.assertNotNull(spec);
+    Assert.assertNotNull(spec.getDataSchema());
+    Assert.assertEquals(4, spec.getDataSchema().getAggregators().length);
+    Assert.assertNotNull(spec.getIoConfig());
+    Assert.assertEquals("metrics", spec.getIoConfig().getTopic());
+    Assert.assertNotNull(spec.getTuningConfig());
+    Assert.assertNull(spec.getContext());
+    Assert.assertFalse(spec.isSuspended());
+
+    String suspendedSerialized = mapper.writeValueAsString(spec.createSuspendedSpec());
+
+    // expect default values populated in reserialized string
+    Assert.assertTrue(suspendedSerialized.contains("\"tuningConfig\":{"));
+    Assert.assertTrue(suspendedSerialized.contains("\"indexSpec\":{"));
+    Assert.assertTrue(suspendedSerialized.contains("\"suspended\":true"));
+
+    KafkaSupervisorSpec suspendedSpec = mapper.readValue(suspendedSerialized, KafkaSupervisorSpec.class);
+
+    Assert.assertTrue(suspendedSpec.isSuspended());
+
+    String runningSerialized = mapper.writeValueAsString(spec.createRunningSpec());
+
+    KafkaSupervisorSpec runningSpec = mapper.readValue(runningSerialized, KafkaSupervisorSpec.class);
+
+    Assert.assertFalse(runningSpec.isSuspended());
   }
 }

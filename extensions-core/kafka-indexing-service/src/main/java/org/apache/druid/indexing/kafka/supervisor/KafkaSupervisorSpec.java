@@ -32,7 +32,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
-import org.apache.druid.indexing.overlord.supervisor.SuspendableSupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
@@ -40,7 +40,7 @@ import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import java.util.List;
 import java.util.Map;
 
-public class KafkaSupervisorSpec implements SuspendableSupervisorSpec
+public class KafkaSupervisorSpec implements SupervisorSpec
 {
   private final DataSchema dataSchema;
   private final KafkaSupervisorTuningConfig tuningConfig;

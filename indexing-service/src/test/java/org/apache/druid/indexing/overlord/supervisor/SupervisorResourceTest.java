@@ -293,14 +293,14 @@ public class SupervisorResourceTest extends EasyMockSupport
   public void testSpecSuspend()
   {
 
-    TestSuspendableSupervisorSpec running = new TestSuspendableSupervisorSpec("my-id", null, null, false) {
+    TestSupervisorSpec running = new TestSupervisorSpec("my-id", null, null, false) {
       @Override
       public List<String> getDataSources()
       {
         return Collections.singletonList("datasource1");
       }
     };
-    TestSuspendableSupervisorSpec suspended = new TestSuspendableSupervisorSpec("my-id", null, null, true) {
+    TestSupervisorSpec suspended = new TestSupervisorSpec("my-id", null, null, true) {
       @Override
       public List<String> getDataSources()
       {
@@ -320,7 +320,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    TestSuspendableSupervisorSpec responseSpec = (TestSuspendableSupervisorSpec) response.getEntity();
+    TestSupervisorSpec responseSpec = (TestSupervisorSpec) response.getEntity();
     Assert.assertEquals(suspended.id, responseSpec.id);
     Assert.assertEquals(suspended.suspended, responseSpec.suspended);
     resetAll();
@@ -341,14 +341,14 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Test
   public void testSpecResume()
   {
-    TestSuspendableSupervisorSpec suspended = new TestSuspendableSupervisorSpec("my-id", null, null, true) {
+    TestSupervisorSpec suspended = new TestSupervisorSpec("my-id", null, null, true) {
       @Override
       public List<String> getDataSources()
       {
         return Collections.singletonList("datasource1");
       }
     };
-    TestSuspendableSupervisorSpec running = new TestSuspendableSupervisorSpec("my-id", null, null, false) {
+    TestSupervisorSpec running = new TestSupervisorSpec("my-id", null, null, false) {
       @Override
       public List<String> getDataSources()
       {
@@ -368,7 +368,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    TestSuspendableSupervisorSpec responseSpec = (TestSuspendableSupervisorSpec) response.getEntity();
+    TestSupervisorSpec responseSpec = (TestSupervisorSpec) response.getEntity();
     Assert.assertEquals(running.id, responseSpec.id);
     Assert.assertEquals(running.suspended, responseSpec.suspended);
     resetAll();
@@ -900,12 +900,19 @@ public class SupervisorResourceTest extends EasyMockSupport
     protected final String id;
     protected final Supervisor supervisor;
     protected final List<String> datasources;
+    boolean suspended;
 
     public TestSupervisorSpec(String id, Supervisor supervisor, List<String> datasources)
     {
       this.id = id;
       this.supervisor = supervisor;
       this.datasources = datasources;
+    }
+
+    public TestSupervisorSpec(String id, Supervisor supervisor, List<String> datasources, boolean suspended)
+    {
+      this(id, supervisor, datasources);
+      this.suspended = suspended;
     }
 
     @Override
@@ -926,57 +933,17 @@ public class SupervisorResourceTest extends EasyMockSupport
       return datasources;
     }
 
+
     @Override
-    public boolean equals(Object o)
+    public SupervisorSpec createSuspendedSpec()
     {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      TestSupervisorSpec that = (TestSupervisorSpec) o;
-
-      if (getId() != null ? !getId().equals(that.getId()) : that.getId() != null) {
-        return false;
-      }
-      if (supervisor != null ? !supervisor.equals(that.supervisor) : that.supervisor != null) {
-        return false;
-      }
-      return datasources != null ? datasources.equals(that.datasources) : that.datasources == null;
-
+      return new TestSupervisorSpec(id, supervisor, datasources, true);
     }
 
     @Override
-    public int hashCode()
+    public SupervisorSpec createRunningSpec()
     {
-      int result = getId() != null ? getId().hashCode() : 0;
-      result = 31 * result + (supervisor != null ? supervisor.hashCode() : 0);
-      result = 31 * result + (datasources != null ? datasources.hashCode() : 0);
-      return result;
-    }
-  }
-
-  private static class TestSuspendableSupervisorSpec extends TestSupervisorSpec implements SuspendableSupervisorSpec
-  {
-    boolean suspended;
-    public TestSuspendableSupervisorSpec(String id, Supervisor supervisor, List<String> datasources, boolean suspended)
-    {
-      super(id, supervisor, datasources);
-      this.suspended = suspended;
-    }
-
-    @Override
-    public SuspendableSupervisorSpec createSuspendedSpec()
-    {
-      return new TestSuspendableSupervisorSpec(id, supervisor, datasources, true);
-    }
-
-    @Override
-    public SuspendableSupervisorSpec createRunningSpec()
-    {
-      return new TestSuspendableSupervisorSpec(id, supervisor, datasources, false);
+      return new TestSupervisorSpec(id, supervisor, datasources, false);
     }
 
     @Override
@@ -995,9 +962,28 @@ public class SupervisorResourceTest extends EasyMockSupport
         return false;
       }
 
-      TestSuspendableSupervisorSpec that = (TestSuspendableSupervisorSpec) o;
+      TestSupervisorSpec that = (TestSupervisorSpec) o;
 
-      return super.equals(o) || (isSuspended() == that.isSuspended());
+      if (getId() != null ? !getId().equals(that.getId()) : that.getId() != null) {
+        return false;
+      }
+      if (supervisor != null ? !supervisor.equals(that.supervisor) : that.supervisor != null) {
+        return false;
+      }
+      if (datasources != null ? !datasources.equals(that.datasources) : that.datasources != null) {
+        return false;
+      }
+      return isSuspended() == that.isSuspended();
+
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int result = getId() != null ? getId().hashCode() : 0;
+      result = 31 * result + (supervisor != null ? supervisor.hashCode() : 0);
+      result = 31 * result + (datasources != null ? datasources.hashCode() : 0);
+      return result;
     }
   }
 }

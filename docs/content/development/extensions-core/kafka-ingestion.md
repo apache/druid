@@ -199,7 +199,7 @@ Seamless schema migrations can thus be achieved by simply submitting the new sch
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/suspend
 ```
-Suspend indexing tasks associated with a _suspendable_ supervisor. Note that the supervisor itself will still be
+Suspend indexing tasks associated with a supervisor. Note that the supervisor itself will still be
 operating and emitting logs and metrics, it will just ensure that no indexing tasks are running until the supervisor
 is resumed. Responds with updated SupervisorSpec.
 
@@ -208,7 +208,7 @@ is resumed. Responds with updated SupervisorSpec.
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/resume
 ```
-Resume indexing tasks for a _suspendable_ supervisor. Responds with updated SupervisorSpec.
+Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
 
 #### Reset Supervisor
 ```

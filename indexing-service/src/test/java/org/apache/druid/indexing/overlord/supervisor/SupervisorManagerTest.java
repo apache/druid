@@ -268,13 +268,13 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testCreateSuspendResumeAndStopSupervisor()
   {
-    Capture<TestSuspendableSupervisorSpec> capturedInsert = Capture.newInstance();
-    SupervisorSpec spec = new TestSuspendableSupervisorSpec("id1", supervisor1, false, supervisor2);
+    Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
+    SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1, false, supervisor2);
     Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
         "id3", new TestSupervisorSpec("id3", supervisor3)
     );
 
-    // mock adding a suspendable supervisor to manager with existing supervisor
+    // mock adding a supervisor to manager with existing supervisor then suspending it
     Assert.assertTrue(manager.getSupervisorIds().isEmpty());
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
@@ -292,7 +292,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
 
     // mock suspend, which stops supervisor1 and sets suspended state in metadata, flipping to supervisor2
-    // in TestSuspendableSupervisorSpec implementation of createSuspendedSpec
+    // in TestSupervisorSpec implementation of createSuspendedSpec
     resetAll();
     metadataSupervisorManager.insert(eq("id1"), capture(capturedInsert));
     supervisor2.start();
@@ -306,7 +306,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
 
     // mock resume, which stops supervisor2 and sets suspended to false in metadata, flipping to supervisor1
-    // in TestSuspendableSupervisorSpec implementation of createRunningSpec
+    // in TestSupervisorSpec implementation of createRunningSpec
     resetAll();
     metadataSupervisorManager.insert(eq("id1"), capture(capturedInsert));
     supervisor2.stop(true);
@@ -319,7 +319,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertFalse(capturedInsert.getValue().suspended);
     verifyAll();
 
-    // mock stop of suspendable supervisor
+    // mock stop of suspended then resumed supervisor
     resetAll();
     metadataSupervisorManager.insert(eq("id1"), anyObject(NoopSupervisorSpec.class));
     supervisor1.stop(true);
@@ -342,45 +342,21 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertTrue(manager.getSupervisorIds().isEmpty());
   }
 
+
   private static class TestSupervisorSpec implements SupervisorSpec
-  {
-    private final String id;
-    private final Supervisor supervisor;
-
-    public TestSupervisorSpec(String id, Supervisor supervisor)
-    {
-      this.id = id;
-      this.supervisor = supervisor;
-    }
-
-    @Override
-    public String getId()
-    {
-      return id;
-    }
-
-    @Override
-    public Supervisor createSupervisor()
-    {
-      return supervisor;
-    }
-
-    @Override
-    public List<String> getDataSources()
-    {
-      return new ArrayList<>();
-    }
-
-  }
-
-  private static class TestSuspendableSupervisorSpec implements SuspendableSupervisorSpec
   {
     private final String id;
     private final Supervisor supervisor;
     private final boolean suspended;
     private final Supervisor suspendedSupervisor;
 
-    public TestSuspendableSupervisorSpec(String id, Supervisor supervisor, boolean suspended, Supervisor suspendedSupervisor)
+
+    public TestSupervisorSpec(String id, Supervisor supervisor)
+    {
+      this(id, supervisor, false, null);
+    }
+
+    public TestSupervisorSpec(String id, Supervisor supervisor, boolean suspended, Supervisor suspendedSupervisor)
     {
       this.id = id;
       this.supervisor = supervisor;
@@ -388,15 +364,15 @@ public class SupervisorManagerTest extends EasyMockSupport
       this.suspendedSupervisor = suspendedSupervisor;
     }
     @Override
-    public SuspendableSupervisorSpec createSuspendedSpec()
+    public SupervisorSpec createSuspendedSpec()
     {
-      return new TestSuspendableSupervisorSpec(id, suspendedSupervisor, true, supervisor);
+      return new TestSupervisorSpec(id, suspendedSupervisor, true, supervisor);
     }
 
     @Override
-    public SuspendableSupervisorSpec createRunningSpec()
+    public SupervisorSpec createRunningSpec()
     {
-      return new TestSuspendableSupervisorSpec(id, suspendedSupervisor, false, supervisor);
+      return new TestSupervisorSpec(id, suspendedSupervisor, false, supervisor);
     }
 
     @Override

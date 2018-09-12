@@ -1774,10 +1774,6 @@ public class KafkaSupervisor implements Supervisor
 
   void createNewTasks() throws JsonProcessingException
   {
-    if (spec.isSuspended()) {
-      return;
-    }
-
     // update the checkpoints in the taskGroup to latest ones so that new tasks do not read what is already published
     taskGroups.entrySet()
               .stream()
