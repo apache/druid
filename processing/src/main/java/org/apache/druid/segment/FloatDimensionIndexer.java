@@ -107,21 +107,20 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public boolean isNull()
       {
-        final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return currEntry.get().getDim(dimIndex) == null;
       }
 
       @Override
       public float getFloat()
       {
-        final Object[] dims = currEntry.get().getDims();
+        final Object dim = currEntry.get().getDim(dimIndex);
 
-        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+        if (dim == null) {
           assert NullHandling.replaceWithDefault();
           return 0.0f;
         }
 
-        return (Float) dims[dimIndex];
+        return (Float) dim;
       }
 
       @SuppressWarnings("deprecation")
@@ -129,13 +128,8 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       @Override
       public Float getObject()
       {
-        final Object[] dims = currEntry.get().getDims();
-
-        if (dimIndex >= dims.length) {
-          return null;
-        }
-
-        return (Float) dims[dimIndex];
+        final Object dim = currEntry.get().getDim(dimIndex);
+        return dim == null ? null : (Float) dim;
       }
 
       @Override

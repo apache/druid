@@ -30,22 +30,24 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public final class IncrementalIndexRow
+public class IncrementalIndexRow
 {
   public static final int EMPTY_ROW_INDEX = -1;
 
-  final long timestamp;
-  final Object[] dims;
-  private final List<IncrementalIndex.DimensionDesc> dimensionDescsList;
+  private long timestamp;
+  private Object[] dims;
+  protected List<IncrementalIndex.DimensionDesc> dimensionDescsList;
 
   /**
    * rowIndex is not checked in {@link #equals} and {@link #hashCode} on purpose. IncrementalIndexRow acts as a Map key
    * and "entry" object (rowIndex is the "value") at the same time. This is done to reduce object indirection and
    * improve locality, and avoid boxing of rowIndex as Integer, when stored in JDK collection:
-   * {@link IncrementalIndex.RollupFactsHolder} needs concurrent collections, that are not present in fastutil.
+   * {@link ExternalDataIncrementalIndex.RollupFactsHolder} needs concurrent collections, that are not present in fastutil.
    */
   private int rowIndex;
   private long dimsKeySize;
+
+  protected IncrementalIndexRow() {}
 
   IncrementalIndexRow(
       long timestamp,
@@ -69,7 +71,7 @@ public final class IncrementalIndexRow
     this.rowIndex = rowIndex;
   }
 
-  private IncrementalIndexRow(
+  protected IncrementalIndexRow(
       long timestamp,
       Object[] dims,
       List<IncrementalIndex.DimensionDesc> dimensionDescsList,
@@ -95,6 +97,24 @@ public final class IncrementalIndexRow
   public long getTimestamp()
   {
     return timestamp;
+  }
+
+  public int getDimsLength()
+  {
+    return dims == null ? 0 : dims.length;
+  }
+
+  public Object getDim(int dimIndex)
+  {
+    if (dims == null || dimIndex >= dims.length) {
+      return null;
+    }
+    return dims[dimIndex];
+  }
+
+  public boolean isNull(int dimIndex)
+  {
+    return dimIndex >= getDimsLength() || dims[dimIndex] == null;
   }
 
   public Object[] getDims()
@@ -135,19 +155,19 @@ public final class IncrementalIndexRow
   public String toString()
   {
     return "IncrementalIndexRow{" +
-           "timestamp=" + DateTimes.utc(timestamp) +
-           ", dims=" + Lists.transform(
-        Arrays.asList(dims), new Function<Object, Object>()
-        {
-          @Override
-          public Object apply(@Nullable Object input)
-          {
-            if (input == null || Array.getLength(input) == 0) {
-              return Collections.singletonList("null");
+            "timestamp=" + DateTimes.utc(getTimestamp()) +
+            ", dims=" + Lists.transform(
+            Arrays.asList(getDims()), new Function<Object, Object>()
+            {
+              @Override
+              public Object apply(@Nullable Object input)
+              {
+                if (input == null || Array.getLength(input) == 0) {
+                  return Collections.singletonList("null");
+                }
+                return Collections.singletonList(input);
+              }
             }
-            return Collections.singletonList(input);
-          }
-        }
     ) + '}';
   }
 
@@ -163,15 +183,15 @@ public final class IncrementalIndexRow
 
     IncrementalIndexRow that = (IncrementalIndexRow) o;
 
-    if (timestamp != that.timestamp) {
+    if (getTimestamp() != that.getTimestamp()) {
       return false;
     }
-    if (dims.length != that.dims.length) {
+    if (getDimsLength() != that.getDimsLength()) {
       return false;
     }
-    for (int i = 0; i < dims.length; i++) {
+    for (int i = 0; i < getDimsLength(); i++) {
       final DimensionIndexer indexer = dimensionDescsList.get(i).getIndexer();
-      if (!indexer.checkUnsortedEncodedKeyComponentsEqual(dims[i], that.dims[i])) {
+      if (!indexer.checkUnsortedEncodedKeyComponentsEqual(getDim(i), that.getDim(i))) {
         return false;
       }
     }
@@ -181,8 +201,8 @@ public final class IncrementalIndexRow
   @Override
   public int hashCode()
   {
-    int hash = (int) timestamp;
-    for (int i = 0; i < dims.length; i++) {
+    int hash = (int) getTimestamp();
+    for (int i = 0; i < getDimsLength(); i++) {
       final DimensionIndexer indexer = dimensionDescsList.get(i).getIndexer();
       hash = 31 * hash + indexer.getUnsortedEncodedKeyComponentHashCode(dims[i]);
     }

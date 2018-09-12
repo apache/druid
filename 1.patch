@@ -1,0 +1,51 @@
+From efcd2d1478497bca5dfff06bcb6ffac7c7b5ab0d Mon Sep 17 00:00:00 2001
+From: gsheffi <gsheffi@yahoo-inc.com>
+Date: Sat, 15 Sep 2018 21:15:23 +0300
+Subject: [PATCH 1/2] Reading more rows
+
+---
+ .../benchmark/indexing/OakIncrementalIndexReadBenchmark.java    | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/benchmarks/src/main/java/org/apache/druid/benchmark/indexing/OakIncrementalIndexReadBenchmark.java b/benchmarks/src/main/java/org/apache/druid/benchmark/indexing/OakIncrementalIndexReadBenchmark.java
+index b50ade491..dfedd4151 100644
+--- a/benchmarks/src/main/java/org/apache/druid/benchmark/indexing/OakIncrementalIndexReadBenchmark.java
++++ b/benchmarks/src/main/java/org/apache/druid/benchmark/indexing/OakIncrementalIndexReadBenchmark.java
+@@ -115,7 +115,7 @@ public class OakIncrementalIndexReadBenchmark
+     for (int j = 0; j < rowsPerSegment; j++) {
+       InputRow row = gen.nextRow();
+       if (j % 10000 == 0) {
+-        log.info(j + " rows generated.");
++        log.info(j + " rows generated. ");
+       }
+       incIndex.add(row);
+     }
+-- 
+2.17.1 (Apple Git-112)
+
+
+From bb69c346238fa0f9b340995e0965221503a4858a Mon Sep 17 00:00:00 2001
+From: gsheffi <gsheffi@yahoo-inc.com>
+Date: Thu, 20 Sep 2018 11:03:28 +0300
+Subject: [PATCH 2/2] Before rebasing
+
+---
+ .../benchmark/indexing/OakIncrementalIndexReadBenchmark.java    | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/benchmarks/src/main/java/org/apache/druid/benchmark/indexing/OakIncrementalIndexReadBenchmark.java b/benchmarks/src/main/java/org/apache/druid/benchmark/indexing/OakIncrementalIndexReadBenchmark.java
+index dfedd4151..02bdacfe7 100644
+--- a/benchmarks/src/main/java/org/apache/druid/benchmark/indexing/OakIncrementalIndexReadBenchmark.java
++++ b/benchmarks/src/main/java/org/apache/druid/benchmark/indexing/OakIncrementalIndexReadBenchmark.java
+@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit;
+ @Measurement(iterations = 25)
+ public class OakIncrementalIndexReadBenchmark
+ {
+-  @Param({"75000"})
++  @Param({"150000"})
+   private int rowsPerSegment;
+ 
+   @Param({"basic"})
+-- 
+2.17.1 (Apple Git-112)
+

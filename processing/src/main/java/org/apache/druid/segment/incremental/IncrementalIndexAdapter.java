@@ -93,15 +93,19 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   )
   {
     int rowNum = 0;
-    for (IncrementalIndexRow row : index.getFacts().persistIterable()) {
-      final Object[] dims = row.getDims();
+    for (IncrementalIndexRow row : index.persistIterable()) {
 
       for (IncrementalIndex.DimensionDesc dimension : dimensions) {
         final int dimIndex = dimension.getIndex();
         DimensionAccessor accessor = accessors.get(dimension.getName());
 
+        Object dim = null;
+        if (dimIndex < row.getDimsLength()) {
+          dim = row.getDim(dimIndex);
+        }
+
         // Add 'null' to the dimension's dictionary.
-        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+        if (dim == null) {
           accessor.indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
           continue;
         }
@@ -110,7 +114,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         if (capabilities.hasBitmapIndexes()) {
           final MutableBitmap[] bitmapIndexes = accessor.invertedIndexes;
           final DimensionIndexer indexer = accessor.indexer;
-          indexer.fillBitmapsFromUnsortedEncodedKeyComponent(dims[dimIndex], rowNum, bitmapIndexes, bitmapFactory);
+          indexer.fillBitmapsFromUnsortedEncodedKeyComponent(dim, rowNum, bitmapIndexes, bitmapFactory);
         }
       }
       ++rowNum;

@@ -50,7 +50,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
 
   IncrementalIndexRowIterator(IncrementalIndex<?> incrementalIndex)
   {
-    this.timeAndDimsIterator = incrementalIndex.getFacts().persistIterable().iterator();
+    this.timeAndDimsIterator = incrementalIndex.persistIterable().iterator();
     this.currentRowPointer = makeRowPointer(incrementalIndex, currentRowHolder, currentRowNumCounter);
     // markedRowPointer doesn't actually need to be a RowPointer (just a TimeAndDimsPointer), but we create a RowPointer
     // in order to reuse the makeRowPointer() method. Passing a dummy RowNumCounter.

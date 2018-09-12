@@ -27,6 +27,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
@@ -106,20 +107,20 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public boolean isNull()
       {
-        final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return currEntry.get().getDim(dimIndex) == null;
       }
 
       @Override
       public double getDouble()
       {
-        final Object[] dims = currEntry.get().getDims();
+        IncrementalIndexRow incrementalIndexRow = currEntry.get();
+        Object dim = incrementalIndexRow.getDim(dimIndex);
 
-        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+        if (dim == null) {
           assert NullHandling.replaceWithDefault();
           return 0.0;
         }
-        return (Double) dims[dimIndex];
+        return (Double) dim;
       }
 
       @SuppressWarnings("deprecation")
@@ -127,12 +128,14 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public Double getObject()
       {
-        final Object[] dims = currEntry.get().getDims();
+        IncrementalIndexRow incrementalIndexRow = currEntry.get();
+        Object dim = incrementalIndexRow.getDim(dimIndex);
 
-        if (dimIndex >= dims.length) {
-          return null;
+        if (dim == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0.0;
         }
-        return (Double) dims[dimIndex];
+        return (Double) dim;
       }
 
       @Override

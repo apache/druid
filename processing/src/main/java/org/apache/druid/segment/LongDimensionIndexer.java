@@ -107,21 +107,20 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public boolean isNull()
       {
-        final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return currEntry.get().getDim(dimIndex) == null;
       }
 
       @Override
       public long getLong()
       {
-        final Object[] dims = currEntry.get().getDims();
+        final Object dim = currEntry.get().getDim(dimIndex);
 
-        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+        if (dim == null) {
           assert NullHandling.replaceWithDefault();
           return 0;
         }
 
-        return (Long) dims[dimIndex];
+        return (Long) dim;
       }
 
       @SuppressWarnings("deprecation")
@@ -129,13 +128,8 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public Long getObject()
       {
-        final Object[] dims = currEntry.get().getDims();
-
-        if (dimIndex >= dims.length) {
-          return null;
-        }
-
-        return (Long) dims[dimIndex];
+        final Object dim = currEntry.get().getDim(dimIndex);
+        return dim == null ? null : (Long) dim;
       }
 
       @Override

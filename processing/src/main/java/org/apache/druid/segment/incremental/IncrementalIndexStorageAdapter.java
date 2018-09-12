@@ -243,7 +243,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       filterMatcher = filter == null ? BooleanValueMatcher.of(true) : filter.makeMatcher(columnSelectorFactory);
       numAdvanced = -1;
       final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
-      cursorIterable = index.getFacts().timeRangeIterable(
+      cursorIterable = index.timeRangeIterable(
           descending,
           timeStart,
           Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStart()).getMillis())
