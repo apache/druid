@@ -191,6 +191,7 @@ public class StringUtils
    * irrelevant to null handling of the data.
    *
    * @param string the string to test and possibly return
+   *
    * @return {@code string} itself if it is non-null; {@code ""} if it is null
    */
   public static String nullToEmptyNonDruidDataString(@Nullable String string)
@@ -206,8 +207,9 @@ public class StringUtils
    * irrelevant to null handling of the data.
    *
    * @param string the string to test and possibly return
+   *
    * @return {@code string} itself if it is nonempty; {@code null} if it is
-   *     empty or null
+   * empty or null
    */
   @Nullable
   public static String emptyToNullNonDruidDataString(@Nullable String string)
