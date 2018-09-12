@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Provider;
 import com.google.inject.util.Providers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
@@ -71,8 +72,8 @@ public class BasicHTTPAuthenticatorTest
       CACHE_MANAGER_PROVIDER,
       "basic",
       "basic",
-      "a",
-      "a",
+      new DefaultPasswordProvider("a"),
+      new DefaultPasswordProvider("a"),
       false,
       null,
       null

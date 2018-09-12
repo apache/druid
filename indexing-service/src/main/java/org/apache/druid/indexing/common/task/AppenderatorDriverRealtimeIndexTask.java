@@ -316,9 +316,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {
-              if (addResult.getNumRowsInSegment() >= tuningConfig.getMaxRowsPerSegment()) {
+              if (addResult.isPushRequired(tuningConfig)) {
                 publishSegments(driver, publisher, committerSupplier, sequenceName);
-
                 sequenceNumber++;
                 sequenceName = makeSequenceName(getId(), sequenceNumber);
               }
@@ -536,7 +535,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = Maps.newHashMap();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        savedParseExceptions);
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }

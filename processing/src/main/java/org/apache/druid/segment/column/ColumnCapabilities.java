@@ -30,4 +30,5 @@ public interface ColumnCapabilities
   boolean hasBitmapIndexes();
   boolean hasSpatialIndexes();
   boolean hasMultipleValues();
+  boolean isFilterable();
 }
