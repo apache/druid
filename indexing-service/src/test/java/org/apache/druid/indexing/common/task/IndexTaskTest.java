@@ -170,7 +170,9 @@ public class IndexTaskTest
   @Before
   public void setup() throws IOException
   {
-    reportsFile = temporaryFolder.newFile(String.format("IndexTaskTestReports-%s.json", System.currentTimeMillis()));
+    reportsFile = temporaryFolder.newFile(
+        StringUtils.format("IndexTaskTestReports-%s.json", System.currentTimeMillis())
+    );
 
     final File deepStorageDir = temporaryFolder.newFolder();
     final File cacheDir = temporaryFolder.newFolder();
