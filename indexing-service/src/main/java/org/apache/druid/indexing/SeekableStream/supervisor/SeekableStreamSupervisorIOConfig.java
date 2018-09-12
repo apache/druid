@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.SeekableStream.supervisor;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -34,23 +33,22 @@ abstract public class SeekableStreamSupervisorIOConfig
   private final Duration taskDuration;
   private final Duration startDelay;
   private final Duration period;
-  private final boolean useEarliestOffset;
+  private final boolean useEarliestSequenceNumber;
   private final Duration completionTimeout;
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
 
-  @JsonCreator
   public SeekableStreamSupervisorIOConfig(
-      @JsonProperty("id") String id,
-      @JsonProperty("replicas") Integer replicas,
-      @JsonProperty("taskCount") Integer taskCount,
-      @JsonProperty("taskDuration") Period taskDuration,
-      @JsonProperty("startDelay") Period startDelay,
-      @JsonProperty("period") Period period,
-      @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
-      @JsonProperty("completionTimeout") Period completionTimeout,
-      @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
-      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod
+      String id,
+      Integer replicas,
+      Integer taskCount,
+      Period taskDuration,
+      Period startDelay,
+      Period period,
+      Boolean useEarliestSequenceNumber,
+      Period completionTimeout,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod
   )
   {
     this.id = Preconditions.checkNotNull(id, "id cannot be null");
@@ -59,7 +57,7 @@ abstract public class SeekableStreamSupervisorIOConfig
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
     this.startDelay = defaultDuration(startDelay, "PT5S");
     this.period = defaultDuration(period, "PT30S");
-    this.useEarliestOffset = useEarliestOffset != null ? useEarliestOffset : false;
+    this.useEarliestSequenceNumber = useEarliestSequenceNumber != null ? useEarliestSequenceNumber : false;
     this.completionTimeout = defaultDuration(completionTimeout, "PT30M");
     this.lateMessageRejectionPeriod = lateMessageRejectionPeriod == null
                                       ? Optional.absent()
@@ -69,7 +67,7 @@ abstract public class SeekableStreamSupervisorIOConfig
                                        : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
   }
 
-  @JsonProperty
+
   public String getId()
   {
     return id;
@@ -105,10 +103,10 @@ abstract public class SeekableStreamSupervisorIOConfig
     return period;
   }
 
-  @JsonProperty
-  public boolean isUseEarliestOffset()
+
+  public boolean isUseEarliestSequenceNumber()
   {
-    return useEarliestOffset;
+    return useEarliestSequenceNumber;
   }
 
   @JsonProperty

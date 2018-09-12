@@ -26,8 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.SeekableStream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -40,21 +40,21 @@ import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import java.util.List;
 import java.util.Map;
 
-public class SeekableStreamSupervisorSpec implements SupervisorSpec
+abstract public class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
   private final DataSchema dataSchema;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamSupervisorIOConfig ioConfig;
   private final Map<String, Object> context;
-
-  private final TaskStorage taskStorage;
-  private final TaskMaster taskMaster;
-  private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-  private final IndexTaskClientFactory indexTaskClientFactory;
-  private final ObjectMapper mapper;
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
-  private final RowIngestionMetersFactory rowIngestionMetersFactory;
+
+  protected final TaskStorage taskStorage;
+  protected final TaskMaster taskMaster;
+  protected final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
+  protected final SeekableStreamIndexTaskClientFactory indexTaskClientFactory;
+  protected final ObjectMapper mapper;
+  protected final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   @JsonCreator
   public SeekableStreamSupervisorSpec(
@@ -65,7 +65,7 @@ public class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      @JacksonInject IndexTaskClientFactory indexTaskClientFactory,
+      @JacksonInject SeekableStreamIndexTaskClientFactory indexTaskClientFactory,
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
@@ -73,32 +73,7 @@ public class SeekableStreamSupervisorSpec implements SupervisorSpec
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
-    this.tuningConfig = tuningConfig != null
-                        ? tuningConfig
-                        : new SeekableStreamSupervisorTuningConfig(
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null
-                        );
+    this.tuningConfig = tuningConfig; // null check done in concrete class
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.context = context;
 
@@ -153,18 +128,7 @@ public class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public Supervisor createSupervisor()
-  {
-    return new SeekableStreamSupervisor(
-        taskStorage,
-        taskMaster,
-        indexerMetadataStorageCoordinator,
-        indexTaskClientFactory,
-        mapper,
-        this,
-        rowIngestionMetersFactory
-    );
-  }
+  abstract public Supervisor createSupervisor();
 
   @Override
   public List<String> getDataSources()
@@ -173,12 +137,7 @@ public class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public String toString()
-  {
-    return "SeekableStreamSupervisorSpec{" +
-           "dataSchema=" + dataSchema +
-           ", tuningConfig=" + tuningConfig +
-           ", ioConfig=" + ioConfig +
-           '}';
-  }
+  abstract public String toString();
+
+
 }

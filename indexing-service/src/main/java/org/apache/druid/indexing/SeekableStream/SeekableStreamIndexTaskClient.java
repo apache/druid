@@ -25,12 +25,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -40,7 +42,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
-//TODO: Need to refactor implemented methods
 abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskClient
 {
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClient.class);
@@ -96,10 +97,73 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
   }
 
 
-  abstract public Map<T1, T2> pause(final String id);
+  public Map<T1, T2> pause(final String id)
+  {
+    log.debug("Pause task[%s]", id);
 
+    try {
+      final FullResponseHolder response = submitRequestWithEmptyContent(
+          id,
+          HttpMethod.POST,
+          "pause",
+          null,
+          true
+      );
 
-  abstract public SeekableStreamIndexTask.Status getStatus(final String id);
+      if (response.getStatus().equals(HttpResponseStatus.OK)) {
+        log.info("Task [%s] paused successfully", id);
+        return deserialize(response.getContent(), new TypeReference<Map<T1, T2>>()
+        {
+        });
+      }
+
+      while (true) {
+        if (getStatus(id) == SeekableStreamIndexTask.Status.PAUSED) {
+          return getCurrentOffsets(id, true);
+        }
+
+        final Duration delay = newRetryPolicy().getAndIncrementRetryDelay();
+        if (delay == null) {
+          log.error("Task [%s] failed to pause, aborting", id);
+          throw new ISE("Task [%s] failed to pause, aborting", id);
+        } else {
+          final long sleepTime = delay.getMillis();
+          log.info(
+              "Still waiting for task [%s] to pause; will try again in [%s]",
+              id,
+              new Duration(sleepTime).toString()
+          );
+          Thread.sleep(sleepTime);
+        }
+      }
+    }
+    catch (NoTaskLocationException e) {
+      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
+      return ImmutableMap.of();
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(
+          StringUtils.format("Exception [%s] while pausing Task [%s]", e.getMessage(), id),
+          e
+      );
+    }
+  }
+
+  public SeekableStreamIndexTask.Status getStatus(final String id)
+  {
+    log.debug("GetStatus task[%s]", id);
+
+    try {
+      final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "status", null, true);
+      return deserialize(response.getContent(), SeekableStreamIndexTask.Status.class);
+    }
+    catch (NoTaskLocationException e) {
+      return SeekableStreamIndexTask.Status.NOT_STARTED;
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
 
   @Nullable
@@ -244,6 +308,13 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
     return doAsync(() -> stop(id, publish));
   }
 
+
+  public ListenableFuture<Boolean> resumeAsync(final String id)
+  {
+    return doAsync(() -> resume(id));
+  }
+
+
   public ListenableFuture<DateTime> getStartTimeAsync(final String id)
   {
     return doAsync(() -> getStartTime(id));
@@ -264,7 +335,27 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
     return doAsync(() -> setEndOffsets(id, endOffsets, finalize));
   }
 
-  abstract public ListenableFuture<SeekableStreamIndexTask.Status> getStatusAsync(final String id);
+  public ListenableFuture<Map<T1, T2>> getCurrentOffsetsAsync(final String id, final boolean retry)
+  {
+    return doAsync(() -> getCurrentOffsets(id, retry));
+  }
+
+  public ListenableFuture<Map<T1, T2>> getEndOffsetsAsync(final String id)
+  {
+    return doAsync(() -> getEndOffsets(id));
+  }
+
+
+  public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(final String id)
+  {
+    return doAsync(() -> getMovingAverages(id));
+  }
+
+
+  public ListenableFuture<SeekableStreamIndexTask.Status> getStatusAsync(final String id)
+  {
+    return doAsync(() -> getStatus(id));
+  }
 
 }
 

@@ -29,31 +29,34 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-abstract public class SeekableStreamSupervisorReportPayload
+abstract public class SeekableStreamSupervisorReportPayload<T1, T2>
 {
   private final String dataSource;
+  private final String id;
   private final int partitions;
   private final int replicas;
   private final long durationSeconds;
-  private final List<TaskReportData> activeTasks;
-  private final List<TaskReportData> publishingTasks;
-  private final Map<Integer, Long> latestOffsets;
-  private final Map<Integer, Long> minimumLag;
+  private final List<SeekableStreamTaskReportData> activeTasks;
+  private final List<SeekableStreamTaskReportData> publishingTasks;
+  private final Map<T1, T2> latestOffsets;
+  private final Map<T1, T2> minimumLag;
   private final Long aggregateLag;
   private final DateTime offsetsLastUpdated;
 
   public SeekableStreamSupervisorReportPayload(
       String dataSource,
+      String id,
       int partitions,
       int replicas,
       long durationSeconds,
-      @Nullable Map<Integer, Long> latestOffsets,
-      @Nullable Map<Integer, Long> minimumLag,
+      @Nullable Map<T1, T2> latestOffsets,
+      @Nullable Map<T1, T2> minimumLag,
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated
   )
   {
     this.dataSource = dataSource;
+    this.id = id;
     this.partitions = partitions;
     this.replicas = replicas;
     this.durationSeconds = durationSeconds;
@@ -65,11 +68,11 @@ abstract public class SeekableStreamSupervisorReportPayload
     this.offsetsLastUpdated = offsetsLastUpdated;
   }
 
-  public void addTask(TaskReportData data)
+  public void addTask(SeekableStreamTaskReportData data)
   {
-    if (data.getType().equals(TaskReportData.TaskType.ACTIVE)) {
+    if (data.getType().equals(SeekableStreamTaskReportData.TaskType.ACTIVE)) {
       activeTasks.add(data);
-    } else if (data.getType().equals(TaskReportData.TaskType.PUBLISHING)) {
+    } else if (data.getType().equals(SeekableStreamTaskReportData.TaskType.PUBLISHING)) {
       publishingTasks.add(data);
     } else {
       throw new IAE("Unknown task type [%s]", data.getType().name());
@@ -80,6 +83,11 @@ abstract public class SeekableStreamSupervisorReportPayload
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  protected String getId()
+  {
+    return id;
   }
 
   @JsonProperty
@@ -101,27 +109,27 @@ abstract public class SeekableStreamSupervisorReportPayload
   }
 
   @JsonProperty
-  public List<TaskReportData> getActiveTasks()
+  public List<? extends SeekableStreamTaskReportData> getActiveTasks()
   {
     return activeTasks;
   }
 
   @JsonProperty
-  public List<TaskReportData> getPublishingTasks()
+  public List<? extends SeekableStreamTaskReportData> getPublishingTasks()
   {
     return publishingTasks;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getLatestOffsets()
+  public Map<T1, T2> getLatestOffsets()
   {
     return latestOffsets;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getMinimumLag()
+  public Map<T1, T2> getMinimumLag()
   {
     return minimumLag;
   }

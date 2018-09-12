@@ -26,24 +26,27 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class TaskReportData
+abstract public class SeekableStreamTaskReportData<T1, T2>
 {
+  public enum TaskType
+  {
+    ACTIVE, PUBLISHING, UNKNOWN
+  }
+
   private final String id;
-  private final Map<Integer, Long> startingOffsets;
+  private final Map<T1, T2> startingOffsets;
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
-  private final Map<Integer, Long> currentOffsets;
-  private final Map<Integer, Long> lag;
+  private final Map<T1, T2> currentOffsets;
 
-  public TaskReportData(
+  public SeekableStreamTaskReportData(
       String id,
-      @Nullable Map<Integer, Long> startingOffsets,
-      @Nullable Map<Integer, Long> currentOffsets,
+      @Nullable Map<T1, T2> startingOffsets,
+      @Nullable Map<T1, T2> currentOffsets,
       @Nullable DateTime startTime,
       Long remainingSeconds,
-      TaskType type,
-      @Nullable Map<Integer, Long> lag
+      TaskType type
   )
   {
     this.id = id;
@@ -52,7 +55,6 @@ public class TaskReportData
     this.startTime = startTime;
     this.remainingSeconds = remainingSeconds;
     this.type = type;
-    this.lag = lag;
   }
 
   @JsonProperty
@@ -63,14 +65,14 @@ public class TaskReportData
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getStartingOffsets()
+  public Map<T1, T2> getStartingOffsets()
   {
     return startingOffsets;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getCurrentOffsets()
+  public Map<T1, T2> getCurrentOffsets()
   {
     return currentOffsets;
   }
@@ -93,28 +95,7 @@ public class TaskReportData
     return type;
   }
 
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getLag()
-  {
-    return lag;
-  }
-
   @Override
-  public String toString()
-  {
-    return "{" +
-           "id='" + id + '\'' +
-           (startingOffsets != null ? ", startingOffsets=" + startingOffsets : "") +
-           (currentOffsets != null ? ", currentOffsets=" + currentOffsets : "") +
-           ", startTime=" + startTime +
-           ", remainingSeconds=" + remainingSeconds +
-           (lag != null ? ", lag=" + lag : "") +
-           '}';
-  }
+  abstract public String toString();
 
-  public enum TaskType
-  {
-    ACTIVE, PUBLISHING, UNKNOWN
-  }
 }

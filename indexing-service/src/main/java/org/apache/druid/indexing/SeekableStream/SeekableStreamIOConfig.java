@@ -31,7 +31,6 @@ import javax.annotation.Nullable;
 abstract public class SeekableStreamIOConfig<T1, T2> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
-  private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
   @Nullable
   private final Integer taskGroupId;

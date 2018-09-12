@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-public class SeekableStreamTuningConfig implements TuningConfig, AppenderatorConfig
+abstract public class SeekableStreamTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
@@ -121,27 +121,7 @@ public class SeekableStreamTuningConfig implements TuningConfig, AppenderatorCon
                               : logParseExceptions;
   }
 
-  public static SeekableStreamTuningConfig copyOf(SeekableStreamTuningConfig config)
-  {
-    return new SeekableStreamTuningConfig(
-        config.maxRowsInMemory,
-        config.maxBytesInMemory,
-        config.maxRowsPerSegment,
-        config.intermediatePersistPeriod,
-        config.basePersistDirectory,
-        config.maxPendingPersists,
-        config.indexSpec,
-        true,
-        config.reportParseExceptions,
-        config.handoffConditionTimeout,
-        config.resetOffsetAutomatically,
-        config.segmentWriteOutMediumFactory,
-        config.intermediateHandoffPeriod,
-        config.logParseExceptions,
-        config.maxParseExceptions,
-        config.maxSavedParseExceptions
-    );
-  }
+  abstract public SeekableStreamTuningConfig copyOf();
 
   @Override
   @JsonProperty
@@ -253,27 +233,7 @@ public class SeekableStreamTuningConfig implements TuningConfig, AppenderatorCon
     return maxSavedParseExceptions;
   }
 
-  public SeekableStreamTuningConfig withBasePersistDirectory(File dir)
-  {
-    return new SeekableStreamTuningConfig(
-        maxRowsInMemory,
-        maxBytesInMemory,
-        maxRowsPerSegment,
-        intermediatePersistPeriod,
-        dir,
-        maxPendingPersists,
-        indexSpec,
-        true,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        resetOffsetAutomatically,
-        segmentWriteOutMediumFactory,
-        intermediateHandoffPeriod,
-        logParseExceptions,
-        maxParseExceptions,
-        maxSavedParseExceptions
-    );
-  }
+  abstract public SeekableStreamTuningConfig withBasePersistDirectory(File dir);
 
   @Override
   public boolean equals(Object o)
@@ -325,24 +285,6 @@ public class SeekableStreamTuningConfig implements TuningConfig, AppenderatorCon
   }
 
   @Override
-  public String toString()
-  {
-    return "SeekableTuningConfig{" +
-           "maxRowsInMemory=" + maxRowsInMemory +
-           ", maxRowsPerSegment=" + maxRowsPerSegment +
-           ", maxBytesInMemory=" + maxBytesInMemory +
-           ", intermediatePersistPeriod=" + intermediatePersistPeriod +
-           ", basePersistDirectory=" + basePersistDirectory +
-           ", maxPendingPersists=" + maxPendingPersists +
-           ", indexSpec=" + indexSpec +
-           ", reportParseExceptions=" + reportParseExceptions +
-           ", handoffConditionTimeout=" + handoffConditionTimeout +
-           ", resetOffsetAutomatically=" + resetOffsetAutomatically +
-           ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
-           ", intermediateHandoffPeriod=" + intermediateHandoffPeriod +
-           ", logParseExceptions=" + logParseExceptions +
-           ", maxParseExceptions=" + maxParseExceptions +
-           ", maxSavedParseExceptions=" + maxSavedParseExceptions +
-           '}';
-  }
+  abstract public String toString();
+
 }

@@ -41,13 +41,11 @@ abstract public class SeekableStreamPartitions<T1, T2>
     this.partitionOffsetMap = ImmutableMap.copyOf(partitionOffsetMap);
   }
 
-  @JsonProperty
   public String getId()
   {
     return id;
   }
 
-  @JsonProperty
   public Map<T1, T2> getPartitionSequenceMap()
   {
     return partitionOffsetMap;

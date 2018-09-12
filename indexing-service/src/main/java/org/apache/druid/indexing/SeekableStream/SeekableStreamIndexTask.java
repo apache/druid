@@ -47,6 +47,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Random;
 
+//TODO: need more refactoring for run()
 abstract public class SeekableStreamIndexTask<T1, T2> extends AbstractTask implements ChatHandler
 {
   public enum Status
@@ -59,14 +60,15 @@ abstract public class SeekableStreamIndexTask<T1, T2> extends AbstractTask imple
   }
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);
-  private static final String TYPE = "index_seekable_stream";
   private static final Random RANDOM = new Random();
+  private static final String TYPE = "index_seekable_stream";
 
-  private final DataSchema dataSchema;
-  private final InputRowParser<ByteBuffer> parser;
-  private final SeekableStreamTuningConfig tuningConfig;
-  private final SeekableStreamIOConfig<T1, T2> ioConfig;
-  private final Optional<ChatHandlerProvider> chatHandlerProvider;
+
+  protected final DataSchema dataSchema;
+  protected final InputRowParser<ByteBuffer> parser;
+  protected final SeekableStreamTuningConfig tuningConfig;
+  protected final SeekableStreamIOConfig<T1, T2> ioConfig;
+  protected final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @JsonCreator
   public SeekableStreamIndexTask(

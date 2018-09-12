@@ -10,6 +10,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -44,6 +45,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -53,6 +55,8 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -60,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,7 +75,14 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
+//TODO: rename offset -> sequence
+//TODO: prune 'kafka' and 'kinesis'
+//TODO: inheritance
+//TODO: make classes abstract
+//TODO: resolve warnings
 abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends Comparable> implements Supervisor
 {
   //---------------------------------------GOOD---------------------------------------------------------
@@ -78,6 +90,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
   private static final Random RANDOM = new Random();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
+  private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
   //---------------------------------------GOOD---------------------------------------------------------
 
 
@@ -91,8 +104,8 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
     final Optional<DateTime> minimumMessageTime;
     final Optional<DateTime> maximumMessageTime;
-    final Set<String> exclusiveStartSequenceNumberPartitions;
-    final TreeMap<Integer, Map<Integer, Long>> sequenceOffsets = new TreeMap<>();
+    final Set<String> exclusiveStartSequenceNumberPartitions; //TODO: exclusiveSequence
+    final TreeMap<Integer, Map<T1, T2>> sequenceOffsets = new TreeMap<>();
     final String baseSequenceName;
     DateTime completionTimeout;
 
@@ -114,7 +127,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       this.baseSequenceName = generateSequenceName(partitionOffsets, minimumMessageTime, maximumMessageTime);
     }
 
-    int addNewCheckpoint(Map<Integer, Long> checkpoint)
+    int addNewCheckpoint(Map<T1, T2> checkpoint)
     {
       sequenceOffsets.put(sequenceOffsets.lastKey() + 1, checkpoint);
       return sequenceOffsets.lastKey();
@@ -172,7 +185,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
   private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
-  private final Object consumerLock = new Object();
+  private final Object consumerLock = new Object(); //TODO: prob not needed
 
   private boolean listenerRegistered = false;
   private long lastRunTime;
@@ -276,7 +289,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
     this.tuningConfig = spec.getTuningConfig();
-    this.taskTuningConfig = SeekableStreamTuningConfig.copyOf(this.tuningConfig);
+    this.taskTuningConfig = this.tuningConfig.copyOf();
     this.supervisorId = supervisorId;
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
@@ -379,7 +392,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
         );
         firstRunTime = DateTimes.nowUtc().plus(ioConfig.getStartDelay());
         scheduledExec.scheduleAtFixedRate(
-            () -> notices.add(new RunNotice()),
+            buildRunTask(),
             ioConfig.getStartDelay().getMillis(),
             Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
             TimeUnit.MILLISECONDS
@@ -698,14 +711,6 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     return false;
   }
 
-  abstract protected int getTaskGroupIdForPartition(T1 partition);
-
-  abstract protected void checkSourceMetadataInstanceMatch(DataSourceMetadata metadata) throws IAE;
-
-  // TODO: may want to put more logic in the base class
-  abstract protected SupervisorReport<SeekableStreamSupervisorReportPayload> generateReport(boolean includeOffsets);
-
-  abstract protected void updatePartitionDataFromStream();
 
   private void discoverTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
@@ -866,6 +871,187 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       }
     }
 
+
+    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      if (results.get(i) == null) {
+        String taskId = futureTaskIds.get(i);
+        log.warn("Task [%s] failed to return status, killing task", taskId);
+        killTask(taskId);
+      }
+    }
+    log.debug("Found [%d] Kafka indexing tasks for dataSource [%s]", taskCount, dataSource);
+
+    // make sure the checkpoints are consistent with each other and with the metadata store
+    verifyAndMergeCheckpoints(taskGroupsToVerify.values());
+
+  }
+
+  private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
+  {
+    final List<ListenableFuture<Boolean>> futures = new ArrayList<>();
+    for (TaskGroup taskGroup : taskGroupsToVerify) {
+      futures.add(workerExec.submit(() -> {
+        verifyAndMergeCheckpoints(taskGroup);
+        return true;
+      }));
+    }
+    try {
+      Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    }
+    catch (InterruptedException | ExecutionException | TimeoutException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  //TODO: prob wanna refactor this
+
+  /**
+   * This method does two things -
+   * 1. Makes sure the checkpoints information in the taskGroup is consistent with that of the tasks, if not kill
+   * inconsistent tasks.
+   * 2. truncates the checkpoints in the taskGroup corresponding to which segments have been published, so that any newly
+   * created tasks for the taskGroup start indexing from after the latest published offsets.
+   */
+  private void verifyAndMergeCheckpoints(final TaskGroup taskGroup)
+  {
+    final int groupId = taskGroup.groupId;
+    final List<Pair<String, TreeMap<Integer, Map<T1, T2>>>> taskSequences = new ArrayList<>();
+    final List<ListenableFuture<TreeMap<Integer, Map<T1, T2>>>> futures = new ArrayList<>();
+    final List<String> taskIds = new ArrayList<>();
+
+    for (String taskId : taskGroup.taskIds()) {
+      final ListenableFuture<TreeMap<Integer, Map<T1, T2>>> checkpointsFuture = taskClient.getCheckpointsAsync(
+          taskId,
+          true
+      );
+      futures.add(checkpointsFuture);
+      taskIds.add(taskId);
+    }
+
+    try {
+      List<TreeMap<Integer, Map<T1, T2>>> futuresResult =
+          Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      for (int i = 0; i < futuresResult.size(); i++) {
+        final TreeMap<Integer, Map<T1, T2>> checkpoints = futuresResult.get(i);
+        final String taskId = taskIds.get(i);
+        if (checkpoints == null) {
+          try {
+            futures.get(i).get(1, TimeUnit.NANOSECONDS);
+          }
+          catch (Exception e) {
+            log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
+            killTask(taskId);
+            taskGroup.tasks.remove(taskId);
+          }
+        } else if (checkpoints.isEmpty()) {
+          log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
+        } else {
+          taskSequences.add(new Pair<>(taskId, checkpoints));
+        }
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    final SeekableStreamDataSourceMetadata<T1, T2> latestDataSourceMetadata = (SeekableStreamDataSourceMetadata<T1, T2>) indexerMetadataStorageCoordinator
+        .getDataSourceMetadata(dataSource);
+    final boolean hasValidOffsetsFromDb = latestDataSourceMetadata != null &&
+                                          latestDataSourceMetadata.getSeekableStreamPartitions() != null &&
+                                          ioConfig.getId().equals(
+                                              latestDataSourceMetadata.getSeekableStreamPartitions().getId()
+                                          );
+    final Map<T1, T2> latestOffsetsFromDb;
+    if (hasValidOffsetsFromDb) {
+      latestOffsetsFromDb = latestDataSourceMetadata.getSeekableStreamPartitions().getPartitionSequenceMap();
+    } else {
+      latestOffsetsFromDb = null;
+    }
+
+    // order tasks of this taskGroup by the latest sequenceId
+    taskSequences.sort((o1, o2) -> o2.rhs.firstKey().compareTo(o1.rhs.firstKey()));
+
+    final Set<String> tasksToKill = new HashSet<>();
+    final AtomicInteger earliestConsistentSequenceId = new AtomicInteger(-1);
+    int taskIndex = 0;
+
+    while (taskIndex < taskSequences.size()) {
+      TreeMap<Integer, Map<T1, T2>> taskCheckpoints = taskSequences.get(taskIndex).rhs;
+      String taskId = taskSequences.get(taskIndex).lhs;
+      if (earliestConsistentSequenceId.get() == -1) {
+        // find the first replica task with earliest sequenceId consistent with datasource metadata in the metadata
+        // store
+        if (taskCheckpoints.entrySet().stream().anyMatch(
+            sequenceCheckpoint -> sequenceCheckpoint.getValue().entrySet().stream().allMatch(
+                partitionOffset -> partitionOffset.getValue().compareTo(latestOffsetsFromDb == null ?
+                                                                        partitionOffset.getValue() :
+                                                                        latestOffsetsFromDb.getOrDefault(
+                                                                            partitionOffset
+                                                                                .getKey(),
+                                                                            partitionOffset
+                                                                                .getValue()
+                                                                        )) == 0)
+                                  && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
+                pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() > 0
+                && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))) {
+          final SortedMap<Integer, Map<T1, T2>> latestCheckpoints = new TreeMap<>(
+              taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
+          );
+          log.info("Setting taskGroup sequences to [%s] for group [%d]", latestCheckpoints, groupId);
+          taskGroup.sequenceOffsets.clear();
+          taskGroup.sequenceOffsets.putAll(latestCheckpoints);
+        } else {
+          log.debug(
+              "Adding task [%s] to kill list, checkpoints[%s], latestoffsets from DB [%s]",
+              taskId,
+              taskCheckpoints,
+              latestOffsetsFromDb
+          );
+          tasksToKill.add(taskId);
+        }
+      } else {
+        // check consistency with taskGroup sequences
+        if (taskCheckpoints.get(taskGroup.sequenceOffsets.firstKey()) == null
+            || !(taskCheckpoints.get(taskGroup.sequenceOffsets.firstKey())
+                                .equals(taskGroup.sequenceOffsets.firstEntry().getValue()))
+            || taskCheckpoints.tailMap(taskGroup.sequenceOffsets.firstKey()).size()
+               != taskGroup.sequenceOffsets.size()) {
+          log.debug(
+              "Adding task [%s] to kill list, checkpoints[%s], taskgroup checkpoints [%s]",
+              taskId,
+              taskCheckpoints,
+              taskGroup.sequenceOffsets
+          );
+          tasksToKill.add(taskId);
+        }
+      }
+      taskIndex++;
+    }
+
+    if ((tasksToKill.size() > 0 && tasksToKill.size() == taskGroup.tasks.size()) ||
+        (taskGroup.tasks.size() == 0 && pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() == 0)) {
+      // killing all tasks or no task left in the group ?
+      // clear state about the taskgroup so that get latest offset information is fetched from metadata store
+      log.warn("Clearing task group [%d] information as no valid tasks left the group", groupId);
+      taskGroups.remove(groupId);
+      partitionGroups.get(groupId).replaceAll((partition, offset) -> NOT_SET);
+    }
+
+    taskSequences.stream().filter(taskIdSequences -> tasksToKill.contains(taskIdSequences.lhs)).forEach(
+        sequenceCheckpoint -> {
+          log.warn(
+              "Killing task [%s], as its checkpoints [%s] are not consistent with group checkpoints[%s] or latest "
+              + "persisted offsets in metadata store [%s]",
+              sequenceCheckpoint.lhs,
+              sequenceCheckpoint.rhs,
+              taskGroup.sequenceOffsets,
+              latestOffsetsFromDb
+          );
+          killTask(sequenceCheckpoint.lhs);
+          taskGroup.tasks.remove(sequenceCheckpoint.lhs);
+        }
+    );
   }
 
   private void addDiscoveredTaskToPendingCompletionTaskGroups(
@@ -983,23 +1169,528 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     return Joiner.on("_").join("index_seekable_streaming", dataSource, hashCode);
   }
 
-  abstract protected void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException;
+  // TODO: refactor this with recordSupplier
+  abstract protected void updatePartitionDataFromStream();
 
-  abstract protected void checkTaskDuration() throws ExecutionException, InterruptedException, TimeoutException;
+  private void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException
+  {
+    final List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    final List<String> futureTaskIds = Lists.newArrayList();
 
-  abstract protected void checkPendingCompletionTasks()
-      throws ExecutionException, InterruptedException, TimeoutException;
+    // update status (and startTime if unknown) of current tasks in taskGroups
+    for (TaskGroup group : taskGroups.values()) {
+      for (Map.Entry<String, TaskData> entry : group.tasks.entrySet()) {
+        final String taskId = entry.getKey();
+        final TaskData taskData = entry.getValue();
 
-  abstract protected boolean isTaskInstanceOfThis(Task task);
+        if (taskData.startTime == null) {
+          futureTaskIds.add(taskId);
+          futures.add(
+              Futures.transform(
+                  taskClient.getStartTimeAsync(taskId), new Function<DateTime, Boolean>()
+                  {
+                    @Nullable
+                    @Override
+                    public Boolean apply(@Nullable DateTime startTime)
+                    {
+                      if (startTime == null) {
+                        return false;
+                      }
 
-  abstract protected void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException;
+                      taskData.startTime = startTime;
+                      long millisRemaining = ioConfig.getTaskDuration().getMillis() -
+                                             (System.currentTimeMillis() - taskData.startTime.getMillis());
+                      if (millisRemaining > 0) {
+                        scheduledExec.schedule(
+                            buildRunTask(),
+                            millisRemaining + MAX_RUN_FREQUENCY_MILLIS,
+                            TimeUnit.MILLISECONDS
+                        );
+                      }
 
-  abstract protected void createNewTasks() throws JsonProcessingException;
+                      return true;
+                    }
+                  }, workerExec
+              )
+          );
+        }
+
+        taskData.status = taskStorage.getStatus(taskId).get();
+      }
+    }
+
+    // update status of pending completion tasks in pendingCompletionTaskGroups
+    for (List<TaskGroup> taskGroups : pendingCompletionTaskGroups.values()) {
+      for (TaskGroup group : taskGroups) {
+        for (Map.Entry<String, TaskData> entry : group.tasks.entrySet()) {
+          entry.getValue().status = taskStorage.getStatus(entry.getKey()).get();
+        }
+      }
+    }
+
+    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      // false means the task hasn't started running yet and that's okay; null means it should be running but the HTTP
+      // request threw an exception so kill the task
+      if (results.get(i) == null) {
+        String taskId = futureTaskIds.get(i);
+        log.warn("Task [%s] failed to return start time, killing task", taskId);
+        killTask(taskId);
+      }
+    }
+  }
+
+  private Runnable buildRunTask()
+  {
+    return () -> notices.add(new RunNotice());
+  }
+
+  private void checkTaskDuration() throws ExecutionException, InterruptedException, TimeoutException
+  {
+    final List<ListenableFuture<Map<T1, T2>>> futures = Lists.newArrayList();
+    final List<Integer> futureGroupIds = Lists.newArrayList();
+
+    for (Map.Entry<Integer, TaskGroup> entry : taskGroups.entrySet()) {
+      Integer groupId = entry.getKey();
+      TaskGroup group = entry.getValue();
+
+      // find the longest running task from this group
+      DateTime earliestTaskStart = DateTimes.nowUtc();
+      for (TaskData taskData : group.tasks.values()) {
+        // startTime can be null if kafkaSupervisor is stopped gracefully before processing any runNotice
+        if (taskData.startTime != null && earliestTaskStart.isAfter(taskData.startTime)) {
+          earliestTaskStart = taskData.startTime;
+        }
+      }
+
+      // TODO: early publish time
+
+      // if this task has run longer than the configured duration, signal all tasks in the group to persist
+      if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
+        log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
+        futureGroupIds.add(groupId);
+        futures.add(checkpointTaskGroup(group, true));
+      }
+    }
+
+    List<Map<T1, T2>> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int j = 0; j < results.size(); j++) {
+      Integer groupId = futureGroupIds.get(j);
+      TaskGroup group = taskGroups.get(groupId);
+      Map<T1, T2> endOffsets = results.get(j);
+
+      if (endOffsets != null) {
+        // set a timeout and put this group in pendingCompletionTaskGroups so that it can be monitored for completion
+        group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
+        pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
+
+        // set endOffsets as the next startOffsets
+        for (Map.Entry<T1, T2> entry : endOffsets.entrySet()) {
+          partitionGroups.get(groupId).put(entry.getKey(), entry.getValue());
+        }
+      } else {
+        log.warn(
+            "All tasks in group [%s] failed to transition to publishing state, killing tasks [%s]",
+            groupId,
+            group.taskIds()
+        );
+        for (String id : group.taskIds()) {
+          killTask(id);
+        }
+        // clear partitionGroups, so that latest offsets from db is used as start offsets not the stale ones
+        // if tasks did some successful incremental handoffs
+        partitionGroups.get(groupId).replaceAll((partition, offset) -> NOT_SET);
+      }
+
+      // remove this task group from the list of current task groups now that it has been handled
+      taskGroups.remove(groupId);
+    }
+  }
+
+  private ListenableFuture<Map<T1, T2>> checkpointTaskGroup(final TaskGroup taskGroup, final boolean finalize)
+  {
+    if (finalize) {
+      // 1) Check if any task completed (in which case we're done) and kill unassigned tasks
+      Iterator<Map.Entry<String, TaskData>> i = taskGroup.tasks.entrySet().iterator();
+      while (i.hasNext()) {
+        Map.Entry<String, TaskData> taskEntry = i.next();
+        String taskId = taskEntry.getKey();
+        TaskData task = taskEntry.getValue();
+
+        // task.status can be null if kafkaSupervisor is stopped gracefully before processing any runNotice.
+        if (task.status != null) {
+          if (task.status.isSuccess()) {
+            // If any task in this group has already completed, stop the rest of the tasks in the group and return.
+            // This will cause us to create a new set of tasks next cycle that will start from the offsets in
+            // metadata store (which will have advanced if we succeeded in publishing and will remain the same if
+            // publishing failed and we need to re-ingest)
+            return Futures.transform(
+                stopTasksInGroup(taskGroup),
+                new Function<Object, Map<T1, T2>>()
+                {
+                  @Nullable
+                  @Override
+                  public Map<T1, T2> apply(@Nullable Object input)
+                  {
+                    return null;
+                  }
+                }
+            );
+          }
+
+          if (task.status.isRunnable()) {
+            if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
+              log.info("Killing task [%s] which hasn't been assigned to a worker", taskId);
+              killTask(taskId);
+              i.remove();
+            }
+          }
+        }
+      }
+    }
+
+    // 2) Pause running tasks
+    final List<ListenableFuture<Map<T1, T2>>> pauseFutures = Lists.newArrayList();
+    final List<String> pauseTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
+    for (final String taskId : pauseTaskIds) {
+      pauseFutures.add(taskClient.pauseAsync(taskId));
+    }
+
+    return Futures.transform(
+        Futures.successfulAsList(pauseFutures), new Function<List<Map<T1, T2>>, Map<T1, T2>>()
+        {
+          @Nullable
+          @Override
+          public Map<T1, T2> apply(List<Map<T1, T2>> input)
+          {
+            // 3) Build a map of the highest offset read by any task in the group for each partition
+            final Map<T1, T2> endOffsets = new HashMap<>();
+            for (int i = 0; i < input.size(); i++) {
+              Map<T1, T2> result = input.get(i);
+
+              if (result == null || result.isEmpty()) { // kill tasks that didn't return a value
+                String taskId = pauseTaskIds.get(i);
+                log.warn("Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
+                killTask(taskId);
+                taskGroup.tasks.remove(taskId);
+
+              } else { // otherwise build a map of the highest offsets seen
+                for (Map.Entry<T1, T2> offset : result.entrySet()) {
+                  if (!endOffsets.containsKey(offset.getKey())
+                      || endOffsets.get(offset.getKey()).compareTo(offset.getValue()) < 0) {
+                    endOffsets.put(offset.getKey(), offset.getValue());
+                  }
+                }
+              }
+            }
+
+            // 4) Set the end offsets for each task to the values from step 3 and resume the tasks. All the tasks should
+            //    finish reading and start publishing within a short period, depending on how in sync the tasks were.
+            final List<ListenableFuture<Boolean>> setEndOffsetFutures = Lists.newArrayList();
+            final List<String> setEndOffsetTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
+
+            if (setEndOffsetTaskIds.isEmpty()) {
+              log.info("All tasks in taskGroup [%d] have failed, tasks will be re-created", taskGroup.groupId);
+              return null;
+            }
+
+            try {
+
+              if (endOffsets.equals(taskGroup.sequenceOffsets.lastEntry().getValue())) {
+                log.warn(
+                    "Checkpoint [%s] is same as the start offsets [%s] of latest sequence for the task group [%d]",
+                    endOffsets,
+                    taskGroup.sequenceOffsets.lastEntry().getValue(),
+                    taskGroup.groupId
+                );
+              }
+
+              log.info(
+                  "Setting endOffsets for tasks in taskGroup [%d] to %s and resuming",
+                  taskGroup.groupId,
+                  endOffsets
+              );
+              for (final String taskId : setEndOffsetTaskIds) {
+                setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, finalize));
+              }
+
+              List<Boolean> results = Futures.successfulAsList(setEndOffsetFutures)
+                                             .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+              for (int i = 0; i < results.size(); i++) {
+                if (results.get(i) == null || !results.get(i)) {
+                  String taskId = setEndOffsetTaskIds.get(i);
+                  log.warn("Task [%s] failed to respond to [set end offsets] in a timely manner, killing task", taskId);
+                  killTask(taskId);
+                  taskGroup.tasks.remove(taskId);
+                }
+              }
+            }
+            catch (Exception e) {
+              log.error("Something bad happened [%s]", e.getMessage());
+              Throwables.propagate(e);
+            }
+
+            if (taskGroup.tasks.isEmpty()) {
+              log.info("All tasks in taskGroup [%d] have failed, tasks will be re-created", taskGroup.groupId);
+              return null;
+            }
+
+            return endOffsets;
+          }
+        }, workerExec
+    );
+  }
+
+  private ListenableFuture<?> stopTasksInGroup(@Nullable TaskGroup taskGroup)
+  {
+    if (taskGroup == null) {
+      return Futures.immediateFuture(null);
+    }
+
+    final List<ListenableFuture<Void>> futures = Lists.newArrayList();
+    for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
+      final String taskId = entry.getKey();
+      final TaskData taskData = entry.getValue();
+      if (taskData.status == null) {
+        killTask(taskId);
+      } else if (!taskData.status.isComplete()) {
+        futures.add(stopTask(taskId, false));
+      }
+    }
+
+    return Futures.successfulAsList(futures);
+  }
+
+  private void checkPendingCompletionTasks()
+      throws ExecutionException, InterruptedException, TimeoutException
+  {
+    List<ListenableFuture<?>> futures = Lists.newArrayList();
+
+    for (Map.Entry<Integer, CopyOnWriteArrayList<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
+
+      boolean stopTasksInTaskGroup = false;
+      Integer groupId = pendingGroupList.getKey();
+      CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingGroupList.getValue();
+      List<TaskGroup> toRemove = Lists.newArrayList();
+
+      for (TaskGroup group : taskGroupList) {
+        boolean foundSuccess = false, entireTaskGroupFailed = false;
+
+        if (stopTasksInTaskGroup) {
+          // One of the earlier groups that was handling the same partition set timed out before the segments were
+          // published so stop any additional groups handling the same partition set that are pending completion.
+          futures.add(stopTasksInGroup(group));
+          toRemove.add(group);
+          continue;
+        }
+
+        Iterator<Map.Entry<String, TaskData>> iTask = group.tasks.entrySet().iterator();
+        while (iTask.hasNext()) {
+          final Map.Entry<String, TaskData> entry = iTask.next();
+          final String taskId = entry.getKey();
+          final TaskData taskData = entry.getValue();
+
+          Preconditions.checkNotNull(taskData.status, "WTH? task[%s] has a null status", taskId);
+
+          if (taskData.status.isFailure()) {
+            iTask.remove(); // remove failed task
+            if (group.tasks.isEmpty()) {
+              // if all tasks in the group have failed, just nuke all task groups with this partition set and restart
+              entireTaskGroupFailed = true;
+              break;
+            }
+          }
+
+          if (taskData.status.isSuccess()) {
+            // If one of the pending completion tasks was successful, stop the rest of the tasks in the group as
+            // we no longer need them to publish their segment.
+            log.info("Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds());
+            futures.add(stopTasksInGroup(group));
+            foundSuccess = true;
+            toRemove.add(group); // remove the TaskGroup from the list of pending completion task groups
+            break; // skip iterating the rest of the tasks in this group as they've all been stopped now
+          }
+        }
+
+        if ((!foundSuccess && group.completionTimeout.isBeforeNow()) || entireTaskGroupFailed) {
+          if (entireTaskGroupFailed) {
+            log.warn("All tasks in group [%d] failed to publish, killing all tasks for these partitions", groupId);
+          } else {
+            log.makeAlert(
+                "No task in [%s] for taskGroup [%d] succeeded before the completion timeout elapsed [%s]!",
+                group.taskIds(),
+                groupId,
+                ioConfig.getCompletionTimeout()
+            ).emit();
+          }
+
+          // reset partitions offsets for this task group so that they will be re-read from metadata storage
+          partitionGroups.get(groupId).replaceAll((partition, offset) -> NOT_SET);
+          // kill all the tasks in this pending completion group
+          killTasksInGroup(group);
+          // set a flag so the other pending completion groups for this set of partitions will also stop
+          stopTasksInTaskGroup = true;
+
+          // kill all the tasks in the currently reading task group and remove the bad task group
+          killTasksInGroup(taskGroups.remove(groupId));
+          toRemove.add(group);
+        }
+      }
+
+      taskGroupList.removeAll(toRemove);
+    }
+
+    // wait for all task shutdowns to complete before returning
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+  }
+
+  private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
+  {
+    List<ListenableFuture<?>> futures = Lists.newArrayList();
+    Iterator<Map.Entry<Integer, TaskGroup>> iTaskGroups = taskGroups.entrySet().iterator();
+    while (iTaskGroups.hasNext()) {
+      Map.Entry<Integer, TaskGroup> taskGroupEntry = iTaskGroups.next();
+      Integer groupId = taskGroupEntry.getKey();
+      TaskGroup taskGroup = taskGroupEntry.getValue();
+
+      // Iterate the list of known tasks in this group and:
+      //   1) Kill any tasks which are not "current" (have the partitions, starting offsets, and minimumMessageTime
+      //      & maximumMessageTime (if applicable) in [taskGroups])
+      //   2) Remove any tasks that have failed from the list
+      //   3) If any task completed successfully, stop all the tasks in this group and move to the next group
+
+      log.debug("Task group [%d] pre-pruning: %s", groupId, taskGroup.taskIds());
+
+      Iterator<Map.Entry<String, TaskData>> iTasks = taskGroup.tasks.entrySet().iterator();
+      while (iTasks.hasNext()) {
+        Map.Entry<String, TaskData> task = iTasks.next();
+        String taskId = task.getKey();
+        TaskData taskData = task.getValue();
+
+        // stop and remove bad tasks from the task group
+        if (!isTaskCurrent(groupId, taskId)) {
+          log.info("Stopping task [%s] which does not match the expected offset range and ingestion spec", taskId);
+          futures.add(stopTask(taskId, false));
+          iTasks.remove();
+          continue;
+        }
+
+        Preconditions.checkNotNull(taskData.status, "WTH? task[%s] has a null status", taskId);
+
+        // remove failed tasks
+        if (taskData.status.isFailure()) {
+          iTasks.remove();
+          continue;
+        }
+
+        // check for successful tasks, and if we find one, stop all tasks in the group and remove the group so it can
+        // be recreated with the next set of offsets
+        if (taskData.status.isSuccess()) {
+          futures.add(stopTasksInGroup(taskGroup));
+          iTaskGroups.remove();
+          break;
+        }
+      }
+      log.debug("Task group [%d] post-pruning: %s", groupId, taskGroup.taskIds());
+    }
+
+    // wait for all task shutdowns to complete before returning
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+  }
+
+  private void createNewTasks() throws JsonProcessingException
+  {
+    // update the checkpoints in the taskGroup to latest ones so that new tasks do not read what is already published
+    verifyAndMergeCheckpoints(
+        taskGroups.values()
+                  .stream()
+                  .filter(taskGroup -> taskGroup.tasks.size() < ioConfig.getReplicas())
+                  .collect(Collectors.toList())
+    );
+
+    // check that there is a current task group for each group of partitions in [partitionGroups]
+    for (Integer groupId : partitionGroups.keySet()) {
+      if (!taskGroups.containsKey(groupId)) {
+        log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
+
+        Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
+            DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
+        ) : Optional.absent());
+
+        Optional<DateTime> maximumMessageTime = (ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? Optional.of(
+            DateTimes.nowUtc().plus(ioConfig.getTaskDuration()).plus(ioConfig.getEarlyMessageRejectionPeriod().get())
+        ) : Optional.absent());
+
+        try {
+          taskGroups.put(
+              groupId,
+              new TaskGroup(
+                  groupId,
+                  generateStartingSequence(groupId),
+                  minimumMessageTime,
+                  maximumMessageTime,
+                  null //TODO: exclusive sequence
+              )
+          );
+        }
+        catch (TimeoutException e) {
+          log.warn(
+              e,
+              "Timeout while fetching sequence numbers - if you are reading from the latest sequence number, you need to write events to the stream before the sequence number can be determined"
+          );
+        }
+      }
+    }
+
+    // iterate through all the current task groups and make sure each one has the desired number of replica tasks
+    boolean createdTask = false;
+    for (Map.Entry<Integer, TaskGroup> entry : taskGroups.entrySet()) {
+      TaskGroup taskGroup = entry.getValue();
+      Integer groupId = entry.getKey();
+
+      //TODO: kinesis
+//      if (taskGroup.partitionOffsets == null || taskGroup.partitionOffsets
+//          .values().stream().allMatch(x -> x == null || Record.END_OF_SHARD_MARKER.equals(x))) {
+//        log.debug("Nothing to read in any partition for taskGroup [%d], skipping task creation", groupId);
+//        continue;
+//      }
+
+      if (ioConfig.getReplicas() > taskGroup.tasks.size()) {
+        log.info(
+            "Number of tasks [%d] does not match configured numReplicas [%d] in task group [%d], creating more tasks",
+            taskGroup.tasks.size(), ioConfig.getReplicas(), groupId
+        );
+        createTasksForGroup(groupId, ioConfig.getReplicas() - taskGroup.tasks.size());
+        createdTask = true;
+      }
+    }
+
+    if (createdTask && firstRunTime.isBeforeNow()) {
+      // Schedule a run event after a short delay to update our internal data structures with the new tasks that were
+      // just created. This is mainly for the benefit of the status API in situations where the run period is lengthy.
+      scheduledExec.schedule(buildRunTask(), 5000, TimeUnit.MILLISECONDS);
+    }
+
+  }
+
+  abstract protected void createTasksForGroup(int group, int replicas) throws JsonProcessingException;
+
+  abstract protected ImmutableMap<T1, T2> generateStartingSequence(int groupId)
+      throws TimeoutException;
 
   abstract protected RecordSupplier<T1, T2> setupRecordSupplier();
 
   abstract protected SeekableStreamSupervisorReportPayload createSeekableStreamSupervisorReportPayload();
 
   abstract protected void scheduleReporting();
+
+  abstract protected int getTaskGroupIdForPartition(T1 partition);
+
+  abstract protected void checkSourceMetadataInstanceMatch(DataSourceMetadata metadata) throws IAE;
+
+  // TODO: may want to put more logic in the base class
+  abstract protected SupervisorReport<SeekableStreamSupervisorReportPayload> generateReport(boolean includeOffsets);
+
+  abstract protected boolean isTaskInstanceOfThis(Task task);
 
 }
