@@ -39,7 +39,10 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
   }
 
   @Override
-  public ClientResponse<RetryResponseHolder<Intermediate>> handleResponse(HttpResponse httpResponse)
+  public ClientResponse<RetryResponseHolder<Intermediate>> handleResponse(
+      HttpResponse httpResponse,
+      TrafficCop trafficCop
+  )
   {
     log.debug("UnauthorizedResponseHandler - Got response status [%s]", httpResponse.getStatus());
     if (httpResponse.getStatus().equals(HttpResponseStatus.UNAUTHORIZED)) {
@@ -47,21 +50,22 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
       httpResponse.getContent().toString();
       return ClientResponse.unfinished(RetryResponseHolder.retry());
     } else {
-      return wrap(httpResponseHandler.handleResponse(httpResponse));
+      return wrap(httpResponseHandler.handleResponse(httpResponse, trafficCop));
     }
   }
 
   @Override
   public ClientResponse<RetryResponseHolder<Intermediate>> handleChunk(
       ClientResponse<RetryResponseHolder<Intermediate>> clientResponse,
-      HttpChunk httpChunk
+      HttpChunk httpChunk,
+      long chunkNum
   )
   {
     if (clientResponse.getObj().shouldRetry()) {
       httpChunk.getContent().toString();
       return clientResponse;
     } else {
-      return wrap(httpResponseHandler.handleChunk(unwrap(clientResponse), httpChunk));
+      return wrap(httpResponseHandler.handleChunk(unwrap(clientResponse), httpChunk, chunkNum));
     }
   }
 
@@ -84,9 +88,12 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
   private <T> ClientResponse<RetryResponseHolder<T>> wrap(ClientResponse<T> response)
   {
     if (response.isFinished()) {
-      return ClientResponse.finished(new RetryResponseHolder<T>(false, response.getObj()));
+      return ClientResponse.finished(new RetryResponseHolder<>(false, response.getObj()));
     } else {
-      return ClientResponse.unfinished(new RetryResponseHolder<T>(false, response.getObj()));
+      return ClientResponse.unfinished(
+          new RetryResponseHolder<>(false, response.getObj()),
+          response.isContinueReading()
+      );
     }
   }
 
@@ -95,7 +102,7 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
     if (response.isFinished()) {
       return ClientResponse.finished(response.getObj().getObj());
     } else {
-      return ClientResponse.unfinished(response.getObj().getObj());
+      return ClientResponse.unfinished(response.getObj().getObj(), response.isContinueReading());
     }
   }
 

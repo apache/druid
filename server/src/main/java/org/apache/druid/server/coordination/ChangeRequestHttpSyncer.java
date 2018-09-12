@@ -426,11 +426,11 @@ public class ChangeRequestHttpSyncer<T>
     private String description;
 
     @Override
-    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response)
+    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
     {
       status = response.getStatus().getCode();
       description = response.getStatus().getReasonPhrase();
-      return ClientResponse.unfinished(super.handleResponse(response).getObj());
+      return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
     }
   }
 

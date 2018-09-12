@@ -46,6 +46,11 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
     this.queryMaker = queryMaker;
   }
 
+  /**
+   * Returns the PartialDruidQuery associated with this DruidRel, and which can be built on top of. Returns null
+   * if this rel cannot be built on top of.
+   */
+  @Nullable
   public abstract PartialDruidQuery getPartialDruidQuery();
 
   /**

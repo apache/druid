@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -130,6 +131,18 @@ public final class QueryPlus<T>
   public QueryPlus<T> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return new QueryPlus<>(query.withQuerySegmentSpec(spec), queryMetrics, identity);
+  }
+
+  /**
+   * Equivalent of withQuery(getQuery().withOverriddenContext(ImmutableMap.of(MAX_QUEUED_BYTES_KEY, maxQueuedBytes))).
+   */
+  public QueryPlus<T> withMaxQueuedBytes(long maxQueuedBytes)
+  {
+    return new QueryPlus<>(
+        query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_QUEUED_BYTES_KEY, maxQueuedBytes)),
+        queryMetrics,
+        identity
+    );
   }
 
   /**

@@ -59,7 +59,7 @@ public class DruidSemiJoinRule extends RelOptRule
       };
 
   private static final Predicate<DruidRel> IS_GROUP_BY = druidRel ->
-      druidRel.getPartialDruidQuery().getAggregate() != null;
+      druidRel.getPartialDruidQuery() != null && druidRel.getPartialDruidQuery().getAggregate() != null;
 
   private static final DruidSemiJoinRule INSTANCE = new DruidSemiJoinRule();
 
@@ -73,7 +73,12 @@ public class DruidSemiJoinRule extends RelOptRule
                 null,
                 IS_LEFT_OR_INNER,
                 some(
-                    operand(DruidRel.class, null, Predicates.not(IS_GROUP_BY), any()),
+                    operand(
+                        DruidRel.class,
+                        null,
+                        Predicates.and(DruidRules.CAN_BUILD_ON, Predicates.not(IS_GROUP_BY)),
+                        any()
+                    ),
                     operand(DruidRel.class, null, IS_GROUP_BY, any())
                 )
             )

@@ -56,6 +56,7 @@ import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -2683,6 +2684,13 @@ public class CachingClusteredClientTest
           public int getCacheBulkMergeLimit()
           {
             return mergeLimit;
+          }
+        },
+        new DruidHttpClientConfig() {
+          @Override
+          public long getMaxQueuedBytes()
+          {
+            return 0L;
           }
         }
     );

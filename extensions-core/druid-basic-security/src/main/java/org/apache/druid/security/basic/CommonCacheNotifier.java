@@ -199,7 +199,7 @@ public class CommonCacheNotifier
     protected static final Logger log = new Logger(ResponseHandler.class);
 
     @Override
-    public ClientResponse<StatusResponseHolder> handleResponse(HttpResponse response)
+    public ClientResponse<StatusResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
     {
       return ClientResponse.unfinished(
           new StatusResponseHolder(
@@ -212,7 +212,8 @@ public class CommonCacheNotifier
     @Override
     public ClientResponse<StatusResponseHolder> handleChunk(
         ClientResponse<StatusResponseHolder> response,
-        HttpChunk chunk
+        HttpChunk chunk,
+        long chunkNum
     )
     {
       return response;

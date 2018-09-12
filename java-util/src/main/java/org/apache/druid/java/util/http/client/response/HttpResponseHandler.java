@@ -38,17 +38,60 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
  *
  * Note: if you return a finished ClientResponse object from anything other than the done() method, IntermediateType
  * must be castable to FinalType
+ *
+ * This handler can exert backpressure by returning a response with "continueReading" set to false from handleResponse()
+ * or handleChunk(). In this case, the HTTP client will stop reading soon thereafter. It may not happen immediately, so
+ * be prepared for more handleChunk() calls to happen. To resume reads, call resume() on the TrafficCop provided by
+ * handleResponse() with a chunk number at least as high as the one provided by the handleChunk() call from which you
+ * returned a suspend-reading response. If you are resuming reads after suspending them from handleResponse(), use 0
+ * for the chunk number.
  */
 public interface HttpResponseHandler<IntermediateType, FinalType>
 {
   /**
    * Handles the initial HttpResponse object that comes back from Netty.
    *
-   * @param response - response from Netty
-   * @return
+   * @param response   response from Netty
+   * @param trafficCop flow controller, allows resuming suspended reads
+   *
+   * @return response that may be "finished" or "unfinished".
    */
-  ClientResponse<IntermediateType> handleResponse(HttpResponse response);
-  ClientResponse<IntermediateType> handleChunk(ClientResponse<IntermediateType> clientResponse, HttpChunk chunk);
+  ClientResponse<IntermediateType> handleResponse(HttpResponse response, TrafficCop trafficCop);
+
+  /**
+   * Called for chunked responses, indicating another HttpChunk has arrived.
+   *
+   * @param clientResponse last response returned by the prior handleResponse() or handleChunk()
+   * @param chunk          the new chunk of data
+   * @param chunkNum       the sequence number of this chunk (increases monotonically)
+   *
+   * @return response that may be "finished" or "unfinished".
+   */
+  ClientResponse<IntermediateType> handleChunk(
+      ClientResponse<IntermediateType> clientResponse,
+      HttpChunk chunk,
+      long chunkNum
+  );
+
+  /**
+   * Called after the final handleResponse() or handleChunk() call, signifying that no more data
+   * will arrive.
+   *
+   * @param clientResponse last response returned by handleResponse() or handleChunk()
+   *
+   * @return response containing an object to hand back to the caller. It must be a "finished" response.
+   */
   ClientResponse<FinalType> done(ClientResponse<IntermediateType> clientResponse);
+
   void exceptionCaught(ClientResponse<IntermediateType> clientResponse, Throwable e);
+
+  interface TrafficCop
+  {
+    /**
+     * Call this to resume reading after you have suspended it.
+     *
+     * @param chunkNum chunk number corresponding to the handleChunk() or handleResponse() call from which you
+     */
+    void resume(long chunkNum);
+  }
 }

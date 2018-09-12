@@ -223,12 +223,20 @@ public class Sink implements Iterable<FireHydrant>
     return !writable;
   }
 
-  public void finishWriting()
+  /**
+   * Marks sink as 'finished', preventing further writes.
+   * @return 'true' if sink was sucessfully finished, 'false' if sink was already finished
+   */
+  public boolean finishWriting()
   {
     synchronized (hydrantLock) {
+      if (!writable) {
+        return false;
+      }
       writable = false;
       clearDedupCache();
     }
+    return true;
   }
 
   public DataSegment getSegment()
