@@ -152,7 +152,7 @@ public class MaterializedViewSupervisor implements Supervisor
         log.info(
             "Materialized view supervisor[%s:%s] is suspended",
             spec.getId(),
-            spec.getBaseDataSource()
+            spec.getDataSourceName()
         );
         return;
       }
