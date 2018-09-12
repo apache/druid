@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.ISE;
 
@@ -32,6 +33,10 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
   private boolean hasMultipleValues = false;
+
+  // This is a query time concept and not persisted in the segment files.
+  @JsonIgnore
+  private boolean filterable;
 
   @Override
   @JsonProperty
@@ -99,6 +104,22 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return hasMultipleValues;
   }
 
+  @Override
+  public boolean isFilterable()
+  {
+    return type == ValueType.STRING ||
+           type == ValueType.LONG ||
+           type == ValueType.FLOAT ||
+           type == ValueType.DOUBLE ||
+           filterable;
+  }
+
+  public ColumnCapabilitiesImpl setFilterable(boolean filterable)
+  {
+    this.filterable = filterable;
+    return this;
+  }
+
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
     this.hasMultipleValues = hasMultipleValues;
@@ -124,5 +145,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.hasInvertedIndexes |= other.hasBitmapIndexes();
     this.hasSpatialIndexes |= other.hasSpatialIndexes();
     this.hasMultipleValues |= other.hasMultipleValues();
+    this.filterable &= other.isFilterable();
   }
 }

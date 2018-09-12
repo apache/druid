@@ -31,7 +31,7 @@ import java.io.InputStream;
 public class InputStreamResponseHandler implements HttpResponseHandler<AppendableByteArrayInputStream, InputStream>
 {
   @Override
-  public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response)
+  public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
     in.add(getContentBytes(response.getContent()));
@@ -40,7 +40,9 @@ public class InputStreamResponseHandler implements HttpResponseHandler<Appendabl
 
   @Override
   public ClientResponse<AppendableByteArrayInputStream> handleChunk(
-      ClientResponse<AppendableByteArrayInputStream> clientResponse, HttpChunk chunk
+      ClientResponse<AppendableByteArrayInputStream> clientResponse,
+      HttpChunk chunk,
+      long chunkNum
   )
   {
     clientResponse.getObj().add(getContentBytes(chunk.getContent()));

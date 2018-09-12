@@ -40,6 +40,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final int maxRowsPerSegment;
+  @Nullable
+  private final Long maxTotalRows;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   @Deprecated
@@ -61,6 +63,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") @Nullable Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") @Nullable File basePersistDirectory,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
@@ -85,6 +88,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.maxTotalRows = maxTotalRows;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
@@ -123,6 +127,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         config.maxRowsInMemory,
         config.maxBytesInMemory,
         config.maxRowsPerSegment,
+        config.maxTotalRows,
         config.intermediatePersistPeriod,
         config.basePersistDirectory,
         config.maxPendingPersists,
@@ -153,10 +158,20 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return maxBytesInMemory;
   }
 
+  @Override
   @JsonProperty
   public int getMaxRowsPerSegment()
   {
     return maxRowsPerSegment;
+  }
+
+
+  @JsonProperty
+  @Override
+  @Nullable
+  public Long getMaxTotalRows()
+  {
+    return maxTotalRows;
   }
 
   @Override
@@ -255,6 +270,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
+        maxTotalRows,
         intermediatePersistPeriod,
         dir,
         maxPendingPersists,
@@ -284,6 +300,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return maxRowsInMemory == that.maxRowsInMemory &&
            maxRowsPerSegment == that.maxRowsPerSegment &&
            maxBytesInMemory == that.maxBytesInMemory &&
+           Objects.equals(maxTotalRows, that.maxTotalRows) &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
@@ -305,6 +322,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         maxRowsInMemory,
         maxRowsPerSegment,
         maxBytesInMemory,
+        maxTotalRows,
         intermediatePersistPeriod,
         basePersistDirectory,
         maxPendingPersists,
@@ -326,6 +344,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return "KafkaTuningConfig{" +
            "maxRowsInMemory=" + maxRowsInMemory +
            ", maxRowsPerSegment=" + maxRowsPerSegment +
+           ", maxTotalRows=" + maxTotalRows +
            ", maxBytesInMemory=" + maxBytesInMemory +
            ", intermediatePersistPeriod=" + intermediatePersistPeriod +
            ", basePersistDirectory=" + basePersistDirectory +
