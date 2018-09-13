@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.indexing.SeekableStream;
+package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexer.TaskStatus;

@@ -1,4 +1,4 @@
-package org.apache.druid.indexing.SeekableStream.supervisor;
+package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -22,12 +22,12 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.SeekableStream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.SeekableStream.SeekableStreamIndexTask;
-import org.apache.druid.indexing.SeekableStream.SeekableStreamIndexTaskClient;
-import org.apache.druid.indexing.SeekableStream.SeekableStreamIndexTaskClientFactory;
-import org.apache.druid.indexing.SeekableStream.SeekableStreamTuningConfig;
-import org.apache.druid.indexing.SeekableStream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
+import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;

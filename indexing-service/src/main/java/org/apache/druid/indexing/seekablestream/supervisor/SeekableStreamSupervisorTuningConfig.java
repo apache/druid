@@ -17,10 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.SeekableStream.supervisor;
+package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexing.SeekableStream.SeekableStreamTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 

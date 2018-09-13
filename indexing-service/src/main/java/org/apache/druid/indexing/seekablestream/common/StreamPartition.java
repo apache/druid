@@ -1,11 +1,11 @@
-package org.apache.druid.indexing.SeekableStream.common;
+package org.apache.druid.indexing.seekablestream.common;
 
-public class StreamPartition<PartitionType>
+public class StreamPartition<T1>
 {
   private final String streamName;
-  private final PartitionType partitionId;
+  private final T1 partitionId;
 
-  public StreamPartition(String streamName, PartitionType partitionId)
+  public StreamPartition(String streamName, T1 partitionId)
   {
     this.streamName = streamName;
     this.partitionId = partitionId;
@@ -16,7 +16,7 @@ public class StreamPartition<PartitionType>
     return streamName;
   }
 
-  public PartitionType getPartitionId()
+  public T1 getPartitionId()
   {
     return partitionId;
   }
@@ -56,7 +56,7 @@ public class StreamPartition<PartitionType>
            '}';
   }
 
-  public static <PartitionType> StreamPartition of(String streamName, PartitionType partitionId)
+  public static <T1> StreamPartition of(String streamName, T1 partitionId)
   {
     return new StreamPartition<>(streamName, partitionId);
   }

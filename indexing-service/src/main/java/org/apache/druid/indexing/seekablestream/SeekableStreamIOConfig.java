@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.SeekableStream;
+package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -59,16 +59,6 @@ abstract public class SeekableStreamIOConfig<T1, T2> implements IOConfig
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
-
-    Preconditions.checkArgument(
-        startPartitions.getId().equals(endPartitions.getId()),
-        "start id and end id must match"
-    );
-
-    Preconditions.checkArgument(
-        startPartitions.getPartitionSequenceMap().keySet().equals(endPartitions.getPartitionSequenceMap().keySet()),
-        "start partition set and end partition set must match"
-    );
   }
 
   @Nullable

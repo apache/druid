@@ -22,7 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.indexing.SeekableStream.SeekableStreamIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;

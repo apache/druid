@@ -17,9 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.SeekableStream;
+package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -112,9 +112,7 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
 
       if (response.getStatus().equals(HttpResponseStatus.OK)) {
         log.info("Task [%s] paused successfully", id);
-        return deserialize(response.getContent(), new TypeReference<Map<T1, T2>>()
-        {
-        });
+        return deserialize(response.getContent(), constructMapType(Map.class));
       }
 
       while (true) {
@@ -221,9 +219,7 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
           null,
           retry
       );
-      return deserialize(response.getContent(), new TypeReference<Map<T1, T2>>()
-      {
-      });
+      return deserialize(response.getContent(), constructMapType(Map.class));
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -240,9 +236,7 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
       final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
       return deserialize(
           response.getContent(),
-          new TypeReference<TreeMap<Integer, Map<T1, T2>>>()
-          {
-          }
+          constructMapType(TreeMap.class)
       );
     }
     catch (NoTaskLocationException e) {
@@ -267,9 +261,7 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
 
     try {
       final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
-      return deserialize(response.getContent(), new TypeReference<Map<T1, T2>>()
-      {
-      });
+      return deserialize(response.getContent(), constructMapType(Map.class));
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -356,6 +348,8 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
   {
     return doAsync(() -> getStatus(id));
   }
+
+  abstract protected JavaType constructMapType(Class<? extends Map> mapType);
 
 }
 

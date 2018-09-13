@@ -1,17 +1,17 @@
-package org.apache.druid.indexing.SeekableStream.common;
+package org.apache.druid.indexing.seekablestream.common;
 
 import java.util.List;
 
-public class Record<PartitionType, SequenceType>
+public class Record<T1, T2>
 {
   public static final String END_OF_SHARD_MARKER = "EOS";
 
   private final String streamName;
-  private final PartitionType partitionId;
-  private final SequenceType sequenceNumber;
+  private final T1 partitionId;
+  private final T2 sequenceNumber;
   private final List<byte[]> data;
 
-  public Record(String streamName, PartitionType partitionId, SequenceType sequenceNumber, List<byte[]> data)
+  public Record(String streamName, T1 partitionId, T2 sequenceNumber, List<byte[]> data)
   {
     this.streamName = streamName;
     this.partitionId = partitionId;
@@ -24,12 +24,12 @@ public class Record<PartitionType, SequenceType>
     return streamName;
   }
 
-  public PartitionType getPartitionId()
+  public T1 getPartitionId()
   {
     return partitionId;
   }
 
-  public SequenceType getSequenceNumber()
+  public T2 getSequenceNumber()
   {
     return sequenceNumber;
   }

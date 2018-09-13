@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.SeekableStream.supervisor;
+package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;

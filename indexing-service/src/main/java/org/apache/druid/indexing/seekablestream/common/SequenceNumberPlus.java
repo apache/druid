@@ -1,4 +1,4 @@
-package org.apache.druid.indexing.SeekableStream.common;
+package org.apache.druid.indexing.seekablestream.common;
 
 
 public class SequenceNumberPlus

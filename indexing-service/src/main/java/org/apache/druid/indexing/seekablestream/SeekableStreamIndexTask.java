@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.SeekableStream;
+package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
