@@ -132,6 +132,33 @@ public class IncrementalIndexRow
     this.rowIndex = rowIndex;
   }
 
+  public int copyStringDim(int dimIndex, int[] dst)
+  {
+    if (dims == null || dimIndex >= dims.length) {
+      return 0;
+    }
+    int[] stringDim = (int[]) dims[dimIndex];
+    if (stringDim != null) {
+      if (dst.length < stringDim.length) {
+        dst = new int[stringDim.length];
+      }
+      System.arraycopy((int[]) dims[dimIndex], 0, dst, 0, stringDim.length);
+      return stringDim.length;
+    } else {
+      return 0;
+    }
+  }
+
+  public int calcStringDimSize(int dimIndex)
+  {
+    if (dims == null || dimIndex >= dims.length || dims[dimIndex] == null) {
+      return 0;
+    }
+
+    return ((int[]) dims[dimIndex]).length;
+
+  }
+
   /**
    * bytesInMemory estimates the size of IncrementalIndexRow key, it takes into account the timestamp(long),
    * dims(Object Array) and dimensionDescsList(List). Each of these are calculated as follows:

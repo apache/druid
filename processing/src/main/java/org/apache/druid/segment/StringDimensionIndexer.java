@@ -444,18 +444,11 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       {
         IncrementalIndexRow key = currEntry.get();
 
-        int[] indices;
-        if (dimIndex < key.getDimsLength()) {
-          indices = (int[]) key.getDim(dimIndex);
-        } else {
-          indices = null;
-        }
-
-        int[] row = null;
-        int rowSize = 0;
-
         // usually due to currEntry's rowIndex is smaller than the row's rowIndex in which this dim first appears
-        if (indices == null || indices.length == 0) {
+        if (key.getDimsLength() == 0 || key.calcStringDimSize(dimIndex) == 0) {
+          int[] row;
+          int rowSize;
+
           if (hasMultipleValues) {
             row = IntArrays.EMPTY_ARRAY;
             rowSize = 0;
@@ -474,14 +467,11 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
               rowSize = 0;
             }
           }
+          indexedInts.setValues(row, rowSize);
+        } else {
+          indexedInts.setValues(key, dimIndex);
         }
 
-        if (row == null && indices != null && indices.length > 0) {
-          row = indices;
-          rowSize = indices.length;
-        }
-
-        indexedInts.setValues(row, rowSize);
         return indexedInts;
       }
 

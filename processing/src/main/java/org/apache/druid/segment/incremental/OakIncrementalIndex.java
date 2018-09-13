@@ -36,7 +36,7 @@ import com.oath.oak.OakMapBuilder;
 import com.oath.oak.OakTransformView;
 import com.oath.oak.OakBufferView;
 import com.oath.oak.OakRBuffer;
-import com.oath.oak.CloseableIterator;
+import com.oath.oak.OakCloseableIterator;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -175,7 +175,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
 
     OakMap tmpOakMap = descending ? oak.descendingMap() : oak;
     OakTransformView transformView = tmpOakMap.createTransformView(transformer);
-    CloseableIterator<Row> valuesIterator = transformView.valuesIterator();
+    OakCloseableIterator<Row> valuesIterator = transformView.valuesIterator();
     return new Iterable<Row>()
     {
       @Override
@@ -334,7 +334,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
     }
 
     OakBufferView bufferView = subMap.createBufferView();
-    CloseableIterator<OakRBuffer> keysIterator = bufferView.keysIterator();
+    OakCloseableIterator<OakRBuffer> keysIterator = bufferView.keysIterator();
     return new Iterable<IncrementalIndexRow>() {
       @Override
       public Iterator<IncrementalIndexRow> iterator()
@@ -350,7 +350,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
   @Override
   public Iterable<IncrementalIndexRow> keySet()
   {
-    CloseableIterator<IncrementalIndexRow> keysIterator = oak.keysIterator();
+    OakCloseableIterator<IncrementalIndexRow> keysIterator = oak.keysIterator();
 
     return new Iterable<IncrementalIndexRow>() {
       @Override

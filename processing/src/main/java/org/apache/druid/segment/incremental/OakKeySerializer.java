@@ -24,9 +24,9 @@ import java.nio.ByteBuffer;
 
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
-import com.oath.oak.Serializer;
+import com.oath.oak.OakSerializer;
 
-public class OakKeySerializer implements Serializer<IncrementalIndexRow>
+public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
 {
   private List<DimensionDesc> dimensionDescsList;
 
