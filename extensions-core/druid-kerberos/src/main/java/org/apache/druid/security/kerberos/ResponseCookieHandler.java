@@ -21,9 +21,9 @@ package org.apache.druid.security.kerberos;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -49,7 +49,7 @@ public class ResponseCookieHandler<Intermediate, Final> implements HttpResponseH
   }
 
   @Override
-  public ClientResponse<Intermediate> handleResponse(HttpResponse httpResponse)
+  public ClientResponse<Intermediate> handleResponse(HttpResponse httpResponse, TrafficCop trafficCop)
   {
     try {
       final HttpHeaders headers = httpResponse.headers();
@@ -66,14 +66,18 @@ public class ResponseCookieHandler<Intermediate, Final> implements HttpResponseH
       log.error(e, "Error while processing Cookies from header");
     }
     finally {
-      return delegate.handleResponse(httpResponse);
+      return delegate.handleResponse(httpResponse, trafficCop);
     }
   }
 
   @Override
-  public ClientResponse<Intermediate> handleChunk(ClientResponse<Intermediate> clientResponse, HttpChunk httpChunk)
+  public ClientResponse<Intermediate> handleChunk(
+      ClientResponse<Intermediate> clientResponse,
+      HttpChunk httpChunk,
+      long chunkNum
+  )
   {
-    return delegate.handleChunk(clientResponse, httpChunk);
+    return delegate.handleChunk(clientResponse, httpChunk, chunkNum);
   }
 
   @Override
