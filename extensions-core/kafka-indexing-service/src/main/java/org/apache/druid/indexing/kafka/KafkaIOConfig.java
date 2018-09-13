@@ -21,28 +21,19 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import org.apache.druid.segment.indexing.IOConfig;
+import org.apache.druid.indexing.SeekableStream.SeekableStreamIOConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class KafkaIOConfig implements IOConfig
+public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
 {
-  private static final boolean DEFAULT_USE_TRANSACTION = true;
   private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
   @Nullable
-  private final Integer taskGroupId;
-  private final String baseSequenceName;
-  private final KafkaPartitions startPartitions;
-  private final KafkaPartitions endPartitions;
-  private final Map<String, Object> consumerProperties;
-  private final boolean useTransaction;
-  private final Optional<DateTime> minimumMessageTime;
-  private final Optional<DateTime> maximumMessageTime;
+  private final Map<String, String> consumerProperties;
   private final boolean skipOffsetGaps;
 
   @JsonCreator
@@ -51,21 +42,24 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") KafkaPartitions startPartitions,
       @JsonProperty("endPartitions") KafkaPartitions endPartitions,
-      @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
+      @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
   )
   {
-    this.taskGroupId = taskGroupId;
-    this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
-    this.startPartitions = Preconditions.checkNotNull(startPartitions, "startPartitions");
-    this.endPartitions = Preconditions.checkNotNull(endPartitions, "endPartitions");
+    super(
+        taskGroupId,
+        baseSequenceName,
+        startPartitions,
+        endPartitions,
+        useTransaction,
+        minimumMessageTime,
+        maximumMessageTime
+    );
+
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
-    this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
-    this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
-    this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
 
     Preconditions.checkArgument(
@@ -88,54 +82,28 @@ public class KafkaIOConfig implements IOConfig
     }
   }
 
-  @Nullable
-  @JsonProperty
-  public Integer getTaskGroupId()
-  {
-    return taskGroupId;
-  }
-
-  @JsonProperty
-  public String getBaseSequenceName()
-  {
-    return baseSequenceName;
-  }
-
+  @Override
   @JsonProperty
   public KafkaPartitions getStartPartitions()
   {
-    return startPartitions;
+    return (KafkaPartitions) super.getStartPartitions();
   }
 
+  @Override
   @JsonProperty
   public KafkaPartitions getEndPartitions()
   {
-    return endPartitions;
+    return (KafkaPartitions) super.getEndPartitions();
   }
 
+
+  @Nullable
   @JsonProperty
-  public Map<String, Object> getConsumerProperties()
+  public Map<String, String> getConsumerProperties()
   {
     return consumerProperties;
   }
 
-  @JsonProperty
-  public boolean isUseTransaction()
-  {
-    return useTransaction;
-  }
-
-  @JsonProperty
-  public Optional<DateTime> getMaximumMessageTime()
-  {
-    return maximumMessageTime;
-  }
-
-  @JsonProperty
-  public Optional<DateTime> getMinimumMessageTime()
-  {
-    return minimumMessageTime;
-  }
 
   @JsonProperty
   public boolean isSkipOffsetGaps()
@@ -147,14 +115,14 @@ public class KafkaIOConfig implements IOConfig
   public String toString()
   {
     return "KafkaIOConfig{" +
-           "taskGroupId=" + taskGroupId +
-           ", baseSequenceName='" + baseSequenceName + '\'' +
-           ", startPartitions=" + startPartitions +
-           ", endPartitions=" + endPartitions +
+           "taskGroupId=" + getTaskGroupId() +
+           ", baseSequenceName='" + getBaseSequenceName() + '\'' +
+           ", startPartitions=" + getStartPartitions() +
+           ", endPartitions=" + getEndPartitions() +
            ", consumerProperties=" + consumerProperties +
-           ", useTransaction=" + useTransaction +
-           ", minimumMessageTime=" + minimumMessageTime +
-           ", maximumMessageTime=" + maximumMessageTime +
+           ", useTransaction=" + isUseTransaction() +
+           ", minimumMessageTime=" + getMinimumMessageTime() +
+           ", maximumMessageTime=" + getMaximumMessageTime() +
            ", skipOffsetGaps=" + skipOffsetGaps +
            '}';
   }

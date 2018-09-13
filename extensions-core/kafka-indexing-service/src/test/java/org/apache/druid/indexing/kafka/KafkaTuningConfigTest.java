@@ -124,7 +124,7 @@ public class KafkaTuningConfigTest
         null,
         null
     );
-    KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);
+    KafkaTuningConfig copy = original.copyOf();
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
     Assert.assertEquals(2, copy.getMaxRowsPerSegment());

@@ -21,24 +21,15 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.SeekableStream.supervisor.SeekableStreamTaskReportData;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class TaskReportData
+public class TaskReportData extends SeekableStreamTaskReportData<Integer, Long>
 {
-  public enum TaskType
-  {
-    ACTIVE, PUBLISHING, UNKNOWN
-  }
 
-  private final String id;
-  private final Map<Integer, Long> startingOffsets;
-  private final DateTime startTime;
-  private final Long remainingSeconds;
-  private final TaskType type;
-  private final Map<Integer, Long> currentOffsets;
   private final Map<Integer, Long> lag;
 
   public TaskReportData(
@@ -51,51 +42,16 @@ public class TaskReportData
       @Nullable Map<Integer, Long> lag
   )
   {
-    this.id = id;
-    this.startingOffsets = startingOffsets;
-    this.currentOffsets = currentOffsets;
-    this.startTime = startTime;
-    this.remainingSeconds = remainingSeconds;
-    this.type = type;
+    super(
+        id,
+        startingOffsets,
+        currentOffsets,
+        startTime,
+        remainingSeconds,
+        type
+    );
+
     this.lag = lag;
-  }
-
-  @JsonProperty
-  public String getId()
-  {
-    return id;
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getStartingOffsets()
-  {
-    return startingOffsets;
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getCurrentOffsets()
-  {
-    return currentOffsets;
-  }
-
-  @JsonProperty
-  public DateTime getStartTime()
-  {
-    return startTime;
-  }
-
-  @JsonProperty
-  public Long getRemainingSeconds()
-  {
-    return remainingSeconds;
-  }
-
-  @JsonProperty
-  public TaskType getType()
-  {
-    return type;
   }
 
   @JsonProperty
@@ -109,11 +65,11 @@ public class TaskReportData
   public String toString()
   {
     return "{" +
-           "id='" + id + '\'' +
-           (startingOffsets != null ? ", startingOffsets=" + startingOffsets : "") +
-           (currentOffsets != null ? ", currentOffsets=" + currentOffsets : "") +
-           ", startTime=" + startTime +
-           ", remainingSeconds=" + remainingSeconds +
+           "id='" + getId() + '\'' +
+           (getStartingOffsets() != null ? ", startingOffsets=" + getStartingOffsets() : "") +
+           (getCurrentOffsets() != null ? ", currentOffsets=" + getCurrentOffsets() : "") +
+           ", startTime=" + getStartTime() +
+           ", remainingSeconds=" + getRemainingSeconds() +
            (lag != null ? ", lag=" + lag : "") +
            '}';
   }

@@ -22,16 +22,14 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.SeekableStream.SeekableStreamPartitions;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Map;
 import java.util.Objects;
 
-public class KafkaPartitions
+public class KafkaPartitions extends SeekableStreamPartitions<Integer, Long>
 {
-  private final String topic;
-  private final Map<Integer, Long> partitionOffsetMap;
 
   @JsonCreator
   public KafkaPartitions(
@@ -39,8 +37,10 @@ public class KafkaPartitions
       @JsonProperty("partitionOffsetMap") final Map<Integer, Long> partitionOffsetMap
   )
   {
-    this.topic = topic;
-    this.partitionOffsetMap = ImmutableMap.copyOf(partitionOffsetMap);
+    super(
+        topic,
+        partitionOffsetMap
+    );
 
     // Validate partitionOffsetMap
     for (Map.Entry<Integer, Long> entry : partitionOffsetMap.entrySet()) {
@@ -58,13 +58,13 @@ public class KafkaPartitions
   @JsonProperty
   public String getTopic()
   {
-    return topic;
+    return getId();
   }
 
   @JsonProperty
   public Map<Integer, Long> getPartitionOffsetMap()
   {
-    return partitionOffsetMap;
+    return getPartitionSequenceMap();
   }
 
   @Override
@@ -77,22 +77,22 @@ public class KafkaPartitions
       return false;
     }
     KafkaPartitions that = (KafkaPartitions) o;
-    return Objects.equals(topic, that.topic) &&
-           Objects.equals(partitionOffsetMap, that.partitionOffsetMap);
+    return Objects.equals(getTopic(), that.getTopic()) &&
+           Objects.equals(getPartitionOffsetMap(), that.getPartitionOffsetMap());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(topic, partitionOffsetMap);
+    return Objects.hash(getTopic(), getPartitionOffsetMap());
   }
 
   @Override
   public String toString()
   {
     return "KafkaPartitions{" +
-           "topic='" + topic + '\'' +
-           ", partitionOffsetMap=" + partitionOffsetMap +
+           "topic='" + getTopic() + '\'' +
+           ", partitionOffsetMap=" + getPartitionOffsetMap() +
            '}';
   }
 }

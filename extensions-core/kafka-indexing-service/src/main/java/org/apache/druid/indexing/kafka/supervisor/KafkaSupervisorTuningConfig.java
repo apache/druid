@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.SeekableStream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.indexing.kafka.KafkaTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfigs;
@@ -30,8 +31,9 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.File;
 
-public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
+public class KafkaSupervisorTuningConfig extends KafkaTuningConfig implements SeekableStreamSupervisorTuningConfig
 {
+
   private final Integer workerThreads;
   private final Integer chatThreads;
   private final Long chatRetries;
@@ -85,39 +87,43 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         maxParseExceptions,
         maxSavedParseExceptions
     );
-
     this.workerThreads = workerThreads;
     this.chatThreads = chatThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : 8);
-    this.httpTimeout = defaultDuration(httpTimeout, "PT10S");
-    this.shutdownTimeout = defaultDuration(shutdownTimeout, "PT80S");
-    this.offsetFetchPeriod = defaultDuration(offsetFetchPeriod, "PT30S");
+    this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, "PT10S");
+    this.shutdownTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(shutdownTimeout, "PT80S");
+    this.offsetFetchPeriod = SeekableStreamSupervisorTuningConfig.defaultDuration(offsetFetchPeriod, "PT30S");
   }
 
+  @Override
   @JsonProperty
   public Integer getWorkerThreads()
   {
     return workerThreads;
   }
 
+  @Override
   @JsonProperty
   public Integer getChatThreads()
   {
     return chatThreads;
   }
 
+  @Override
   @JsonProperty
   public Long getChatRetries()
   {
     return chatRetries;
   }
 
+  @Override
   @JsonProperty
   public Duration getHttpTimeout()
   {
     return httpTimeout;
   }
 
+  @Override
   @JsonProperty
   public Duration getShutdownTimeout()
   {
@@ -159,8 +165,5 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
            '}';
   }
 
-  private static Duration defaultDuration(final Period period, final String theDefault)
-  {
-    return (period == null ? new Period(theDefault) : period).toStandardDuration();
-  }
+
 }

@@ -20,9 +20,9 @@ package org.apache.druid.indexing.kafka;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.SeekableStream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.kafka.KafkaIndexTask.Status;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 
@@ -33,7 +33,7 @@ import java.util.Map;
  * This class is used by only {@link KafkaIndexTask}. We currently have two implementations of this interface, i.e.,
  * {@link IncrementalPublishingKafkaIndexTaskRunner} and {@link LegacyKafkaIndexTaskRunner}. The latter one was used in
  * the versions prior to 0.12.0, but being kept to support rolling update from them.
- *
+ * <p>
  * We don't have a good reason for having this interface except for better code maintenance for the latest kakfa
  * indexing algorithm. As a result, this interface can be removed in the future when {@link LegacyKafkaIndexTaskRunner}
  * is removed and it's no longer useful.
@@ -50,13 +50,16 @@ public interface KafkaIndexTaskRunner extends ChatHandler
 
   @VisibleForTesting
   RowIngestionMeters getRowIngestionMeters();
+
   @VisibleForTesting
-  Status getStatus();
+  SeekableStreamIndexTask.Status getStatus();
 
   @VisibleForTesting
   Map<Integer, Long> getCurrentOffsets();
+
   @VisibleForTesting
   Map<Integer, Long> getEndOffsets();
+
   @VisibleForTesting
   Response setEndOffsets(
       Map<Integer, Long> offsets,
@@ -65,6 +68,7 @@ public interface KafkaIndexTaskRunner extends ChatHandler
 
   @VisibleForTesting
   Response pause() throws InterruptedException;
+
   @VisibleForTesting
   void resume() throws InterruptedException;
 }

@@ -35,6 +35,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.SeekableStream.SeekableStreamIndexTask.Status;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -46,7 +47,6 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
-import org.apache.druid.indexing.kafka.KafkaIndexTask.Status;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -530,9 +530,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       ).get();
 
       final List<String> publishedSegments = published.getSegments()
-                                                       .stream()
-                                                       .map(DataSegment::getIdentifier)
-                                                       .collect(Collectors.toList());
+                                                      .stream()
+                                                      .map(DataSegment::getIdentifier)
+                                                      .collect(Collectors.toList());
 
       log.info(
           "Published segments[%s] with metadata[%s].",

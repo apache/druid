@@ -44,6 +44,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.SeekableStream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.SeekableStream.supervisor.SeekableStreamTaskReportData;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
@@ -291,9 +293,9 @@ public class KafkaSupervisor implements Supervisor
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
 
     this.dataSource = spec.getDataSchema().getDataSource();
-    this.ioConfig = spec.getIoConfig();
-    this.tuningConfig = spec.getTuningConfig();
-    this.taskTuningConfig = KafkaTuningConfig.copyOf(this.tuningConfig);
+    this.ioConfig = (KafkaSupervisorIOConfig) spec.getIoConfig();
+    this.tuningConfig = (KafkaSupervisorTuningConfig) spec.getTuningConfig();
+    this.taskTuningConfig = (KafkaTuningConfig) this.tuningConfig.copyOf();
     this.supervisorId = StringUtils.format("KafkaSupervisor-%s", dataSource);
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
@@ -1117,14 +1119,14 @@ public class KafkaSupervisor implements Supervisor
           futureTaskIds.add(taskId);
           futures.add(
               Futures.transform(
-                  taskClient.getStatusAsync(taskId), new Function<KafkaIndexTask.Status, Boolean>()
+                  taskClient.getStatusAsync(taskId), new Function<SeekableStreamIndexTask.Status, Boolean>()
                   {
                     @Override
-                    public Boolean apply(KafkaIndexTask.Status status)
+                    public Boolean apply(SeekableStreamIndexTask.Status status)
                     {
                       try {
                         log.debug("Task [%s], status [%s]", taskId, status);
-                        if (status == KafkaIndexTask.Status.PUBLISHING) {
+                        if (status == SeekableStreamIndexTask.Status.PUBLISHING) {
                           kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap().keySet().forEach(
                               partition -> addDiscoveredTaskToPendingCompletionTaskGroups(
                                   getTaskGroupIdForPartition(partition),
@@ -2207,7 +2209,7 @@ public class KafkaSupervisor implements Supervisor
                   includeOffsets ? currentOffsets : null,
                   startTime,
                   remainingSeconds,
-                  TaskReportData.TaskType.ACTIVE,
+                  SeekableStreamTaskReportData.TaskType.ACTIVE,
                   includeOffsets ? getLagPerPartition(currentOffsets) : null
               )
           );
@@ -2234,7 +2236,7 @@ public class KafkaSupervisor implements Supervisor
                     includeOffsets ? currentOffsets : null,
                     startTime,
                     remainingSeconds,
-                    TaskReportData.TaskType.PUBLISHING,
+                    SeekableStreamTaskReportData.TaskType.PUBLISHING,
                     null
                 )
             );
