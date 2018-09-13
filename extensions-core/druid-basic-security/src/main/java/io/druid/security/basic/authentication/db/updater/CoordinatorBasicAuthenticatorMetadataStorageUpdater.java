@@ -138,7 +138,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                 authenticatorName,
                 BasicAuthUtils.ADMIN_NAME,
                 new BasicAuthenticatorCredentialUpdate(
-                    dbConfig.getInitialAdminPassword(),
+                    dbConfig.getInitialAdminPassword().getPassword(),
                     BasicAuthUtils.DEFAULT_KEY_ITERATIONS
                 )
             );
@@ -151,7 +151,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                 authenticatorName,
                 BasicAuthUtils.INTERNAL_USER_NAME,
                 new BasicAuthenticatorCredentialUpdate(
-                    dbConfig.getInitialInternalClientPassword(),
+                    dbConfig.getInitialInternalClientPassword().getPassword(),
                     BasicAuthUtils.DEFAULT_KEY_ITERATIONS
                 )
             );
