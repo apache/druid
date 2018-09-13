@@ -55,6 +55,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final boolean suspended;
 
   @JsonCreator
   public KafkaSupervisorSpec(
@@ -62,6 +63,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
       @JsonProperty("tuningConfig") KafkaSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
@@ -111,6 +113,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     this.emitter = emitter;
     this.monitorSchedulerConfig = monitorSchedulerConfig;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.suspended = suspended != null ? suspended : false;
   }
 
   @JsonProperty
@@ -135,6 +138,13 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  @Override
+  @JsonProperty("suspended")
+  public boolean isSuspended()
+  {
+    return suspended;
   }
 
   public ServiceEmitter getEmitter()
@@ -181,5 +191,36 @@ public class KafkaSupervisorSpec implements SupervisorSpec
            ", tuningConfig=" + tuningConfig +
            ", ioConfig=" + ioConfig +
            '}';
+  }
+
+  @Override
+  public KafkaSupervisorSpec createSuspendedSpec()
+  {
+    return toggleSuspend(true);
+  }
+
+  @Override
+  public KafkaSupervisorSpec createRunningSpec()
+  {
+    return toggleSuspend(false);
+  }
+
+  private KafkaSupervisorSpec toggleSuspend(boolean suspend)
+  {
+    return new KafkaSupervisorSpec(
+        dataSchema,
+        tuningConfig,
+        ioConfig,
+        context,
+        suspend,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        kafkaIndexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory
+    );
   }
 }
