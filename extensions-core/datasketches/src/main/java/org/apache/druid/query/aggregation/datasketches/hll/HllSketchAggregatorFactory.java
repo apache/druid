@@ -32,8 +32,11 @@ import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnValueSelector;
 
 /**
  * Base class for both build and merge factories
@@ -118,6 +121,42 @@ abstract class HllSketchAggregatorFactory extends AggregatorFactory
     union.update((HllSketch) objectA);
     union.update((HllSketch) objectA);
     return union.getResult(tgtHllType);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new ObjectAggregateCombiner<HllSketch>()
+    {
+      private final Union union = new Union(lgK);
+
+      @Override
+      public void reset(final ColumnValueSelector selector)
+      {
+        union.reset();
+        fold(selector);
+      }
+
+      @Override
+      public void fold(final ColumnValueSelector selector)
+      {
+        final HllSketch sketch = (HllSketch) selector.getObject();
+        union.update(sketch);
+      }
+
+      @Nullable
+      @Override
+      public HllSketch getObject()
+      {
+        return union.getResult(tgtHllType);
+      }
+
+      @Override
+      public Class<HllSketch> classOfObject()
+      {
+        return HllSketch.class;
+      }
+    };
   }
 
   @Override
