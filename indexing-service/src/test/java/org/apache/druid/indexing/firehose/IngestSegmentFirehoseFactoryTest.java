@@ -110,7 +110,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -324,7 +323,7 @@ public class IngestSegmentFirehoseFactoryTest
         null,
         new NoopTestTaskFileWriter()
     );
-    Collection<Object[]> values = new LinkedList<>();
+    Collection<Object[]> values = new ArrayList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(
         ROW_PARSER,
         new MapInputRowParser(

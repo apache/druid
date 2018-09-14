@@ -138,10 +138,12 @@ import org.junit.rules.TemporaryFolder;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Files;
+import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.LinkedList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -161,7 +163,7 @@ public class RealtimeIndexTaskTest
   private static class TestFirehose implements Firehose
   {
     private final InputRowParser<Map<String, Object>> parser;
-    private final List<Map<String, Object>> queue = new LinkedList<>();
+    private final Deque<Optional<Map<String, Object>>> queue = new ArrayDeque<>();
     private boolean closed = false;
 
     public TestFirehose(final InputRowParser<Map<String, Object>> parser)
@@ -172,7 +174,7 @@ public class RealtimeIndexTaskTest
     public void addRows(List<Map<String, Object>> rows)
     {
       synchronized (this) {
-        queue.addAll(rows);
+        rows.stream().map(Optional::ofNullable).forEach(queue::add);
         notifyAll();
       }
     }
@@ -198,7 +200,7 @@ public class RealtimeIndexTaskTest
     public InputRow nextRow()
     {
       synchronized (this) {
-        final InputRow row = parser.parseBatch(queue.remove(0)).get(0);
+        final InputRow row = parser.parseBatch(queue.removeFirst().orElse(null)).get(0);
         if (row != null && row.getRaw(FAIL_DIM) != null) {
           throw new ParseException(FAIL_DIM);
         }

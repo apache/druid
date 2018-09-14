@@ -149,10 +149,11 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -178,7 +179,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private static class TestFirehose implements Firehose
   {
     private final InputRowParser<Map<String, Object>> parser;
-    private final List<Map<String, Object>> queue = new LinkedList<>();
+    private final Deque<Optional<Map<String, Object>>> queue = new ArrayDeque<>();
     private boolean closed = false;
 
     public TestFirehose(final InputRowParser<Map<String, Object>> parser)
@@ -189,7 +190,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     public void addRows(List<Map<String, Object>> rows)
     {
       synchronized (this) {
-        queue.addAll(rows);
+        rows.stream().map(Optional::ofNullable).forEach(queue::add);
         notifyAll();
       }
     }
@@ -215,7 +216,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     public InputRow nextRow()
     {
       synchronized (this) {
-        final InputRow row = parser.parseBatch(queue.remove(0)).get(0);
+        final InputRow row = parser.parseBatch(queue.removeFirst().orElse(null)).get(0);
         if (row != null && row.getRaw(FAIL_DIM) != null) {
           throw new ParseException(FAIL_DIM);
         }

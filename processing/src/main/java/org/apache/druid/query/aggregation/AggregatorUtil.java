@@ -38,8 +38,9 @@ import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -114,19 +115,20 @@ public class AggregatorUtil
    */
   public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String postAggName)
   {
-    LinkedList<PostAggregator> rv = Lists.newLinkedList();
+    ArrayList<PostAggregator> rv = new ArrayList<>();
     Set<String> deps = new HashSet<>();
     deps.add(postAggName);
-    // Iterate backwards to find the last calculated aggregate and add dependent aggregator as we find dependencies in
-    // reverse order
+    // Iterate backwards to find the last calculated aggregate and add dependent aggregator as we find dependencies
+    // in reverse order
     for (PostAggregator agg : Lists.reverse(postAggregatorList)) {
       if (deps.contains(agg.getName())) {
-        rv.addFirst(agg); // add to the beginning of List
+        rv.add(agg); // add to the beginning of List
         deps.remove(agg.getName());
         deps.addAll(agg.getDependentFields());
       }
     }
 
+    Collections.reverse(rv);
     return rv;
   }
 
@@ -137,10 +139,7 @@ public class AggregatorUtil
   )
   {
 
-    List<PostAggregator> condensedPostAggs = AggregatorUtil.pruneDependentPostAgg(
-        postAggList,
-        metric
-    );
+    List<PostAggregator> condensedPostAggs = AggregatorUtil.pruneDependentPostAgg(postAggList, metric);
     // calculate dependent aggregators for these postAgg
     Set<String> dependencySet = new HashSet<>();
     dependencySet.add(metric);

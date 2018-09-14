@@ -19,35 +19,55 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.common.collect.ImmutableList;
+import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class PortFinderTest
 {
-  private final PortFinder finder = new PortFinder(1200);
+  private final List<PortFinder> finders = new ArrayList<>();
+
+  @Before
+  public void setUp()
+  {
+    // use startPort and endPort to generate usable ports.
+    PortFinder finder1 = EasyMock.createMockBuilder(PortFinder.class)
+                                 .withConstructor(1200, 1201, ImmutableList.of())
+                                 .addMockedMethod("canBind")
+                                 .createMock();
+    // chose usable ports from candidates
+    PortFinder finder2 = EasyMock.createMockBuilder(PortFinder.class)
+                                 .withConstructor(1024, 1025, ImmutableList.of(1200, 1201))
+                                 .addMockedMethod("canBind")
+                                 .createMock();
+
+    finders.add(finder1);
+    finders.add(finder2);
+  }
 
   @Test
-  public void testUsedPort() throws IOException
+  public void testUsedPort()
   {
-    final int port1 = finder.findUnusedPort();
-    // verify that the port is free
-    ServerSocket socket1 = new ServerSocket(port1);
-    finder.markPortUnused(port1);
-    final int port2 = finder.findUnusedPort();
-    Assert.assertNotEquals("Used port is not reallocated", port1, port2);
-    // verify that port2 is free
-    ServerSocket socket2 = new ServerSocket(port2);
+    for (PortFinder finder : finders) {
+      EasyMock.expect(finder.canBind(1200)).andReturn(true).andReturn(false);
+      EasyMock.expect(finder.canBind(1201)).andReturn(true);
+      EasyMock.replay(finder);
 
-    socket1.close();
-    // Now port1 should get recycled
-    Assert.assertEquals(port1, finder.findUnusedPort());
+      final int port1 = finder.findUnusedPort();
+      Assert.assertEquals(1200, port1);
+      finder.markPortUnused(port1);
 
-    socket2.close();
-    finder.markPortUnused(port1);
-    finder.markPortUnused(port2);
+      final int port2 = finder.findUnusedPort();
+      Assert.assertEquals(1201, port2);
+      finder.markPortUnused(port2);
 
+      EasyMock.verify(finder);
+    }
   }
 }

@@ -81,6 +81,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   private final MaterializedViewTaskConfig config;
   private final AuthorizerMapper authorizerMapper;
   private final ChatHandlerProvider chatHandlerProvider;
+  private final boolean suspended;
   
   public MaterializedViewSupervisorSpec(
       @JsonProperty("baseDataSource") String baseDataSource,
@@ -92,6 +93,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
       @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates,
       @JsonProperty("classpathPrefix") String classpathPrefix,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("suspended") Boolean suspended,
       @JacksonInject ObjectMapper objectMapper,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject TaskStorage taskStorage,
@@ -139,7 +141,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.config = config;
-    
+    this.suspended = suspended != null ? suspended : false;
+
     this.metrics = Sets.newHashSet();
     for (AggregatorFactory aggregatorFactory : aggregators) {
       metrics.add(aggregatorFactory.getName());
@@ -305,7 +308,14 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   {
     return context;
   }
-  
+
+  @Override
+  @JsonProperty("suspended")
+  public boolean isSuspended()
+  {
+    return suspended;
+  }
+
   @Override
   public String getId() 
   {
@@ -331,7 +341,59 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   {
     return ImmutableList.of(dataSourceName);
   }
-  
+
+  @Override
+  public SupervisorSpec createSuspendedSpec()
+  {
+    return new MaterializedViewSupervisorSpec(
+        baseDataSource,
+        dimensionsSpec,
+        aggregators,
+        tuningConfig,
+        dataSourceName,
+        hadoopCoordinates,
+        hadoopDependencyCoordinates,
+        classpathPrefix,
+        context,
+        true,
+        objectMapper,
+        taskMaster,
+        taskStorage,
+        metadataSupervisorManager,
+        segmentManager,
+        metadataStorageCoordinator,
+        config,
+        authorizerMapper,
+        chatHandlerProvider
+    );
+  }
+
+  @Override
+  public SupervisorSpec createRunningSpec()
+  {
+    return new MaterializedViewSupervisorSpec(
+        baseDataSource,
+        dimensionsSpec,
+        aggregators,
+        tuningConfig,
+        dataSourceName,
+        hadoopCoordinates,
+        hadoopDependencyCoordinates,
+        classpathPrefix,
+        context,
+        false,
+        objectMapper,
+        taskMaster,
+        taskStorage,
+        metadataSupervisorManager,
+        segmentManager,
+        metadataStorageCoordinator,
+        config,
+        authorizerMapper,
+        chatHandlerProvider
+    );
+  }
+
   @Override
   public String toString()
   {

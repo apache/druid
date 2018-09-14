@@ -135,31 +135,7 @@ public class MaterializedViewSupervisor implements Supervisor
       exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded(supervisorId));
       final Duration delay = config.getTaskCheckDuration().toStandardDuration();
       future = exec.scheduleWithFixedDelay(
-          new Runnable() {
-            @Override
-            public void run()
-            {
-              try {
-                DataSourceMetadata metadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
-                if (metadata instanceof DerivativeDataSourceMetadata 
-                    && spec.getBaseDataSource().equals(((DerivativeDataSourceMetadata) metadata).getBaseDataSource())
-                    && spec.getDimensions().equals(((DerivativeDataSourceMetadata) metadata).getDimensions())
-                    && spec.getMetrics().equals(((DerivativeDataSourceMetadata) metadata).getMetrics())) {
-                  checkSegmentsAndSubmitTasks();
-                } else {
-                  log.error(
-                      "Failed to start %s. Metadata in database(%s) is different from new dataSource metadata(%s)",
-                      supervisorId,
-                      metadata,
-                      spec
-                  );
-                }
-              }
-              catch (Exception e) {
-                log.makeAlert(e, StringUtils.format("uncaught exception in %s.", supervisorId)).emit();
-              }
-            }
-          },
+          MaterializedViewSupervisor.this::run,
           0,
           delay.getMillis(),
           TimeUnit.MILLISECONDS
@@ -167,7 +143,40 @@ public class MaterializedViewSupervisor implements Supervisor
       started = true;
     }
   }
-  
+
+  @VisibleForTesting
+  public void run()
+  {
+    try {
+      if (spec.isSuspended()) {
+        log.info(
+            "Materialized view supervisor[%s:%s] is suspended",
+            spec.getId(),
+            spec.getDataSourceName()
+        );
+        return;
+      }
+
+      DataSourceMetadata metadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
+      if (metadata instanceof DerivativeDataSourceMetadata
+          && spec.getBaseDataSource().equals(((DerivativeDataSourceMetadata) metadata).getBaseDataSource())
+          && spec.getDimensions().equals(((DerivativeDataSourceMetadata) metadata).getDimensions())
+          && spec.getMetrics().equals(((DerivativeDataSourceMetadata) metadata).getMetrics())) {
+        checkSegmentsAndSubmitTasks();
+      } else {
+        log.error(
+            "Failed to start %s. Metadata in database(%s) is different from new dataSource metadata(%s)",
+            supervisorId,
+            metadata,
+            spec
+        );
+      }
+    }
+    catch (Exception e) {
+      log.makeAlert(e, StringUtils.format("uncaught exception in %s.", supervisorId)).emit();
+    }
+  }
+
   @Override
   public void stop(boolean stopGracefully) 
   {
@@ -207,7 +216,8 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     return new MaterializedViewSupervisorReport(
         dataSource,
-        DateTimes.nowUtc(), 
+        DateTimes.nowUtc(),
+        spec.isSuspended(),
         spec.getBaseDataSource(),
         spec.getDimensions(),
         spec.getMetrics(),
