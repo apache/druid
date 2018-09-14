@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.datasketches.hll;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.datasketches.hll;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
 import java.util.Arrays;
 import java.util.List;

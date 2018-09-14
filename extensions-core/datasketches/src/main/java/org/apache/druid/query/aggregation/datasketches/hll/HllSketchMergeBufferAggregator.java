@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.datasketches.hll;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Lock;
