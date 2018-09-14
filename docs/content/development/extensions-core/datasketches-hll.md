@@ -15,7 +15,7 @@ druid.extensions.loadList=["druid-datasketches"]
 
 ### Aggregators
 
-```json
+```
 {
   "type" : "HLLSketchBuild",
   "name" : <output name>,
@@ -25,7 +25,7 @@ druid.extensions.loadList=["druid-datasketches"]
  }
 ```
 
-```json
+```
 {
   "type" : "HLLSketchMerge",
   "name" : <output name>,
@@ -47,7 +47,7 @@ druid.extensions.loadList=["druid-datasketches"]
 
 #### Estimate with bounds
 
-```json
+```
 {
   "type"  : "HLLSketchEstimateWithBounds",
   "name": <output name>,
@@ -58,7 +58,7 @@ druid.extensions.loadList=["druid-datasketches"]
 
 #### Union
 
-```json
+```
 {
   "type"  : "HLLSketchUnion",
   "name": <output name>,
@@ -72,7 +72,7 @@ druid.extensions.loadList=["druid-datasketches"]
 
 Human-readable sketch summary for debugging
 
-```json
+```
 {
   "type"  : "HLLSketchToString",
   "name": <output name>,
