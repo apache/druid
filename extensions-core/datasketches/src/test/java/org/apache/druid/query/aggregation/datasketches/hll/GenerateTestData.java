@@ -25,6 +25,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.codec.binary.Base64;
 
@@ -47,7 +48,7 @@ class GenerateTestData
     Path sketchPath = FileSystems.getDefault().getPath("hll_sketches.tsv");
     try (BufferedWriter out1 = Files.newBufferedWriter(rawPath, StandardCharsets.UTF_8)) {
       try (BufferedWriter out2 = Files.newBufferedWriter(sketchPath, StandardCharsets.UTF_8)) {
-        Random rand = new Random();
+        Random rand = ThreadLocalRandom.current();
         int key = 0;
         for (int i = 0; i < 100; i++) {
           HllSketch sketch = new HllSketch(lgK);
