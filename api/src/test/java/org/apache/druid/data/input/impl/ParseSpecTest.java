@@ -19,12 +19,22 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -32,6 +42,21 @@ public class ParseSpecTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  private ObjectMapper mapper;
+
+  @Before
+  public void setUp()
+  {
+    // Similar to configs from DefaultObjectMapper, which we cannot use here since we're in druid-api.
+    mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    mapper.configure(MapperFeature.AUTO_DETECT_GETTERS, false);
+    mapper.configure(MapperFeature.AUTO_DETECT_FIELDS, false);
+    mapper.configure(MapperFeature.AUTO_DETECT_IS_GETTERS, false);
+    mapper.configure(MapperFeature.AUTO_DETECT_SETTERS, false);
+    mapper.configure(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS, false);
+  }
 
   @Test(expected = ParseException.class)
   public void testDuplicateNames()
@@ -142,5 +167,45 @@ public class ParseSpecTest
         false,
         0
     );
+  }
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    final String json = "{"
+                        + "\"format\":\"timeAndDims\", "
+                        + "\"timestampSpec\": {\"column\":\"timestamp\"}, "
+                        + "\"dimensionsSpec\":{}"
+                        + "}";
+
+    final Object mapValue = mapper.readValue(json, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+    final ParseSpec parseSpec = mapper.convertValue(mapValue, ParseSpec.class);
+
+    Assert.assertEquals(TimeAndDimsParseSpec.class, parseSpec.getClass());
+    Assert.assertEquals("timestamp", parseSpec.getTimestampSpec().getTimestampColumn());
+    Assert.assertEquals(ImmutableList.of(), parseSpec.getDimensionsSpec().getDimensionNames());
+
+    // Test round-trip.
+    Assert.assertEquals(
+        parseSpec,
+        mapper.readValue(mapper.writeValueAsString(parseSpec), ParseSpec.class)
+    );
+  }
+
+  @Test
+  public void testBadTypeSerde() throws IOException
+  {
+    final String json = "{"
+                        + "\"format\":\"foo\", "
+                        + "\"timestampSpec\": {\"column\":\"timestamp\"}, "
+                        + "\"dimensionsSpec\":{}"
+                        + "}";
+
+    final Object mapValue = mapper.readValue(json, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(JsonMappingException.class));
+    expectedException.expectMessage("Could not resolve type id 'foo' into a subtype");
+    mapper.convertValue(mapValue, ParseSpec.class);
   }
 }

@@ -23,7 +23,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  */
@@ -31,7 +32,7 @@ public class AppendableByteArrayInputStream extends InputStream
 {
   private static final Logger log = new Logger(AppendableByteArrayInputStream.class);
 
-  private final LinkedList<byte[]> bytes = new LinkedList<byte[]>();
+  private final Deque<byte[]> bytes = new ArrayDeque<>();
   private final SingleByteReaderDoer singleByteReaderDoer = new SingleByteReaderDoer();
 
   private volatile boolean done = false;

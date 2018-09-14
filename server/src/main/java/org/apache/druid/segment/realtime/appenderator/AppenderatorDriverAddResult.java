@@ -100,6 +100,16 @@ public class AppenderatorDriverAddResult
     return isPersistRequired;
   }
 
+  public boolean isPushRequired(AppenderatorConfig tuningConfig)
+  {
+    boolean overThreshold = getNumRowsInSegment() >= tuningConfig.getMaxRowsPerSegment();
+    Long maxTotal = tuningConfig.getMaxTotalRows();
+    if (maxTotal != null) {
+      overThreshold |= getTotalNumRowsInAppenderator() >= maxTotal;
+    }
+    return overThreshold;
+  }
+
   @Nullable
   public ParseException getParseException()
   {

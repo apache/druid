@@ -44,6 +44,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -52,6 +53,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Endpoints for submitting and starting a {@link SupervisorSpec}, getting running supervisors, stopping supervisors,
@@ -90,49 +92,55 @@ public class SupervisorResource
   public Response specPost(final SupervisorSpec spec, @Context final HttpServletRequest req)
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(SupervisorManager manager)
-          {
-            Preconditions.checkArgument(
-                spec.getDataSources() != null && spec.getDataSources().size() > 0,
-                "No dataSources found to perform authorization checks"
-            );
+        manager -> {
+          Preconditions.checkArgument(
+              spec.getDataSources() != null && spec.getDataSources().size() > 0,
+              "No dataSources found to perform authorization checks"
+          );
 
-            Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-                req,
-                Iterables.transform(spec.getDataSources(), AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
-                authorizerMapper
-            );
+          Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+              req,
+              Iterables.transform(spec.getDataSources(), AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
+              authorizerMapper
+          );
 
-            if (!authResult.isAllowed()) {
-              throw new ForbiddenException(authResult.toString());
-            }
-
-            manager.createOrUpdateAndStartSupervisor(spec);
-            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+          if (!authResult.isAllowed()) {
+            throw new ForbiddenException(authResult.toString());
           }
+
+          manager.createOrUpdateAndStartSupervisor(spec);
+          return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }
     );
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response specGetAll(@Context final HttpServletRequest req)
+  public Response specGetAll(
+      @QueryParam("full") String full,
+      @Context final HttpServletRequest req
+  )
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(final SupervisorManager manager)
-          {
-            Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
-                req,
-                manager,
-                manager.getSupervisorIds()
-            );
+        manager -> {
+          Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+              req,
+              manager,
+              manager.getSupervisorIds()
+          );
+
+          if (full == null) {
             return Response.ok(authorizedSupervisorIds).build();
+          } else {
+            List<Map<String, ?>> all =
+                authorizedSupervisorIds.stream()
+                                       .map(x -> ImmutableMap.<String, Object>builder()
+                                           .put("id", x)
+                                           .put("spec", manager.getSupervisorSpec(x).get())
+                                           .build()
+                                       )
+                                       .collect(Collectors.toList());
+            return Response.ok(all).build();
           }
         }
     );
@@ -145,20 +153,15 @@ public class SupervisorResource
   public Response specGet(@PathParam("id") final String id)
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(SupervisorManager manager)
-          {
-            Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
-            if (!spec.isPresent()) {
-              return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
-                             .build();
-            }
-
-            return Response.ok(spec.get()).build();
+        manager -> {
+          Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
+          if (!spec.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .build();
           }
+
+          return Response.ok(spec.get()).build();
         }
     );
   }
@@ -170,20 +173,15 @@ public class SupervisorResource
   public Response specGetStatus(@PathParam("id") final String id)
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(SupervisorManager manager)
-          {
-            Optional<SupervisorReport> spec = manager.getSupervisorStatus(id);
-            if (!spec.isPresent()) {
-              return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
-                             .build();
-            }
-
-            return Response.ok(spec.get()).build();
+        manager -> {
+          Optional<SupervisorReport> spec = manager.getSupervisorStatus(id);
+          if (!spec.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .build();
           }
+
+          return Response.ok(spec.get()).build();
         }
     );
   }
@@ -197,49 +195,66 @@ public class SupervisorResource
   )
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(SupervisorManager manager)
-          {
-            Optional<Map<String, Map<String, Object>>> stats = manager.getSupervisorStats(id);
-            if (!stats.isPresent()) {
-              return Response.status(Response.Status.NOT_FOUND)
-                             .entity(
-                                 ImmutableMap.of(
-                                     "error",
-                                     StringUtils.format("[%s] does not exist", id)
-                                 )
-                             )
-                             .build();
-            }
-
-            return Response.ok(stats.get()).build();
+        manager -> {
+          Optional<Map<String, Map<String, Object>>> stats = manager.getSupervisorStats(id);
+          if (!stats.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   StringUtils.format("[%s] does not exist", id)
+                               )
+                           )
+                           .build();
           }
+
+          return Response.ok(stats.get()).build();
         }
     );
   }
 
+  @POST
+  @Path("/{id}/resume")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response specResume(@PathParam("id") final String id)
+  {
+    return specSuspendOrResume(id, false);
+  }
 
+  @POST
+  @Path("/{id}/suspend")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response specSuspend(@PathParam("id") final String id)
+  {
+    return specSuspendOrResume(id, true);
+  }
+
+  @Deprecated
   @POST
   @Path("/{id}/shutdown")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response shutdown(@PathParam("id") final String id)
   {
+    return terminate(id);
+  }
+
+  @POST
+  @Path("/{id}/terminate")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response terminate(@PathParam("id") final String id)
+  {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(SupervisorManager manager)
-          {
-            if (manager.stopAndRemoveSupervisor(id)) {
-              return Response.ok(ImmutableMap.of("id", id)).build();
-            } else {
-              return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
-                             .build();
-            }
+        manager -> {
+          if (manager.stopAndRemoveSupervisor(id)) {
+            return Response.ok(ImmutableMap.of("id", id)).build();
+          } else {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .build();
           }
         }
     );
@@ -284,21 +299,14 @@ public class SupervisorResource
   public Response specGetAllHistory(@Context final HttpServletRequest req)
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(final SupervisorManager manager)
-          {
-            return Response.ok(
-                AuthorizationUtils.filterAuthorizedResources(
-                    req,
-                    manager.getSupervisorHistory(),
-                    SPEC_DATASOURCE_READ_RA_GENERATOR,
-                    authorizerMapper
-                )
-            ).build();
-          }
-        }
+        manager -> Response.ok(
+            AuthorizationUtils.filterAuthorizedResources(
+                req,
+                manager.getSupervisorHistory(),
+                SPEC_DATASOURCE_READ_RA_GENERATOR,
+                authorizerMapper
+            )
+        ).build()
     );
   }
 
@@ -310,38 +318,33 @@ public class SupervisorResource
       @PathParam("id") final String id)
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(SupervisorManager manager)
-          {
-            Map<String, List<VersionedSupervisorSpec>> supervisorHistory = manager.getSupervisorHistory();
-            Iterable<VersionedSupervisorSpec> historyForId = supervisorHistory.get(id);
-            if (historyForId != null) {
-              final List<VersionedSupervisorSpec> authorizedHistoryForId =
-                  Lists.newArrayList(
-                      AuthorizationUtils.filterAuthorizedResources(
-                          req,
-                          historyForId,
-                          SPEC_DATASOURCE_READ_RA_GENERATOR,
-                          authorizerMapper
-                      )
-                  );
-              if (authorizedHistoryForId.size() > 0) {
-                return Response.ok(authorizedHistoryForId).build();
-              }
+        manager -> {
+          Map<String, List<VersionedSupervisorSpec>> supervisorHistory = manager.getSupervisorHistory();
+          Iterable<VersionedSupervisorSpec> historyForId = supervisorHistory.get(id);
+          if (historyForId != null) {
+            final List<VersionedSupervisorSpec> authorizedHistoryForId =
+                Lists.newArrayList(
+                    AuthorizationUtils.filterAuthorizedResources(
+                        req,
+                        historyForId,
+                        SPEC_DATASOURCE_READ_RA_GENERATOR,
+                        authorizerMapper
+                    )
+                );
+            if (authorizedHistoryForId.size() > 0) {
+              return Response.ok(authorizedHistoryForId).build();
             }
-
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(
-                               ImmutableMap.of(
-                                   "error",
-                                   StringUtils.format("No history for [%s].", id)
-                               )
-                           )
-                           .build();
-
           }
+
+          return Response.status(Response.Status.NOT_FOUND)
+                         .entity(
+                             ImmutableMap.of(
+                                 "error",
+                                 StringUtils.format("No history for [%s].", id)
+                             )
+                         )
+                         .build();
+
         }
     );
   }
@@ -353,18 +356,13 @@ public class SupervisorResource
   public Response reset(@PathParam("id") final String id)
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
-        {
-          @Override
-          public Response apply(SupervisorManager manager)
-          {
-            if (manager.resetSupervisor(id, null)) {
-              return Response.ok(ImmutableMap.of("id", id)).build();
-            } else {
-              return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
-                             .build();
-            }
+        manager -> {
+          if (manager.resetSupervisor(id, null)) {
+            return Response.ok(ImmutableMap.of("id", id)).build();
+          } else {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .build();
           }
         }
     );
@@ -406,6 +404,31 @@ public class SupervisorResource
             raGenerator,
             authorizerMapper
         )
+    );
+  }
+
+  private Response specSuspendOrResume(final String id, boolean suspend)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
+          if (!spec.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                           .build();
+          }
+
+          if (spec.get().isSuspended() == suspend) {
+            final String errMsg =
+                StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running");
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(ImmutableMap.of("error", errMsg))
+                           .build();
+          }
+          manager.suspendOrResumeSupervisor(id, suspend);
+          spec = manager.getSupervisorSpec(id);
+          return Response.ok(spec.get()).build();
+        }
     );
   }
 }
