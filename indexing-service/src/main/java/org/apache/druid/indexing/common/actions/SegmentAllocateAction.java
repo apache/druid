@@ -267,14 +267,17 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     }
 
     if (lockResult.isOk()) {
-      final SegmentIdentifier identifier = toolbox.getIndexerMetadataStorageCoordinator().allocatePendingSegment(
-          dataSource,
-          sequenceName,
-          previousSegmentId,
-          tryInterval,
-          lockResult.getTaskLock().getVersion(),
-          skipSegmentLineageCheck
-      );
+      SegmentIdentifier identifier;
+      synchronized (lockResult.getTaskLock()) {
+        identifier = toolbox.getIndexerMetadataStorageCoordinator().allocatePendingSegment(
+            dataSource,
+            sequenceName,
+            previousSegmentId,
+            tryInterval,
+            lockResult.getTaskLock().getVersion(),
+            skipSegmentLineageCheck
+        );
+      }
       if (identifier != null) {
         return identifier;
       } else {

@@ -387,11 +387,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(interval, "interval");
     Preconditions.checkNotNull(maxVersion, "maxVersion");
 
-    return connector.retryTransaction(
-        new TransactionCallback<SegmentIdentifier>()
+    return connector.retryWithHandle(
+        new HandleCallback<SegmentIdentifier>()
         {
           @Override
-          public SegmentIdentifier inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          public SegmentIdentifier withHandle(Handle handle) throws Exception
           {
             return skipSegmentLineageCheck ?
                    allocatePendingSegment(handle, dataSource, sequenceName, interval, maxVersion) :
@@ -404,9 +404,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        maxVersion
                    );
           }
-        },
-        ALLOCATE_SEGMENT_QUIET_TRIES,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+        }
     );
   }
 
