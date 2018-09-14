@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -797,7 +798,7 @@ public class HyperLogLogCollectorTest
   public void showErrorRate()
   {
     HashFunction fn = Hashing.murmur3_128();
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
 
     double error = 0.0d;
     int count = 0;

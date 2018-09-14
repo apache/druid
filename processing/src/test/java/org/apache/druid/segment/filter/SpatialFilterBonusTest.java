@@ -74,6 +74,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -213,7 +214,7 @@ public class SpatialFilterBonusTest
 
     // Add a bunch of random points, without replacement
     Set<String> alreadyChosen = Sets.newHashSet();
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 6; i < NUM_POINTS; i++) {
       String coord = null;
       while (coord == null) {
@@ -408,7 +409,7 @@ public class SpatialFilterBonusTest
       );
 
       // Add a bunch of random points
-      Random rand = new Random();
+      Random rand = ThreadLocalRandom.current();
       for (int i = 6; i < NUM_POINTS; i++) {
         third.add(
             new MapBasedInputRow(

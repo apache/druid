@@ -69,6 +69,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -244,7 +245,7 @@ public class SpatialFilterTest
     );
 
     // Add a bunch of random points
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 8; i < NUM_POINTS; i++) {
       theIndex.add(
           new MapBasedInputRow(
@@ -464,7 +465,7 @@ public class SpatialFilterTest
       );
 
       // Add a bunch of random points
-      Random rand = new Random();
+      Random rand = ThreadLocalRandom.current();
       for (int i = 8; i < NUM_POINTS; i++) {
         third.add(
             new MapBasedInputRow(

@@ -28,8 +28,9 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
-// This is used for generating test data for DoublesSketchAggregatorTest
+/** This is used for generating test data for {@link DoublesSketchAggregatorTest} */
 public class GenerateTestData
 {
 
@@ -39,7 +40,7 @@ public class GenerateTestData
     Path sketchPath = FileSystems.getDefault().getPath("doubles_sketch_data.tsv");
     BufferedWriter buildData = Files.newBufferedWriter(buildPath, StandardCharsets.UTF_8);
     BufferedWriter sketchData = Files.newBufferedWriter(sketchPath, StandardCharsets.UTF_8);
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     int sequenceNumber = 0;
     for (int i = 0; i < 20; i++) {
       int product = rand.nextInt(10);

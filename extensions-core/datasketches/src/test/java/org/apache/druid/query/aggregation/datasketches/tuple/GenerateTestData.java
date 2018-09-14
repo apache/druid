@@ -29,8 +29,9 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
-//This is used for generating test data for ArrayOfDoublesSketchAggregationTest
+/** This is used for generating test data for {@link ArrayOfDoublesSketchAggregationTest} */
 class GenerateTestData
 {
 
@@ -44,7 +45,7 @@ class GenerateTestData
   {
     Path path = FileSystems.getDefault().getPath("array_of_doubles_sketch_data.tsv");
     try (BufferedWriter out = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-      Random rand = new Random();
+      Random rand = ThreadLocalRandom.current();
       int key = 0;
       for (int i = 0; i < 20; i++) {
         ArrayOfDoublesUpdatableSketch sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(1024)
@@ -71,7 +72,7 @@ class GenerateTestData
     double meanControl = 10.2;
     Path path = FileSystems.getDefault().getPath("bucket_test_data.tsv");
     try (BufferedWriter out = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-      Random rand = new Random();
+      Random rand = ThreadLocalRandom.current();
       for (int i = 0; i < 1000; i++) {
         writeBucketTestRecord(out, "test", i, rand.nextGaussian() + meanTest);
         writeBucketTestRecord(out, "control", i, rand.nextGaussian() + meanControl);

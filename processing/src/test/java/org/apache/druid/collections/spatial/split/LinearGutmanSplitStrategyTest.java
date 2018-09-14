@@ -29,6 +29,7 @@ import org.apache.druid.collections.spatial.RTree;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -82,7 +83,7 @@ public class LinearGutmanSplitStrategyTest
   {
     BitmapFactory bf = new ConciseBitmapFactory();
     RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100; i++) {
       tree.insert(new float[]{rand.nextFloat(), rand.nextFloat()}, i);
     }
@@ -95,7 +96,7 @@ public class LinearGutmanSplitStrategyTest
   {
     BitmapFactory bf = new RoaringBitmapFactory();
     RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100; i++) {
       tree.insert(new float[]{rand.nextFloat(), rand.nextFloat()}, i);
     }

@@ -36,7 +36,7 @@ import org.joda.time.Duration;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RemoteTaskActionClient implements TaskActionClient
 {
@@ -44,7 +44,6 @@ public class RemoteTaskActionClient implements TaskActionClient
   private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
   private final DruidLeaderClient druidLeaderClient;
-  private final Random random = new Random();
 
   private static final Logger log = new Logger(RemoteTaskActionClient.class);
 
@@ -121,7 +120,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 
   private long jitter(long input)
   {
-    final double jitter = random.nextGaussian() * input / 4.0;
+    final double jitter = ThreadLocalRandom.current().nextGaussian() * input / 4.0;
     long retval = input + (long) jitter;
     return retval < 0 ? 0 : retval;
   }

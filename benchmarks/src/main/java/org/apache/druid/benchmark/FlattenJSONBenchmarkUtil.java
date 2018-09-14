@@ -40,13 +40,13 @@ import java.util.Random;
 
 public class FlattenJSONBenchmarkUtil
 {
-  private Random rng;
-  private final ObjectMapper mapper = new DefaultObjectMapper();
   private static final String DEFAULT_TIMESTAMP = "2015-09-12T12:10:53.155Z";
+
+  private final Random rng = new Random(9999);
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   public FlattenJSONBenchmarkUtil()
   {
-    this.rng = new Random(9999);
     mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.PUBLIC_ONLY);
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
