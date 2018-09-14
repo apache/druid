@@ -2,6 +2,10 @@
 layout: doc_page
 ---
 
+<div class="note info">
+NOTE: Realtime nodes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead. 
+</div>
+
 Stream Pull Ingestion
 =====================
 
@@ -159,7 +163,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |dedupColumn|String|the column to judge whether this row is already in this segment, if so, throw away this row. If it is String type column, to reduce heap cost, use long type hashcode of this column's value to judge whether this row is already ingested, so there maybe very small chance to throw away a row that is not ingested before.|no (default == null)|
 |indexSpec|Object|Tune how data is indexed. See below for more information.|no|
 
-Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/druid-io/druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`. 
+Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/apache/incubator-druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`. 
 
 #### Rejection Policy
 
@@ -344,4 +348,4 @@ difficult to manage and track at scale.
 Stream ingestion may generate a large number of small segments because it's difficult to optimize the segment size at
 ingestion time. The number of segments will increase over time, and this might cause the query performance issue. 
 
-Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.html).
+Details on how to optimize the segment size can be found on [Segment size optimization](../operations/segment-optimization.html).

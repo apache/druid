@@ -44,6 +44,7 @@ FROM table
 [ HAVING expr ]
 [ ORDER BY expr [ ASC | DESC ], expr [ ASC | DESC ], ... ]
 [ LIMIT limit ]
+[ UNION ALL <another query> ]
 ```
 
 The FROM clause refers to either a Druid datasource, like `druid.foo`, an [INFORMATION_SCHEMA table](#retrieving-metadata), a
@@ -73,6 +74,9 @@ to data nodes for queries that run with the native TopN query type, but not the 
 versions of Druid will support pushing down limits using the native GroupBy query type as well. If you notice that
 adding a limit doesn't change performance very much, then it's likely that Druid didn't push down the limit for your
 query.
+
+The "UNION ALL" operator can be used to fuse multiple queries together. Their results will be concatenated, and each
+query will run separately, back to back (not in parallel). Druid does not currently support "UNION" without "ALL".
 
 Add "EXPLAIN PLAN FOR" to the beginning of any query to see how it would be run as a native Druid query. In this case,
 the query will not actually be executed.
@@ -339,10 +343,6 @@ of configuration.
 You can make Druid SQL queries using JSON over HTTP by posting to the endpoint `/druid/v2/sql/`. The request should
 be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
 
-Results are available in two formats: "object" (the default; a JSON array of JSON objects), and "array" (a JSON array
-of JSON arrays). In "object" form, each row's field names will match the column names from your SQL query. In "array"
-form, each row's values are returned in the order specified in your SQL query.
-
 You can use _curl_ to send SQL queries from the command-line:
 
 ```bash
@@ -353,9 +353,8 @@ $ curl -XPOST -H'Content-Type: application/json' http://BROKER:8082/druid/v2/sql
 [{"TheCount":24433}]
 ```
 
-Metadata is available over the HTTP API by querying the ["INFORMATION_SCHEMA" tables](#retrieving-metadata).
-
-Finally, you can also provide [connection context parameters](#connection-context) by adding a "context" map, like:
+There are a variety of [connection context parameters](#connection-context) you can provide by adding a "context" map,
+like:
 
 ```json
 {
@@ -365,6 +364,45 @@ Finally, you can also provide [connection context parameters](#connection-contex
   }
 }
 ```
+
+Metadata is available over the HTTP API by querying [system tables](#retrieving-metadata).
+
+#### Responses
+
+All Druid SQL HTTP responses include a "X-Druid-Column-Names" header with a JSON-encoded array of columns that
+will appear in the result rows and an "X-Druid-Column-Types" header with a JSON-encoded array of
+[types](#data-types-and-casts).
+
+For the result rows themselves, Druid SQL supports a variety of result formats. You can
+specify these by adding a "resultFormat" parameter, like:
+
+```json
+{
+  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
+  "resultFormat" : "object"
+}
+```
+
+The supported result formats are:
+
+|Format|Description|Content-Type|
+|------|-----------|------------|
+|`object`|The default, a JSON array of JSON objects. Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.|application/json|
+|`array`|JSON array of JSON arrays. Each inner array has elements matching the columns returned by the SQL query, in order.|application/json|
+|`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
+|`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
+|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/csv|
+
+Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
+same format as [native Druid query errors](../querying/querying.html#query-errors). If an error occurs while the response body is
+being sent, at that point it is too late to change the HTTP status code or report a JSON error, so the response will
+simply end midstream and an error will be logged by the Druid server that was handling your request.
+
+As a caller, it is important that you properly handle response truncation. This is easy for the "object" and "array"
+formats, since truncated responses will be invalid JSON. For the line-oriented formats, you should check the
+trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
+through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
+delivered due to an error.
 
 ### JDBC
 
@@ -398,13 +436,13 @@ Table metadata is available over JDBC using `connection.getMetaData()` or by que
 ["INFORMATION_SCHEMA" tables](#retrieving-metadata). Parameterized queries (using `?` or other placeholders) don't work properly,
 so avoid those.
 
-#### Connection Stickiness
+#### Connection stickiness
 
 Druid's JDBC server does not share connection state between brokers. This means that if you're using JDBC and have
 multiple Druid brokers, you should either connect to a specific broker, or use a load balancer with sticky sessions
-enabled.
-
-The Druid Router node provides connection stickiness when balancing JDBC requests. Please see [Router](../development/router.html) documentation for more details.
+enabled. The Druid Router node provides connection stickiness when balancing JDBC requests, and can be used to achieve
+the necessary stickiness even with a normal non-sticky load balancer. Please see the
+[Router](../development/router.html) documentation for more details.
 
 Note that the non-JDBC [JSON over HTTP](#json-over-http) API is stateless and does not require stickiness.
 

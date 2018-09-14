@@ -42,7 +42,7 @@ java \
   -cp "lib/*" \
   -Ddruid.extensions.directory="extensions" \
   -Ddruid.extensions.hadoopDependenciesDir="hadoop-dependencies" \
-  io.druid.cli.Main tools pull-deps \
+  org.apache.druid.cli.Main tools pull-deps \
   --no-default-hadoop \
   -c "com.example:druid-example-extension:1.0.0"
 ```
@@ -51,11 +51,11 @@ You only have to install the extension once. Then, add `"druid-example-extension
 `druid.extensions.loadList` in common.runtime.properties to instruct Druid to load the extension.
 
 <div class="note info">
-Please make sure all the Extensions related configuration properties listed <a href="../configuration/index.html">here</a> are set correctly.
+Please make sure all the Extensions related configuration properties listed <a href="../configuration/index.html#extensions">here</a> are set correctly.
 </div>
 
 <div class="note info">
-The Maven groupId for almost every <a href="../development/extensions.html#community-extensions">community extension</a> is io.druid.extensions.contrib. The artifactId is the name 
+The Maven groupId for almost every <a href="../development/extensions.html#community-extensions">community extension</a> is org.apache.druid.extensions.contrib. The artifactId is the name 
 of the extension, and the version is the latest Druid stable version.
 </div>
 

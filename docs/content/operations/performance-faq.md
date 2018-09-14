@@ -54,17 +54,17 @@ Yes, using a `log4j2.xml` similar to the following causes some of the more chatt
     </Console>
   </Appenders>
   <Loggers>
-    <AsyncLogger name="io.druid.curator.inventory.CuratorInventoryManager" level="debug" additivity="false">
+    <AsyncLogger name="org.apache.druid.curator.inventory.CuratorInventoryManager" level="debug" additivity="false">
       <AppenderRef ref="Console"/>
     </AsyncLogger>
-    <AsyncLogger name="io.druid.client.BatchServerInventoryView" level="debug" additivity="false">
+    <AsyncLogger name="org.apache.druid.client.BatchServerInventoryView" level="debug" additivity="false">
       <AppenderRef ref="Console"/>
     </AsyncLogger>
     <!-- Make extra sure nobody adds logs in a bad way that can hurt performance -->
-    <AsyncLogger name="io.druid.client.ServerInventoryView" level="debug" additivity="false">
+    <AsyncLogger name="org.apache.druid.client.ServerInventoryView" level="debug" additivity="false">
       <AppenderRef ref="Console"/>
     </AsyncLogger>
-    <AsyncLogger name ="io.druid.java.util.http.client.pool.ChannelResourceFactory" level="info" additivity="false">
+    <AsyncLogger name ="org.apache.druid.java.util.http.client.pool.ChannelResourceFactory" level="info" additivity="false">
       <AppenderRef ref="Console"/>
     </AsyncLogger>
     <Root level="info">

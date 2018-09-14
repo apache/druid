@@ -1,1 +1,1 @@
-io.druid.annotations.SubclassesMustBePublicAnnotationProcessor
+org.apache.druid.annotations.SubclassesMustBePublicAnnotationProcessor

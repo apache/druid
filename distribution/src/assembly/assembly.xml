@@ -232,13 +232,13 @@
             <useTransitiveDependencies>true</useTransitiveDependencies>
             <outputDirectory>lib</outputDirectory>
             <excludes>
-                <exclude>io.druid:extensions-distribution</exclude>
+                <exclude>org.apache.druid:extensions-distribution</exclude>
             </excludes>
         </dependencySet>
         <dependencySet>
             <unpack>true</unpack>
             <includes>
-                <include>io.druid:extensions-distribution</include>
+                <include>org.apache.druid:extensions-distribution</include>
             </includes>
         </dependencySet>
     </dependencySets>
