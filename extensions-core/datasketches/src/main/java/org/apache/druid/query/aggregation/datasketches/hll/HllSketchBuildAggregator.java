@@ -40,7 +40,7 @@ public class HllSketchBuildAggregator implements Aggregator
   public HllSketchBuildAggregator(final ColumnValueSelector<Object> selector, final int lgK, final TgtHllType tgtHllType)
   {
     this.selector = selector;
-    sketch = new HllSketch(lgK, tgtHllType);
+    this.sketch = new HllSketch(lgK, tgtHllType);
   }
 
   /*

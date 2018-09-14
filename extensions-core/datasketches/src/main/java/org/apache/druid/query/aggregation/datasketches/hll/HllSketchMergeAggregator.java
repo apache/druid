@@ -42,7 +42,7 @@ public class HllSketchMergeAggregator implements Aggregator
   {
     this.selector = selector;
     this.tgtHllType = tgtHllType;
-    union = new Union(lgK);
+    this.union = new Union(lgK);
   }
 
   /*
