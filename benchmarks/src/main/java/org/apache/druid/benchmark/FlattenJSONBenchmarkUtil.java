@@ -37,12 +37,13 @@ import org.apache.druid.java.util.common.parsers.Parser;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class FlattenJSONBenchmarkUtil
 {
-  private final ObjectMapper mapper = new DefaultObjectMapper();
   private static final String DEFAULT_TIMESTAMP = "2015-09-12T12:10:53.155Z";
+
+  private final Random rng = new Random(9999);
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   public FlattenJSONBenchmarkUtil()
   {
@@ -237,7 +238,6 @@ public class FlattenJSONBenchmarkUtil
   */
   public String generateNestedEvent() throws Exception
   {
-    Random rng = ThreadLocalRandom.current();
     BenchmarkEvent nestedDims1 = new BenchmarkEvent(
         null,
         String.valueOf(rng.nextInt()), String.valueOf(rng.nextInt()), null, null, null, null,

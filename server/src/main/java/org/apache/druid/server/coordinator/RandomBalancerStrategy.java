@@ -30,8 +30,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomBalancerStrategy implements BalancerStrategy
 {
-  private final ReservoirSegmentSampler sampler = new ReservoirSegmentSampler();
-
   @Override
   public ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
@@ -55,7 +53,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   @Override
   public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders)
   {
-    return sampler.getRandomBalancerSegmentHolder(serverHolders);
+    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(serverHolders);
   }
 
   @Override

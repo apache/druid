@@ -24,10 +24,10 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class ReservoirSegmentSampler
+final class ReservoirSegmentSampler
 {
 
-  public BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
+  static BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
   {
     ServerHolder fromServerHolder = null;
     DataSegment proposalSegment = null;
@@ -49,5 +49,9 @@ public class ReservoirSegmentSampler
     } else {
       return null;
     }
+  }
+
+  private ReservoirSegmentSampler()
+  {
   }
 }
