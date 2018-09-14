@@ -38,10 +38,10 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
@@ -134,7 +134,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       }
     }
 
-    final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(new LinkedList<>());
+    final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(new ArrayList<>());
     if (populateCache) {
       final Function cacheFn = strategy.prepareForSegmentLevelCache();
       return cachePopulator.wrap(base.run(queryPlus, responseContext), value -> cacheFn.apply(value), cache, key);

@@ -58,6 +58,7 @@ public class KafkaTuningConfigTest
     Assert.assertNotNull(config.getBasePersistDirectory());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment());
+    Assert.assertEquals(null, config.getMaxTotalRows());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
@@ -73,6 +74,7 @@ public class KafkaTuningConfigTest
                      + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
                      + "  \"maxRowsInMemory\": 100,\n"
                      + "  \"maxRowsPerSegment\": 100,\n"
+                     + "  \"maxTotalRows\": 1000,\n"
                      + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
@@ -92,6 +94,8 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMaxRowsPerSegment());
+    Assert.assertNotEquals(null, config.getMaxTotalRows());
+    Assert.assertEquals(1000, config.getMaxTotalRows().longValue());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(true, config.isReportParseExceptions());
@@ -105,6 +109,7 @@ public class KafkaTuningConfigTest
         1,
         null,
         2,
+        10L,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -123,6 +128,8 @@ public class KafkaTuningConfigTest
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
     Assert.assertEquals(2, copy.getMaxRowsPerSegment());
+    Assert.assertNotEquals(null, copy.getMaxTotalRows());
+    Assert.assertEquals(10L, copy.getMaxTotalRows().longValue());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
     Assert.assertEquals(0, copy.getMaxPendingPersists());

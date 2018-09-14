@@ -22,13 +22,14 @@ package org.apache.druid.security.basic.authentication;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 public class BytesFullResponseHandler implements HttpResponseHandler<FullResponseHolder, FullResponseHolder>
 {
   @Override
-  public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response)
+  public ClientResponse<FullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     BytesFullResponseHolder holder = new BytesFullResponseHolder(
         response.getStatus(),
@@ -36,7 +37,7 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
         null
     );
 
-    holder.addChunk(response.getContent().array());
+    holder.addChunk(getContentBytes(response.getContent()));
 
     return ClientResponse.unfinished(
         holder
@@ -46,7 +47,8 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
   @Override
   public ClientResponse<FullResponseHolder> handleChunk(
       ClientResponse<FullResponseHolder> response,
-      HttpChunk chunk
+      HttpChunk chunk,
+      long chunkNum
   )
   {
     BytesFullResponseHolder holder = (BytesFullResponseHolder) response.getObj();
@@ -55,7 +57,7 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
       return ClientResponse.finished(null);
     }
 
-    holder.addChunk(chunk.getContent().array());
+    holder.addChunk(getContentBytes(chunk.getContent()));
     return response;
   }
 
@@ -71,5 +73,12 @@ public class BytesFullResponseHandler implements HttpResponseHandler<FullRespons
   )
   {
     // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
+  }
+
+  private byte[] getContentBytes(ChannelBuffer content)
+  {
+    byte[] contentBytes = new byte[content.readableBytes()];
+    content.readBytes(contentBytes);
+    return contentBytes;
   }
 }
