@@ -36,9 +36,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -197,7 +197,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
         )
     );
     final AtomicInteger index = new AtomicInteger(0);
-    List<ListenableFuture<?>> futures = new LinkedList<>();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
 
     final Integer loops = totalIndexSize / concurrentThreads;
 
@@ -250,7 +250,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     );
     final AtomicInteger index = new AtomicInteger(0);
     final AtomicInteger queryableIndex = new AtomicInteger(0);
-    List<ListenableFuture<?>> futures = new LinkedList<>();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
 
     final Integer loops = totalIndexSize / concurrentThreads;
 

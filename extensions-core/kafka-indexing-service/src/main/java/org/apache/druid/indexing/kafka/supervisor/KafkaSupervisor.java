@@ -308,14 +308,8 @@ public class KafkaSupervisor implements Supervisor
         Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
         if (taskRunner.isPresent()) {
           Optional<? extends TaskRunnerWorkItem> item = Iterables.tryFind(
-              taskRunner.get().getRunningTasks(), new Predicate<TaskRunnerWorkItem>()
-              {
-                @Override
-                public boolean apply(TaskRunnerWorkItem taskRunnerWorkItem)
-                {
-                  return id.equals(taskRunnerWorkItem.getTaskId());
-                }
-              }
+              taskRunner.get().getRunningTasks(),
+              (Predicate<TaskRunnerWorkItem>) taskRunnerWorkItem -> id.equals(taskRunnerWorkItem.getTaskId())
           );
 
           if (item.isPresent()) {
@@ -371,28 +365,23 @@ public class KafkaSupervisor implements Supervisor
         consumer = getKafkaConsumer();
 
         exec.submit(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                try {
-                  while (!Thread.currentThread().isInterrupted()) {
-                    final Notice notice = notices.take();
+            () -> {
+              try {
+                while (!Thread.currentThread().isInterrupted()) {
+                  final Notice notice = notices.take();
 
-                    try {
-                      notice.handle();
-                    }
-                    catch (Throwable e) {
-                      log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
-                         .addData("noticeClass", notice.getClass().getSimpleName())
-                         .emit();
-                    }
+                  try {
+                    notice.handle();
+                  }
+                  catch (Throwable e) {
+                    log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
+                       .addData("noticeClass", notice.getClass().getSimpleName())
+                       .emit();
                   }
                 }
-                catch (InterruptedException e) {
-                  log.info("KafkaSupervisor[%s] interrupted, exiting", dataSource);
-                }
+              }
+              catch (InterruptedException e) {
+                log.info("KafkaSupervisor[%s] interrupted, exiting", dataSource);
               }
             }
         );
@@ -897,7 +886,16 @@ public class KafkaSupervisor implements Supervisor
     checkTaskDuration();
     checkPendingCompletionTasks();
     checkCurrentTaskState();
-    createNewTasks();
+
+    // if supervisor is not suspended, ensure required tasks are running
+    // if suspended, ensure tasks have been requested to gracefully stop
+    if (!spec.isSuspended()) {
+      log.info("[%s] supervisor is running.", dataSource);
+      createNewTasks();
+    } else {
+      log.info("[%s] supervisor is suspended.", dataSource);
+      gracefulShutdownInternal();
+    }
 
     if (log.isDebugEnabled()) {
       log.debug(generateReport(true).toString());
@@ -2086,7 +2084,8 @@ public class KafkaSupervisor implements Supervisor
         includeOffsets ? latestOffsetsFromKafka : null,
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
-        includeOffsets ? offsetsLastUpdated : null
+        includeOffsets ? offsetsLastUpdated : null,
+        spec.isSuspended()
     );
     SupervisorReport<KafkaSupervisorReportPayload> report = new SupervisorReport<>(
         dataSource,
