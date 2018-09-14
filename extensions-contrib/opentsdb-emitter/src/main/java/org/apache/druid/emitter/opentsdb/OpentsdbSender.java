@@ -151,7 +151,7 @@ public class OpentsdbSender
           webResource.entity(events, MediaType.APPLICATION_JSON_TYPE).post();
         }
         catch (Exception e) {
-          log.error(e, "send to opentsdb server failed");
+          log.error(e, "error occurred when sending metrics to opentsdb server.");
         }
         finally {
           events.clear();
