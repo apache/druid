@@ -58,7 +58,7 @@ public class PlannerConfig
   private boolean useFallback = false;
 
   @JsonProperty
-  private boolean forceTimeCondition = false;
+  private boolean requireTimeCondition = false;
 
   @JsonProperty
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
@@ -103,9 +103,9 @@ public class PlannerConfig
     return useFallback;
   }
 
-  public boolean isForceTimeCondition()
+  public boolean isRequireTimeCondition()
   {
-    return forceTimeCondition;
+    return requireTimeCondition;
   }
 
   public DateTimeZone getSqlTimeZone()
@@ -140,7 +140,7 @@ public class PlannerConfig
         CTX_KEY_USE_FALLBACK,
         isUseFallback()
     );
-    newConfig.forceTimeCondition = isForceTimeCondition();
+    newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     return newConfig;
   }
@@ -180,7 +180,7 @@ public class PlannerConfig
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
            useFallback == that.useFallback &&
-           forceTimeCondition == that.forceTimeCondition &&
+           requireTimeCondition == that.requireTimeCondition &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone);
   }
@@ -198,7 +198,7 @@ public class PlannerConfig
         useApproximateCountDistinct,
         useApproximateTopN,
         useFallback,
-        forceTimeCondition,
+        requireTimeCondition,
         sqlTimeZone
     );
   }
@@ -215,7 +215,7 @@ public class PlannerConfig
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
            ", useFallback=" + useFallback +
-           ", forceTimeCondition=" + forceTimeCondition +
+           ", requireTimeCondition=" + requireTimeCondition +
            ", sqlTimeZone=" + sqlTimeZone +
            '}';
   }

@@ -142,9 +142,9 @@ public class CalciteQueryTest extends CalciteTestBase
   private static final Logger log = new Logger(CalciteQueryTest.class);
 
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
-  private static final PlannerConfig PLANNER_CONFIG_FORCE_TIME_CONDITION = new PlannerConfig() {
+  private static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION = new PlannerConfig() {
     @Override
-    public boolean isForceTimeCondition()
+    public boolean isRequireTimeCondition()
     {
       return true;
     }
@@ -7461,11 +7461,11 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testForceTimeConditionPositive() throws Exception
+  public void testRequireTimeConditionPositive() throws Exception
   {
     // simple timeseries
     testQuery(
-        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
         + "  cnt FROM druid.foo\n"
@@ -7491,7 +7491,7 @@ public class CalciteQueryTest extends CalciteTestBase
 
     // nested groupby only requires time condition for inner most query
     testQuery(
-        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
         "SELECT\n"
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
@@ -7531,7 +7531,7 @@ public class CalciteQueryTest extends CalciteTestBase
 
     // semi-join requires time condition on both left and right query
     testQuery(
-        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE __time >= '2000-01-01' AND SUBSTRING(dim2, 1, 1) IN (\n"
         + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
@@ -7571,13 +7571,13 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testForceTimeConditionSimpleQueryNegative() throws Exception
+  public void testRequireTimeConditionSimpleQueryNegative() throws Exception
   {
     expectedException.expect(CannotBuildQueryException.class);
-    expectedException.expectMessage("Missing __time filter");
+    expectedException.expectMessage("__time column");
 
     testQuery(
-        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
         + "  cnt FROM druid.foo\n"
@@ -7591,13 +7591,13 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testForceTimeConditionSubQueryNegative() throws Exception
+  public void testRequireTimeConditionSubQueryNegative() throws Exception
   {
     expectedException.expect(CannotBuildQueryException.class);
-    expectedException.expectMessage("Missing __time filter");
+    expectedException.expectMessage("__time column");
 
     testQuery(
-        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
         "SELECT\n"
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
@@ -7609,13 +7609,13 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testForceTimeConditionSemiJoinNegative() throws Exception
+  public void testRequireTimeConditionSemiJoinNegative() throws Exception
   {
     expectedException.expect(CannotBuildQueryException.class);
-    expectedException.expectMessage("Missing __time filter");
+    expectedException.expectMessage("__time column");
 
     testQuery(
-        PLANNER_CONFIG_FORCE_TIME_CONDITION,
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE SUBSTRING(dim2, 1, 1) IN (\n"
         + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"

@@ -101,9 +101,11 @@ public class QueryMaker
     final Query query = druidQuery.getQuery();
 
     final Query innerMostQuery = findInnerMostQuery(query);
-    if (plannerContext.getPlannerConfig().isForceTimeCondition() &&
+    if (plannerContext.getPlannerConfig().isRequireTimeCondition() &&
         innerMostQuery.getIntervals().equals(Intervals.ONLY_ETERNITY)) {
-      throw new CannotBuildQueryException("Missing __time filter");
+      throw new CannotBuildQueryException(
+          "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
+      );
     }
 
     if (query instanceof TimeseriesQuery) {
