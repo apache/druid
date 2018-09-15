@@ -115,7 +115,7 @@ public class OakIncrementalIndexReadBenchmark
     for (int j = 0; j < rowsPerSegment; j++) {
       InputRow row = gen.nextRow();
       if (j % 10000 == 0) {
-        log.info(j + " rows generated.");
+        log.info(j + " rows generated. ");
       }
       incIndex.add(row);
     }
