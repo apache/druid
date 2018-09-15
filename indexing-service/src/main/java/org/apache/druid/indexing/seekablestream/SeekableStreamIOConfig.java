@@ -27,8 +27,9 @@ import org.apache.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
-abstract public class SeekableStreamIOConfig<T1, T2> implements IOConfig
+public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
 
@@ -104,6 +105,9 @@ abstract public class SeekableStreamIOConfig<T1, T2> implements IOConfig
     return minimumMessageTime;
   }
 
+  @JsonProperty
+  public abstract Set<T1> getExclusiveStartSequenceNumberPartitions();
+
   @Override
-  abstract public String toString();
+  public abstract String toString();
 }

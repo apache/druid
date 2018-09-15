@@ -18,6 +18,7 @@
  */
 package org.apache.druid.indexing.seekablestream;
 
+
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -54,11 +55,11 @@ public interface SeekableStreamIndexTaskRunner<T1, T2> extends ChatHandler
   Response setEndOffsets(
       Map<T1, T2> offsets,
       boolean finish // this field is only for internal purposes, shouldn't be usually set by users
-  ) throws InterruptedException;
+  );
 
   @VisibleForTesting
-  Response pause() throws InterruptedException;
+  Response pause();
 
   @VisibleForTesting
-  void resume() throws InterruptedException;
+  void resume();
 }

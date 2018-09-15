@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-abstract public class SeekableStreamSupervisorIOConfig
+public abstract class SeekableStreamSupervisorIOConfig
 {
   private final String id;
   private final Integer replicas;
@@ -67,6 +67,10 @@ abstract public class SeekableStreamSupervisorIOConfig
                                        : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
   }
 
+  private static Duration defaultDuration(final Period period, final String theDefault)
+  {
+    return (period == null ? new Period(theDefault) : period).toStandardDuration();
+  }
 
   public String getId()
   {
@@ -103,7 +107,6 @@ abstract public class SeekableStreamSupervisorIOConfig
     return period;
   }
 
-
   public boolean isUseEarliestSequenceNumber()
   {
     return useEarliestSequenceNumber;
@@ -128,10 +131,5 @@ abstract public class SeekableStreamSupervisorIOConfig
   }
 
   @Override
-  abstract public String toString();
-
-  private static Duration defaultDuration(final Period period, final String theDefault)
-  {
-    return (period == null ? new Period(theDefault) : period).toStandardDuration();
-  }
+  public abstract String toString();
 }

@@ -48,22 +48,11 @@ import java.util.Map;
 import java.util.Random;
 
 //TODO: need more refactoring for run()
-abstract public class SeekableStreamIndexTask<T1, T2> extends AbstractTask implements ChatHandler
+public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask implements ChatHandler
 {
-  public enum Status
-  {
-    NOT_STARTED,
-    STARTING,
-    READING,
-    PAUSED,
-    PUBLISHING
-  }
-
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);
   private static final Random RANDOM = new Random();
   private static final String TYPE = "index_seekable_stream";
-
-
   protected final DataSchema dataSchema;
   protected final InputRowParser<ByteBuffer> parser;
   protected final SeekableStreamTuningConfig tuningConfig;
@@ -149,17 +138,25 @@ abstract public class SeekableStreamIndexTask<T1, T2> extends AbstractTask imple
     return ioConfig;
   }
 
+  @Override
+  public abstract TaskStatus run(TaskToolbox toolbox);
 
   @Override
-  abstract public TaskStatus run(final TaskToolbox toolbox);
+  public abstract boolean canRestore();
 
   @Override
-  abstract public boolean canRestore();
+  public abstract void stopGracefully();
 
   @Override
-  abstract public void stopGracefully();
+  public abstract <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
-  @Override
-  abstract public <T> QueryRunner<T> getQueryRunner(Query<T> query);
+  public enum Status
+  {
+    NOT_STARTED,
+    STARTING,
+    READING,
+    PAUSED,
+    PUBLISHING
+  }
 
 }

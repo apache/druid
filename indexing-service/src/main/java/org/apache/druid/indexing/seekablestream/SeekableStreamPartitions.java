@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Objects;
 
-abstract public class SeekableStreamPartitions<T1, T2>
+public abstract class SeekableStreamPartitions<T1, T2>
 {
   private final String id;
   private final Map<T1, T2> partitionOffsetMap;
@@ -72,6 +72,6 @@ abstract public class SeekableStreamPartitions<T1, T2>
   }
 
   @Override
-  abstract public String toString();
+  public abstract String toString();
 
 }

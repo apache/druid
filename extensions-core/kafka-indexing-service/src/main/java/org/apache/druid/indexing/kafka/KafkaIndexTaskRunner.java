@@ -20,9 +20,9 @@ package org.apache.druid.indexing.kafka;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 

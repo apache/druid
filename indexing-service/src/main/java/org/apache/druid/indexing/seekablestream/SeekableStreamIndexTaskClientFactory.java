@@ -28,7 +28,7 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-abstract public class SeekableStreamIndexTaskClientFactory<T extends SeekableStreamIndexTaskClient>
+public abstract class SeekableStreamIndexTaskClientFactory<T extends SeekableStreamIndexTaskClient>
     implements IndexTaskClientFactory<T>
 {
   private HttpClient httpClient;
@@ -45,7 +45,7 @@ abstract public class SeekableStreamIndexTaskClientFactory<T extends SeekableStr
   }
 
   @Override
-  abstract public T build(
+  public abstract T build(
       TaskInfoProvider taskInfoProvider,
       String dataSource,
       int numThreads,

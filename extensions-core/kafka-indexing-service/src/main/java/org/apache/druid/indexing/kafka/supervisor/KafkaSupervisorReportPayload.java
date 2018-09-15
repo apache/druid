@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
+import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;

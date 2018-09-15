@@ -26,13 +26,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
@@ -40,21 +40,20 @@ import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import java.util.List;
 import java.util.Map;
 
-abstract public class SeekableStreamSupervisorSpec implements SupervisorSpec
+public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
-  private final DataSchema dataSchema;
-  private final SeekableStreamSupervisorTuningConfig tuningConfig;
-  private final SeekableStreamSupervisorIOConfig ioConfig;
-  private final Map<String, Object> context;
-  private final ServiceEmitter emitter;
-  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
-
   protected final TaskStorage taskStorage;
   protected final TaskMaster taskMaster;
   protected final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   protected final SeekableStreamIndexTaskClientFactory indexTaskClientFactory;
   protected final ObjectMapper mapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final DataSchema dataSchema;
+  private final SeekableStreamSupervisorTuningConfig tuningConfig;
+  private final SeekableStreamSupervisorIOConfig ioConfig;
+  private final Map<String, Object> context;
+  private final ServiceEmitter emitter;
+  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
 
   @JsonCreator
   public SeekableStreamSupervisorSpec(
@@ -128,7 +127,7 @@ abstract public class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  abstract public Supervisor createSupervisor();
+  public abstract Supervisor createSupervisor();
 
   @Override
   public List<String> getDataSources()
@@ -137,7 +136,7 @@ abstract public class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  abstract public String toString();
+  public abstract String toString();
 
 
 }

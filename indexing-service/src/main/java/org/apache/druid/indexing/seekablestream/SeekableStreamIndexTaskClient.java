@@ -42,7 +42,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
-abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskClient
+public abstract class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskClient
 {
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClient.class);
 
@@ -349,7 +349,9 @@ abstract public class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
     return doAsync(() -> getStatus(id));
   }
 
-  abstract protected JavaType constructMapType(Class<? extends Map> mapType);
+  protected abstract JavaType constructMapType(Class<? extends Map> mapType);
+
+  public abstract Class<? extends SeekableStreamIndexTask> getTaskClassType();
 
 }
 

@@ -72,13 +72,14 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
-import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.test.TestBroker;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.CompressionUtils;
@@ -437,7 +438,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.READING) {
       Thread.sleep(10);
     }
 
@@ -510,7 +511,7 @@ public class KafkaIndexTaskTest
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
+    while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.PAUSED) {
       Thread.sleep(10);
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
@@ -722,7 +723,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // task will pause for checkpointing
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
+    while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.PAUSED) {
       Thread.sleep(10);
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
@@ -782,7 +783,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.READING) {
       Thread.sleep(10);
     }
 
@@ -836,7 +837,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.READING) {
       Thread.sleep(10);
     }
 
@@ -900,7 +901,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.READING) {
       Thread.sleep(10);
     }
 
@@ -1741,7 +1742,7 @@ public class KafkaIndexTaskTest
     }
 
     Assert.assertEquals(2, countEvents(task));
-    Assert.assertEquals(KafkaIndexTask.Status.READING, task.getRunner().getStatus());
+    Assert.assertEquals(SeekableStreamIndexTask.Status.READING, task.getRunner().getStatus());
 
     Map<Integer, Long> currentOffsets = objectMapper.readValue(
         task.getRunner().pause().getEntity().toString(),
@@ -1749,7 +1750,7 @@ public class KafkaIndexTaskTest
         {
         }
     );
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
+    Assert.assertEquals(SeekableStreamIndexTask.Status.PAUSED, task.getRunner().getStatus());
 
     // Insert remaining data
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
@@ -1812,13 +1813,13 @@ public class KafkaIndexTaskTest
 
     runTask(task);
 
-    while (!task.getRunner().getStatus().equals(KafkaIndexTask.Status.READING)) {
+    while (!task.getRunner().getStatus().equals(SeekableStreamIndexTask.Status.READING)) {
       Thread.sleep(2000);
     }
 
     task.getRunner().pause();
 
-    while (!task.getRunner().getStatus().equals(KafkaIndexTask.Status.PAUSED)) {
+    while (!task.getRunner().getStatus().equals(SeekableStreamIndexTask.Status.PAUSED)) {
       Thread.sleep(25);
     }
   }
@@ -1851,12 +1852,12 @@ public class KafkaIndexTaskTest
 
     runTask(task);
 
-    while (!task.getRunner().getStatus().equals(KafkaIndexTask.Status.READING)) {
+    while (!task.getRunner().getStatus().equals(SeekableStreamIndexTask.Status.READING)) {
       Thread.sleep(20);
     }
 
     for (int i = 0; i < 5; i++) {
-      Assert.assertEquals(task.getRunner().getStatus(), KafkaIndexTask.Status.READING);
+      Assert.assertEquals(task.getRunner().getStatus(), SeekableStreamIndexTask.Status.READING);
       // Offset should not be reset
       Assert.assertTrue(task.getRunner().getCurrentOffsets().get(0) == 200L);
     }

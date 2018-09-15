@@ -26,27 +26,23 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-abstract public class SeekableStreamTaskReportData<T1, T2>
+public class TaskReportData<T1, T2>
 {
-  public enum TaskType
-  {
-    ACTIVE, PUBLISHING, UNKNOWN
-  }
-
   private final String id;
   private final Map<T1, T2> startingOffsets;
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
   private final Map<T1, T2> currentOffsets;
-
-  public SeekableStreamTaskReportData(
+  private final Map<T1, T2> lag;
+  public TaskReportData(
       String id,
       @Nullable Map<T1, T2> startingOffsets,
       @Nullable Map<T1, T2> currentOffsets,
       @Nullable DateTime startTime,
       Long remainingSeconds,
-      TaskType type
+      TaskType type,
+      @Nullable Map<T1, T2> lag
   )
   {
     this.id = id;
@@ -55,6 +51,7 @@ abstract public class SeekableStreamTaskReportData<T1, T2>
     this.startTime = startTime;
     this.remainingSeconds = remainingSeconds;
     this.type = type;
+    this.lag = lag;
   }
 
   @JsonProperty
@@ -95,7 +92,28 @@ abstract public class SeekableStreamTaskReportData<T1, T2>
     return type;
   }
 
-  @Override
-  abstract public String toString();
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<T1, T2> getLag()
+  {
+    return lag;
+  }
 
+  @Override
+  public String toString()
+  {
+    return "{" +
+           "id='" + id + '\'' +
+           (startingOffsets != null ? ", startingOffsets=" + startingOffsets : "") +
+           (currentOffsets != null ? ", currentOffsets=" + currentOffsets : "") +
+           ", startTime=" + startTime +
+           ", remainingSeconds=" + remainingSeconds +
+           (lag != null ? ", lag=" + lag : "") +
+           '}';
+  }
+
+  public enum TaskType
+  {
+    ACTIVE, PUBLISHING, UNKNOWN
+  }
 }

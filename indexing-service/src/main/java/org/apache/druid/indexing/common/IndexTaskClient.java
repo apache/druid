@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
@@ -138,6 +139,11 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected RetryPolicy newRetryPolicy()
   {
     return retryPolicyFactory.makeRetryPolicy();
+  }
+
+  protected <T> T deserialize(String content, JavaType type) throws IOException
+  {
+    return objectMapper.readValue(content, type);
   }
 
   protected <T> T deserialize(String content, TypeReference<T> typeReference) throws IOException

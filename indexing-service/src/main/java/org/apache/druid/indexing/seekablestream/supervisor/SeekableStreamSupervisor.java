@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,6 +34,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -22,12 +42,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
-import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
-import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -42,6 +56,15 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
+import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -49,14 +72,14 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -77,98 +100,31 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 //TODO: rename offset -> sequence
 //TODO: prune 'kafka' and 'kinesis'
 //TODO: inheritance
 //TODO: make classes abstract
 //TODO: resolve warnings
-abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends Comparable> implements Supervisor
+public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 extends Comparable<T2>>
+    implements Supervisor
 {
-  //---------------------------------------GOOD---------------------------------------------------------
+  public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
   private static final Random RANDOM = new Random();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
-  //---------------------------------------GOOD---------------------------------------------------------
-
-
-  public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
-
-  private class TaskGroup
-  {
-    final int groupId;
-
-    final ImmutableMap<T1, T2> partitionOffsets;
-    final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
-    final Optional<DateTime> minimumMessageTime;
-    final Optional<DateTime> maximumMessageTime;
-    final Set<String> exclusiveStartSequenceNumberPartitions; //TODO: exclusiveSequence
-    final TreeMap<Integer, Map<T1, T2>> sequenceOffsets = new TreeMap<>();
-    final String baseSequenceName;
-    DateTime completionTimeout;
-
-    public TaskGroup(
-        int groupId,
-        ImmutableMap<T1, T2> partitionOffsets,
-        Optional<DateTime> minimumMessageTime,
-        Optional<DateTime> maximumMessageTime,
-        Set<String> exclusiveStartSequenceNumberPartitions
-    )
-    {
-      this.groupId = groupId;
-      this.partitionOffsets = partitionOffsets;
-      this.minimumMessageTime = minimumMessageTime;
-      this.maximumMessageTime = maximumMessageTime;
-      this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions != null
-                                                    ? exclusiveStartSequenceNumberPartitions
-                                                    : new HashSet<>();
-      this.baseSequenceName = generateSequenceName(partitionOffsets, minimumMessageTime, maximumMessageTime);
-    }
-
-    int addNewCheckpoint(Map<T1, T2> checkpoint)
-    {
-      sequenceOffsets.put(sequenceOffsets.lastKey() + 1, checkpoint);
-      return sequenceOffsets.lastKey();
-    }
-
-    public Set<String> taskIds()
-    {
-      return tasks.keySet();
-    }
-  }
-
-  private class TaskData
-  {
-    volatile TaskStatus status;
-    volatile DateTime startTime;
-    volatile Map<T1, T2> currentOffsets = new HashMap<>();
-
-    @Override
-    public String toString()
-    {
-      return "TaskData{" +
-             "status=" + status +
-             ", startTime=" + startTime +
-             ", currentOffsets=" + currentOffsets +
-             '}';
-    }
-  }
-
-  //TODO: doc
-  private final ConcurrentHashMap<Integer, TaskGroup> taskGroups = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<Integer, ConcurrentHashMap<T1, T2>> partitionGroups = new ConcurrentHashMap<>();
-
+  protected final ConcurrentHashMap<Integer, TaskGroup> taskGroups = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<Integer, ConcurrentHashMap<T1, T2>> partitionGroups = new ConcurrentHashMap<>();
   private final TaskStorage taskStorage;
   private final TaskMaster taskMaster;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final SeekableStreamIndexTaskClient<T1, T2> taskClient;
   private final ObjectMapper sortingMapper;
   private final SeekableStreamSupervisorSpec spec;
-  private final ServiceEmitter emitter;
-  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final String dataSource;
   private final SeekableStreamSupervisorIOConfig ioConfig;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
@@ -177,7 +133,6 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
   private final TaskInfoProvider taskInfoProvider;
   private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
-
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
   private final ScheduledExecutorService reportingExec;
@@ -185,83 +140,20 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
   private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
-  private final Object consumerLock = new Object(); //TODO: prob not needed
-
+  private final Object recordSupplierLock = new Object();
+  private final Set<T1> subsequentlyDiscoveredPartitions = new HashSet<>();
+  private final boolean checkpointSupported;
+  private final T2 NOT_SET;
+  private final T2 MAX_SEQUENCE_NUMBER;
+  protected volatile Map<T1, T2> latestOffsetsFromStream;
+  protected volatile DateTime offsetsLastUpdated;
   private boolean listenerRegistered = false;
   private long lastRunTime;
-
   private volatile DateTime firstRunTime;
   private volatile DateTime earlyPublishTime = null;
   private volatile RecordSupplier<T1, T2> recordSupplier;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
-
-  private final T2 NOT_SET;
-
-  //-------------------------------GOOD----------------------------------------
-
-  /**
-   * Notice is used to queue tasks that are internal to the supervisor
-   */
-  private interface Notice
-  {
-    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException;
-  }
-
-  private class RunNotice implements Notice
-  {
-    @Override
-    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
-    {
-      long nowTime = System.currentTimeMillis();
-      if (nowTime - lastRunTime < MAX_RUN_FREQUENCY_MILLIS) {
-        return;
-      }
-      lastRunTime = nowTime;
-
-      runInternal();
-    }
-  }
-
-  private class GracefulShutdownNotice extends ShutdownNotice
-  {
-    @Override
-    public void handle() throws InterruptedException, ExecutionException, TimeoutException
-    {
-      gracefulShutdownInternal();
-      super.handle();
-    }
-  }
-
-  private class ShutdownNotice implements Notice
-  {
-    @Override
-    public void handle() throws InterruptedException, ExecutionException, TimeoutException
-    {
-      recordSupplier.close();
-
-      synchronized (stopLock) {
-        stopped = true;
-        stopLock.notifyAll();
-      }
-    }
-  }
-
-  private class ResetNotice implements Notice
-  {
-    final DataSourceMetadata dataSourceMetadata;
-
-    ResetNotice(DataSourceMetadata dataSourceMetadata)
-    {
-      this.dataSourceMetadata = dataSourceMetadata;
-    }
-
-    @Override
-    public void handle()
-    {
-      resetInternal(dataSourceMetadata);
-    }
-  }
 
   //---------------------------GOOD-----------------------------------------
   public SeekableStreamSupervisor(
@@ -273,7 +165,9 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       final ObjectMapper mapper,
       final SeekableStreamSupervisorSpec spec,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
-      final T2 NOT_SET
+      final T2 NOT_SET, // TODO: fix these flags and extra variables
+      final T2 MAX_SEQUENCE_NUMBER,
+      final boolean checkpointSupported
   )
   {
     this.taskStorage = taskStorage;
@@ -281,10 +175,10 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.sortingMapper = mapper.copy().configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
     this.spec = spec;
-    this.emitter = spec.getEmitter();
-    this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.NOT_SET = NOT_SET;
+    this.MAX_SEQUENCE_NUMBER = MAX_SEQUENCE_NUMBER; //TODO: placeholder till fix
+    this.checkpointSupported = checkpointSupported;
 
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
@@ -358,6 +252,17 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     );
   }
 
+  protected static String getRandomId()
+  {
+    final StringBuilder suffix = new StringBuilder(8);
+    for (int i = 0; i < Integer.BYTES * 2; ++i) {
+      suffix.append((char) ('a' + ((RANDOM.nextInt() >>> (i * 4)) & 0x0F)));
+    }
+    return suffix.toString();
+  }
+
+  //-------------------------------GOOD----------------------------------------
+
   //-------------------------------GOOD----------------------------------------
   @Override
   public void start()
@@ -367,7 +272,10 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       Preconditions.checkState(!exec.isShutdown(), "already stopped");
 
       try {
-        recordSupplier = setupRecordSupplier();
+        if (recordSupplier == null) {
+          recordSupplier = setupRecordSupplier();
+        }
+
 
         exec.submit(
             () -> {
@@ -398,9 +306,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
             TimeUnit.MILLISECONDS
         );
 
-
-        //TODO: this logic is different from kafka and kinesis, need to look into
-        scheduleReporting();
+        scheduleReporting(reportingExec);
 
         started = true;
         log.info(
@@ -421,7 +327,6 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       }
     }
   }
-
 
   //---------------------------GOOOD------------------------------
   @Override
@@ -483,15 +388,28 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     }
   }
 
+  @Override
+  public Map<String, Map<String, Object>> getStats()
+  {
+    try {
+      return getCurrentTotalStats();
+    }
+    catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      log.error(ie, "getStats() interrupted.");
+      throw new RuntimeException(ie);
+    }
+    catch (ExecutionException | TimeoutException eete) {
+      throw new RuntimeException(eete);
+    }
+  }
 
-  //-------------------------------GOOD----------------------------------------
   @Override
   public SupervisorReport getStatus()
   {
     return generateReport(true);
   }
 
-  //-------------------------------GOOD----------------------------------------
   @Override
   public void reset(DataSourceMetadata dataSourceMetadata)
   {
@@ -501,16 +419,15 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
 
   //TODO: checkpoints
   @Override
-  abstract public void checkpoint(
+  public abstract void checkpoint(
       @Nullable Integer taskGroupId,
       String baseSequenceName,
       DataSourceMetadata previousCheckPoint,
       DataSourceMetadata currentCheckPoint
   );
 
-  //-------------------------------GOOD----------------------------------------
   @VisibleForTesting
-  void runInternal()
+  protected void runInternal()
       throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
   {
     possiblyRegisterListener();
@@ -567,7 +484,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
 
   //-------------------------------GOOD----------------------------------------
   @VisibleForTesting
-  void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
+  protected void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
   {
     for (TaskGroup taskGroup : taskGroups.values()) {
       for (Map.Entry<String, TaskData> entry :
@@ -585,7 +502,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
 
   //-------------------------------GOOD----------------------------------------
   @VisibleForTesting
-  void resetInternal(DataSourceMetadata dataSourceMetadata)
+  protected void resetInternal(DataSourceMetadata dataSourceMetadata)
   {
     if (dataSourceMetadata == null) {
       // Reset everything
@@ -596,15 +513,18 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       partitionGroups.clear();
     } else {
 
-      checkSourceMetadataInstanceMatch(dataSourceMetadata);
-
+      if (!checkSourceMetaDataMatch(dataSourceMetadata)) {
+        throw new IAE("Expected KafkaDataSourceMetadata but found instance of [%s]", dataSourceMetadata.getClass());
+      }
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       final SeekableStreamDataSourceMetadata<T1, T2> resetMetadata = (SeekableStreamDataSourceMetadata<T1, T2>) dataSourceMetadata;
 
       if (resetMetadata.getSeekableStreamPartitions().getId().equals(ioConfig.getId())) {
         // metadata can be null
         final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
-        checkSourceMetadataInstanceMatch(metadata);
+        if (metadata != null && !checkSourceMetaDataMatch(metadata)) {
+          throw new IAE("Expected KafkaDataSourceMetadata but found instance of [%s]", metadata.getClass());
+        }
 
         final SeekableStreamDataSourceMetadata<T1, T2> currentMetadata = (SeekableStreamDataSourceMetadata<T1, T2>) metadata;
 
@@ -623,8 +543,8 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
               getTaskGroupIdForPartition(resetPartitionOffset.getKey())
           );
           final boolean isSameOffset = partitionTaskGroup != null
-                                       && partitionTaskGroup.partitionOffsets.get(resetPartitionOffset.getKey())
-                                                                             .equals(resetPartitionOffset.getValue());
+                                       && partitionTaskGroup.startingSequences.get(resetPartitionOffset.getKey())
+                                                                              .equals(resetPartitionOffset.getValue());
           if (partitionOffsetInMetadataStore != null || isSameOffset) {
             doReset = true;
             break;
@@ -671,7 +591,6 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
 
   }
 
-
   private void killTask(final String id)
   {
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
@@ -711,7 +630,6 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     return false;
   }
 
-
   private void discoverTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
     int taskCount = 0;
@@ -721,7 +639,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
     for (Task task : tasks) {
-      if (!isTaskInstanceOfThis(task) || !dataSource.equals(task.getDataSource())) {
+      if (!checkTaskInstance(task) || !dataSource.equals(task.getDataSource())) {
         continue;
       }
 
@@ -841,7 +759,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
                                       ),
                                       seekableStreamIndexTask.getIOConfig().getMinimumMessageTime(),
                                       seekableStreamIndexTask.getIOConfig().getMaximumMessageTime(),
-                                      null //TODO: fix
+                                      seekableStreamIndexTask.getIOConfig().getExclusiveStartSequenceNumberPartitions()
                                   );
                                 }
                             );
@@ -880,7 +798,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
         killTask(taskId);
       }
     }
-    log.debug("Found [%d] Kafka indexing tasks for dataSource [%s]", taskCount, dataSource);
+    log.debug("Found [%d] seekable stream indexing tasks for dataSource [%s]", taskCount, dataSource);
 
     // make sure the checkpoints are consistent with each other and with the metadata store
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
@@ -903,8 +821,6 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       throw new RuntimeException(e);
     }
   }
-
-  //TODO: prob wanna refactor this
 
   /**
    * This method does two things -
@@ -999,8 +915,8 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
           );
           log.info("Setting taskGroup sequences to [%s] for group [%d]", latestCheckpoints, groupId);
-          taskGroup.sequenceOffsets.clear();
-          taskGroup.sequenceOffsets.putAll(latestCheckpoints);
+          taskGroup.currentSequences.clear();
+          taskGroup.currentSequences.putAll(latestCheckpoints);
         } else {
           log.debug(
               "Adding task [%s] to kill list, checkpoints[%s], latestoffsets from DB [%s]",
@@ -1012,16 +928,16 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
         }
       } else {
         // check consistency with taskGroup sequences
-        if (taskCheckpoints.get(taskGroup.sequenceOffsets.firstKey()) == null
-            || !(taskCheckpoints.get(taskGroup.sequenceOffsets.firstKey())
-                                .equals(taskGroup.sequenceOffsets.firstEntry().getValue()))
-            || taskCheckpoints.tailMap(taskGroup.sequenceOffsets.firstKey()).size()
-               != taskGroup.sequenceOffsets.size()) {
+        if (taskCheckpoints.get(taskGroup.currentSequences.firstKey()) == null
+            || !(taskCheckpoints.get(taskGroup.currentSequences.firstKey())
+                                .equals(taskGroup.currentSequences.firstEntry().getValue()))
+            || taskCheckpoints.tailMap(taskGroup.currentSequences.firstKey()).size()
+               != taskGroup.currentSequences.size()) {
           log.debug(
               "Adding task [%s] to kill list, checkpoints[%s], taskgroup checkpoints [%s]",
               taskId,
               taskCheckpoints,
-              taskGroup.sequenceOffsets
+              taskGroup.currentSequences
           );
           tasksToKill.add(taskId);
         }
@@ -1045,7 +961,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
               + "persisted offsets in metadata store [%s]",
               sequenceCheckpoint.lhs,
               sequenceCheckpoint.rhs,
-              taskGroup.sequenceOffsets,
+              taskGroup.currentSequences,
               latestOffsetsFromDb
           );
           killTask(sequenceCheckpoint.lhs);
@@ -1065,7 +981,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
         k -> new CopyOnWriteArrayList<>()
     );
     for (TaskGroup taskGroup : taskGroupList) {
-      if (taskGroup.partitionOffsets.equals(startingPartitions)) {
+      if (taskGroup.startingSequences.equals(startingPartitions)) {
         if (taskGroup.tasks.putIfAbsent(taskId, new TaskData()) == null) {
           log.info("Added discovered task [%s] to existing pending task group [%s]", taskId, groupId);
         }
@@ -1113,7 +1029,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
   private boolean isTaskCurrent(int taskGroupId, String taskId)
   {
     Optional<Task> taskOptional = taskStorage.getTask(taskId);
-    if (!taskOptional.isPresent() || !(isTaskInstanceOfThis(taskOptional.get()))) {
+    if (!taskOptional.isPresent() || !checkTaskInstance(taskOptional.get())) {
       return false;
     }
 
@@ -1134,7 +1050,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     }
   }
 
-  String generateSequenceName(
+  protected String generateSequenceName(
       Map<T1, T2> startPartitions,
       Optional<DateTime> minimumMessageTime,
       Optional<DateTime> maximumMessageTime
@@ -1169,8 +1085,41 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     return Joiner.on("_").join("index_seekable_streaming", dataSource, hashCode);
   }
 
-  // TODO: refactor this with recordSupplier
-  abstract protected void updatePartitionDataFromStream();
+  private void updatePartitionDataFromStream()
+  {
+    Set<T1> partitionIds = null;
+    try {
+      synchronized (recordSupplierLock) {
+        partitionIds = recordSupplier.getPartitionIds(ioConfig.getId());
+      }
+    }
+    catch (Exception e) {
+      log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getId());
+      return;
+    }
+
+    log.debug("Found [%d] partitions for topic [%s]", partitionIds.size(), ioConfig.getId());
+
+    for (T1 partitionId : partitionIds) {
+      int taskGroupId = getTaskGroupIdForPartition(partitionId);
+      // TODO: check for closed partitions (not sure if can be done in Kafka)
+      // TODO: earlyPublishTime
+
+      ConcurrentHashMap<T1, T2> partitionMap = partitionGroups.computeIfAbsent(
+          taskGroupId,
+          k -> new ConcurrentHashMap<>()
+      );
+
+      if (partitionMap.putIfAbsent(partitionId, NOT_SET) == null) {
+        log.info(
+            "New partition [%s] discovered for topic [%s], added to task group [%d]",
+            partitionId,
+            ioConfig.getId(),
+            taskGroupId
+        );
+      }
+    }
+  }
 
   private void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException
   {
@@ -1240,6 +1189,8 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
     }
   }
 
+  //TODO: prob wanna refactor this
+
   private Runnable buildRunTask()
   {
     return () -> notices.add(new RunNotice());
@@ -1257,13 +1208,19 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       // find the longest running task from this group
       DateTime earliestTaskStart = DateTimes.nowUtc();
       for (TaskData taskData : group.tasks.values()) {
-        // startTime can be null if kafkaSupervisor is stopped gracefully before processing any runNotice
         if (taskData.startTime != null && earliestTaskStart.isAfter(taskData.startTime)) {
           earliestTaskStart = taskData.startTime;
         }
       }
 
       // TODO: early publish time
+//      boolean doEarlyPublish = false;
+//      if (earlyPublishTime != null && (earlyPublishTime.isBeforeNow() || earlyPublishTime.isEqualNow())) {
+//        log.info("Early publish requested - signalling tasks to publish");
+//
+//        earlyPublishTime = null;
+//        doEarlyPublish = true;
+//      }
 
       // if this task has run longer than the configured duration, signal all tasks in the group to persist
       if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
@@ -1317,7 +1274,6 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
         String taskId = taskEntry.getKey();
         TaskData task = taskEntry.getValue();
 
-        // task.status can be null if kafkaSupervisor is stopped gracefully before processing any runNotice.
         if (task.status != null) {
           if (task.status.isSuccess()) {
             // If any task in this group has already completed, stop the rest of the tasks in the group and return.
@@ -1396,11 +1352,11 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
 
             try {
 
-              if (endOffsets.equals(taskGroup.sequenceOffsets.lastEntry().getValue())) {
+              if (endOffsets.equals(taskGroup.currentSequences.lastEntry().getValue())) {
                 log.warn(
                     "Checkpoint [%s] is same as the start offsets [%s] of latest sequence for the task group [%d]",
                     endOffsets,
-                    taskGroup.sequenceOffsets.lastEntry().getValue(),
+                    taskGroup.currentSequences.lastEntry().getValue(),
                     taskGroup.groupId
                 );
               }
@@ -1626,7 +1582,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
               groupId,
               new TaskGroup(
                   groupId,
-                  generateStartingSequence(groupId),
+                  generateStartingSequencesForPartitionGroup(groupId),
                   minimumMessageTime,
                   maximumMessageTime,
                   null //TODO: exclusive sequence
@@ -1649,7 +1605,7 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
       Integer groupId = entry.getKey();
 
       //TODO: kinesis
-//      if (taskGroup.partitionOffsets == null || taskGroup.partitionOffsets
+//      if (taskGroup.startingSequences == null || taskGroup.startingSequences
 //          .values().stream().allMatch(x -> x == null || Record.END_OF_SHARD_MARKER.equals(x))) {
 //        log.debug("Nothing to read in any partition for taskGroup [%d], skipping task creation", groupId);
 //        continue;
@@ -1673,24 +1629,736 @@ abstract public class SeekableStreamSupervisor<T1 extends Comparable, T2 extends
 
   }
 
-  abstract protected void createTasksForGroup(int group, int replicas) throws JsonProcessingException;
+  protected void addNotice(Notice notice)
+  {
+    notices.add(notice);
+  }
 
-  abstract protected ImmutableMap<T1, T2> generateStartingSequence(int groupId)
-      throws TimeoutException;
+  @VisibleForTesting
+  @Nullable
+  protected TaskGroup removeTaskGroup(int taskGroupId)
+  {
+    return taskGroups.remove(taskGroupId);
+  }
 
-  abstract protected RecordSupplier<T1, T2> setupRecordSupplier();
+  @VisibleForTesting
+  protected void moveTaskGroupToPendingCompletion(int taskGroupId)
+  {
+    final TaskGroup taskGroup = taskGroups.remove(taskGroupId);
+    if (taskGroup != null) {
+      pendingCompletionTaskGroups.computeIfAbsent(taskGroupId, k -> new CopyOnWriteArrayList<>()).add(taskGroup);
+    }
+  }
 
-  abstract protected SeekableStreamSupervisorReportPayload createSeekableStreamSupervisorReportPayload();
+  @VisibleForTesting
+  protected int getNoticesQueueSize()
+  {
+    return notices.size();
+  }
 
-  abstract protected void scheduleReporting();
+  /**
+   * Collect row ingestion stats from all tasks managed by this supervisor.
+   *
+   * @return A map of groupId->taskId->task row stats
+   *
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   */
+  private Map<String, Map<String, Object>> getCurrentTotalStats()
+      throws InterruptedException, ExecutionException, TimeoutException
+  {
+    Map<String, Map<String, Object>> allStats = Maps.newHashMap();
+    final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
+    final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
 
-  abstract protected int getTaskGroupIdForPartition(T1 partition);
+    for (int groupId : taskGroups.keySet()) {
+      TaskGroup group = taskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getMovingAveragesAsync(taskId),
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
+                  return new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  );
+                }
+            )
+        );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      }
+    }
 
-  abstract protected void checkSourceMetadataInstanceMatch(DataSourceMetadata metadata) throws IAE;
+    for (int groupId : pendingCompletionTaskGroups.keySet()) {
+      TaskGroup group = taskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getMovingAveragesAsync(taskId),
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
+                  return new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  );
+                }
+            )
+        );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      }
+    }
 
-  // TODO: may want to put more logic in the base class
-  abstract protected SupervisorReport<SeekableStreamSupervisorReportPayload> generateReport(boolean includeOffsets);
+    List<StatsFromTaskResult> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      StatsFromTaskResult result = results.get(i);
+      if (result != null) {
+        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> Maps.newHashMap());
+        groupMap.put(result.getTaskId(), result.getStats());
+      } else {
+        Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
+        log.error("Failed to get stats for group[%d]-task[%s]", groupAndTaskId.lhs, groupAndTaskId.rhs);
+      }
+    }
 
-  abstract protected boolean isTaskInstanceOfThis(Task task);
+    return allStats;
+  }
+
+  private ImmutableMap<T1, T2> generateStartingSequencesForPartitionGroup(int groupId) throws TimeoutException
+  {
+    ImmutableMap.Builder<T1, T2> builder = ImmutableMap.builder();
+    for (Map.Entry<T1, T2> entry : partitionGroups.get(groupId).entrySet()) {
+      T1 partition = entry.getKey();
+      T2 offset = entry.getValue();
+
+      if (offset != null && !offset.equals(NOT_SET)) {
+        // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
+        builder.put(partition, offset);
+      } else {
+        // if we don't have a startingOffset (first run or we had some previous failures and reset the offsets) then
+        // get the offset from metadata storage (if available) or Kafka (otherwise)
+        builder.put(partition, getOffsetFromStorageForPartition(partition));
+      }
+    }
+    return builder.build();
+  }
+
+  /**
+   * Queries the dataSource metadata table to see if there is a previous ending offset for this partition. If it doesn't
+   * find any data, it will retrieve the latest or earliest Kafka offset depending on the useEarliestOffset config.
+   */
+  private T2 getOffsetFromStorageForPartition(T1 partition) throws TimeoutException
+  {
+    final Map<T1, T2> metadataOffsets = getOffsetsFromMetadataStorage();
+    T2 offset = metadataOffsets.get(partition);
+    if (offset != null) {
+      log.debug("Getting offset [%s] from metadata storage for partition [%s]", offset, partition);
+
+      // TODO: tuningConfig.isSkipSequenceNumberAvailabilityCheck()
+
+      try {
+        T2 latestSequence = getOffsetFromStreamForPartition(partition, false);
+        if (latestSequence == null || offset.compareTo(latestSequence) > 0) {
+          if (taskTuningConfig.isResetOffsetAutomatically()) {
+            // TODO: reset internal
+            throw new ISE(
+                "Previous sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) - automatically resetting offset",
+                offset,
+                partition,
+                latestSequence
+            );
+
+          } else {
+            throw new ISE(
+                "Previous sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]). You can clear the previous sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
+                offset,
+                partition,
+                latestSequence
+            );
+          }
+        }
+      }
+      catch (TimeoutException e) {
+        throw new ISE(e, "Timeout while fetching earliest sequence number for partition [%s]", partition);
+      }
+
+      return offset;
+    } else {
+      boolean useEarliestSequenceNumber = ioConfig.isUseEarliestSequenceNumber();
+      if (subsequentlyDiscoveredPartitions.contains(partition)) {
+        log.info(
+            "Overriding useEarliestSequenceNumber and starting from beginning of newly discovered partition [%s] (which is probably from a split or merge)",
+            partition
+        );
+        useEarliestSequenceNumber = true;
+      }
+
+      offset = getOffsetFromStreamForPartition(partition, useEarliestSequenceNumber);
+      log.info("Getting sequence number [%s] for partition [%s]", offset, partition);
+      return offset;
+    }
+  }
+
+  private Map<T1, T2> getOffsetsFromMetadataStorage()
+  {
+    final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
+    if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
+        && checkSourceMetaDataMatch(dataSourceMetadata)) {
+      SeekableStreamPartitions<T1, T2> partitions = ((SeekableStreamDataSourceMetadata) dataSourceMetadata).getSeekableStreamPartitions();
+      if (partitions != null) {
+        if (!ioConfig.getId().equals(partitions.getId())) {
+          log.warn(
+              "Topic in metadata storage [%s] doesn't match spec topic [%s], ignoring stored offsets",
+              partitions.getId(),
+              ioConfig.getId()
+          );
+          return Collections.emptyMap();
+        } else if (partitions.getPartitionSequenceMap() != null) {
+          return partitions.getPartitionSequenceMap();
+        }
+      }
+    }
+
+    return Collections.emptyMap();
+  }
+
+  private T2 getOffsetFromStreamForPartition(T1 partition, boolean useEarliestOffset) throws TimeoutException
+  {
+    synchronized (recordSupplierLock) {
+      StreamPartition<T1> topicPartition = new StreamPartition<>(ioConfig.getId(), partition);
+      if (!recordSupplier.getAssignment().contains(topicPartition)) {
+        recordSupplier.assign(Collections.singleton(topicPartition));
+      }
+
+      return useEarliestOffset
+             ? recordSupplier.getEarliestSequenceNumber(topicPartition)
+             : recordSupplier.getLatestSequenceNumber(topicPartition);
+    }
+  }
+
+  private void createTasksForGroup(int groupId, int replicas) throws JsonProcessingException
+  {
+    TaskGroup group = taskGroups.get(groupId);
+    Map<T1, T2> startPartitions = group.startingSequences;
+    Map<T1, T2> endPartitions = new HashMap<>();
+    Set<T1> exclusiveStartSequenceNumberPartitions = taskGroups.get(groupId).exclusiveStartSequenceNumberPartitions;
+    for (T1 partition : startPartitions.keySet()) {
+      endPartitions.put(partition, MAX_SEQUENCE_NUMBER);
+    }
+
+    DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
+    DateTime maximumMessageTime = taskGroups.get(groupId).maximumMessageTime.orNull();
+
+    SeekableStreamIOConfig newIoConfig = createIoConfig(
+        groupId,
+        startPartitions,
+        endPartitions,
+        group.baseSequenceName,
+        minimumMessageTime,
+        maximumMessageTime,
+        exclusiveStartSequenceNumberPartitions,
+        ioConfig
+    );
+
+
+    List<SeekableStreamIndexTask<T1, T2>> taskList = createIndexTask(
+        replicas,
+        group.baseSequenceName,
+        sortingMapper,
+        group.currentSequences,
+        newIoConfig,
+        taskTuningConfig,
+        rowIngestionMetersFactory
+    );
+
+    for (int i = 0; i < replicas; i++) {
+      Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+      SeekableStreamIndexTask indexTask = taskList.get(i);
+      if (taskQueue.isPresent()) {
+        try {
+          taskQueue.get().add(indexTask);
+        }
+        catch (EntryExistsException e) {
+          log.error("Tried to add task [%s] but it already exists", indexTask.getId());
+        }
+      } else {
+        log.error("Failed to get task queue because I'm not the leader!");
+      }
+    }
+  }
+
+  private void updateCurrentOffsets() throws InterruptedException, ExecutionException, TimeoutException
+  {
+    final List<ListenableFuture<Void>> futures = Stream.concat(
+        taskGroups.values().stream().flatMap(taskGroup -> taskGroup.tasks.entrySet().stream()),
+        pendingCompletionTaskGroups.values()
+                                   .stream()
+                                   .flatMap(List::stream)
+                                   .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
+    ).map(
+        task -> Futures.transform(
+            taskClient.getCurrentOffsetsAsync(task.getKey(), false),
+            (Function<Map<T1, T2>, Void>) (currentSequences) -> {
+
+              if (currentSequences != null && !currentSequences.isEmpty()) {
+                task.getValue().currentSequences = currentSequences;
+              }
+
+              return null;
+            }
+        )
+    ).collect(Collectors.toList());
+
+    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+  }
+
+  private void updateLatestOffsetsFromStream()
+  {
+    synchronized (recordSupplierLock) {
+      Set<T1> partitionIds = null;
+      try {
+        partitionIds = recordSupplier.getPartitionIds(ioConfig.getId());
+      }
+      catch (Exception e) {
+        log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getId());
+        Throwables.propagate(e);
+      }
+
+      Set<StreamPartition<T1>> partitions = partitionIds
+          .stream()
+          .map(e -> new StreamPartition<>(ioConfig.getId(), e))
+          .collect(Collectors.toSet());
+
+      recordSupplier.assign(partitions);
+      recordSupplier.seekToLatest(partitions);
+
+      latestOffsetsFromStream = partitions.stream()
+                                          .collect(Collectors.toMap(
+                                              StreamPartition::getPartitionId,
+                                              x -> recordSupplier.position(x)
+                                          ));
+    }
+
+  }
+
+  @VisibleForTesting
+  protected Runnable updateCurrentAndLatestOffsets()
+  {
+    return () -> {
+      try {
+        updateCurrentOffsets();
+        updateLatestOffsetsFromStream();
+        offsetsLastUpdated = DateTimes.nowUtc();
+      }
+      catch (Exception e) {
+        log.warn(e, "Exception while getting current/latest offsets");
+      }
+    };
+  }
+
+  protected Map<T1, T2> getHighestCurrentOffsets()
+  {
+    return taskGroups
+        .values()
+        .stream()
+        .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
+        .flatMap(taskData -> taskData.getValue().currentSequences.entrySet().stream())
+        .collect(Collectors.toMap(
+            Map.Entry::getKey,
+            Map.Entry::getValue,
+            (v1, v2) -> v1.compareTo(v2) > 0 ? v1 : v2
+        ));
+  }
+
+  private SupervisorReport<? extends SeekableStreamSupervisorReportPayload<T1, T2>> generateReport(
+      boolean includeOffsets
+  )
+  {
+    int numPartitions = partitionGroups.values().stream().mapToInt(Map::size).sum();
+
+    final SeekableStreamSupervisorReportPayload<T1, T2> payload = createReportPayload(numPartitions, includeOffsets);
+
+    SupervisorReport<SeekableStreamSupervisorReportPayload<T1, T2>> report = new SupervisorReport<>(
+        dataSource,
+        DateTimes.nowUtc(),
+        payload
+    );
+
+    List<TaskReportData<T1, T2>> taskReports = Lists.newArrayList();
+
+    try {
+      for (TaskGroup taskGroup : taskGroups.values()) {
+        for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
+          String taskId = entry.getKey();
+          @Nullable
+          DateTime startTime = entry.getValue().startTime;
+          Map<T1, T2> currentOffsets = entry.getValue().currentSequences;
+          Long remainingSeconds = null;
+          if (startTime != null) {
+            remainingSeconds = Math.max(
+                0, ioConfig.getTaskDuration().getMillis() - (System.currentTimeMillis() - startTime.getMillis())
+            ) / 1000;
+          }
+
+          taskReports.add(
+              new TaskReportData<T1, T2>(
+                  taskId,
+                  includeOffsets ? taskGroup.startingSequences : null,
+                  includeOffsets ? currentOffsets : null,
+                  startTime,
+                  remainingSeconds,
+                  TaskReportData.TaskType.ACTIVE,
+                  includeOffsets ? getLagPerPartition(currentOffsets) : null
+              )
+          );
+        }
+      }
+
+      for (List<TaskGroup> taskGroups : pendingCompletionTaskGroups.values()) {
+        for (TaskGroup taskGroup : taskGroups) {
+          for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
+            String taskId = entry.getKey();
+            @Nullable
+            DateTime startTime = entry.getValue().startTime;
+            Map<T1, T2> currentOffsets = entry.getValue().currentSequences;
+            Long remainingSeconds = null;
+            if (taskGroup.completionTimeout != null) {
+              remainingSeconds = Math.max(0, taskGroup.completionTimeout.getMillis() - System.currentTimeMillis())
+                                 / 1000;
+            }
+
+            taskReports.add(
+                new TaskReportData<T1, T2>(
+                    taskId,
+                    includeOffsets ? taskGroup.startingSequences : null,
+                    includeOffsets ? currentOffsets : null,
+                    startTime,
+                    remainingSeconds,
+                    TaskReportData.TaskType.PUBLISHING,
+                    null
+                )
+            );
+          }
+        }
+      }
+
+      taskReports.forEach(payload::addTask);
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to generate status report");
+    }
+
+    return report;
+  }
+
+  protected abstract SeekableStreamIOConfig createIoConfig(
+      int groupId,
+      Map<T1, T2> startPartitions,
+      Map<T1, T2> endPartitions,
+      String baseSequenceName,
+      DateTime minimumMessageTime,
+      DateTime maximumMessageTime,
+      Set<T1> exclusiveStartSequenceNumberPartitions,
+      SeekableStreamSupervisorIOConfig ioConfig
+  );
+
+  protected abstract List<SeekableStreamIndexTask<T1, T2>> createIndexTask(
+      int replicas,
+      String baseSequenceName,
+      ObjectMapper sortingMapper,
+      TreeMap<Integer, Map<T1, T2>> sequenceOffsets,
+      SeekableStreamIOConfig taskIoConfig,
+      SeekableStreamTuningConfig taskTuningConfig,
+      RowIngestionMetersFactory rowIngestionMetersFactory
+  ) throws JsonProcessingException;
+
+  protected abstract RecordSupplier<T1, T2> setupRecordSupplier();
+
+  protected abstract void scheduleReporting(ScheduledExecutorService reportingExec);
+
+  protected abstract int getTaskGroupIdForPartition(T1 partition);
+
+  protected abstract boolean checkSourceMetaDataMatch(DataSourceMetadata metadata);
+
+  protected abstract boolean checkTaskInstance(Task task);
+
+  protected abstract SeekableStreamSupervisorReportPayload<T1, T2> createReportPayload(
+      int numPartitions,
+      boolean includeOffsets
+  );
+
+  protected abstract Map<T1, T2> getLagPerPartition(Map<T1, T2> currentOffsets);
+
+  /**
+   * Notice is used to queue tasks that are internal to the supervisor
+   */
+  private interface Notice
+  {
+    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException;
+  }
+
+  private static class StatsFromTaskResult
+  {
+    private final String groupId;
+    private final String taskId;
+    private final Map<String, Object> stats;
+
+    public StatsFromTaskResult(
+        int groupId,
+        String taskId,
+        Map<String, Object> stats
+    )
+    {
+      this.groupId = String.valueOf(groupId);
+      this.taskId = taskId;
+      this.stats = stats;
+    }
+
+    public String getGroupId()
+    {
+      return groupId;
+    }
+
+    public String getTaskId()
+    {
+      return taskId;
+    }
+
+    public Map<String, Object> getStats()
+    {
+      return stats;
+    }
+  }
+
+  private class TaskGroup
+  {
+    final int groupId;
+
+    final ImmutableMap<T1, T2> startingSequences;
+    final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
+    final Optional<DateTime> minimumMessageTime;
+    final Optional<DateTime> maximumMessageTime;
+    final Set<T1> exclusiveStartSequenceNumberPartitions; //TODO: exclusiveSequence
+    final TreeMap<Integer, Map<T1, T2>> currentSequences = new TreeMap<>();
+    final String baseSequenceName;
+    DateTime completionTimeout;
+
+    public TaskGroup(
+        int groupId,
+        ImmutableMap<T1, T2> startingSequences,
+        Optional<DateTime> minimumMessageTime,
+        Optional<DateTime> maximumMessageTime,
+        Set<T1> exclusiveStartSequenceNumberPartitions
+    )
+    {
+      this.groupId = groupId;
+      this.startingSequences = startingSequences;
+      this.minimumMessageTime = minimumMessageTime;
+      this.maximumMessageTime = maximumMessageTime;
+      this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions != null
+                                                    ? exclusiveStartSequenceNumberPartitions
+                                                    : new HashSet<>();
+      this.baseSequenceName = generateSequenceName(startingSequences, minimumMessageTime, maximumMessageTime);
+    }
+
+    int addNewCheckpoint(Map<T1, T2> checkpoint)
+    {
+      currentSequences.put(currentSequences.lastKey() + 1, checkpoint);
+      return currentSequences.lastKey();
+    }
+
+    public Set<String> taskIds()
+    {
+      return tasks.keySet();
+    }
+  }
+
+  private class TaskData
+  {
+    volatile TaskStatus status;
+    volatile DateTime startTime;
+    volatile Map<T1, T2> currentSequences = new HashMap<>();
+
+    @Override
+    public String toString()
+    {
+      return "TaskData{" +
+             "status=" + status +
+             ", startTime=" + startTime +
+             ", currentSequences=" + currentSequences +
+             '}';
+    }
+  }
+
+  private class RunNotice implements Notice
+  {
+    @Override
+    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+    {
+      long nowTime = System.currentTimeMillis();
+      if (nowTime - lastRunTime < MAX_RUN_FREQUENCY_MILLIS) {
+        return;
+      }
+      lastRunTime = nowTime;
+
+      runInternal();
+    }
+  }
+
+  private class GracefulShutdownNotice extends ShutdownNotice
+  {
+    @Override
+    public void handle() throws InterruptedException, ExecutionException, TimeoutException
+    {
+      gracefulShutdownInternal();
+      super.handle();
+    }
+  }
+
+  private class ShutdownNotice implements Notice
+  {
+    @Override
+    public void handle() throws InterruptedException, ExecutionException, TimeoutException
+    {
+      recordSupplier.close();
+
+      synchronized (stopLock) {
+        stopped = true;
+        stopLock.notifyAll();
+      }
+    }
+  }
+
+  private class ResetNotice implements Notice
+  {
+    final DataSourceMetadata dataSourceMetadata;
+
+    ResetNotice(DataSourceMetadata dataSourceMetadata)
+    {
+      this.dataSourceMetadata = dataSourceMetadata;
+    }
+
+    @Override
+    public void handle()
+    {
+      resetInternal(dataSourceMetadata);
+    }
+  }
+
+  protected class CheckpointNotice implements Notice
+  {
+    @Nullable
+    private final Integer nullableTaskGroupId;
+    @Deprecated
+    private final String baseSequenceName;
+    private final SeekableStreamDataSourceMetadata<T1, T2> previousCheckpoint;
+    private final SeekableStreamDataSourceMetadata<T1, T2> currentCheckpoint;
+
+    public CheckpointNotice(
+        @Nullable Integer nullableTaskGroupId,
+        @Deprecated String baseSequenceName,
+        SeekableStreamDataSourceMetadata<T1, T2> previousCheckpoint,
+        SeekableStreamDataSourceMetadata<T1, T2> currentCheckpoint
+    )
+    {
+      this.baseSequenceName = baseSequenceName;
+      this.nullableTaskGroupId = nullableTaskGroupId;
+      this.previousCheckpoint = previousCheckpoint;
+      this.currentCheckpoint = currentCheckpoint;
+    }
+
+    @Override
+    public void handle() throws ExecutionException, InterruptedException
+    {
+      // Find taskGroupId using taskId if it's null. It can be null while rolling update.
+      final int taskGroupId;
+      if (nullableTaskGroupId == null) {
+        // We search taskId in taskGroups and pendingCompletionTaskGroups sequentially. This should be fine because
+        // 1) a taskGroup can be moved from taskGroups to pendingCompletionTaskGroups in RunNotice
+        //    (see checkTaskDuration()).
+        // 2) Notices are proceesed by a single thread. So, CheckpointNotice and RunNotice cannot be processed at the
+        //    same time.
+        final java.util.Optional<Integer> maybeGroupId = taskGroups
+            .entrySet()
+            .stream()
+            .filter(entry -> {
+              final TaskGroup taskGroup = entry.getValue();
+              return taskGroup.baseSequenceName.equals(baseSequenceName);
+            })
+            .findAny()
+            .map(Map.Entry::getKey);
+        taskGroupId = maybeGroupId.orElse(
+            pendingCompletionTaskGroups
+                .entrySet()
+                .stream()
+                .filter(entry -> {
+                  final List<TaskGroup> taskGroups = entry.getValue();
+                  return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
+                })
+                .findAny()
+                .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
+                .getKey()
+        );
+      } else {
+        taskGroupId = nullableTaskGroupId;
+      }
+
+      // check for consistency
+      // if already received request for this sequenceName and dataSourceMetadata combination then return
+      final TaskGroup taskGroup = taskGroups.get(taskGroupId);
+
+      if (isValidTaskGroup(taskGroupId, taskGroup)) {
+        final TreeMap<Integer, Map<T1, T2>> checkpoints = taskGroup.currentSequences;
+
+        // check validity of previousCheckpoint
+        int index = checkpoints.size();
+        for (int sequenceId : checkpoints.descendingKeySet()) {
+          Map<T1, T2> checkpoint = checkpoints.get(sequenceId);
+          // We have already verified the topic of the current checkpoint is same with that in ioConfig.
+          // See checkpoint().
+          if (checkpoint.equals(previousCheckpoint.getSeekableStreamPartitions()
+                                                  .getPartitionSequenceMap()
+          )) {
+            break;
+          }
+          index--;
+        }
+        if (index == 0) {
+          throw new ISE("No such previous checkpoint [%s] found", previousCheckpoint);
+        } else if (index < checkpoints.size()) {
+          // if the found checkpoint is not the latest one then already checkpointed by a replica
+          Preconditions.checkState(index == checkpoints.size() - 1, "checkpoint consistency failure");
+          log.info("Already checkpointed with offsets [%s]", checkpoints.lastEntry().getValue());
+          return;
+        }
+        final Map<T1, T2> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
+        taskGroup.addNewCheckpoint(newCheckpoint);
+        log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
+      }
+    }
+
+    protected boolean isValidTaskGroup(int taskGroupId, @Nullable TaskGroup taskGroup)
+    {
+      if (taskGroup == null) {
+        // taskGroup might be in pendingCompletionTaskGroups or partitionGroups
+        if (pendingCompletionTaskGroups.containsKey(taskGroupId)) {
+          log.warn(
+              "Ignoring checkpoint request because taskGroup[%d] has already stopped indexing and is waiting for "
+              + "publishing segments",
+              taskGroupId
+          );
+          return false;
+        } else if (partitionGroups.containsKey(taskGroupId)) {
+          log.warn("Ignoring checkpoint request because taskGroup[%d] is inactive", taskGroupId);
+          return false;
+        } else {
+          throw new ISE("WTH?! cannot find taskGroup [%s] among all taskGroups [%s]", taskGroupId, taskGroups);
+        }
+      }
+
+      return true;
+    }
+  }
 
 }

@@ -29,15 +29,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-abstract public class SeekableStreamSupervisorReportPayload<T1, T2>
+public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
 {
   private final String dataSource;
   private final String id;
   private final int partitions;
   private final int replicas;
   private final long durationSeconds;
-  private final List<SeekableStreamTaskReportData> activeTasks;
-  private final List<SeekableStreamTaskReportData> publishingTasks;
+  private final List<TaskReportData> activeTasks;
+  private final List<TaskReportData> publishingTasks;
   private final Map<T1, T2> latestOffsets;
   private final Map<T1, T2> minimumLag;
   private final Long aggregateLag;
@@ -68,11 +68,11 @@ abstract public class SeekableStreamSupervisorReportPayload<T1, T2>
     this.offsetsLastUpdated = offsetsLastUpdated;
   }
 
-  public void addTask(SeekableStreamTaskReportData data)
+  public void addTask(TaskReportData data)
   {
-    if (data.getType().equals(SeekableStreamTaskReportData.TaskType.ACTIVE)) {
+    if (data.getType().equals(TaskReportData.TaskType.ACTIVE)) {
       activeTasks.add(data);
-    } else if (data.getType().equals(SeekableStreamTaskReportData.TaskType.PUBLISHING)) {
+    } else if (data.getType().equals(TaskReportData.TaskType.PUBLISHING)) {
       publishingTasks.add(data);
     } else {
       throw new IAE("Unknown task type [%s]", data.getType().name());
@@ -109,13 +109,13 @@ abstract public class SeekableStreamSupervisorReportPayload<T1, T2>
   }
 
   @JsonProperty
-  public List<? extends SeekableStreamTaskReportData> getActiveTasks()
+  public List<? extends TaskReportData> getActiveTasks()
   {
     return activeTasks;
   }
 
   @JsonProperty
-  public List<? extends SeekableStreamTaskReportData> getPublishingTasks()
+  public List<? extends TaskReportData> getPublishingTasks()
   {
     return publishingTasks;
   }
@@ -148,5 +148,5 @@ abstract public class SeekableStreamSupervisorReportPayload<T1, T2>
   }
 
   @Override
-  abstract public String toString();
+  public abstract String toString();
 }

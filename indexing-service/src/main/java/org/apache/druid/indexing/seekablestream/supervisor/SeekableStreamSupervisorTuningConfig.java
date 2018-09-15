@@ -27,6 +27,11 @@ import org.joda.time.Period;
 public interface SeekableStreamSupervisorTuningConfig
 {
 
+  static Duration defaultDuration(final Period period, final String theDefault)
+  {
+    return (period == null ? new Period(theDefault) : period).toStandardDuration();
+  }
+
   @JsonProperty
   Integer getWorkerThreads();
 
@@ -42,13 +47,11 @@ public interface SeekableStreamSupervisorTuningConfig
   @JsonProperty
   Duration getShutdownTimeout();
 
+  @JsonProperty
+  Duration getOffsetFetchPeriod();
+
   @Override
   String toString();
 
   SeekableStreamTuningConfig copyOf();
-
-  static Duration defaultDuration(final Period period, final String theDefault)
-  {
-    return (period == null ? new Period(theDefault) : period).toStandardDuration();
-  }
 }

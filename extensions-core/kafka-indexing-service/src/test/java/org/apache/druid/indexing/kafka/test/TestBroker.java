@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka.test;
+package org.apache.druid.indexing.seekablestream.test;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;

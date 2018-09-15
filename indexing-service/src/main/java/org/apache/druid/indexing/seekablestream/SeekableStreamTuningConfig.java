@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-abstract public class SeekableStreamTuningConfig implements TuningConfig, AppenderatorConfig
+public abstract class SeekableStreamTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
@@ -121,7 +121,7 @@ abstract public class SeekableStreamTuningConfig implements TuningConfig, Append
                               : logParseExceptions;
   }
 
-  abstract public SeekableStreamTuningConfig copyOf();
+  public abstract SeekableStreamTuningConfig copyOf();
 
   @Override
   @JsonProperty
@@ -233,7 +233,7 @@ abstract public class SeekableStreamTuningConfig implements TuningConfig, Append
     return maxSavedParseExceptions;
   }
 
-  abstract public SeekableStreamTuningConfig withBasePersistDirectory(File dir);
+  public abstract SeekableStreamTuningConfig withBasePersistDirectory(File dir);
 
   @Override
   public boolean equals(Object o)
@@ -285,6 +285,6 @@ abstract public class SeekableStreamTuningConfig implements TuningConfig, Append
   }
 
   @Override
-  abstract public String toString();
+  public abstract String toString();
 
 }
