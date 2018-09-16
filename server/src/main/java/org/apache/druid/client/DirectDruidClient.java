@@ -207,9 +207,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private final AtomicBoolean done = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
+        private final AtomicReference<Boolean> isChannelReadable = new AtomicReference<>();
+        private final AtomicLong channelClosedTime = new AtomicLong(0);
 
         private QueryMetrics<? super Query<T>> queryMetrics;
         private long responseStartTimeNs;
+        private long backPressureStartTimeNs;
 
         private QueryMetrics<? super Query<T>> acquireResponseMetrics()
         {
@@ -231,6 +234,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final long currentQueuedByteCount = queuedByteCount.addAndGet(holder.getLength());
           queue.put(holder);
 
+          if (usingBackpressure && currentQueuedByteCount >= maxQueuedBytes && isChannelReadable.get()) {
+            backPressureStartTimeNs = System.nanoTime();
+            isChannelReadable.set(false);
+          }
+
           // True if we should keep reading.
           return !usingBackpressure || currentQueuedByteCount < maxQueuedBytes;
         }
@@ -246,6 +254,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           if (usingBackpressure && currentQueuedByteCount < maxQueuedBytes) {
             Preconditions.checkNotNull(trafficCopRef.get(), "No TrafficCop, how can this be?")
                          .resume(holder.getChunkNum());
+
+            //If channel is currently closed for reads, reopen and record time that it was closed for
+            if (!isChannelReadable.get()) {
+              isChannelReadable.set(true);
+              long backPressureReleaseTimeNs = System.nanoTime();
+              channelClosedTime.addAndGet(backPressureReleaseTimeNs - backPressureStartTimeNs);
+            }
           }
 
           return holder.getStream();
@@ -382,6 +397,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
           responseMetrics.reportNodeTime(nodeTimeNs);
           responseMetrics.reportNodeBytes(totalByteCount.get());
+          responseMetrics.reportBackPressureTime(channelClosedTime.get());
           responseMetrics.emit(emitter);
           synchronized (done) {
             try {

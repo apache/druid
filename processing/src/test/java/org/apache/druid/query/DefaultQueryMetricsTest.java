@@ -152,5 +152,10 @@ public class DefaultQueryMetricsTest
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/node/bytes", actualEvent.get("metric"));
     Assert.assertEquals(10L, actualEvent.get("value"));
+
+    queryMetrics.reportBackPressureTime(11).emit(serviceEmitter);
+    actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Assert.assertEquals("query/node/backpressure", actualEvent.get("metric"));
+    Assert.assertEquals(11L, actualEvent.get("value"));
   }
 }
