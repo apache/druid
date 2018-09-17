@@ -99,8 +99,10 @@ abstract class HllSketchAggregatorFactory extends AggregatorFactory
     return Arrays.asList(fieldName);
   }
 
-  // This is a convoluted way to return a list of input field names this aggregator needs.
-  // Currently the returned factories are only used to obtain a field name by calling getName() method.
+  /**
+   * This is a convoluted way to return a list of input field names this aggregator needs.
+   * Currently the returned factories are only used to obtain a field name by calling getName() method.
+   */
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
