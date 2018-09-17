@@ -66,8 +66,10 @@ public class HllSketchBuildComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(final ByteBuffer buf, final ColumnBuilder columnBuilder)
   {
-    columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(),
-        GenericIndexed.read(buf, HllSketchObjectStrategy.STRATEGY)));
+    columnBuilder.setComplexColumn(
+        new ComplexColumnPartSupplier(getTypeName(),
+        GenericIndexed.read(buf, HllSketchObjectStrategy.STRATEGY))
+    );
   }
 
 }

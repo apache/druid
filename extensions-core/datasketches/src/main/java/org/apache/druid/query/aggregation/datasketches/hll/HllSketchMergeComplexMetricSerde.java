@@ -80,8 +80,12 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(final ByteBuffer buf, final ColumnBuilder columnBuilder)
   {
-    columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(),
-        GenericIndexed.read(buf, HllSketchObjectStrategy.STRATEGY, columnBuilder.getFileMapper())));
+    columnBuilder.setComplexColumn(
+        new ComplexColumnPartSupplier(
+            getTypeName(),
+            GenericIndexed.read(buf,HllSketchObjectStrategy.STRATEGY, columnBuilder.getFileMapper())
+        )
+    );
   }
 
   static HllSketch deserializeSketch(final Object object)

@@ -81,7 +81,10 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     );
   }
 
-  // for the HLL_4 sketch type, this value can be exceeded slightly in extremely rare cases
+  /**
+   * For the HLL_4 sketch type, this value can be exceeded slightly in extremely rare cases.
+   * The sketch will request on-heap memory and move there. It is handled in HllSketchBuildBufferAggregator.
+   */
   @Override
   public int getMaxIntermediateSize()
   {

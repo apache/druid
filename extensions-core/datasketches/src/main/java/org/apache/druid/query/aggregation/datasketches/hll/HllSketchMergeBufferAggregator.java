@@ -40,7 +40,8 @@ import org.apache.druid.segment.ColumnValueSelector;
 public class HllSketchMergeBufferAggregator implements BufferAggregator
 {
 
-  private static final int NUM_STRIPES = 64; // for locking per buffer position (power of 2 to make index computation faster)
+  // for locking per buffer position (power of 2 to make index computation faster)
+  private static final int NUM_STRIPES = 64;
 
   private final ColumnValueSelector<HllSketch> selector;
   private final int lgK;
@@ -65,6 +66,9 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   public void init(final ByteBuffer buf, final int position)
   {
     final WritableMemory mem = WritableMemory.wrap(buf).writableRegion(position, size);
+    // Not necessary to keep the constructed object since it is cheap to reconstruct by wrapping the memory.
+    // The objects are not cached as in BuildBufferAggregator since they never exceed the max size and never move.
+    // So it is easier to reconstruct them by wrapping memory then to keep position-to-object mappings. 
     new Union(lgK, mem);
   }
 

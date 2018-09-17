@@ -38,7 +38,11 @@ public class HllSketchMergeAggregator implements Aggregator
   private final TgtHllType tgtHllType;
   private Union union;
 
-  public HllSketchMergeAggregator(final ColumnValueSelector<HllSketch> selector, final int lgK, final TgtHllType tgtHllType)
+  public HllSketchMergeAggregator(
+      final ColumnValueSelector<HllSketch> selector,
+      final int lgK,
+      final TgtHllType tgtHllType
+  )
   {
     this.selector = selector;
     this.tgtHllType = tgtHllType;

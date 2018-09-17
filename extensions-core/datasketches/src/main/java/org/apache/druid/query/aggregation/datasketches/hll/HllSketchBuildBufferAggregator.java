@@ -42,7 +42,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  private static final int NUM_STRIPES = 64; // for locking per buffer position (power of 2 to make index computation faster)
+  // for locking per buffer position (power of 2 to make index computation faster)
+  private static final int NUM_STRIPES = 64;
 
   private final ColumnValueSelector<Object> selector;
   private final int lgK;
@@ -137,8 +138,10 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b));
   }
 
-  // In very rare cases sketches can exceed given memory, request on-heap memory and move there.
-  // We need to identify such sketches and reuse the same objects as opposed to wrapping new memory regions.
+  /**
+   * In very rare cases sketches can exceed given memory, request on-heap memory and move there.
+   * We need to identify such sketches and reuse the same objects as opposed to wrapping new memory regions.
+   */
   @Override
   public void relocate(final int oldPosition, final int newPosition, final ByteBuffer oldBuf, final ByteBuffer newBuf)
   {
@@ -157,13 +160,21 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     map.put(position, sketch);
   }
 
-  // compute lock index to avoid boxing in Striped.get() call
+  /**
+   * compute lock index to avoid boxing in Striped.get() call
+   * @param position
+   * @return index
+   */
   static int lockIndex(final int position)
   {
     return smear(position) % NUM_STRIPES;
   }
 
-  // from https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
+  /**
+   * see https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
+   * @param hashCode
+   * @return smeared hashCode
+   */
   private static int smear(int hashCode)
   {
     hashCode ^= (hashCode >>> 20) ^ (hashCode >>> 12);

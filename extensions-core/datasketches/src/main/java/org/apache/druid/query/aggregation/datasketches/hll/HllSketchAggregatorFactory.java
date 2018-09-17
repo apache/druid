@@ -31,7 +31,6 @@ import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
@@ -48,23 +47,23 @@ abstract class HllSketchAggregatorFactory extends AggregatorFactory
   static final int DEFAULT_LG_K = 12;
   static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 
-  static final Comparator<HllSketch> COMPARATOR = Comparator.nullsFirst(Comparator.comparingDouble(HllSketch::getEstimate));
+  static final Comparator<HllSketch> COMPARATOR =
+      Comparator.nullsFirst(Comparator.comparingDouble(HllSketch::getEstimate));
 
   private final String name;
   private final String fieldName;
   private final int lgK;
   private final TgtHllType tgtHllType;
 
-  HllSketchAggregatorFactory(final String name, final String fieldName, @Nullable final Integer lgK, @Nullable final String tgtHllType)
+  HllSketchAggregatorFactory(
+      final String name,
+      final String fieldName,
+      @Nullable final Integer lgK,
+      @Nullable final String tgtHllType
+  )
   {
-    if (name == null) {
-      throw new IAE("Aggregator name must be specified");
-    }
-    this.name = name;
-    if (fieldName == null) {
-      throw new IAE("Parameter fieldName must be specified");
-    }
-    this.fieldName = fieldName;
+    this.name = Objects.requireNonNull(name);
+    this.fieldName = Objects.requireNonNull(fieldName);
     this.lgK = lgK == null ? DEFAULT_LG_K : lgK;
     this.tgtHllType = tgtHllType == null ? DEFAULT_TGT_HLL_TYPE : TgtHllType.valueOf(tgtHllType);
   }
@@ -119,7 +118,7 @@ abstract class HllSketchAggregatorFactory extends AggregatorFactory
   {
     final Union union = new Union(lgK);
     union.update((HllSketch) objectA);
-    union.update((HllSketch) objectA);
+    union.update((HllSketch) objectB);
     return union.getResult(tgtHllType);
   }
 
