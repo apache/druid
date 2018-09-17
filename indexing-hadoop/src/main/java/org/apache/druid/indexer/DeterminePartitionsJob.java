@@ -313,8 +313,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Context context,
-        boolean reportParseExceptions
+        Context context
     ) throws IOException, InterruptedException
     {
       final List<Object> groupKey = Rows.toGroupKey(
@@ -395,8 +394,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Context context,
-        boolean reportParseExceptions
+        Context context
     ) throws IOException, InterruptedException
     {
       final Map<String, Iterable<String>> dims = Maps.newHashMap();
