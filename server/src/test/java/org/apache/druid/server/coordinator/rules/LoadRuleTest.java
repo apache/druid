@@ -685,6 +685,210 @@ public class LoadRuleTest
     EasyMock.verify(throttler, mockBalancerStrategy);
   }
 
+  /**
+   * 2 servers in different tiers, the first is in maitenance mode.
+   * Should not load a segment to the server in maintenance mode.
+   */
+  @Test
+  public void testLoadDuringMaitenance()
+  {
+    final LoadQueuePeon mockPeon1 = createEmptyPeon();
+    final LoadQueuePeon mockPeon2 = createOneCallPeonMock();
+
+    LoadRule rule = createLoadRule(ImmutableMap.of(
+        "tier1", 1,
+        "tier2", 1
+    ));
+
+    final DataSegment segment = createDataSegment("foo");
+
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy)
+            .times(1);
+
+    EasyMock.replay(mockPeon1, mockPeon2, mockBalancerStrategy);
+
+
+    DruidCluster druidCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "tier1",
+            Stream.of(
+                createServerHolder("tier1", mockPeon1, true)
+            ).collect(Collectors.toCollection(() -> new TreeSet<>())),
+            "tier2",
+            Stream.of(
+                createServerHolder("tier2", mockPeon2, false)
+            ).collect(Collectors.toCollection(() -> new TreeSet<>()))
+        )
+    );
+
+    CoordinatorStats stats = rule.run(
+        null,
+        DruidCoordinatorRuntimeParams.newBuilder()
+                                     .withDruidCluster(druidCluster)
+                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+                                     .withReplicationManager(throttler)
+                                     .withBalancerStrategy(mockBalancerStrategy)
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
+                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+        segment
+    );
+
+    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier2"));
+    EasyMock.verify(mockPeon1, mockPeon2, mockBalancerStrategy);
+  }
+
+
+  /**
+   * 2 tiers, 2 servers each, 1 server of the second tier is in maintenance.
+   * Should not load a segment to the server in maintenance mode.
+   */
+  @Test
+  public void testLoadReplicaDuringMaitenance()
+  {
+    EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(true).anyTimes();
+
+    final LoadQueuePeon mockPeon1 = createEmptyPeon();
+    final LoadQueuePeon mockPeon2 = createOneCallPeonMock();
+    final LoadQueuePeon mockPeon3 = createOneCallPeonMock();
+    final LoadQueuePeon mockPeon4 = createOneCallPeonMock();
+
+    LoadRule rule = createLoadRule(ImmutableMap.of(
+        "tier1", 2,
+        "tier2", 2
+    ));
+
+    final DataSegment segment = createDataSegment("foo");
+
+    throttler.registerReplicantCreation(EasyMock.eq("tier2"), EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().times(2);
+
+    ServerHolder holder1 = createServerHolder("tier1", mockPeon1, true);
+    ServerHolder holder2 = createServerHolder("tier1", mockPeon2, false);
+    ServerHolder holder3 = createServerHolder("tier2", mockPeon3, false);
+    ServerHolder holder4 = createServerHolder("tier2", mockPeon4, false);
+
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder2)))
+            .andReturn(holder2);
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder3, holder4)))
+            .andReturn(holder3);
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder4)))
+            .andReturn(holder4);
+
+    EasyMock.replay(throttler, mockPeon1, mockPeon2, mockPeon3, mockPeon4, mockBalancerStrategy);
+
+
+    DruidCluster druidCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "tier1",
+            Stream.of(
+                holder1,
+                holder2
+            ).collect(Collectors.toCollection(() -> new TreeSet<>())),
+            "tier2",
+            Stream.of(
+                holder3,
+                holder4
+            ).collect(Collectors.toCollection(() -> new TreeSet<>()))
+        )
+    );
+
+    CoordinatorStats stats = rule.run(
+        null,
+        DruidCoordinatorRuntimeParams.newBuilder()
+                                     .withDruidCluster(druidCluster)
+                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+                                     .withReplicationManager(throttler)
+                                     .withBalancerStrategy(mockBalancerStrategy)
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
+                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+        segment
+    );
+
+    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier1"));
+    Assert.assertEquals(2L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier2"));
+
+    EasyMock.verify(throttler, mockPeon1, mockPeon2, mockPeon3, mockPeon4, mockBalancerStrategy);
+  }
+
+
+  /**
+   * 2 servers with a segment, one server in maintenance mode.
+   * Should drop a segment from both.
+   */
+  @Test
+  public void testDropDuringMaintenance()
+  {
+    final LoadQueuePeon mockPeon = createEmptyPeon();
+    mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().times(2);
+    EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy)
+            .times(2);
+    EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
+
+    LoadRule rule = createLoadRule(ImmutableMap.of(
+        "tier1", 0
+    ));
+
+    final DataSegment segment1 = createDataSegment("foo1");
+    final DataSegment segment2 = createDataSegment("foo2");
+
+    DruidServer server1 = createServer("tier1");
+    server1.addDataSegment(segment1);
+    DruidServer server2 = createServer("tier1");
+    server2.addDataSegment(segment2);
+
+    DruidCluster druidCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "tier1",
+            Stream.of(
+                new ServerHolder(
+                    server1.toImmutableDruidServer(),
+                    mockPeon,
+                    true
+                ),
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    mockPeon,
+                    false
+                )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+        )
+    );
+
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams.newBuilder()
+                                                                       .withDruidCluster(druidCluster)
+                                                                       .withSegmentReplicantLookup(
+                                                                           SegmentReplicantLookup.make(druidCluster))
+                                                                       .withReplicationManager(throttler)
+                                                                       .withBalancerStrategy(mockBalancerStrategy)
+                                                                       .withBalancerReferenceTimestamp(DateTimes.of(
+                                                                           "2013-01-01"))
+                                                                       .withAvailableSegments(Arrays.asList(
+                                                                           segment1,
+                                                                           segment2
+                                                                       )).build();
+    CoordinatorStats stats = rule.run(
+        null,
+        params,
+        segment1
+    );
+    Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "tier1"));
+    stats = rule.run(
+        null,
+        params,
+        segment2
+    );
+    Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "tier1"));
+
+
+    EasyMock.verify(throttler, mockPeon);
+  }
+
   private DataSegment createDataSegment(String dataSource)
   {
     return new DataSegment(
@@ -759,5 +963,37 @@ public class LoadRuleTest
     EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(segs.size()).anyTimes();
 
     return mockPeon;
+  }
+
+  private static int serverId = 0;
+  private static DruidServer createServer(String tier)
+  {
+    int serverId = ++LoadRuleTest.serverId;
+    return new DruidServer(
+        "server" + serverId,
+        "127.0.0.1:800" + serverId,
+        null,
+        1000,
+        ServerType.HISTORICAL,
+        tier,
+        0
+    );
+  }
+
+  private static LoadQueuePeon createOneCallPeonMock()
+  {
+    final LoadQueuePeon mockPeon2 = createEmptyPeon();
+    mockPeon2.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+    return mockPeon2;
+  }
+
+  private static ServerHolder createServerHolder(String tier, LoadQueuePeon mockPeon1, boolean maintenance)
+  {
+    return new ServerHolder(
+        createServer(tier).toImmutableDruidServer(),
+        mockPeon1,
+        maintenance
+    );
   }
 }

@@ -33,14 +33,22 @@ public class ServerHolder implements Comparable<ServerHolder>
   private static final Logger log = new Logger(ServerHolder.class);
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
+  private final boolean maintenance;
+
+  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
+  {
+    this(server, peon, false);
+  }
 
   public ServerHolder(
       ImmutableDruidServer server,
-      LoadQueuePeon peon
+      LoadQueuePeon peon,
+      boolean maintenance
   )
   {
     this.server = server;
     this.peon = peon;
+    this.maintenance = maintenance;
   }
 
   public ImmutableDruidServer getServer()
@@ -76,6 +84,11 @@ public class ServerHolder implements Comparable<ServerHolder>
   public double getPercentUsed()
   {
     return (100.0 * getSizeUsed()) / getMaxSize();
+  }
+
+  public boolean isMaintenance()
+  {
+    return maintenance;
   }
 
   public long getAvailableSize()

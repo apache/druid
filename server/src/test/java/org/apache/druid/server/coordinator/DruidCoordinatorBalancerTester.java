@@ -19,20 +19,31 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.primitives.Doubles;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Comparator;
+
 public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
 {
+  public static final Comparator<ServerHolder> percentUsedComparator = (ServerHolder a, ServerHolder b) -> {
+    int c = Doubles.compare(a.getPercentUsed(), b.getPercentUsed());
+    if (c == 0) {
+      return a.getServer().getName().compareTo(b.getServer().getName());
+    }
+    return c;
+  };
+
   public DruidCoordinatorBalancerTester(DruidCoordinator coordinator)
   {
     super(coordinator);
   }
 
   @Override
-  protected void moveSegment(
+  protected boolean moveSegment(
       final BalancerSegmentHolder segment,
       final ImmutableDruidServer toServer,
       final DruidCoordinatorRuntimeParams params
@@ -69,10 +80,12 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
         dropPeon.markSegmentToDrop(segment.getSegment());
 
         currentlyMovingSegments.get("normal").put(segmentName, segment);
+        return true;
       }
       catch (Exception e) {
         log.info(e, StringUtils.format("[%s] : Moving exception", segmentName));
       }
     }
+    return false;
   }
 }

@@ -57,6 +57,10 @@ public class BroadcastDistributionRuleTest
   private final List<DataSegment> largeSegments = Lists.newArrayList();
   private final List<DataSegment> largeSegments2 = Lists.newArrayList();
   private DataSegment smallSegment;
+  private DruidCluster secondCluster;
+  private ServerHolder generalServer;
+  private ServerHolder maintenanceServer2;
+  private ServerHolder maintenanceServer1;
 
   @Before
   public void setUp()
@@ -196,6 +200,50 @@ public class BroadcastDistributionRuleTest
         )
     );
 
+    generalServer = new ServerHolder(
+        new DruidServer(
+            "general",
+            "host1",
+            null,
+            100,
+            ServerType.HISTORICAL,
+            "tier1",
+            0
+        ).addDataSegment(largeSegments.get(0))
+         .toImmutableDruidServer(),
+        new LoadQueuePeonTester()
+    );
+
+    maintenanceServer1 = new ServerHolder(
+        new DruidServer(
+            "maintenance1",
+            "host2",
+            null,
+            100,
+            ServerType.HISTORICAL,
+            "tier1",
+            0
+        ).addDataSegment(smallSegment)
+         .toImmutableDruidServer(),
+        new LoadQueuePeonTester(),
+        true
+    );
+
+    maintenanceServer2 = new ServerHolder(
+        new DruidServer(
+            "maintenance2",
+            "host3",
+            null,
+            100,
+            ServerType.HISTORICAL,
+            "tier1",
+            0
+        ).addDataSegment(largeSegments.get(1))
+         .toImmutableDruidServer(),
+        new LoadQueuePeonTester(),
+        true
+    );
+
     druidCluster = new DruidCluster(
         null,
         ImmutableMap.of(
@@ -210,6 +258,18 @@ public class BroadcastDistributionRuleTest
                 holdersOfLargeSegments.get(1),
                 holdersOfLargeSegments.get(2),
                 holdersOfLargeSegments2.get(1)
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+        )
+    );
+
+    secondCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "tier1",
+            Stream.of(
+                generalServer,
+                maintenanceServer1,
+                maintenanceServer2
             ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
@@ -251,6 +311,46 @@ public class BroadcastDistributionRuleTest
     );
 
     assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
+  }
+
+  /**
+   * Servers:
+   * name         | segments
+   * -------------+--------------
+   * general      | large segment
+   * maintenance1 | small segment
+   * maintenance2 | large segment
+   *
+   * After running the rule for the small segment:
+   * general      | large & small segments
+   * maintenance1 |
+   * maintenance2 | large segment
+   */
+  @Test
+  public void testBroadcastWithMaintenance()
+  {
+    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
+
+    CoordinatorStats stats = rule.run(
+        null,
+        DruidCoordinatorRuntimeParams.newBuilder()
+                                     .withDruidCluster(secondCluster)
+                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(secondCluster))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
+                                     .withAvailableSegments(Lists.newArrayList(
+                                         smallSegment,
+                                         largeSegments.get(0),
+                                         largeSegments.get(1)
+                                     )).build(),
+        smallSegment
+    );
+
+    assertEquals(1L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(false, stats.hasPerTierStats());
+
+    assertEquals(1, generalServer.getPeon().getSegmentsToLoad().size());
+    assertEquals(1, maintenanceServer1.getPeon().getSegmentsToDrop().size());
+    assertEquals(0, maintenanceServer2.getPeon().getSegmentsToLoad().size());
   }
 
   @Test

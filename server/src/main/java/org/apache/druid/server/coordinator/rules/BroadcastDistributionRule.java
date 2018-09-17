@@ -49,7 +49,8 @@ public abstract class BroadcastDistributionRule implements Rule
       params.getDruidCluster().getAllServers().forEach(
           eachHolder -> {
             if (colocatedDataSources.stream()
-                                    .anyMatch(source -> eachHolder.getServer().getDataSource(source) != null)) {
+                                    .anyMatch(source -> eachHolder.getServer().getDataSource(source) != null
+                                                        && !eachHolder.isMaintenance())) {
               loadServerHolders.add(eachHolder);
             } else if (eachHolder.isServingSegment(segment)) {
               if (!eachHolder.getPeon().getSegmentsToDrop().contains(segment)) {

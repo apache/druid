@@ -51,6 +51,8 @@ public class CoordinatorDynamicConfig
   private final boolean emitBalancingStats;
   private final boolean killAllDataSources;
   private final Set<String> killDataSourceWhitelist;
+  private final Set<String> maintenanceList;
+  private final int maintenanceModeSegmentsPriority;
 
   // The pending segments of the dataSources in this list are not killed.
   private final Set<String> killPendingSegmentsSkipList;
@@ -62,6 +64,7 @@ public class CoordinatorDynamicConfig
    * See {@link LoadQueuePeon}, {@link org.apache.druid.server.coordinator.rules.LoadRule#run}
    */
   private final int maxSegmentsInNodeLoadingQueue;
+
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -80,7 +83,9 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
       @JsonProperty("killAllDataSources") boolean killAllDataSources,
       @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
-      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue
+      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
+      @JsonProperty("maintenanceList") Object maintenanceList,
+      @JsonProperty("maintenanceModeSegmentsPriority") int maintenanceModeSegmentsPriority
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -95,6 +100,8 @@ public class CoordinatorDynamicConfig
     this.killDataSourceWhitelist = parseJsonStringOrArray(killDataSourceWhitelist);
     this.killPendingSegmentsSkipList = parseJsonStringOrArray(killPendingSegmentsSkipList);
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
+    this.maintenanceList = parseJsonStringOrArray(maintenanceList);
+    this.maintenanceModeSegmentsPriority = Math.min(10, Math.max(0, maintenanceModeSegmentsPriority));
 
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -192,6 +199,18 @@ public class CoordinatorDynamicConfig
     return maxSegmentsInNodeLoadingQueue;
   }
 
+  @JsonProperty
+  public Set<String> getMaintenanceList()
+  {
+    return maintenanceList;
+  }
+
+  @JsonProperty
+  public int getMaintenanceModeSegmentsPriority()
+  {
+    return maintenanceModeSegmentsPriority;
+  }
+
   @Override
   public String toString()
   {
@@ -204,10 +223,12 @@ public class CoordinatorDynamicConfig
            ", replicationThrottleLimit=" + replicationThrottleLimit +
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", emitBalancingStats=" + emitBalancingStats +
-           ", killDataSourceWhitelist=" + killDataSourceWhitelist +
            ", killAllDataSources=" + killAllDataSources +
+           ", killDataSourceWhitelist=" + killDataSourceWhitelist +
            ", killPendingSegmentsSkipList=" + killPendingSegmentsSkipList +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
+           ", maintenanceList=" + maintenanceList +
+           ", maintenanceModeSegmentsPriority=" + maintenanceModeSegmentsPriority +
            '}';
   }
 
@@ -256,7 +277,13 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(killDataSourceWhitelist, that.killDataSourceWhitelist)) {
       return false;
     }
-    return Objects.equals(killPendingSegmentsSkipList, that.killPendingSegmentsSkipList);
+    if (!Objects.equals(killPendingSegmentsSkipList, that.killPendingSegmentsSkipList)) {
+      return false;
+    }
+    if (!Objects.equals(maintenanceList, that.maintenanceList)) {
+      return false;
+    }
+    return maintenanceModeSegmentsPriority == that.maintenanceModeSegmentsPriority;
   }
 
   @Override
@@ -274,7 +301,9 @@ public class CoordinatorDynamicConfig
         killAllDataSources,
         maxSegmentsInNodeLoadingQueue,
         killDataSourceWhitelist,
-        killPendingSegmentsSkipList
+        killPendingSegmentsSkipList,
+        maintenanceList,
+        maintenanceModeSegmentsPriority
     );
   }
 
@@ -295,6 +324,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
+    private static final int DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY = 7;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
@@ -308,6 +338,8 @@ public class CoordinatorDynamicConfig
     private Boolean killAllDataSources;
     private Object killPendingSegmentsSkipList;
     private Integer maxSegmentsInNodeLoadingQueue;
+    private Object maintenanceList;
+    private Integer maintenanceModeSegmentsPriority;
 
     public Builder()
     {
@@ -326,7 +358,9 @@ public class CoordinatorDynamicConfig
         @JsonProperty("killDataSourceWhitelist") @Nullable Object killDataSourceWhitelist,
         @JsonProperty("killAllDataSources") @Nullable Boolean killAllDataSources,
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object killPendingSegmentsSkipList,
-        @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue
+        @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
+        @JsonProperty("maintenanceList") @Nullable Object maintenanceList,
+        @JsonProperty("maintenanceModeSegmentsPriority") @Nullable Integer maintenanceModeSegmentsPriority
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -341,6 +375,8 @@ public class CoordinatorDynamicConfig
       this.killDataSourceWhitelist = killDataSourceWhitelist;
       this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
+      this.maintenanceList = maintenanceList;
+      this.maintenanceModeSegmentsPriority = maintenanceModeSegmentsPriority;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -409,6 +445,18 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withMaintenanceList(Set<String> list)
+    {
+      this.maintenanceList = list;
+      return this;
+    }
+
+    public Builder withMaintenanceModeSegmentsPriority(Integer priority)
+    {
+      this.maintenanceModeSegmentsPriority = priority;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -423,7 +471,9 @@ public class CoordinatorDynamicConfig
           killDataSourceWhitelist,
           killAllDataSources == null ? DEFAULT_KILL_ALL_DATA_SOURCES : killAllDataSources,
           killPendingSegmentsSkipList,
-          maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue
+          maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue,
+          maintenanceList,
+          maintenanceModeSegmentsPriority == null ? DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY : maintenanceModeSegmentsPriority
       );
     }
 
@@ -441,7 +491,9 @@ public class CoordinatorDynamicConfig
           killDataSourceWhitelist == null ? defaults.getKillDataSourceWhitelist() : killDataSourceWhitelist,
           killAllDataSources == null ? defaults.isKillAllDataSources() : killAllDataSources,
           killPendingSegmentsSkipList == null ? defaults.getKillPendingSegmentsSkipList() : killPendingSegmentsSkipList,
-          maxSegmentsInNodeLoadingQueue == null ? defaults.getMaxSegmentsInNodeLoadingQueue() : maxSegmentsInNodeLoadingQueue
+          maxSegmentsInNodeLoadingQueue == null ? defaults.getMaxSegmentsInNodeLoadingQueue() : maxSegmentsInNodeLoadingQueue,
+          maintenanceList == null ? defaults.getMaintenanceList() : maintenanceList,
+          maintenanceModeSegmentsPriority == null ? defaults.getMaintenanceModeSegmentsPriority() : maintenanceModeSegmentsPriority
       );
     }
   }
