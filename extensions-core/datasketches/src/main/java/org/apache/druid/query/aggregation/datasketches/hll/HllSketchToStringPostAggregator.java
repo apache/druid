@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Ordering;
 import com.yahoo.sketches.hll.HllSketch;
 
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -65,7 +64,7 @@ public class HllSketchToStringPostAggregator implements PostAggregator
   @Override
   public Comparator<String> getComparator()
   {
-    return Ordering.natural();
+    return Comparator.nullsFirst(Comparator.naturalOrder());
   }
 
   @Override
