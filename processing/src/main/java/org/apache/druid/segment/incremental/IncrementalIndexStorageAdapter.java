@@ -236,9 +236,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     {
       currEntry = new IncrementalIndexRowHolder();
       columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(index, virtualColumns, descending, currEntry);
+      maxRowIndex = index.getLastRowIndex();
       filterMatcher = filter == null ? BooleanValueMatcher.of(true) : filter.makeMatcher(columnSelectorFactory);
       numAdvanced = -1;
-      maxRowIndex = index.getLastRowIndex();
       final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
       cursorIterable = index.getFacts().timeRangeIterable(
           descending,
