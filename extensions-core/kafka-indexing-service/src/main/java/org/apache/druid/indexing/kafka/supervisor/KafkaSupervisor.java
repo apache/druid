@@ -367,7 +367,7 @@ public class KafkaSupervisor implements Supervisor
         exec.submit(
             () -> {
               try {
-                while (!Thread.currentThread().isInterrupted()) {
+                while (!Thread.currentThread().isInterrupted() && !stopped) {
                   final Notice notice = notices.take();
 
                   try {
