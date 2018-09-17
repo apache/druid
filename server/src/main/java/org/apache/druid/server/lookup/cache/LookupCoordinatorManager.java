@@ -859,11 +859,11 @@ public class LookupCoordinatorManager
       return new SequenceInputStreamResponseHandler()
       {
         @Override
-        public ClientResponse<InputStream> handleResponse(HttpResponse response)
+        public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
           returnCode.set(response.getStatus().getCode());
           reasonString.set(response.getStatus().getReasonPhrase());
-          return super.handleResponse(response);
+          return super.handleResponse(response, trafficCop);
         }
       };
     }

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -159,6 +160,9 @@ public class SqlResource
         yielder0.close();
         throw Throwables.propagate(e);
       }
+    }
+    catch (ForbiddenException e) {
+      throw e; // let ForbiddenExceptionMapper handle this
     }
     catch (Exception e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);

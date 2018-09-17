@@ -63,6 +63,19 @@ public class ForkingTaskRunnerConfig
   private int startPort = 8100;
 
   @JsonProperty
+  @Min(1024)
+  @Max(65535)
+  private int endPort = 65535;
+
+  /**
+   * Task ports your services are going to use. If non-empty, ports for one task will be chosen from these ports.
+   * Otherwise, using startPort and endPort to generate usable ports.
+   */
+  @JsonProperty
+  @NotNull
+  private List<Integer> ports = ImmutableList.of();
+
+  @JsonProperty
   @NotNull
   List<String> allowedPrefixes = Lists.newArrayList(
       "com.metamx",
@@ -73,14 +86,6 @@ public class ForkingTaskRunnerConfig
       "java.io.tmpdir",
       "hadoop"
   );
-
-  @JsonProperty
-  private boolean separateIngestionEndpoint = false;
-
-  public boolean isSeparateIngestionEndpoint()
-  {
-    return separateIngestionEndpoint;
-  }
 
   public String getJavaCommand()
   {
@@ -105,6 +110,16 @@ public class ForkingTaskRunnerConfig
   public int getStartPort()
   {
     return startPort;
+  }
+
+  public int getEndPort()
+  {
+    return endPort;
+  }
+
+  public List<Integer> getPorts()
+  {
+    return ports;
   }
 
   public List<String> getAllowedPrefixes()

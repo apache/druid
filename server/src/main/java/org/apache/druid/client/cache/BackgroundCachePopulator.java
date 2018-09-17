@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.ByteArrayOutputStream;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -67,7 +67,7 @@ public class BackgroundCachePopulator implements CachePopulator
       final Cache.NamedKey cacheKey
   )
   {
-    final List<ListenableFuture<CacheType>> cacheFutures = new LinkedList<>();
+    final List<ListenableFuture<CacheType>> cacheFutures = new ArrayList<>();
 
     final Sequence<T> wrappedSequence = Sequences.map(
         sequence,

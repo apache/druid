@@ -165,7 +165,7 @@ These metrics are for the Druid coordinator and are reset each time the coordina
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
 
-If `emitBalancingStats` is set to `true` in the coordinator [dynamic configuration](../configuration/coordinator.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
+If `emitBalancingStats` is set to `true` in the coordinator [dynamic configuration](../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
 
 ## General Health
 
@@ -197,7 +197,7 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/mem/used`|Used memory.|memKind.|< max memory|
 |`jvm/mem/committed`|Committed memory.|memKind.|close to max memory|
 |`jvm/gc/count`|Garbage collection count.|gcName.|< 100|
-|`jvm/gc/time`|Garbage collection time.|gcName.|< 1s|	
+|`jvm/gc/cpu`|Cpu time in Nanoseconds spent on garbage collection.|gcName.|< 1s|
 
 ### EventReceiverFirehose
 

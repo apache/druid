@@ -9,7 +9,7 @@ This tutorial will guide the reader through the process of defining an ingestion
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
-It will also be helpful to have finished [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html), [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html), and [Tutorial: Rollup](/docs/VERSION/tutorials/tutorial-rollup.html).
+It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html), [Tutorial: Querying data](../tutorials/tutorial-query.html), and [Tutorial: Rollup](../tutorials/tutorial-rollup.html).
 
 ## Example data
 

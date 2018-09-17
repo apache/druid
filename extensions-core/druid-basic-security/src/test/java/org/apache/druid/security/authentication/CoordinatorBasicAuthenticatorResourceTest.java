@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
@@ -83,8 +84,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 null,
                 AUTHENTICATOR_NAME,
                 "test",
-                "druid",
-                "druid",
+                new DefaultPasswordProvider("druid"),
+                new DefaultPasswordProvider("druid"),
                 null,
                 null,
                 null
@@ -94,8 +95,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 null,
                 AUTHENTICATOR_NAME2,
                 "test",
-                "druid",
-                "druid",
+                new DefaultPasswordProvider("druid"),
+                new DefaultPasswordProvider("druid"),
                 null,
                 null,
                 null

@@ -99,11 +99,11 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -181,8 +181,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private final RowIngestionMeters rowIngestionMeters;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
-  private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new LinkedList<>();
-  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new LinkedList<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
 
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -431,9 +431,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           // if stop is requested or task's end offset is set by call to setEndOffsets method with finish set to true
           if (stopRequested.get() || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
-          }
-
-          if (stopRequested.get()) {
             break;
           }
 
@@ -530,10 +527,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
                     if (addResult.isOk()) {
                       // If the number of rows in the segment exceeds the threshold after adding a row,
                       // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
-                      if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
-                        if (!sequenceToUse.isCheckpointed()) {
-                          sequenceToCheckpoint = sequenceToUse;
-                        }
+                      if (addResult.isPushRequired(tuningConfig) && !sequenceToUse.isCheckpointed()) {
+                        sequenceToCheckpoint = sequenceToUse;
                       }
                       isPersistRequired |= addResult.isPersistRequired();
                     } else {

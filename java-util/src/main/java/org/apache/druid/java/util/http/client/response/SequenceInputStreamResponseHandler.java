@@ -55,7 +55,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   private final AtomicBoolean done = new AtomicBoolean(false);
 
   @Override
-  public ClientResponse<InputStream> handleResponse(HttpResponse response)
+  public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     try {
       queue.put(new ChannelBufferInputStream(response.getContent()));
@@ -99,7 +99,9 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
 
   @Override
   public ClientResponse<InputStream> handleChunk(
-      ClientResponse<InputStream> clientResponse, HttpChunk chunk
+      ClientResponse<InputStream> clientResponse,
+      HttpChunk chunk,
+      long chunkNum
   )
   {
     final ChannelBuffer channelBuffer = chunk.getContent();

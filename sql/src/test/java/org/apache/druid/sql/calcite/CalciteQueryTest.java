@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HLLCV1;
 import org.apache.druid.java.util.common.DateTimes;
@@ -108,7 +109,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -188,7 +188,8 @@ public class CalciteQueryTest extends CalciteTestBase
       return DateTimes.inferTzfromString("America/Los_Angeles");
     }
   };
-  private static final PlannerConfig PLANNER_CONFIG_SEMI_JOIN_ROWS_LIMIT = new PlannerConfig() {
+  private static final PlannerConfig PLANNER_CONFIG_SEMI_JOIN_ROWS_LIMIT = new PlannerConfig()
+  {
     @Override
     public int getMaxSemiJoinRowsInMemory()
     {
@@ -1614,6 +1615,65 @@ public class CalciteQueryTest extends CalciteTestBase
             new Object[]{"2", nullValue},
             new Object[]{"", nullValue}
         )
+    );
+  }
+
+  @Test
+  public void testUnionAll() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM foo UNION ALL SELECT SUM(cnt) FROM foo UNION ALL SELECT COUNT(*) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build(),
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build(),
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{6L}, new Object[]{6L}, new Object[]{6L})
+    );
+  }
+
+  @Test
+  public void testUnionAllWithLimit() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM ("
+        + "SELECT COUNT(*) FROM foo UNION ALL SELECT SUM(cnt) FROM foo UNION ALL SELECT COUNT(*) FROM foo"
+        + ") LIMIT 2",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build(),
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{6L}, new Object[]{6L})
     );
   }
 
