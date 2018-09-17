@@ -83,7 +83,7 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
     columnBuilder.setComplexColumn(
         new ComplexColumnPartSupplier(
             getTypeName(),
-            GenericIndexed.read(buf,HllSketchObjectStrategy.STRATEGY, columnBuilder.getFileMapper())
+            GenericIndexed.read(buf, HllSketchObjectStrategy.STRATEGY, columnBuilder.getFileMapper())
         )
     );
   }
