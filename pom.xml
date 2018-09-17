@@ -1056,6 +1056,16 @@
                                 <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
                             </patterns>
                         </license>
+                        <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                            <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
+                            <licenseFamilyName>Allan Jardine</licenseFamilyName>
+                            <notes></notes>
+                            <patterns>
+                                <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
+                                <pattern>Copyright 2008-2011 Allan Jardine</pattern>
+                                <pattern>GPL v2 or BSD 3 point style</pattern>
+                            </patterns>
+                        </license>
                     </licenses>
 
                     <licenseFamilies>
@@ -1079,8 +1089,8 @@
                         <exclude>eclipse.importorder</exclude>
                         <!--CODE RESOURCES-->
                         <exclude>**/javax.annotation.processing.Processor</exclude>
-                        <exclude>**/io.druid.initialization.DruidModule</exclude>
-                        <exclude>**/antlr4/io/druid/math/expr/antlr/Expr.g4</exclude>
+                        <exclude>**/org.apache.druid.initialization.DruidModule</exclude>
+                        <exclude>**/org/apache/druid/math/expr/antlr/Expr.g4</exclude>
                         <exclude>**/dependency-reduced-pom.xml</exclude>
                         <!--BUILD and TESTS-->
                         <exclude>**/target/**</exclude>
