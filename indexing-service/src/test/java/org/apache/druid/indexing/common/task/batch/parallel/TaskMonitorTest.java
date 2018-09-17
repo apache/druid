@@ -200,6 +200,7 @@ public class TaskMonitorTest
               DateTimes.EPOCH,
               DateTimes.EPOCH,
               tasks.get(taskId),
+              tasks.get(taskId),
               RunnerTaskState.RUNNING,
               -1L,
               TaskLocation.unknown(),

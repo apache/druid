@@ -267,6 +267,7 @@ public class OverlordResource
                   // TaskStorage API doesn't yet allow it.
                   DateTimes.EPOCH,
                   taskInfo.getStatus().getStatusCode(),
+                  taskInfo.getStatus().getStatusCode(),
                   taskRunner.getRunnerTaskState(workItem.getTaskId()),
                   taskInfo.getStatus().getDuration(),
                   workItem.getLocation(),
@@ -287,6 +288,7 @@ public class OverlordResource
                 // Would be nice to include the real queue insertion time, but the
                 // TaskStorage API doesn't yet allow it.
                 DateTimes.EPOCH,
+                taskInfo.getStatus().getStatusCode(),
                 taskInfo.getStatus().getStatusCode(),
                 RunnerTaskState.WAITING,
                 taskInfo.getStatus().getDuration(),
@@ -668,6 +670,7 @@ public class OverlordResource
         workItem.getCreatedTime(),
         workItem.getQueueInsertionTime(),
         workItem.getTaskState(),
+        workItem.getTaskState(),
         workItem.getRunnerTaskState(),
         null,
         workItem.getLocation(),
@@ -682,6 +685,7 @@ public class OverlordResource
         // Would be nice to include the real queue insertion time, but the
         // TaskStorage API doesn't yet allow it.
         DateTimes.EPOCH,
+        taskInfo.getStatus().getStatusCode(),
         taskInfo.getStatus().getStatusCode(),
         RunnerTaskState.NONE,
         taskInfo.getStatus().getDuration(),
@@ -764,6 +768,7 @@ public class OverlordResource
         // Would be nice to include the real queue insertion time, but the
         // TaskStorage API doesn't yet allow it.
         DateTimes.EPOCH,
+        taskInfo.getStatus().getStatusCode(),
         taskInfo.getStatus().getStatusCode(),
         runnerTaskState,
         taskInfo.getStatus().getDuration(),

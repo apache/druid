@@ -51,6 +51,7 @@ public class TaskStatusPlusTest
         DateTimes.nowUtc(),
         DateTimes.nowUtc(),
         TaskState.RUNNING,
+        TaskState.RUNNING,
         RunnerTaskState.RUNNING,
         1000L,
         TaskLocation.create("testHost", 1010, -1),
@@ -75,8 +76,9 @@ public class TaskStatusPlusTest
                         + "\"type\": \"testType\",\n"
                         + "\"createdTime\": \"2018-09-17T06:35:17.392Z\",\n"
                         + "\"queueInsertionTime\": \"2018-09-17T06:35:17.392Z\",\n"
+                        + "\"statusCode\": \"RUNNING\",\n"
                         + "\"status\": \"RUNNING\",\n"
-                        + "\"runnerStatus\": \"RUNNING\",\n"
+                        + "\"runnerStatusCode\": \"RUNNING\",\n"
                         + "\"duration\": 1000,\n"
                         + "\"location\": {\n"
                         + "\"host\": \"testHost\",\n"
@@ -95,7 +97,8 @@ public class TaskStatusPlusTest
     String serialized = mapper.writeValueAsString(taskStatusPlus);
 
     Assert.assertTrue(serialized.contains("\"status\":"));
-    Assert.assertTrue(serialized.contains("\"runnerStatus\":"));
+    Assert.assertTrue(serialized.contains("\"statusCode\":"));
+    Assert.assertTrue(serialized.contains("\"runnerStatusCode\":"));
   }
 
   // Copied from org.apache.druid.jackson.JodaStuff

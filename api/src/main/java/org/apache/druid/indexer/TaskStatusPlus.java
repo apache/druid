@@ -48,8 +48,9 @@ public class TaskStatusPlus
       @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
-      @JsonProperty("status") @Nullable TaskState state,
-      @JsonProperty("runnerStatus") @Nullable RunnerTaskState runnerTaskState,
+      @JsonProperty("statusCode") @Nullable TaskState state,
+      @Deprecated @JsonProperty("status") @Nullable TaskState status,
+      @JsonProperty("runnerStatusCode") @Nullable RunnerTaskState runnerTaskState,
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
       @JsonProperty("dataSource") @Nullable String dataSource, // nullable for backward compatibility
@@ -97,14 +98,22 @@ public class TaskStatusPlus
   }
 
   @Nullable
-  @JsonProperty("status")
+  @JsonProperty("statusCode")
   public TaskState getState()
   {
     return state;
   }
 
+  @Deprecated
   @Nullable
-  @JsonProperty("runnerStatus")
+  @JsonProperty("status")
+  public TaskState getStatus()
+  {
+    return state;
+  }
+
+  @Nullable
+  @JsonProperty("runnerStatusCode")
   public RunnerTaskState getRunnerTaskState()
   {
     return runnerTaskState;
