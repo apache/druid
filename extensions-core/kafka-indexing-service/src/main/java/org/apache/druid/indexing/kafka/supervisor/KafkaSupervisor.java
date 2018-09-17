@@ -416,7 +416,6 @@ public class KafkaSupervisor implements Supervisor
             ioConfig.getStartDelay(),
             spec.toString()
         );
-
       }
       catch (Exception e) {
         if (consumer != null) {
@@ -1179,12 +1178,9 @@ public class KafkaSupervisor implements Supervisor
 
   private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
   {
-    final List<ListenableFuture<Boolean>> futures = new ArrayList<>();
+    final List<ListenableFuture<?>> futures = new ArrayList<>();
     for (TaskGroup taskGroup : taskGroupsToVerify) {
-      futures.add(workerExec.submit(() -> {
-        verifyAndMergeCheckpoints(taskGroup);
-        return true;
-      }));
+      futures.add(workerExec.submit(() -> verifyAndMergeCheckpoints(taskGroup)));
     }
     try {
       Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
@@ -1213,19 +1209,21 @@ public class KafkaSupervisor implements Supervisor
           taskId,
           true
       );
-      futures.add(checkpointsFuture);
       taskIds.add(taskId);
+      futures.add(checkpointsFuture);
     }
 
     try {
-      List<TreeMap<Integer, Map<Integer, Long>>> futuresResult =
-          Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      List<TreeMap<Integer, Map<Integer, Long>>> futuresResult = Futures.successfulAsList(futures)
+                                                                        .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+
       for (int i = 0; i < futuresResult.size(); i++) {
         final TreeMap<Integer, Map<Integer, Long>> checkpoints = futuresResult.get(i);
         final String taskId = taskIds.get(i);
         if (checkpoints == null) {
           try {
-            futures.get(i).get(1, TimeUnit.NANOSECONDS);
+            // catch the exception in failed futures
+            futures.get(i).get();
           }
           catch (Exception e) {
             log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
