@@ -203,12 +203,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       {
         private final AtomicLong totalByteCount = new AtomicLong(0);
         private final AtomicLong queuedByteCount = new AtomicLong(0);
+        private final AtomicLong channelClosedTime = new AtomicLong(0);
         private final BlockingQueue<InputStreamHolder> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
+        private final AtomicBoolean channelReadable = new AtomicBoolean(true);
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
-        private final AtomicReference<Boolean> isChannelReadable = new AtomicReference<>();
-        private final AtomicLong channelClosedTime = new AtomicLong(0);
 
         private QueryMetrics<? super Query<T>> queryMetrics;
         private long responseStartTimeNs;
@@ -234,9 +234,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final long currentQueuedByteCount = queuedByteCount.addAndGet(holder.getLength());
           queue.put(holder);
 
-          if (usingBackpressure && currentQueuedByteCount >= maxQueuedBytes && isChannelReadable.get()) {
+          if (usingBackpressure && currentQueuedByteCount >= maxQueuedBytes && channelReadable.get()) {
             backPressureStartTimeNs = System.nanoTime();
-            isChannelReadable.set(false);
+            channelReadable.set(false);
           }
 
           // True if we should keep reading.
@@ -256,8 +256,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                          .resume(holder.getChunkNum());
 
             //If channel is currently closed for reads, reopen and record time that it was closed for
-            if (!isChannelReadable.get()) {
-              isChannelReadable.set(true);
+            if (!channelReadable.get()) {
+              channelReadable.set(true);
               long backPressureReleaseTimeNs = System.nanoTime();
               channelClosedTime.addAndGet(backPressureReleaseTimeNs - backPressureStartTimeNs);
             }
