@@ -20,19 +20,19 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+  <modelVersion>4.0.0</modelVersion>
 
-    <packaging>pom</packaging>
+  <packaging>pom</packaging>
 
-    <artifactId>distribution</artifactId>
-    <name>distribution</name>
-    <description>distribution</description>
+  <artifactId>distribution</artifactId>
+  <name>distribution</name>
+  <description>distribution</description>
 
-    <parent>
-        <artifactId>druid</artifactId>
-        <groupId>org.apache.druid</groupId>
-        <version>0.13.0-incubating-SNAPSHOT</version>
-    </parent>
+  <parent>
+    <artifactId>druid</artifactId>
+    <groupId>org.apache.druid</groupId>
+    <version>0.13.0-SNAPSHOT</version>
+  </parent>
 
     <dependencies>
         <dependency>
@@ -138,6 +138,8 @@
                                         <argument>org.apache.druid.extensions:druid-kafka-extraction-namespace</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kafka-indexing-service</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-kinesis-indexing-service</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-lookups-cached-global</argument>
                                         <argument>-c</argument>
