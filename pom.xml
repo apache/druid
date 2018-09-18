@@ -1106,6 +1106,10 @@
                         <exclude>**/tutorial/conf/**</exclude>
                         <exclude>**/derby.log</exclude>
                         <exclude>**/docker/**</exclude>
+                        <!--IDE MODULE FILES-->
+                        <exclude>**/*.iml</exclude>
+                        <!--CRASH LOGS-->
+                        <exclude>**/hs_err_pid*.log</exclude>
                     </excludes>
                 </configuration>
             </plugin>
