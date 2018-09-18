@@ -42,6 +42,7 @@ public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
   private final Map<T1, T2> minimumLag;
   private final Long aggregateLag;
   private final DateTime offsetsLastUpdated;
+  private final boolean suspended;
 
   public SeekableStreamSupervisorReportPayload(
       String dataSource,
@@ -52,7 +53,8 @@ public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
       @Nullable Map<T1, T2> latestOffsets,
       @Nullable Map<T1, T2> minimumLag,
       @Nullable Long aggregateLag,
-      @Nullable DateTime offsetsLastUpdated
+      @Nullable DateTime offsetsLastUpdated,
+      boolean suspended
   )
   {
     this.dataSource = dataSource;
@@ -66,6 +68,7 @@ public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
     this.minimumLag = minimumLag;
     this.aggregateLag = aggregateLag;
     this.offsetsLastUpdated = offsetsLastUpdated;
+    this.suspended = suspended;
   }
 
   public void addTask(TaskReportData data)
@@ -100,6 +103,12 @@ public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
   public int getReplicas()
   {
     return replicas;
+  }
+
+  @JsonProperty
+  public boolean getSuspended()
+  {
+    return suspended;
   }
 
   @JsonProperty

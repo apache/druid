@@ -215,7 +215,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         includeOffsets ? latestOffsetsFromStream : null,
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
-        includeOffsets ? offsetsLastUpdated : null
+        includeOffsets ? offsetsLastUpdated : null,
+        spec.isSuspended()
     );
   }
 

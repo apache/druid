@@ -104,9 +104,7 @@ import java.util.stream.Stream;
 
 //TODO: rename offset -> sequence
 //TODO: prune 'kafka' and 'kinesis'
-//TODO: inheritance
-//TODO: make classes abstract
-//TODO: resolve warnings
+//TODO: resolve warnings + inspect code
 public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 extends Comparable<T2>>
     implements Supervisor
 {
@@ -437,7 +435,15 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
     checkTaskDuration();
     checkPendingCompletionTasks();
     checkCurrentTaskState();
-    createNewTasks();
+    // if supervisor is not suspended, ensure required tasks are running
+    // if suspended, ensure tasks have been requested to gracefully stop
+    if (!spec.isSuspended()) {
+      log.info("[%s] supervisor is running.", dataSource);
+      createNewTasks();
+    } else {
+      log.info("[%s] supervisor is suspended.", dataSource);
+      gracefulShutdownInternal();
+    }
 
     if (log.isDebugEnabled()) {
       log.debug(generateReport(true).toString());

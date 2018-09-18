@@ -41,12 +41,14 @@ import java.util.Map;
 
 public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 {
+
   @JsonCreator
   public KafkaSupervisorSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") KafkaSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
@@ -83,10 +85,12 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
             null,
             null,
             null,
+            null,
             null
         ),
         ioConfig,
         context,
+        suspended,
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -130,6 +134,26 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   public KafkaSupervisorIOConfig getIoConfig()
   {
     return (KafkaSupervisorIOConfig) super.getIoConfig();
+  }
+
+  @Override
+  protected KafkaSupervisorSpec toggleSuspend(boolean suspend)
+  {
+    return new KafkaSupervisorSpec(
+        getDataSchema(),
+        getTuningConfig(),
+        getIoConfig(),
+        getContext(),
+        suspend,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        (KafkaIndexTaskClientFactory) indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory
+    );
   }
 
   @Override

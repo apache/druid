@@ -52,8 +52,9 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamSupervisorIOConfig ioConfig;
   private final Map<String, Object> context;
-  private final ServiceEmitter emitter;
-  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
+  protected final ServiceEmitter emitter;
+  protected final DruidMonitorSchedulerConfig monitorSchedulerConfig;
+  private final boolean suspended;
 
   @JsonCreator
   public SeekableStreamSupervisorSpec(
@@ -61,6 +62,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JsonProperty("tuningConfig") SeekableStreamSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") SeekableStreamSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
@@ -84,6 +86,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     this.emitter = emitter;
     this.monitorSchedulerConfig = monitorSchedulerConfig;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.suspended = suspended != null ? suspended : false;
   }
 
   @JsonProperty
@@ -136,7 +139,29 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @Override
+  public SeekableStreamSupervisorSpec createSuspendedSpec()
+  {
+    return toggleSuspend(true);
+  }
+
+  @Override
+  public SeekableStreamSupervisorSpec createRunningSpec()
+  {
+    return toggleSuspend(false);
+  }
+
+  @Override
+  @JsonProperty("suspended")
+  public boolean isSuspended()
+  {
+    return suspended;
+  }
+
+  @Override
   public abstract String toString();
+
+
+  protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
 
 
 }

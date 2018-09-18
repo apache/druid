@@ -41,7 +41,8 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       @Nullable Map<Integer, Long> latestOffsets,
       @Nullable Map<Integer, Long> minimumLag,
       @Nullable Long aggregateLag,
-      @Nullable DateTime offsetsLastUpdated
+      @Nullable DateTime offsetsLastUpdated,
+      boolean suspended
   )
   {
     super(
@@ -53,7 +54,8 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
         latestOffsets,
         minimumLag,
         aggregateLag,
-        offsetsLastUpdated
+        offsetsLastUpdated,
+        suspended
     );
   }
 
@@ -93,6 +95,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
            (getMinimumLag() != null ? ", minimumLag=" + getMinimumLag() : "") +
            (getAggregateLag() != null ? ", aggregateLag=" + getAggregateLag() : "") +
            (getOffsetsLastUpdated() != null ? ", offsetsLastUpdated=" + getOffsetsLastUpdated() : "") +
+           ", suspended=" + getSuspended() +
            '}';
   }
 

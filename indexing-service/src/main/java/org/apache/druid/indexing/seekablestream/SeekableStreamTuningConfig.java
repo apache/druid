@@ -40,6 +40,8 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final int maxRowsPerSegment;
+  @Nullable
+  private final Long maxTotalRows;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   @Deprecated
@@ -61,6 +63,7 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") @Nullable Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") @Nullable File basePersistDirectory,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
@@ -82,6 +85,7 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
 
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : maxRowsPerSegment;
+    this.maxTotalRows = maxTotalRows;
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -137,10 +141,19 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
     return maxBytesInMemory;
   }
 
+  @Override
   @JsonProperty
   public int getMaxRowsPerSegment()
   {
     return maxRowsPerSegment;
+  }
+
+  @JsonProperty
+  @Override
+  @Nullable
+  public Long getMaxTotalRows()
+  {
+    return maxTotalRows;
   }
 
   @Override

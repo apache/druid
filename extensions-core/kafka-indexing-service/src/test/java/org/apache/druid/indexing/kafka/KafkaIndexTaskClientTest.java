@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -147,7 +148,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertEquals(false, client.resume(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
-    Assert.assertEquals(KafkaIndexTask.Status.NOT_STARTED, client.getStatus(TEST_ID));
+    Assert.assertEquals(SeekableStreamIndexTask.Status.NOT_STARTED, client.getStatus(TEST_ID));
     Assert.assertEquals(null, client.getStartTime(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.getCurrentOffsets(TEST_ID, true));
     Assert.assertEquals(ImmutableMap.of(), client.getEndOffsets(TEST_ID));
@@ -399,7 +400,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testGetStatus() throws Exception
   {
-    KafkaIndexTask.Status status = KafkaIndexTask.Status.READING;
+    SeekableStreamIndexTask.Status status = SeekableStreamIndexTask.Status.READING;
 
     Capture<Request> captured = Capture.newInstance();
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
@@ -409,7 +410,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    KafkaIndexTask.Status results = client.getStatus(TEST_ID);
+    SeekableStreamIndexTask.Status results = client.getStatus(TEST_ID);
     verifyAll();
 
     Request request = captured.getValue();
@@ -728,13 +729,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     replayAll();
 
     List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<KafkaIndexTask.Status>> futures = Lists.newArrayList();
+    List<ListenableFuture<SeekableStreamIndexTask.Status>> futures = Lists.newArrayList();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "status")));
       futures.add(client.getStatusAsync(testId));
     }
 
-    List<KafkaIndexTask.Status> responses = Futures.allAsList(futures).get();
+    List<SeekableStreamIndexTask.Status> responses = Futures.allAsList(futures).get();
 
     verifyAll();
     List<Request> requests = captured.getValues();
@@ -744,7 +745,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(KafkaIndexTask.Status.READING, responses.get(i));
+      Assert.assertEquals(SeekableStreamIndexTask.Status.READING, responses.get(i));
     }
   }
 
