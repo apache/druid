@@ -323,19 +323,19 @@ public class ITTLSTest
 
   private HttpClient makeCustomHttpClient(String keystorePath, String certAlias)
   {
-    SSLContext intermediateClientSSLContext = TLSUtils.createSSLContext(
-        sslClientConfig.getProtocol(),
-        sslClientConfig.getTrustStoreType(),
-        sslClientConfig.getTrustStorePath(),
-        sslClientConfig.getTrustStoreAlgorithm(),
-        sslClientConfig.getTrustStorePasswordProvider(),
-        sslClientConfig.getKeyStoreType(),
-        keystorePath,
-        sslClientConfig.getKeyManagerFactoryAlgorithm(),
-        certAlias,
-        sslClientConfig.getKeyStorePasswordProvider(),
-        sslClientConfig.getKeyManagerPasswordProvider()
-    );
+    SSLContext intermediateClientSSLContext = new TLSUtils.ClientSSLContextBuilder()
+        .setProtocol(sslClientConfig.getProtocol())
+        .setTrustStoreType(sslClientConfig.getTrustStoreType())
+        .setTrustStorePath(sslClientConfig.getTrustStorePath())
+        .setTrustStoreAlgorithm(sslClientConfig.getTrustStoreAlgorithm())
+        .setTrustStorePasswordProvider(sslClientConfig.getTrustStorePasswordProvider())
+        .setKeyStoreType(sslClientConfig.getKeyStoreType())
+        .setKeyStorePath(keystorePath)
+        .setKeyStoreAlgorithm(sslClientConfig.getKeyManagerFactoryAlgorithm())
+        .setCertAlias(certAlias)
+        .setKeyStorePasswordProvider(sslClientConfig.getKeyStorePasswordProvider())
+        .setKeyManagerFactoryPasswordProvider(sslClientConfig.getKeyManagerPasswordProvider())
+        .build();
 
     final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(intermediateClientSSLContext);
 
@@ -355,19 +355,13 @@ public class ITTLSTest
 
   private HttpClient makeCertlessClient()
   {
-    SSLContext certlessClientSSLContext = TLSUtils.createSSLContext(
-        sslClientConfig.getProtocol(),
-        sslClientConfig.getTrustStoreType(),
-        sslClientConfig.getTrustStorePath(),
-        sslClientConfig.getTrustStoreAlgorithm(),
-        sslClientConfig.getTrustStorePasswordProvider(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    SSLContext certlessClientSSLContext = new TLSUtils.ClientSSLContextBuilder()
+        .setProtocol(sslClientConfig.getProtocol())
+        .setTrustStoreType(sslClientConfig.getTrustStoreType())
+        .setTrustStorePath(sslClientConfig.getTrustStorePath())
+        .setTrustStoreAlgorithm(sslClientConfig.getTrustStoreAlgorithm())
+        .setTrustStorePasswordProvider(sslClientConfig.getTrustStorePasswordProvider())
+        .build();
 
     final HttpClientConfig.Builder builder = getHttpClientConfigBuilder(certlessClientSSLContext);
 

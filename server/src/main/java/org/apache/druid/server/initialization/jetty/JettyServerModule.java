@@ -263,6 +263,8 @@ public class JettyServerModule extends JerseyServletModule
         sslContextFactory.setNeedClientAuth(tlsServerConfig.isRequireClientCertificate());
         if (tlsServerConfig.isRequireClientCertificate()) {
           if (tlsServerConfig.getCrlPath() != null) {
+            // setValidatePeerCerts is used just to enable revocation checking using a static CRL file.
+            // Certificate validation is always performed when client certificates are required.
             sslContextFactory.setValidatePeerCerts(true);
             sslContextFactory.setCrlPath(tlsServerConfig.getCrlPath());
           }
@@ -272,16 +274,19 @@ public class JettyServerModule extends JerseyServletModule
           if (tlsServerConfig.getTrustStorePath() != null) {
             sslContextFactory.setTrustStorePath(tlsServerConfig.getTrustStorePath());
             sslContextFactory.setTrustStoreType(
-                tlsServerConfig.getTrustStoreType() == null ?
-                KeyStore.getDefaultType() : tlsServerConfig.getTrustStoreType()
+                tlsServerConfig.getTrustStoreType() == null
+                ? KeyStore.getDefaultType()
+                : tlsServerConfig.getTrustStoreType()
             );
             sslContextFactory.setTrustManagerFactoryAlgorithm(
-                tlsServerConfig.getTrustStoreAlgorithm() == null ?
-                TrustManagerFactory.getDefaultAlgorithm() : tlsServerConfig.getTrustStoreAlgorithm()
+                tlsServerConfig.getTrustStoreAlgorithm() == null
+                ? TrustManagerFactory.getDefaultAlgorithm()
+                : tlsServerConfig.getTrustStoreAlgorithm()
             );
             sslContextFactory.setTrustStorePassword(
-                tlsServerConfig.getTrustStorePasswordProvider() == null ?
-                null : tlsServerConfig.getTrustStorePasswordProvider().getPassword()
+                tlsServerConfig.getTrustStorePasswordProvider() == null
+                ? null
+                : tlsServerConfig.getTrustStorePasswordProvider().getPassword()
             );
           }
         }

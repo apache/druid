@@ -40,7 +40,7 @@ The following table contains configuration options related to client certificate
 |`druid.server.https.trustStorePath`|The file path or URL of the trust store containing certificates used to validate client certificates. Not needed if `requireClientCertificate` is false.|none|yes, only if `requireClientCertificate` is true|
 |`druid.server.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate client certificate chains. Not needed if `requireClientCertificate` is false.|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.server.https.trustStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the Trust Store.  Not needed if `requireClientCertificate` is false.|none|no|
-|`druid.server.https.validateHostnames`|If set to true, perform hostname validation on client certificates.  Not used if `requireClientCertificate` is false.|false|no|
+|`druid.server.https.validateHostnames`|If set to true, check that the client's hostname matches the CN/subjectAltNames in the client certificate.  Not used if `requireClientCertificate` is false.|true|no|
 |`druid.server.https.crlPath`|Specifies a path to a file containing static [Certificate Revocation Lists](https://en.wikipedia.org/wiki/Certificate_revocation_list), used to check if a client certificate has been revoked. Not used if `requireClientCertificate` is false.|null|no|
 
 The following table contains non-mandatory advanced configuration options, use caution.

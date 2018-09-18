@@ -19,10 +19,13 @@
 
 package org.apache.druid.server.security;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.druid.metadata.PasswordProvider;
+
 import org.eclipse.jetty.util.ssl.AliasedX509ExtendedKeyManager;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -39,18 +42,118 @@ import java.security.cert.CertificateException;
 
 public class TLSUtils
 {
+  public static class ClientSSLContextBuilder
+  {
+    private String protocol;
+    private String trustStoreType;
+    private String trustStorePath;
+    private String trustStoreAlgorithm;
+    private PasswordProvider trustStorePasswordProvider;
+    private String keyStoreType;
+    private String keyStorePath;
+    private String keyStoreAlgorithm;
+    private String certAlias;
+    private PasswordProvider keyStorePasswordProvider;
+    private PasswordProvider keyManagerFactoryPasswordProvider;
+
+    public ClientSSLContextBuilder setProtocol(String protocol)
+    {
+      this.protocol = protocol;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setTrustStoreType(String trustStoreType)
+    {
+      this.trustStoreType = trustStoreType;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setTrustStorePath(String trustStorePath)
+    {
+      this.trustStorePath = trustStorePath;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setTrustStoreAlgorithm(String trustStoreAlgorithm)
+    {
+      this.trustStoreAlgorithm = trustStoreAlgorithm;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setTrustStorePasswordProvider(PasswordProvider trustStorePasswordProvider)
+    {
+      this.trustStorePasswordProvider = trustStorePasswordProvider;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setKeyStoreType(String keyStoreType)
+    {
+      this.keyStoreType = keyStoreType;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setKeyStorePath(String keyStorePath)
+    {
+      this.keyStorePath = keyStorePath;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setKeyStoreAlgorithm(String keyStoreAlgorithm)
+    {
+      this.keyStoreAlgorithm = keyStoreAlgorithm;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setCertAlias(String certAlias)
+    {
+      this.certAlias = certAlias;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setKeyStorePasswordProvider(PasswordProvider keyStorePasswordProvider)
+    {
+      this.keyStorePasswordProvider = keyStorePasswordProvider;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setKeyManagerFactoryPasswordProvider(PasswordProvider keyManagerFactoryPasswordProvider)
+    {
+      this.keyManagerFactoryPasswordProvider = keyManagerFactoryPasswordProvider;
+      return this;
+    }
+
+    public SSLContext build()
+    {
+      Preconditions.checkNotNull(trustStorePath, "must specify a trustStorePath");
+
+      return createSSLContext(
+        protocol,
+        trustStoreType,
+        trustStorePath,
+        trustStoreAlgorithm,
+        trustStorePasswordProvider,
+        keyStoreType,
+        keyStorePath,
+        keyStoreAlgorithm,
+        certAlias,
+        keyStorePasswordProvider,
+        keyManagerFactoryPasswordProvider
+      );
+    }
+  }
+
   public static SSLContext createSSLContext(
-      String protocol,
-      String trustStoreType,
+      @Nullable String protocol,
+      @Nullable String trustStoreType,
       String trustStorePath,
-      String trustStoreAlgorithm,
-      PasswordProvider trustStorePasswordProvider,
-      String keyStoreType,
-      String keyStorePath,
-      String keyStoreAlgorithm,
-      String certAlias,
-      PasswordProvider keyStorePasswordProvider,
-      PasswordProvider keyManagerFactoryPasswordProvider
+      @Nullable String trustStoreAlgorithm,
+      @Nullable PasswordProvider trustStorePasswordProvider,
+      @Nullable String keyStoreType,
+      @Nullable String keyStorePath,
+      @Nullable String keyStoreAlgorithm,
+      @Nullable String certAlias,
+      @Nullable PasswordProvider keyStorePasswordProvider,
+      @Nullable PasswordProvider keyManagerFactoryPasswordProvider
   )
   {
     SSLContext sslContext = null;
@@ -61,7 +164,7 @@ public class TLSUtils
                                                : trustStoreType);
       trustStore.load(
           new FileInputStream(trustStorePath),
-          trustStorePasswordProvider.getPassword().toCharArray()
+          trustStorePasswordProvider == null ? null : trustStorePasswordProvider.getPassword().toCharArray()
       );
       TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(trustStoreAlgorithm == null
                                                                                 ? TrustManagerFactory.getDefaultAlgorithm()

@@ -43,18 +43,18 @@ public class SSLContextProvider implements Provider<SSLContext>
   {
     log.info("Creating SslContext for https client using config [%s]", config);
 
-    return TLSUtils.createSSLContext(
-        config.getProtocol(),
-        config.getTrustStoreType(),
-        config.getTrustStorePath(),
-        config.getTrustStoreAlgorithm(),
-        config.getTrustStorePasswordProvider(),
-        config.getKeyStoreType(),
-        config.getKeyStorePath(),
-        config.getKeyManagerFactoryAlgorithm(),
-        config.getCertAlias(),
-        config.getKeyStorePasswordProvider(),
-        config.getKeyManagerPasswordProvider()
-    );
+    return new TLSUtils.ClientSSLContextBuilder()
+        .setProtocol(config.getProtocol())
+        .setTrustStoreType(config.getTrustStoreType())
+        .setTrustStorePath(config.getTrustStorePath())
+        .setTrustStoreAlgorithm(config.getTrustStoreAlgorithm())
+        .setTrustStorePasswordProvider(config.getTrustStorePasswordProvider())
+        .setKeyStoreType(config.getKeyStoreType())
+        .setKeyStorePath(config.getKeyStorePath())
+        .setKeyStoreAlgorithm(config.getKeyManagerFactoryAlgorithm())
+        .setCertAlias(config.getCertAlias())
+        .setKeyStorePasswordProvider(config.getKeyStorePasswordProvider())
+        .setKeyManagerFactoryPasswordProvider(config.getKeyManagerPasswordProvider())
+        .build();
   }
 }

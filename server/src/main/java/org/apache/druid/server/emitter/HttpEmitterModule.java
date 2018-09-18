@@ -126,19 +126,13 @@ public class HttpEmitterModule implements Module
       }
     } else if (sslConfig.getTrustStorePath() != null) {
       log.info("Creating SSLContext for HttpEmitter client using config [%s]", sslConfig);
-      effectiveSSLContext = TLSUtils.createSSLContext(
-          sslConfig.getProtocol(),
-          sslConfig.getTrustStoreType(),
-          sslConfig.getTrustStorePath(),
-          sslConfig.getTrustStoreAlgorithm(),
-          sslConfig.getTrustStorePasswordProvider(),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-      );
+      effectiveSSLContext = new TLSUtils.ClientSSLContextBuilder()
+          .setProtocol(sslConfig.getProtocol())
+          .setTrustStoreType(sslConfig.getTrustStoreType())
+          .setTrustStorePath(sslConfig.getTrustStorePath())
+          .setTrustStoreAlgorithm(sslConfig.getTrustStoreAlgorithm())
+          .setTrustStorePasswordProvider(sslConfig.getTrustStorePasswordProvider())
+          .build();
     } else {
       effectiveSSLContext = sslContext;
     }

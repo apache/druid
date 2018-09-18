@@ -71,7 +71,7 @@ public class TLSServerConfig
   private PasswordProvider trustStorePasswordProvider;
 
   @JsonProperty
-  private boolean validateHostnames = false;
+  private boolean validateHostnames = true;
 
   @JsonProperty
   private String crlPath;

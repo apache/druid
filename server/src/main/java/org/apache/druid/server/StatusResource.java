@@ -27,7 +27,6 @@ import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
@@ -50,8 +49,6 @@ import java.util.Set;
 @Path("/status")
 public class StatusResource
 {
-  private static Logger log = new Logger(StatusResource.class);
-
   private final Properties properties;
 
   private final DruidServerConfig druidServerConfig;
