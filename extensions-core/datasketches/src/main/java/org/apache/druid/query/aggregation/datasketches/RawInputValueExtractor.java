@@ -17,18 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.hll;
+package org.apache.druid.query.aggregation.datasketches;
 
-import org.apache.druid.query.aggregation.datasketches.RawInputValueExtractor;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 
-public class HllSketchBuildComplexMetricSerde extends HllSketchMergeComplexMetricSerde
-{
+public class RawInputValueExtractor implements ComplexMetricExtractor {
 
   @Override
-  public ComplexMetricExtractor getExtractor()
+  public Class<?> extractedClass()
   {
-    return new RawInputValueExtractor();
+    return Object.class;
   }
 
+  @Override
+  public Object extractValue(final InputRow inputRow, final String metricName)
+  {
+    return inputRow.getRaw(metricName);
+  }
+  
 }
