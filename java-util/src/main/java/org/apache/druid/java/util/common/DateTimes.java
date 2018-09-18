@@ -51,6 +51,21 @@ public final class DateTimes
     }
   }
 
+  public static abstract class Formatter
+  {
+    private DateTimeFormatter innerFormatter;
+
+    public Formatter(DateTimeFormatter innerFormatter)
+    {
+      this.innerFormatter = innerFormatter;
+    }
+
+    public DateTime parse(final String instant)
+    {
+      return innerFormatter.parseDateTime(instant);
+    }
+  }
+
   /**
    * Simple wrapper class to enforce UTC Chronology in formatter. Specifically, it will use
    * {@link DateTimeFormatter#withChronology(Chronology)} to set the chronology to
@@ -73,6 +88,18 @@ public final class DateTimes
     public String print(final DateTime instant)
     {
       return innerFormatter.print(instant);
+    }
+  }
+
+
+  /**
+   * System Formatter wrapper with JVM's timezone, if user does't specify in jvm.config, system's timezone will be used
+   */
+  public static class SysFormatter extends Formatter
+  {
+    public SysFormatter(DateTimeFormatter innerFormatter)
+    {
+      super(innerFormatter.withChronology(ISOChronology.getInstance(DateTimeZone.getDefault())));
     }
   }
 
