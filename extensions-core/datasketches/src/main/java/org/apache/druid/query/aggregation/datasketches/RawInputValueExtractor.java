@@ -28,7 +28,8 @@ public class RawInputValueExtractor implements ComplexMetricExtractor {
 
   private RawInputValueExtractor() {}
 
-  public static RawInputValueExtractor getInstance() {
+  public static RawInputValueExtractor getInstance()
+  {
     return EXTRACTOR;
   }
 
