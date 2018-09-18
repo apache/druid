@@ -51,7 +51,7 @@ public final class DateTimes
     }
   }
 
-  public static abstract class Formatter
+  public abstract static class Formatter
   {
     private DateTimeFormatter innerFormatter;
 
@@ -64,6 +64,11 @@ public final class DateTimes
     {
       return innerFormatter.parseDateTime(instant);
     }
+
+    public String print(final DateTime instant)
+    {
+      return innerFormatter.print(instant);
+    }
   }
 
   /**
@@ -71,23 +76,11 @@ public final class DateTimes
    * {@link DateTimeFormatter#withChronology(Chronology)} to set the chronology to
    * {@link ISOChronology#getInstanceUTC()} on the wrapped {@link DateTimeFormatter}.
    */
-  public static class UtcFormatter
+  public static class UtcFormatter extends Formatter
   {
-    private final DateTimeFormatter innerFormatter;
-
     private UtcFormatter(final DateTimeFormatter innerFormatter)
     {
-      this.innerFormatter = innerFormatter.withChronology(ISOChronology.getInstanceUTC());
-    }
-
-    public DateTime parse(final String instant)
-    {
-      return innerFormatter.parseDateTime(instant);
-    }
-
-    public String print(final DateTime instant)
-    {
-      return innerFormatter.print(instant);
+      super(innerFormatter.withChronology(ISOChronology.getInstanceUTC()));
     }
   }
 
