@@ -1016,6 +1016,99 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <version>0.12</version>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <outputDirectory>${project.basedir}/rat</outputDirectory>
+                    <licenses>
+                        <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                            <licenseFamilyCategory>MIT</licenseFamilyCategory>
+                            <licenseFamilyName>MIT JQyery</licenseFamilyName>
+                            <notes></notes>
+                            <patterns>
+                                <pattern>Copyright 2012 jQuery Foundation and other contributors; Licensed MIT</pattern>
+                                <pattern>jQuery Foundation, Inc. | jquery.org/license</pattern>
+                            </patterns>
+                        </license>
+                        <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                            <licenseFamilyCategory>Underscore</licenseFamilyCategory>
+                            <licenseFamilyName>Underscore</licenseFamilyName>
+                            <notes></notes>
+                            <patterns>
+                                <pattern>Underscore is freely distributable under the MIT license</pattern>
+                            </patterns>
+                        </license>
+                        <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                            <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
+                            <licenseFamilyName>Allan Jardine</licenseFamilyName>
+                            <notes></notes>
+                            <patterns>
+                                <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
+                            </patterns>
+                        </license>
+                        <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                            <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
+                            <licenseFamilyName>Allan Jardine</licenseFamilyName>
+                            <notes></notes>
+                            <patterns>
+                                <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
+                                <pattern>Copyright 2008-2011 Allan Jardine</pattern>
+                                <pattern>GPL v2 or BSD 3 point style</pattern>
+                            </patterns>
+                        </license>
+                    </licenses>
+
+                    <licenseFamilies>
+                        <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                            <familyName>MIT JQyery</familyName>
+                        </licenseFamily>
+                        <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                            <familyName>Underscore</familyName>
+                        </licenseFamily>
+                        <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                            <familyName>Allan Jardine</familyName>
+                        </licenseFamily>
+                    </licenseFamilies>
+                    <excludes>
+                        <!--DOCS-->
+                        <exclude>**/*.md</exclude>
+                        <exclude>publications/**</exclude>
+                        <exclude>docs/**</exclude>
+                        <!--CODE STYLE-->
+                        <exclude>codestyle/*</exclude>
+                        <exclude>eclipse.importorder</exclude>
+                        <!--CODE RESOURCES-->
+                        <exclude>**/javax.annotation.processing.Processor</exclude>
+                        <exclude>**/org.apache.druid.initialization.DruidModule</exclude>
+                        <exclude>**/org/apache/druid/math/expr/antlr/Expr.g4</exclude>
+                        <exclude>**/dependency-reduced-pom.xml</exclude>
+                        <!--BUILD and TESTS-->
+                        <exclude>**/target/**</exclude>
+                        <exclude>**/build/**</exclude>
+                        <exclude>**/test/resources/**</exclude>
+                        <exclude>**/src/test/avro/**</exclude>
+                        <exclude>**/src/test/thrift/**</exclude>
+                        <exclude>.travis.yml</exclude>
+                        <!--DEV and IT-TESTS-->
+                        <exclude>**/*.json</exclude>
+                        <exclude>**/jvm.config</exclude>
+                        <exclude>**/quickstart/protobuf/**</exclude>
+                        <exclude>**/tutorial/conf/**</exclude>
+                        <exclude>**/derby.log</exclude>
+                        <exclude>**/docker/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
