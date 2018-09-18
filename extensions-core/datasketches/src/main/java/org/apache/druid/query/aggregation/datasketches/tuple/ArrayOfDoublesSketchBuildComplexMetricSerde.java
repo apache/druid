@@ -28,7 +28,7 @@ public class ArrayOfDoublesSketchBuildComplexMetricSerde extends ArrayOfDoublesS
   @Override
   public ComplexMetricExtractor getExtractor()
   {
-    return new RawInputValueExtractor();
+    return RawInputValueExtractor.getInstance();
   }
 
 }

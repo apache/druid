@@ -24,6 +24,14 @@ import org.apache.druid.segment.serde.ComplexMetricExtractor;
 
 public class RawInputValueExtractor implements ComplexMetricExtractor {
 
+  private static final RawInputValueExtractor EXTRACTOR = new RawInputValueExtractor();
+
+  private RawInputValueExtractor() {}
+
+  public static RawInputValueExtractor getInstance() {
+    return EXTRACTOR;
+  }
+
   @Override
   public Class<?> extractedClass()
   {

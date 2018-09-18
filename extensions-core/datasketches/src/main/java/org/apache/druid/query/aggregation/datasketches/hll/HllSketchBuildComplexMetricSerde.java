@@ -28,7 +28,7 @@ public class HllSketchBuildComplexMetricSerde extends HllSketchMergeComplexMetri
   @Override
   public ComplexMetricExtractor getExtractor()
   {
-    return new RawInputValueExtractor();
+    return RawInputValueExtractor.getInstance();
   }
 
 }
