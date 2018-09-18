@@ -36,15 +36,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -196,7 +197,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
         )
     );
     final AtomicInteger index = new AtomicInteger(0);
-    List<ListenableFuture<?>> futures = new LinkedList<>();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
 
     final Integer loops = totalIndexSize / concurrentThreads;
 
@@ -249,7 +250,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
     );
     final AtomicInteger index = new AtomicInteger(0);
     final AtomicInteger queryableIndex = new AtomicInteger(0);
-    List<ListenableFuture<?>> futures = new LinkedList<>();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
 
     final Integer loops = totalIndexSize / concurrentThreads;
 
@@ -271,7 +272,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
                   catch (InterruptedException e) {
                     throw Throwables.propagate(e);
                   }
-                  final Random rndGen = new Random();
+                  final Random rndGen = ThreadLocalRandom.current();
                   while (!done.get()) {
                     Integer idx = rndGen.nextInt(queryableIndex.get() + 1);
                     Assert.assertEquals(idx, concurrentIndexible.get(idx));

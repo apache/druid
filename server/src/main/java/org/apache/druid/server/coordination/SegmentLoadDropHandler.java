@@ -624,7 +624,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               synchronized (lock) {
                 try {
                   if (!(finished && queue.isEmpty())) {
-                    final List<DataSegment> segments = Lists.newLinkedList();
+                    final List<DataSegment> segments = new ArrayList<>();
                     queue.drainTo(segments);
                     try {
                       announcer.announceSegments(segments);
@@ -656,7 +656,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         finished = true;
         // announce any remaining segments
         try {
-          final List<DataSegment> segments = Lists.newLinkedList();
+          final List<DataSegment> segments = new ArrayList<>();
           queue.drainTo(segments);
           announcer.announceSegments(segments);
         }

@@ -172,11 +172,12 @@ public class AggregatorUtilTest
     );
 
     Assert.assertEquals(
-        new Pair(Lists.newArrayList(agg1, agg2), Collections.singletonList(postAgg2)), AggregatorUtil.condensedAggregators(
-        Lists.newArrayList(agg1, agg2),
-        Lists.newArrayList(postAgg1, postAgg2),
-        "postAgg"
-    )
+        new Pair<>(Lists.newArrayList(agg1, agg2), Collections.singletonList(postAgg2)),
+        AggregatorUtil.condensedAggregators(
+            Lists.newArrayList(agg1, agg2),
+            Lists.newArrayList(postAgg1, postAgg2),
+            "postAgg"
+        )
     );
 
   }

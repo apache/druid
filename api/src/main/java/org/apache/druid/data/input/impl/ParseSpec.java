@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.parsers.Parser;
 import java.util.List;
 
 @ExtensionPoint
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format", defaultImpl = DelimitedParseSpec.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "json", value = JSONParseSpec.class),
     @JsonSubTypes.Type(name = "csv", value = CSVParseSpec.class),

@@ -20,12 +20,12 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -239,7 +239,7 @@ public class ApproximateHistogramTest
       randNums[i] = (float) rand.nextGaussian();
     }
 
-    List<ApproximateHistogram> randHist = Lists.newLinkedList();
+    List<ApproximateHistogram> randHist = new ArrayList<>();
     Iterator<ApproximateHistogram> it = Iterators.cycle(randHist);
 
     for (int k = 0; k < numRand; ++k) {

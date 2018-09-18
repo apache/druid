@@ -131,6 +131,24 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
         {
           return ImmutableList.of("test");
         }
+
+        @Override
+        public SupervisorSpec createSuspendedSpec()
+        {
+          return null;
+        }
+
+        @Override
+        public SupervisorSpec createRunningSpec()
+        {
+          return null;
+        }
+
+        @Override
+        public boolean isSuspended()
+        {
+          return false;
+        }
       };
       EasyMock.expect(supervisorManager.getSupervisorSpec(EasyMock.anyString()))
               .andReturn(Optional.of(supervisorSpec))

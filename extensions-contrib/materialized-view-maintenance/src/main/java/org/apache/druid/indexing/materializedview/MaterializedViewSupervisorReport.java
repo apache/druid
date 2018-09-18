@@ -29,10 +29,11 @@ import java.util.Set;
 
 public class MaterializedViewSupervisorReport extends SupervisorReport 
 {
-  
+
   public MaterializedViewSupervisorReport(
       String dataSource,
       DateTime generationTime,
+      boolean suspended,
       String baseDataSource,
       Set<String> dimensions,
       Set<String> metrics,
@@ -42,6 +43,7 @@ public class MaterializedViewSupervisorReport extends SupervisorReport
     super(dataSource, generationTime, "{" +
         "dataSource='" + dataSource + '\'' +
         ", baseDataSource='" + baseDataSource + '\'' +
+        ", suspended='" + suspended + "\'" +
         ", dimensions=" + dimensions +
         ", metrics=" + metrics +
         ", missTimeline" + Sets.newHashSet(missTimeline) +

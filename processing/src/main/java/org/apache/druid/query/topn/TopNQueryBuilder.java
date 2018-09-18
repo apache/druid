@@ -37,7 +37,9 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -247,13 +249,13 @@ public class TopNQueryBuilder
   @SuppressWarnings("unchecked")
   public TopNQueryBuilder aggregators(List<? extends AggregatorFactory> a)
   {
-    aggregatorSpecs = (List<AggregatorFactory>) a;
+    aggregatorSpecs = new ArrayList<>(a); // defensive copy
     return this;
   }
 
-  public TopNQueryBuilder postAggregators(List<PostAggregator> p)
+  public TopNQueryBuilder postAggregators(Collection<PostAggregator> p)
   {
-    postAggregatorSpecs = p;
+    postAggregatorSpecs = new ArrayList<>(p); // defensive copy
     return this;
   }
 
