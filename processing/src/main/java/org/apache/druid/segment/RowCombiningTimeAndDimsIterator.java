@@ -20,13 +20,13 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.aggregation.AggregateCombiner;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * RowCombiningTimeAndDimsIterator takes some {@link RowIterator}s, assuming that they are "sorted" (see javadoc of
@@ -98,11 +98,7 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
   @Nullable
   private RowPointer nextRowPointer;
 
-  RowCombiningTimeAndDimsIterator(
-      List<TransformableRowIterator> originalIterators,
-      AggregatorFactory[] metricAggs,
-      List<String> metricNames
-  )
+  RowCombiningTimeAndDimsIterator(List<TransformableRowIterator> originalIterators, List<MetricDesc> metricDescs)
   {
     int numCombinedIterators = originalIterators.size();
     mergingIterator = new MergingRowIterator(originalIterators);
@@ -116,9 +112,12 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
         }
     );
 
-    combinedMetricSelectors = new AggregateCombiner[metricAggs.length];
-    Arrays.setAll(combinedMetricSelectors, metricIndex -> metricAggs[metricIndex].makeNullableAggregateCombiner());
-    combinedMetricNames = metricNames;
+    combinedMetricSelectors = new AggregateCombiner[metricDescs.size()];
+    Arrays.setAll(
+        combinedMetricSelectors,
+        metricIndex -> metricDescs.get(metricIndex).getAggregatorFactory().makeNullableAggregateCombiner()
+    );
+    combinedMetricNames = metricDescs.stream().map(MetricDesc::getName).collect(Collectors.toList());
 
     combinedTimeAndDimsPointersByOriginalIteratorIndex = new TimeAndDimsPointer[numCombinedIterators];
     Arrays.setAll(

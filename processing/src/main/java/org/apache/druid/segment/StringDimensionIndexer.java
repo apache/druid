@@ -39,7 +39,6 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
-import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 import it.unimi.dsi.fastutil.ints.IntArrays;
@@ -427,7 +426,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   public DimensionSelector makeDimensionSelector(
       final DimensionSpec spec,
       final IncrementalIndexRowHolder currEntry,
-      final IncrementalIndex.DimensionDesc desc
+      final DimensionDesc desc
   )
   {
     final ExtractionFn extractionFn = spec.getExtractionFn();
@@ -658,7 +657,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
       IncrementalIndexRowHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
+      DimensionDesc desc
   )
   {
     return makeDimensionSelector(DefaultDimensionSpec.of(desc.getName()), currEntry, desc);

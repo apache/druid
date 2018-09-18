@@ -195,7 +195,7 @@ public class IndexMergerV9CompatibilityTest
   @Test
   public void testSimpleReprocess() throws IOException
   {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(
+    final IndexableAdapter adapter = new QueryableIndexAdapter(
         closer.closeLater(
             indexIO.loadIndex(
                 persistTmpDir
@@ -220,7 +220,7 @@ public class IndexMergerV9CompatibilityTest
   @Test
   public void testIdempotentReprocess() throws IOException
   {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(
+    final IndexableAdapter adapter = new QueryableIndexAdapter(
         closer.closeLater(
             indexIO.loadIndex(
                 persistTmpDir
@@ -232,12 +232,12 @@ public class IndexMergerV9CompatibilityTest
     reprocessAndValidate(persistTmpDir, tmpDir1);
 
     final File tmpDir2 = new File(tmpDir, "reprocessed2");
-    final IndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(closer.closeLater(indexIO.loadIndex(tmpDir1)));
+    final IndexableAdapter adapter2 = new QueryableIndexAdapter(closer.closeLater(indexIO.loadIndex(tmpDir1)));
     Assert.assertEquals(events.size(), adapter2.getNumRows());
     reprocessAndValidate(tmpDir1, tmpDir2);
 
     final File tmpDir3 = new File(tmpDir, "reprocessed3");
-    final IndexableAdapter adapter3 = new QueryableIndexIndexableAdapter(closer.closeLater(indexIO.loadIndex(tmpDir2)));
+    final IndexableAdapter adapter3 = new QueryableIndexAdapter(closer.closeLater(indexIO.loadIndex(tmpDir2)));
     Assert.assertEquals(events.size(), adapter3.getNumRows());
     reprocessAndValidate(tmpDir2, tmpDir3);
   }

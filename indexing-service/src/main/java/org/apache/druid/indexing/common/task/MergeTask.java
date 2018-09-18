@@ -28,11 +28,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -48,6 +49,7 @@ public class MergeTask extends MergeTaskBase
   private final List<AggregatorFactory> aggregators;
   private final Boolean rollup;
   private final IndexSpec indexSpec;
+  private final int numFilesPerMerge;
 
   @JsonCreator
   public MergeTask(
@@ -59,6 +61,7 @@ public class MergeTask extends MergeTaskBase
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
+      @JsonProperty("numFilesPerMerge") Integer numFilesPerMerge,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -67,6 +70,7 @@ public class MergeTask extends MergeTaskBase
     this.aggregators = Preconditions.checkNotNull(aggregators, "null aggregations");
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
+    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   @Override
@@ -95,8 +99,9 @@ public class MergeTask extends MergeTaskBase
         aggregators.toArray(new AggregatorFactory[0]),
         outDir,
         indexSpec,
+        numFilesPerMerge,
         getSegmentWriteOutMediumFactory()
-    );
+    ).getFile();
   }
 
   @Override
@@ -121,5 +126,11 @@ public class MergeTask extends MergeTaskBase
   public List<AggregatorFactory> getAggregators()
   {
     return aggregators;
+  }
+
+  @JsonProperty
+  public int getNumFilesPerMerge()
+  {
+    return numFilesPerMerge;
   }
 }

@@ -31,7 +31,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
-import org.apache.druid.segment.QueryableIndexIndexableAdapter;
+import org.apache.druid.segment.QueryableIndexAdapter;
 import org.apache.druid.segment.RowFilteringIndexAdapter;
 import org.apache.druid.segment.RowPointer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -113,7 +113,7 @@ public class AppendTask extends MergeTaskBase
     for (final SegmentToMergeHolder holder : segmentsToMerge) {
       adapters.add(
           new RowFilteringIndexAdapter(
-              new QueryableIndexIndexableAdapter(toolbox.getIndexIO().loadIndex(holder.getFile())),
+              new QueryableIndexAdapter(toolbox.getIndexIO().loadIndex(holder.getFile())),
               (RowPointer rowPointer) -> holder.getInterval().contains(rowPointer.getTimestamp())
           )
       );

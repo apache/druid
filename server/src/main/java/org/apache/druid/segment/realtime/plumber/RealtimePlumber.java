@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -58,6 +59,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.MergedIndexMetadata;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -76,7 +78,6 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -420,7 +421,7 @@ public class RealtimePlumber implements Plumber
               final long mergeThreadCpuTime = VMUtils.safeGetThreadCpuTime();
               mergeStopwatch = Stopwatch.createStarted();
 
-              final File mergedFile;
+              final MergedIndexMetadata mergedIndexMetadata;
               List<QueryableIndex> indexes = Lists.newArrayList();
               Closer closer = Closer.create();
               try {
@@ -432,12 +433,13 @@ public class RealtimePlumber implements Plumber
                   closer.register(segmentAndCloseable.rhs);
                 }
 
-                mergedFile = indexMerger.mergeQueryableIndex(
+                mergedIndexMetadata = indexMerger.mergeQueryableIndex(
                     indexes,
                     schema.getGranularitySpec().isRollup(),
                     schema.getAggregators(),
                     mergedTarget,
                     config.getIndexSpec(),
+                    config.getNumFilesPerMerge(),
                     config.getSegmentWriteOutMediumFactory()
                 );
               }
@@ -455,8 +457,8 @@ public class RealtimePlumber implements Plumber
               log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
 
               DataSegment segment = dataSegmentPusher.push(
-                  mergedFile,
-                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+                  mergedIndexMetadata.getFile(),
+                  sink.getSegment().withDimensions(mergedIndexMetadata.getDimensions()),
                   false
               );
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());

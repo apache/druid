@@ -513,8 +513,9 @@ public class IndexMergerV9WithSpatialIndexTest
                 METRIC_AGGS,
                 mergedFile,
                 indexSpec,
+                2,
                 null
-            )
+            ).getFile()
         );
         return mergedRealtime;
 

@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig.Builder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -125,28 +126,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
             new LocalFirehoseFactory(new File("tmp"), "test_*", null),
             false
         ),
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        new Builder().setMaxNumSubTasks(2).build()
     );
 
     // set up test tools

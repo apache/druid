@@ -25,12 +25,13 @@ import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.List;
 
 /**
  * An adapter to an index
  */
-public interface IndexableAdapter
+public interface IndexableAdapter extends Closeable
 {
   Interval getDataInterval();
 

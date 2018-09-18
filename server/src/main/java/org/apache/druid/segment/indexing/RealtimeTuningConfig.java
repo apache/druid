@@ -42,7 +42,6 @@ import java.io.File;
  */
 public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 {
-  private static final int defaultMaxRowsInMemory = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final Period defaultWindowPeriod = new Period("PT10M");
   private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
@@ -72,7 +71,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public static RealtimeTuningConfig makeDefaultTuningConfig(final @Nullable File basePersistDirectory)
   {
     return new RealtimeTuningConfig(
-        defaultMaxRowsInMemory,
+        TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY,
         0L,
         defaultIntermediatePersistPeriod,
         defaultWindowPeriod,
@@ -89,7 +88,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         defaultHandoffConditionTimeout,
         defaultAlertTimeout,
         null,
-        defaultDedupColumn
+        defaultDedupColumn,
+        TuningConfig.DEFAULT_NUM_FILES_PER_MERGE
     );
   }
 
@@ -112,6 +112,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   @Nullable
   private final String dedupColumn;
+  private final int numFilesPerMerge;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -133,10 +134,11 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @JsonProperty("dedupColumn") @Nullable String dedupColumn
+      @JsonProperty("dedupColumn") @Nullable String dedupColumn,
+      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
   )
   {
-    this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
+    this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -166,6 +168,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.dedupColumn = dedupColumn == null ? defaultDedupColumn : dedupColumn;
+    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   @Override
@@ -282,6 +285,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return segmentWriteOutMediumFactory;
   }
 
+  @Override
+  @JsonProperty
+  public int getNumFilesPerMerge()
+  {
+    return numFilesPerMerge;
+  }
+
   @JsonProperty
   @Nullable
   public String getDedupColumn()
@@ -309,7 +319,8 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn
+        dedupColumn,
+        numFilesPerMerge
     );
   }
 
@@ -333,7 +344,163 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn
+        dedupColumn,
+        numFilesPerMerge
     );
+  }
+
+  public static class Builder
+  {
+    private Integer maxRowsInMemory;
+    private Long maxBytesInMemory;
+    private Period intermediatePersistPeriod;
+    private Period windowPeriod;
+    private File basePersistDirectory;
+    private VersioningPolicy versioningPolicy;
+    private RejectionPolicyFactory rejectionPolicyFactory;
+    private Integer maxPendingPersists;
+    private ShardSpec shardSpec;
+    private IndexSpec indexSpec;
+    private int persistThreadPriority;
+    private int mergeThreadPriority;
+    private Boolean reportParseExceptions;
+    private Long handoffConditionTimeout;
+    private Long alertTimeout;
+    private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+    private String dedupColumn;
+    private Integer numFilesPerMerge;
+
+    public Builder setMaxRowsInMemory(int maxRowsInMemory)
+    {
+      this.maxRowsInMemory = maxRowsInMemory;
+      return this;
+    }
+
+    public Builder setMaxBytesInMemory(long maxBytesInMemory)
+    {
+      this.maxBytesInMemory = maxBytesInMemory;
+      return this;
+    }
+
+    public Builder setIntermediatePersistePeriod(Period intermediatePersistePeriod)
+    {
+      this.intermediatePersistPeriod = intermediatePersistePeriod;
+      return this;
+    }
+
+    public Builder setWindowPeriod(Period windowPeriod)
+    {
+      this.windowPeriod = windowPeriod;
+      return this;
+    }
+
+    public Builder setBasePersistDirectory(File basePersistDirectory)
+    {
+      this.basePersistDirectory = basePersistDirectory;
+      return this;
+    }
+
+    public Builder setVersioningPolicy(VersioningPolicy versioningPolicy)
+    {
+      this.versioningPolicy = versioningPolicy;
+      return this;
+    }
+
+    public Builder setRejectionPolicyFactory(RejectionPolicyFactory rejectionPolicyFactory)
+    {
+      this.rejectionPolicyFactory = rejectionPolicyFactory;
+      return this;
+    }
+
+    public Builder setMaxPendingPersists(int maxPendingPersists)
+    {
+      this.maxPendingPersists = maxPendingPersists;
+      return this;
+    }
+
+    public Builder setShardSpec(ShardSpec shardSpec)
+    {
+      this.shardSpec = shardSpec;
+      return this;
+    }
+
+    public Builder setIndexSpec(IndexSpec indexSpec)
+    {
+      this.indexSpec = indexSpec;
+      return this;
+    }
+
+    public Builder setPersistThreadPriority(int persistThreadPriority)
+    {
+      this.persistThreadPriority = persistThreadPriority;
+      return this;
+    }
+
+    public Builder setMergeThreadPriority(int mergeThreadPriority)
+    {
+      this.mergeThreadPriority = mergeThreadPriority;
+      return this;
+    }
+
+    public Builder setReportParseExceptions(boolean reportParseExceptions)
+    {
+      this.reportParseExceptions = reportParseExceptions;
+      return this;
+    }
+
+    public Builder setHandoffConditionTimeout(long handoffConditionTimeout)
+    {
+      this.handoffConditionTimeout = handoffConditionTimeout;
+      return this;
+    }
+
+    public Builder setAlertTimeout(long alertTimeout)
+    {
+      this.alertTimeout = alertTimeout;
+      return this;
+    }
+
+    public Builder setSegmentWriteOutMediumFactory(SegmentWriteOutMediumFactory factory)
+    {
+      this.segmentWriteOutMediumFactory = factory;
+      return this;
+    }
+
+    public Builder setDedupColumn(String dedupColumn)
+    {
+      this.dedupColumn = dedupColumn;
+      return this;
+    }
+
+    public Builder setNumFilesPerMerge(int numFilesPerMerge)
+    {
+      this.numFilesPerMerge = numFilesPerMerge;
+      return this;
+    }
+
+    public RealtimeTuningConfig build()
+    {
+      return new RealtimeTuningConfig(
+          maxRowsInMemory,
+          maxBytesInMemory,
+          intermediatePersistPeriod,
+          windowPeriod,
+          basePersistDirectory,
+          versioningPolicy,
+          rejectionPolicyFactory,
+          maxPendingPersists,
+          shardSpec,
+          indexSpec,
+          true,
+          persistThreadPriority,
+          mergeThreadPriority,
+          reportParseExceptions,
+          handoffConditionTimeout,
+          alertTimeout,
+          segmentWriteOutMediumFactory,
+          dedupColumn,
+          numFilesPerMerge
+      );
+    }
   }
 }

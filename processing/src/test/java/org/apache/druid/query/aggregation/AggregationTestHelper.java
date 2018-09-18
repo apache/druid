@@ -552,7 +552,7 @@ public class AggregationTestHelper implements Closeable
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, new IndexSpec(), null);
+        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, new IndexSpec(), 2, null);
 
         for (QueryableIndex qi : indexes) {
           qi.close();

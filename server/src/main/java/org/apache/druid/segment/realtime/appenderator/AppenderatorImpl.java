@@ -38,6 +38,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -63,6 +64,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.MergedIndexMetadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
@@ -77,7 +79,6 @@ import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -704,7 +705,7 @@ public class AppenderatorImpl implements Appenderator
         throw new ISE("Merged target[%s] exists after removing?!", mergedTarget);
       }
 
-      final File mergedFile;
+      final MergedIndexMetadata mergedIndexMetadata;
       List<QueryableIndex> indexes = Lists.newArrayList();
       Closer closer = Closer.create();
       try {
@@ -716,12 +717,13 @@ public class AppenderatorImpl implements Appenderator
           closer.register(segmentAndCloseable.rhs);
         }
 
-        mergedFile = indexMerger.mergeQueryableIndex(
+        mergedIndexMetadata = indexMerger.mergeQueryableIndex(
             indexes,
             schema.getGranularitySpec().isRollup(),
             schema.getAggregators(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
+            tuningConfig.getNumFilesPerMerge(),
             tuningConfig.getSegmentWriteOutMediumFactory()
         );
       }
@@ -738,8 +740,8 @@ public class AppenderatorImpl implements Appenderator
           // Kafka indexing task, pushers must use unique file paths in deep storage in order to maintain exactly-once
           // semantics.
           () -> dataSegmentPusher.push(
-              mergedFile,
-              sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+              mergedIndexMetadata.getFile(),
+              sink.getSegment().withDimensions(mergedIndexMetadata.getDimensions()),
               useUniquePath
           ),
           exception -> exception instanceof Exception,

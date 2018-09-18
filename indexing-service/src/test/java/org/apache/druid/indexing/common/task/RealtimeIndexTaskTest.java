@@ -913,26 +913,16 @@ public class RealtimeIndexTaskTest
         null,
         null
     );
-    RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
-        1000,
-        null,
-        new Period("P1Y"),
-        new Period("PT10M"),
-        null,
-        null,
-        new ServerTimeRejectionPolicyFactory(),
-        null,
-        null,
-        null,
-        true,
-        0,
-        0,
-        reportParseExceptions,
-        handoffTimeout,
-        null,
-        null,
-        null
-    );
+    final RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig.Builder()
+        .setMaxRowsInMemory(1000)
+        .setIntermediatePersistePeriod(new Period("P1Y"))
+        .setWindowPeriod(new Period("PT10M"))
+        .setRejectionPolicyFactory(new ServerTimeRejectionPolicyFactory())
+        .setPersistThreadPriority(0)
+        .setMergeThreadPriority(0)
+        .setReportParseExceptions(reportParseExceptions)
+        .setHandoffConditionTimeout(handoffTimeout)
+        .build();
     return new RealtimeIndexTask(
         taskId,
         null,

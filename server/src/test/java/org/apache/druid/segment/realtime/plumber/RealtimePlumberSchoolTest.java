@@ -209,7 +209,8 @@ public class RealtimePlumberSchoolTest
         null,
         null,
         null,
-        null
+        null,
+        2
     );
 
     realtimePlumberSchool = new RealtimePlumberSchool(

@@ -384,6 +384,11 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getMaxParseExceptions();
   }
 
+  public int getNumFilesPerMerge()
+  {
+    return schema.getTuningConfig().getNumFilesPerMerge();
+  }
+
   /**
    * Job instance should have Configuration set (by calling {@link #addJobProperties(Job)}
    * or via injected system properties) before this method is called.  The {@link PathSpec} may

@@ -158,7 +158,7 @@ public class IndexBuilder
                     @Override
                     public IndexableAdapter apply(QueryableIndex input)
                     {
-                      return new QueryableIndexIndexableAdapter(input);
+                      return new QueryableIndexAdapter(input);
                     }
                   }
               ),
@@ -178,8 +178,9 @@ public class IndexBuilder
                   AggregatorFactory.class
               ),
               new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID())),
-              indexSpec
-          )
+              indexSpec,
+              2
+          ).getFile()
       );
       for (QueryableIndex index : persisted) {
         index.close();

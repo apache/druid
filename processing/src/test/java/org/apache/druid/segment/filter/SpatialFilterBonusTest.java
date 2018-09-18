@@ -462,8 +462,9 @@ public class SpatialFilterBonusTest
               METRIC_AGGS,
               mergedFile,
               indexSpec,
+              2,
               null
-          )
+          ).getFile()
       );
 
       return mergedRealtime;

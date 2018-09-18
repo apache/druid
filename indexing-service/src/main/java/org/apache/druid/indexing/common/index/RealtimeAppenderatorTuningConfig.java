@@ -71,6 +71,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
+  private final int numFilesPerMerge;
 
   @JsonCreator
   public RealtimeAppenderatorTuningConfig(
@@ -89,7 +90,8 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -131,6 +133,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
+    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   @Override
@@ -222,6 +225,13 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return segmentWriteOutMediumFactory;
   }
 
+  @Override
+  @JsonProperty
+  public int getNumFilesPerMerge()
+  {
+    return numFilesPerMerge;
+  }
+
   @JsonProperty
   public boolean isLogParseExceptions()
   {
@@ -258,7 +268,8 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        numFilesPerMerge
     );
   }
 }

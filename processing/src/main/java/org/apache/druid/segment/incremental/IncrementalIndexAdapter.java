@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.segment.DimensionDesc;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
@@ -33,6 +34,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,14 +49,14 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
   private static class DimensionAccessor
   {
-    private final IncrementalIndex.DimensionDesc dimensionDesc;
+    private final DimensionDesc dimensionDesc;
     private final MutableBitmap[] invertedIndexes;
     private final DimensionIndexer indexer;
 
-    public DimensionAccessor(IncrementalIndex.DimensionDesc dimensionDesc)
+    public DimensionAccessor(DimensionDesc dimensionDesc)
     {
       this.dimensionDesc = dimensionDesc;
-      this.indexer = dimensionDesc.getIndexer();
+      this.indexer = dimensionDesc.makeOrGetIndexer();
       if (dimensionDesc.getCapabilities().hasBitmapIndexes()) {
         this.invertedIndexes = new MutableBitmap[indexer.getCardinality() + 1];
       } else {
@@ -68,10 +70,10 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     this.dataInterval = dataInterval;
     this.index = index;
 
-    final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
+    final List<DimensionDesc> dimensions = index.getDimensions();
     accessors = dimensions
         .stream()
-        .collect(Collectors.toMap(IncrementalIndex.DimensionDesc::getName, DimensionAccessor::new));
+        .collect(Collectors.toMap(DimensionDesc::getName, DimensionAccessor::new));
 
     processRows(index, bitmapFactory, dimensions);
   }
@@ -89,14 +91,14 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private void processRows(
       IncrementalIndex<?> index,
       BitmapFactory bitmapFactory,
-      List<IncrementalIndex.DimensionDesc> dimensions
+      List<DimensionDesc> dimensions
   )
   {
     int rowNum = 0;
     for (IncrementalIndexRow row : index.getFacts().persistIterable()) {
       final Object[] dims = row.getDims();
 
-      for (IncrementalIndex.DimensionDesc dimension : dimensions) {
+      for (DimensionDesc dimension : dimensions) {
         final int dimIndex = dimension.getIndex();
         DimensionAccessor accessor = accessors.get(dimension.getName());
 
@@ -150,7 +152,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       return null;
     }
 
-    final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
+    final DimensionIndexer indexer = accessor.dimensionDesc.makeOrGetIndexer();
 
     return indexer.getSortedIndexedValues();
   }
@@ -169,7 +171,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       return BitmapValues.EMPTY;
     }
     ColumnCapabilities capabilities = accessor.dimensionDesc.getCapabilities();
-    DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
+    DimensionIndexer indexer = accessor.dimensionDesc.makeOrGetIndexer();
 
     if (!capabilities.hasBitmapIndexes()) {
       return BitmapValues.EMPTY;
@@ -227,5 +229,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return index.getMetadata();
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    index.close();
   }
 }

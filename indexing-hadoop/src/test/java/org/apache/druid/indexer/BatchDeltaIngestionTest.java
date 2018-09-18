@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -473,30 +474,10 @@ public class BatchDeltaIngestionTest
                 null,
                 tmpDir.getCanonicalPath()
             ),
-            new HadoopTuningConfig(
-                tmpDir.getCanonicalPath(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null
-            )
+            new Builder()
+                .setWorkingPath(tmpDir.getCanonicalPath())
+                .setCleanOnFailure(false)
+                .build()
         )
     );
 

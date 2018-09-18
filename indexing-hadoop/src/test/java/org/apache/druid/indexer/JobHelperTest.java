@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -108,36 +109,18 @@ public class JobHelperTest
                 null,
                 tmpDir.getCanonicalPath()
             ),
-            new HadoopTuningConfig(
-                tmpDir.getCanonicalPath(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                //Map of job properties
-                ImmutableMap.of(
-                    "fs.s3.impl",
-                    "org.apache.hadoop.fs.s3native.NativeS3FileSystem",
-                    "fs.s3.awsAccessKeyId",
-                    "THISISMYACCESSKEY"
-                ),
-                false,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null
-            )
+            new Builder()
+                .setWorkingPath(tmpDir.getCanonicalPath())
+                .setCleanOnFailure(false)
+                .setJobProperties(
+                    //Map of job properties
+                    ImmutableMap.of(
+                        "fs.s3.impl",
+                        "org.apache.hadoop.fs.s3native.NativeS3FileSystem",
+                        "fs.s3.awsAccessKeyId",
+                        "THISISMYACCESSKEY"
+                    )
+                ).build()
         )
     );
   }

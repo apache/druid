@@ -40,7 +40,7 @@ import java.io.File;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
-public class QueryableIndexIndexableAdapterTest
+public class QueryableIndexAdapterTest
 {
   private static final IndexSpec INDEX_SPEC = IndexMergerTestBase.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
@@ -67,7 +67,7 @@ public class QueryableIndexIndexableAdapterTest
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
 
-  public QueryableIndexIndexableAdapterTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  public QueryableIndexAdapterTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
     indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
@@ -92,7 +92,7 @@ public class QueryableIndexIndexableAdapterTest
         )
     );
 
-    IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
+    IndexableAdapter adapter = new QueryableIndexAdapter(index);
     String dimension = "dim1";
     @SuppressWarnings("UnusedAssignment") //null is added to all dimensions with value
     BitmapValues bitmapValues = adapter.getBitmapValues(dimension, 0);

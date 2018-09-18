@@ -16,19 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.druid.segment;
 
-package org.apache.druid.segment.selector.settable;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
+import javax.annotation.Nullable;
 
-public interface SettableColumnValueSelector<T> extends ColumnValueSelector<T>
+/**
+ * Metric descriptor. Some APIs can return nulls only because {@link IndexMergerV9#convert} doesn't take
+ * {@link AggregatorFactory}s. They shouldn't return nulls in any other cases.
+ */
+public interface MetricDesc
 {
-  void setValueFrom(ColumnValueSelector selector);
+  int getIndex();
 
-  @Override
-  default void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // SettableColumnValueSelectors have nothing to inspect
-  }
+  String getName();
+
+  @Nullable
+  AggregatorFactory getAggregatorFactory();
+
+  String getType();
+
+  ValueType getValueType();
+
+  ColumnCapabilitiesImpl getCapabilities();
 }

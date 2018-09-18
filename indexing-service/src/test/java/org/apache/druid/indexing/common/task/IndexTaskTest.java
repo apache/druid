@@ -54,7 +54,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
-import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -905,26 +904,14 @@ public class IndexTaskTest
       writer.write("this is not JSON\n"); // invalid JSON
     }
 
-    final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
-        2,
-        null,
-        null,
-        null,
-        null,
-        null,
-        indexSpec,
-        null,
-        true,
-        false,
-        true,
-        false,
-        null,
-        null,
-        null,
-        true,
-        7,
-        7
-    );
+    final IndexTuningConfig tuningConfig = new IndexTuningConfig.Builder()
+        .setTargetPartitionSize(2)
+        .setIndexSpec(indexSpec)
+        .setForceGuaranteedRollup(true)
+        .setLogParseExceptions(true)
+        .setMaxParseExceptions(7)
+        .setMaxSavedParseExceptions(7)
+        .build();
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
         tmpDir,
@@ -1026,26 +1013,13 @@ public class IndexTaskTest
     }
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
-    final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
-        2,
-        null,
-        null,
-        null,
-        null,
-        null,
-        indexSpec,
-        null,
-        true,
-        false,
-        false,
-        false,
-        null,
-        null,
-        null,
-        true,
-        2,
-        5
-    );
+    final IndexTuningConfig tuningConfig = new IndexTuningConfig.Builder()
+        .setTargetPartitionSize(2)
+        .setIndexSpec(indexSpec)
+        .setLogParseExceptions(true)
+        .setMaxParseExceptions(2)
+        .setMaxSavedParseExceptions(5)
+        .build();
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
         tmpDir,
@@ -1140,26 +1114,14 @@ public class IndexTaskTest
     }
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
-    final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
-        2,
-        null,
-        null,
-        null,
-        null,
-        null,
-        indexSpec,
-        null,
-        true,
-        false,
-        true,
-        false,
-        null,
-        null,
-        null,
-        true,
-        2,
-        5
-    );
+    final IndexTuningConfig tuningConfig = new IndexTuningConfig.Builder()
+        .setTargetPartitionSize(2)
+        .setIndexSpec(indexSpec)
+        .setForceGuaranteedRollup(true)
+        .setLogParseExceptions(true)
+        .setMaxParseExceptions(2)
+        .setMaxSavedParseExceptions(5)
+        .build();
 
     final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
         tmpDir,
@@ -1614,26 +1576,29 @@ public class IndexTaskTest
       boolean reportParseException
   )
   {
-    return new IndexTask.IndexTuningConfig(
-        targetPartitionSize,
-        maxRowsInMemory,
-        maxBytesInMemory,
-        maxTotalRows,
-        null,
-        numShards,
-        indexSpec,
-        null,
-        true,
-        forceExtendableShardSpecs,
-        forceGuaranteedRollup,
-        reportParseException,
-        null,
-        null,
-        null,
-        null,
-        null,
-        1
-    );
+    final IndexTuningConfig.Builder builder = new IndexTuningConfig.Builder()
+        .setIndexSpec(indexSpec)
+        .setForceExtendableShardSpecs(forceExtendableShardSpecs)
+        .setForceGuaranteedRollup(forceGuaranteedRollup)
+        .setReportParseExceptions(reportParseException)
+        .setMaxSavedParseExceptions(1);
+
+    if (targetPartitionSize != null) {
+      builder.setTargetPartitionSize(targetPartitionSize);
+    }
+    if (maxRowsInMemory != null) {
+      builder.setMaxRowsInMemory(maxRowsInMemory);
+    }
+    if (maxBytesInMemory != null) {
+      builder.setMaxBytesInMemory(maxBytesInMemory);
+    }
+    if (maxTotalRows != null) {
+      builder.setMaxTotalRows(maxTotalRows);
+    }
+    if (numShards != null) {
+      builder.setNumShards(numShards);
+    }
+    return builder.build();
   }
 
   private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException

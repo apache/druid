@@ -1404,6 +1404,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         null
     );
+
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
         1000,
         null,
@@ -1420,7 +1421,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        null
     );
     return new AppenderatorDriverRealtimeIndexTask(
         taskId,

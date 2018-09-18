@@ -49,30 +49,7 @@ public class HadoopTuningConfig implements TuningConfig
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
-    return new HadoopTuningConfig(
-        null,
-        DateTimes.nowUtc().toString(),
-        DEFAULT_PARTITIONS_SPEC,
-        DEFAULT_SHARD_SPECS,
-        DEFAULT_INDEX_SPEC,
-        DEFAULT_ROW_FLUSH_BOUNDARY,
-        0L,
-        false,
-        true,
-        false,
-        false,
-        null,
-        false,
-        false,
-        null,
-        true,
-        DEFAULT_NUM_BACKGROUND_PERSIST_THREADS,
-        false,
-        false,
-        null,
-        null,
-        null
-    );
+    return new Builder().build();
   }
 
   private final String workingPath;
@@ -95,6 +72,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final List<String> allowedHadoopPrefix;
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
+  private final int numFilesPerMerge;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -121,7 +99,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
       final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
-      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions
+      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
+      final @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
   )
   {
     this.workingPath = workingPath;
@@ -155,9 +134,14 @@ public class HadoopTuningConfig implements TuningConfig
     if (!this.ignoreInvalidRows) {
       this.maxParseExceptions = 0;
     } else {
-      this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+      this.maxParseExceptions = maxParseExceptions == null
+                                ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+                                : maxParseExceptions;
     }
-    this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
+    this.logParseExceptions = logParseExceptions == null
+                              ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
+                              : logParseExceptions;
+    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   @JsonProperty
@@ -291,6 +275,12 @@ public class HadoopTuningConfig implements TuningConfig
     return maxParseExceptions;
   }
 
+  @JsonProperty
+  public int getNumFilesPerMerge()
+  {
+    return numFilesPerMerge;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -315,7 +305,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        numFilesPerMerge
     );
   }
 
@@ -343,7 +334,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        numFilesPerMerge
     );
   }
 
@@ -371,7 +363,188 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        numFilesPerMerge
     );
+  }
+
+  public static class Builder
+  {
+    private String workingPath;
+    private String version;
+    private PartitionsSpec partitionsSpec;
+    private Map<Long, List<HadoopyShardSpec>> shardSpecs;
+    private IndexSpec indexSpec;
+    private Integer maxRowsInMemory;
+    private Long maxBytesInMemory;
+    private boolean leaveIntermediate;
+    private Boolean cleanupOnFailure;
+    private boolean overwriteFiles;
+    private boolean ignoreInvalidRows;
+    private Map<String, String> jobProperties;
+    private boolean combineText;
+    private Boolean useCombiner;
+    private Integer numBackgroundPersistThreads;
+    private boolean forceExtendableShardSpecs;
+    private boolean useExplicitVersion;
+    private List<String> allowedHadoopPrefix;
+    private Boolean logParseExceptions;
+    private Integer maxParseExceptions;
+    private Integer numFilesPerMerge;
+
+    public Builder setWorkingPath(String workingPath)
+    {
+      this.workingPath = workingPath;
+      return this;
+    }
+
+    public Builder setVersion(String version)
+    {
+      this.version = version;
+      return this;
+    }
+
+    public Builder setPartitionsSpec(PartitionsSpec partitionsSpec)
+    {
+      this.partitionsSpec = partitionsSpec;
+      return this;
+    }
+
+    public Builder setShardSpecs(Map<Long, List<HadoopyShardSpec>> shardSpecs)
+    {
+      this.shardSpecs = shardSpecs;
+      return this;
+    }
+
+    public Builder setIndexSpec(IndexSpec indexSpec)
+    {
+      this.indexSpec = indexSpec;
+      return this;
+    }
+
+    public Builder setMaxRowsInMemory(int maxRowsInMemory)
+    {
+      this.maxRowsInMemory = maxRowsInMemory;
+      return this;
+    }
+
+    public Builder setMaxBytesInMemory(long maxBytesInMemory)
+    {
+      this.maxBytesInMemory = maxBytesInMemory;
+      return this;
+    }
+
+    public Builder setleaveIntermediate(boolean leaveIntermediate)
+    {
+      this.leaveIntermediate = leaveIntermediate;
+      return this;
+    }
+
+    public Builder setCleanOnFailure(boolean cleanOnFailure)
+    {
+      this.cleanupOnFailure = cleanOnFailure;
+      return this;
+    }
+
+    public Builder setOverwriteFiles(boolean overwriteFiles)
+    {
+      this.overwriteFiles = overwriteFiles;
+      return this;
+    }
+
+    public Builder setIgnoreInvalidRows(boolean ignoreInvalidRows)
+    {
+      this.ignoreInvalidRows = ignoreInvalidRows;
+      return this;
+    }
+
+    public Builder setJobProperties(Map<String, String> jobProperties)
+    {
+      this.jobProperties = jobProperties;
+      return this;
+    }
+
+    public Builder setCombineText(boolean combineText)
+    {
+      this.combineText = combineText;
+      return this;
+    }
+
+    public Builder setUseCombiner(boolean useCombiner)
+    {
+      this.useCombiner = useCombiner;
+      return this;
+    }
+
+    public Builder setNumBackgroundPersistThreads(int numBackgroundPersistThreads)
+    {
+      this.numBackgroundPersistThreads = numBackgroundPersistThreads;
+      return this;
+    }
+
+    public Builder setForceExtendableShardSpecs(boolean forceExtendableShardSpecs)
+    {
+      this.forceExtendableShardSpecs = forceExtendableShardSpecs;
+      return this;
+    }
+
+    public Builder setUseExplicitVersion(boolean useExplicitVersion)
+    {
+      this.useExplicitVersion = useExplicitVersion;
+      return this;
+    }
+
+    public Builder setAllowedHadoopPrefix(List<String> allowedHadoopPrefix)
+    {
+      this.allowedHadoopPrefix = allowedHadoopPrefix;
+      return this;
+    }
+
+    public Builder setLogParseExceptions(boolean logParseExceptions)
+    {
+      this.logParseExceptions = logParseExceptions;
+      return this;
+    }
+
+    public Builder setMaxParseExceptions(int maxParseExceptions)
+    {
+      this.maxParseExceptions = maxParseExceptions;
+      return this;
+    }
+
+    public Builder setNumFilesPerMerge(int numFilesPerMerge)
+    {
+      this.numFilesPerMerge = numFilesPerMerge;
+      return this;
+    }
+
+    public HadoopTuningConfig build()
+    {
+      return new HadoopTuningConfig(
+          workingPath,
+          version,
+          partitionsSpec,
+          shardSpecs,
+          indexSpec,
+          maxRowsInMemory,
+          maxBytesInMemory,
+          leaveIntermediate,
+          cleanupOnFailure,
+          overwriteFiles,
+          ignoreInvalidRows,
+          jobProperties,
+          combineText,
+          useCombiner,
+          null,
+          true,
+          numBackgroundPersistThreads,
+          forceExtendableShardSpecs,
+          useExplicitVersion,
+          allowedHadoopPrefix,
+          logParseExceptions,
+          maxParseExceptions,
+          numFilesPerMerge
+      );
+    }
   }
 }

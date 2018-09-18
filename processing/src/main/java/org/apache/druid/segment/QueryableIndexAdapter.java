@@ -43,6 +43,8 @@ import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelecto
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -53,16 +55,16 @@ import java.util.Set;
 
 /**
  */
-public class QueryableIndexIndexableAdapter implements IndexableAdapter
+public class QueryableIndexAdapter implements IndexableAdapter
 {
-  private static final Logger log = new Logger(QueryableIndexIndexableAdapter.class);
+  private static final Logger log = new Logger(QueryableIndexAdapter.class);
 
   private final int numRows;
   private final QueryableIndex input;
   private final ImmutableList<String> availableDimensions;
   private final Metadata metadata;
 
-  public QueryableIndexIndexableAdapter(QueryableIndex input)
+  public QueryableIndexAdapter(QueryableIndex input)
   {
     this.input = input;
     numRows = input.getNumRows();
@@ -86,6 +88,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     this.availableDimensions = availableDimensions.build();
 
     this.metadata = input.getMetadata();
+  }
+
+  public File getBaseDir()
+  {
+    return input.getBaseDir();
   }
 
   @Override
@@ -176,6 +183,84 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     return new RowIteratorImpl();
   }
 
+  @Override
+  public String getMetricType(String metric)
+  {
+    final Column column = input.getColumn(metric);
+
+    final ValueType type = column.getCapabilities().getType();
+    switch (type) {
+      case FLOAT:
+        return "float";
+      case LONG:
+        return "long";
+      case DOUBLE:
+        return "double";
+      case COMPLEX: {
+        try (ComplexColumn complexColumn = column.getComplexColumn()) {
+          return complexColumn.getTypeName();
+        }
+      }
+      default:
+        throw new ISE("Unknown type[%s]", type);
+    }
+  }
+
+  @Override
+  public ColumnCapabilities getCapabilities(String column)
+  {
+    return input.getColumn(column).getCapabilities();
+  }
+
+  @Override
+  public BitmapValues getBitmapValues(String dimension, int dictId)
+  {
+    final Column column = input.getColumn(dimension);
+    if (column == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    final BitmapIndex bitmaps = column.getBitmapIndex();
+    if (bitmaps == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    if (dictId >= 0) {
+      return new ImmutableBitmapValues(bitmaps.getBitmap(dictId));
+    } else {
+      return BitmapValues.EMPTY;
+    }
+  }
+
+  @VisibleForTesting
+  BitmapValues getBitmapIndex(String dimension, String value)
+  {
+    final Column column = input.getColumn(dimension);
+
+    if (column == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    final BitmapIndex bitmaps = column.getBitmapIndex();
+    if (bitmaps == null) {
+      return BitmapValues.EMPTY;
+    }
+
+    return new ImmutableBitmapValues(bitmaps.getBitmap(bitmaps.getIndex(value)));
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return metadata;
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    input.close();
+  }
+
   /**
    * On {@link #moveToNext()} and {@link #mark()}, this class copies all column values into a set of {@link
    * SettableColumnValueSelector} instances. Alternative approach was to save only offset in column and use the same
@@ -258,7 +343,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           metricNames,
           offset::getOffset
       );
-
 
       markedDimensionValueSelectors = dimensionHandlers
           .stream()
@@ -365,77 +449,5 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       offset.setCurrentOffset(memoizedOffset);
       setRowPointerValues();
     }
-  }
-
-  @Override
-  public String getMetricType(String metric)
-  {
-    final Column column = input.getColumn(metric);
-
-    final ValueType type = column.getCapabilities().getType();
-    switch (type) {
-      case FLOAT:
-        return "float";
-      case LONG:
-        return "long";
-      case DOUBLE:
-        return "double";
-      case COMPLEX: {
-        try (ComplexColumn complexColumn = column.getComplexColumn()) {
-          return complexColumn.getTypeName();
-        }
-      }
-      default:
-        throw new ISE("Unknown type[%s]", type);
-    }
-  }
-
-  @Override
-  public ColumnCapabilities getCapabilities(String column)
-  {
-    return input.getColumn(column).getCapabilities();
-  }
-
-  @Override
-  public BitmapValues getBitmapValues(String dimension, int dictId)
-  {
-    final Column column = input.getColumn(dimension);
-    if (column == null) {
-      return BitmapValues.EMPTY;
-    }
-
-    final BitmapIndex bitmaps = column.getBitmapIndex();
-    if (bitmaps == null) {
-      return BitmapValues.EMPTY;
-    }
-
-    if (dictId >= 0) {
-      return new ImmutableBitmapValues(bitmaps.getBitmap(dictId));
-    } else {
-      return BitmapValues.EMPTY;
-    }
-  }
-
-  @VisibleForTesting
-  BitmapValues getBitmapIndex(String dimension, String value)
-  {
-    final Column column = input.getColumn(dimension);
-
-    if (column == null) {
-      return BitmapValues.EMPTY;
-    }
-
-    final BitmapIndex bitmaps = column.getBitmapIndex();
-    if (bitmaps == null) {
-      return BitmapValues.EMPTY;
-    }
-
-    return new ImmutableBitmapValues(bitmaps.getBitmap(bitmaps.getIndex(value)));
-  }
-
-  @Override
-  public Metadata getMetadata()
-  {
-    return metadata;
   }
 }

@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -191,30 +192,11 @@ public class DetermineHashedPartitionsJobTest
                 "static"
             ), null, tmpDir.getAbsolutePath()
         ),
-        new HadoopTuningConfig(
-            tmpDir.getAbsolutePath(),
-            null,
-            new HashedPartitionsSpec(targetPartitionSize, null, true, null, null),
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null
-        )
+        new Builder()
+            .setWorkingPath(tmpDir.getAbsolutePath())
+            .setPartitionsSpec(new HashedPartitionsSpec(targetPartitionSize, null, true, null, null))
+            .setCleanOnFailure(false)
+            .build()
     );
     this.indexerConfig = new HadoopDruidIndexerConfig(ingestionSpec);
   }

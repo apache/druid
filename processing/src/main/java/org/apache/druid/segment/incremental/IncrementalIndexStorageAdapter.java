@@ -32,6 +32,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionDesc;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
@@ -89,12 +90,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return Integer.MAX_VALUE;
     }
 
-    IncrementalIndex.DimensionDesc desc = index.getDimension(dimension);
+    DimensionDesc desc = index.getDimension(dimension);
     if (desc == null) {
       return 0;
     }
 
-    DimensionIndexer indexer = index.getDimension(dimension).getIndexer();
+    DimensionIndexer indexer = index.getDimension(dimension).makeOrGetIndexer();
     return indexer.getCardinality();
   }
 
@@ -120,12 +121,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMinValue(String column)
   {
-    IncrementalIndex.DimensionDesc desc = index.getDimension(column);
+    DimensionDesc desc = index.getDimension(column);
     if (desc == null) {
       return null;
     }
 
-    DimensionIndexer indexer = desc.getIndexer();
+    DimensionIndexer indexer = desc.makeOrGetIndexer();
     return indexer.getMinValue();
   }
 
@@ -133,12 +134,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMaxValue(String column)
   {
-    IncrementalIndex.DimensionDesc desc = index.getDimension(column);
+    DimensionDesc desc = index.getDimension(column);
     if (desc == null) {
       return null;
     }
 
-    DimensionIndexer indexer = desc.getIndexer();
+    DimensionIndexer indexer = desc.makeOrGetIndexer();
     return indexer.getMaxValue();
   }
 

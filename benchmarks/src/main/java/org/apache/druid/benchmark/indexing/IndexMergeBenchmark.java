@@ -38,6 +38,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
@@ -192,8 +193,9 @@ public class IndexMergeBenchmark
           schemaInfo.getAggsArray(),
           tmpFile,
           new IndexSpec(),
+          TuningConfig.DEFAULT_NUM_FILES_PER_MERGE,
           null
-      );
+      ).getFile();
 
       blackhole.consume(mergedFile);
     }

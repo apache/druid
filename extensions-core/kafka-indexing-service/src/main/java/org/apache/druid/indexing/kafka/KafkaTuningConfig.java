@@ -57,6 +57,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
+  private final int numFilesPerMerge;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -77,7 +78,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -113,12 +115,17 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       this.maxParseExceptions = 0;
       this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
     } else {
-      this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+      this.maxParseExceptions = maxParseExceptions == null
+                                ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+                                : maxParseExceptions;
       this.maxSavedParseExceptions = maxSavedParseExceptions == null
                                      ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
                                      : maxSavedParseExceptions;
     }
-    this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
+    this.logParseExceptions = logParseExceptions == null
+                              ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
+                              : logParseExceptions;
+    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
@@ -140,7 +147,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         config.intermediateHandoffPeriod,
         config.logParseExceptions,
         config.maxParseExceptions,
-        config.maxSavedParseExceptions
+        config.maxSavedParseExceptions,
+        config.numFilesPerMerge
     );
   }
 
@@ -240,6 +248,12 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return segmentWriteOutMediumFactory;
   }
 
+  @Override
+  public int getNumFilesPerMerge()
+  {
+    return numFilesPerMerge;
+  }
+
   @JsonProperty
   public Period getIntermediateHandoffPeriod()
   {
@@ -283,7 +297,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        numFilesPerMerge
     );
   }
 
@@ -312,7 +327,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod) &&
            logParseExceptions == that.logParseExceptions &&
            maxParseExceptions == that.maxParseExceptions &&
-           maxSavedParseExceptions == that.maxSavedParseExceptions;
+           maxSavedParseExceptions == that.maxSavedParseExceptions &&
+           numFilesPerMerge == that.numFilesPerMerge;
   }
 
   @Override
@@ -334,7 +350,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        numFilesPerMerge
     );
   }
 
@@ -358,6 +375,165 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            ", logParseExceptions=" + logParseExceptions +
            ", maxParseExceptions=" + maxParseExceptions +
            ", maxSavedParseExceptions=" + maxSavedParseExceptions +
+           ", numFilesPerMerge=" + numFilesPerMerge +
            '}';
+  }
+
+  public static class Builder
+  {
+    private Integer maxRowsInMemory;
+    private Long maxBytesInMemory;
+    private Integer maxRowsPerSegment;
+    private Long maxTotalRows;
+    private Period intermediatePersistPeriod;
+    private File basePersistDirectory;
+    private Integer maxPendingPersists;
+    private IndexSpec indexSpec;
+    private Boolean reportParseExceptions;
+    private Long handoffConditionTimeout;
+    private Boolean resetOffsetAutomatically;
+    private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+    private Period intermediateHandoffPeriod;
+    private Boolean logParseExceptions;
+    private Integer maxParseExceptions;
+    private Integer maxSavedParseExceptions;
+    private Integer numFilesPerMerge;
+
+    public Builder setMaxRowsInMemory(int maxRowsInMemory)
+    {
+      this.maxRowsInMemory = maxRowsInMemory;
+      return this;
+    }
+
+    public Builder setMaxBytesInMemory(long maxBytesInMemory)
+    {
+      this.maxBytesInMemory = maxBytesInMemory;
+      return this;
+    }
+
+    public Builder setMaxRowsPerSegment(@Nullable Integer maxRowsPerSegment)
+    {
+      if (maxRowsPerSegment != null) {
+        this.maxRowsPerSegment = maxRowsPerSegment;
+      }
+      return this;
+    }
+
+    public Builder setMaxTotalRows(@Nullable Long maxTotalRows)
+    {
+      if (maxTotalRows != null) {
+        this.maxTotalRows = maxTotalRows;
+      }
+      return this;
+    }
+
+    public Builder setIntermediatePersistePeriod(Period intermediatePersistePeriod)
+    {
+      this.intermediatePersistPeriod = intermediatePersistePeriod;
+      return this;
+    }
+
+    public Builder setBasePersistDirectory(File basePersistDirectory)
+    {
+      this.basePersistDirectory = basePersistDirectory;
+      return this;
+    }
+
+    @Deprecated
+    public Builder setMaxPendingPersists(int maxPendingPersists)
+    {
+      this.maxPendingPersists = maxPendingPersists;
+      return this;
+    }
+
+    public Builder setIndexSpec(IndexSpec indexSpec)
+    {
+      this.indexSpec = indexSpec;
+      return this;
+    }
+
+    public Builder setReportParseExceptions(boolean reportParseExceptions)
+    {
+      this.reportParseExceptions = reportParseExceptions;
+      return this;
+    }
+
+    public Builder setHandoffConditionTimeout(long handoffConditionTimeout)
+    {
+      this.handoffConditionTimeout = handoffConditionTimeout;
+      return this;
+    }
+
+    public Builder setResetOffsetAutomatically(boolean resetOffsetAutomatically)
+    {
+      this.resetOffsetAutomatically = resetOffsetAutomatically;
+      return this;
+    }
+
+    public Builder setSegmentWriteOutMediumFactory(SegmentWriteOutMediumFactory factory)
+    {
+      this.segmentWriteOutMediumFactory = factory;
+      return this;
+    }
+
+    public Builder setIntermediateHandoffPeriod(@Nullable Period intermediateHandoffPeriod)
+    {
+      if (intermediateHandoffPeriod != null) {
+        this.intermediateHandoffPeriod = intermediateHandoffPeriod;
+      }
+      return this;
+    }
+
+    public Builder setLogParseExceptions(boolean logParseExceptions)
+    {
+      this.logParseExceptions = logParseExceptions;
+      return this;
+    }
+
+    public Builder setMaxParseExceptions(@Nullable Integer maxParseExceptions)
+    {
+      if (maxParseExceptions != null) {
+        this.maxParseExceptions = maxParseExceptions;
+      }
+      return this;
+    }
+
+    public Builder setMaxSavedParseExceptions(@Nullable Integer maxSavedParseExceptions)
+    {
+      if (maxSavedParseExceptions != null) {
+        this.maxSavedParseExceptions = maxSavedParseExceptions;
+      }
+      return this;
+    }
+
+    public Builder setNumFilesPerMerge(int numFilesPerMerge)
+    {
+      this.numFilesPerMerge = numFilesPerMerge;
+      return this;
+    }
+
+    public KafkaTuningConfig build()
+    {
+      return new KafkaTuningConfig(
+          maxRowsInMemory,
+          maxBytesInMemory,
+          maxRowsPerSegment,
+          maxTotalRows,
+          intermediatePersistPeriod,
+          basePersistDirectory,
+          maxPendingPersists,
+          indexSpec,
+          true,
+          reportParseExceptions,
+          handoffConditionTimeout,
+          resetOffsetAutomatically,
+          segmentWriteOutMediumFactory,
+          intermediateHandoffPeriod,
+          logParseExceptions,
+          maxParseExceptions,
+          maxSavedParseExceptions,
+          numFilesPerMerge
+      );
+    }
   }
 }

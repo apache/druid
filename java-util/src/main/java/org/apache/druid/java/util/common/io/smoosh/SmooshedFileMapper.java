@@ -85,22 +85,25 @@ public class SmooshedFileMapper implements Closeable
         );
       }
 
-      return new SmooshedFileMapper(outFiles, internalFiles);
+      return new SmooshedFileMapper(baseDir, outFiles, internalFiles);
     }
     finally {
       Closeables.close(in, false);
     }
   }
 
+  private final File baseDir;
   private final List<File> outFiles;
   private final Map<String, Metadata> internalFiles;
   private final List<MappedByteBuffer> buffersList = Lists.newArrayList();
 
   private SmooshedFileMapper(
+      File baseDir,
       List<File> outFiles,
       Map<String, Metadata> internalFiles
   )
   {
+    this.baseDir = baseDir;
     this.outFiles = outFiles;
     this.internalFiles = internalFiles;
   }
@@ -135,6 +138,11 @@ public class SmooshedFileMapper implements Closeable
     ByteBuffer retVal = mappedBuffer.duplicate();
     retVal.position(metadata.getStartOffset()).limit(metadata.getEndOffset());
     return retVal.slice();
+  }
+
+  public File getBaseDir()
+  {
+    return baseDir;
   }
 
   @Override

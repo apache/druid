@@ -16,19 +16,38 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.druid.segment;
 
-package org.apache.druid.segment.selector.settable;
+import java.io.File;
+import java.util.List;
 
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
-
-public interface SettableColumnValueSelector<T> extends ColumnValueSelector<T>
+public class MergedIndexMetadata
 {
-  void setValueFrom(ColumnValueSelector selector);
+  private final File file;
+  private final List<String> dimensions;
+
+  public MergedIndexMetadata(File file, List<String> dimensions)
+  {
+    this.file = file;
+    this.dimensions = dimensions;
+  }
+
+  public File getFile()
+  {
+    return file;
+  }
+
+  public List<String> getDimensions()
+  {
+    return dimensions;
+  }
 
   @Override
-  default void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  public String toString()
   {
-    // SettableColumnValueSelectors have nothing to inspect
+    return "MergedIndexMetadata{" +
+           "file=" + file +
+           ", dimensions=" + dimensions +
+           '}';
   }
 }

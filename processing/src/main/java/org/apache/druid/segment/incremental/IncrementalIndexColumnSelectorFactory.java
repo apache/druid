@@ -23,6 +23,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDesc;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
@@ -76,7 +77,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       return new SingleScanTimeDimSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 
-    final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
+    final DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
     if (dimensionDesc == null) {
       // not a dimension, column may be a metric
       ColumnCapabilities capabilities = getColumnCapabilities(dimension);
@@ -93,7 +94,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       // if we can't wrap the base column, just return a column of all nulls
       return DimensionSelectorUtils.constantSelector(null, extractionFn);
     } else {
-      final DimensionIndexer indexer = dimensionDesc.getIndexer();
+      final DimensionIndexer indexer = dimensionDesc.makeOrGetIndexer();
       return indexer.makeDimensionSelector(dimensionSpec, rowHolder, dimensionDesc);
     }
   }
@@ -111,8 +112,8 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
 
     final Integer dimIndex = index.getDimensionIndex(columnName);
     if (dimIndex != null) {
-      final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
-      final DimensionIndexer indexer = dimensionDesc.getIndexer();
+      final DimensionDesc dimensionDesc = index.getDimension(columnName);
+      final DimensionIndexer indexer = dimensionDesc.makeOrGetIndexer();
       return indexer.makeColumnValueSelector(rowHolder, dimensionDesc);
     }
 

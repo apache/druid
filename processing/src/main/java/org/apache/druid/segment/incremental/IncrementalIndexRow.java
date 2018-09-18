@@ -22,6 +22,7 @@ package org.apache.druid.segment.incremental;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.DimensionDesc;
 import org.apache.druid.segment.DimensionIndexer;
 
 import javax.annotation.Nullable;
@@ -36,7 +37,7 @@ public final class IncrementalIndexRow
 
   final long timestamp;
   final Object[] dims;
-  private final List<IncrementalIndex.DimensionDesc> dimensionDescsList;
+  private final List<DimensionDesc> dimensionDescsList;
 
   /**
    * rowIndex is not checked in {@link #equals} and {@link #hashCode} on purpose. IncrementalIndexRow acts as a Map key
@@ -50,7 +51,7 @@ public final class IncrementalIndexRow
   IncrementalIndexRow(
       long timestamp,
       Object[] dims,
-      List<IncrementalIndex.DimensionDesc> dimensionDescsList
+      List<DimensionDesc> dimensionDescsList
   )
   {
     this(timestamp, dims, dimensionDescsList, EMPTY_ROW_INDEX);
@@ -59,7 +60,7 @@ public final class IncrementalIndexRow
   IncrementalIndexRow(
       long timestamp,
       Object[] dims,
-      List<IncrementalIndex.DimensionDesc> dimensionDescsList,
+      List<DimensionDesc> dimensionDescsList,
       int rowIndex
   )
   {
@@ -72,7 +73,7 @@ public final class IncrementalIndexRow
   private IncrementalIndexRow(
       long timestamp,
       Object[] dims,
-      List<IncrementalIndex.DimensionDesc> dimensionDescsList,
+      List<DimensionDesc> dimensionDescsList,
       long dimsKeySize
   )
   {
@@ -85,7 +86,7 @@ public final class IncrementalIndexRow
   static IncrementalIndexRow createTimeAndDimswithDimsKeySize(
       long timestamp,
       Object[] dims,
-      List<IncrementalIndex.DimensionDesc> dimensionDescsList,
+      List<DimensionDesc> dimensionDescsList,
       long dimsKeySize
   )
   {
@@ -170,7 +171,7 @@ public final class IncrementalIndexRow
       return false;
     }
     for (int i = 0; i < dims.length; i++) {
-      final DimensionIndexer indexer = dimensionDescsList.get(i).getIndexer();
+      final DimensionIndexer indexer = dimensionDescsList.get(i).makeOrGetIndexer();
       if (!indexer.checkUnsortedEncodedKeyComponentsEqual(dims[i], that.dims[i])) {
         return false;
       }
@@ -183,7 +184,7 @@ public final class IncrementalIndexRow
   {
     int hash = (int) timestamp;
     for (int i = 0; i < dims.length; i++) {
-      final DimensionIndexer indexer = dimensionDescsList.get(i).getIndexer();
+      final DimensionIndexer indexer = dimensionDescsList.get(i).makeOrGetIndexer();
       hash = 31 * hash + indexer.getUnsortedEncodedKeyComponentHashCode(dims[i]);
     }
     return hash;

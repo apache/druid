@@ -31,6 +31,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -94,6 +95,12 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
     this.fileMapper = fileMapper;
     this.metadata = metadata;
     this.dimensionHandlers = dimensionHandlers;
+  }
+
+  @Override
+  public File getBaseDir()
+  {
+    return fileMapper.getBaseDir();
   }
 
   @Override

@@ -21,6 +21,9 @@ package org.apache.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Preconditions;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -38,4 +41,15 @@ public interface TuningConfig
   // tracks active index and not the index being flushed to disk, to account for that
   // we halved default to 1/6(max jvm memory)
   long DEFAULT_MAX_BYTES_IN_MEMORY = Runtime.getRuntime().maxMemory() / 6;
+  int DEFAULT_NUM_FILES_PER_MERGE = 64;
+
+  static int validateAndGetNumFilesPerMerge(@Nullable Integer numFilesPerMerge)
+  {
+    if (numFilesPerMerge == null) {
+      return DEFAULT_NUM_FILES_PER_MERGE;
+    } else {
+      Preconditions.checkArgument(numFilesPerMerge > 1, "numFilesPerMerge should be larger than 1");
+      return numFilesPerMerge;
+    }
+  }
 }

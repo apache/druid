@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.MergedIndexMetadata;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -90,6 +91,7 @@ public class SameIntervalMergeTaskTest
         indexSpec,
         true,
         null,
+        null,
         null
     );
 
@@ -139,6 +141,20 @@ public class SameIntervalMergeTaskTest
     // ensure LockTryAcquireAction is submitted
     Assert.assertTrue(isReady);
     final List<DataSegment> segments = Lists.newArrayList();
+
+    final IndexMergerV9 indexMerger = EasyMock.createMock(IndexMergerV9.class);
+
+    EasyMock.expect(
+        indexMerger.mergeQueryableIndex(
+            EasyMock.anyObject(),
+            EasyMock.anyBoolean(),
+            EasyMock.anyObject(),
+            EasyMock.anyObject(),
+            EasyMock.anyObject(),
+            EasyMock.anyInt(),
+            EasyMock.anyObject())
+    ).andReturn(new MergedIndexMetadata(new File("test"), Collections.emptyList()));
+    EasyMock.replay(indexMerger);
 
     mergeTask.run(
         new TaskToolbox(
@@ -253,7 +269,7 @@ public class SameIntervalMergeTaskTest
             null,
             null,
             null,
-            EasyMock.createMock(IndexMergerV9.class),
+            indexMerger,
             null,
             null,
             null,

@@ -215,28 +215,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
             getObjectMapper()
         ),
         ioConfig,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        new ParallelIndexTuningConfig.Builder().setMaxNumSubTasks(2).build()
     );
 
     // set up test tools

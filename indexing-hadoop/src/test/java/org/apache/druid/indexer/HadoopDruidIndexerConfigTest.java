@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -78,30 +79,10 @@ public class HadoopDruidIndexerConfigTest
             jsonMapper
         ),
         new HadoopIOConfig(ImmutableMap.of("paths", "bar", "type", "static"), null, null),
-        new HadoopTuningConfig(
-            null,
-            null,
-            null,
-            ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(), specs),
-            null,
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null
-        )
+        new Builder()
+            .setShardSpecs(ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(), specs))
+            .setCleanOnFailure(false)
+            .build()
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");
@@ -145,40 +126,17 @@ public class HadoopDruidIndexerConfigTest
             jsonMapper
         ),
         new HadoopIOConfig(ImmutableMap.of("paths", "bar", "type", "static"), null, null),
-        new HadoopTuningConfig(
-            null,
-            null,
-            null,
-            ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(),
-                                                              Collections.singletonList(new HadoopyShardSpec(
-                                                                  NoneShardSpec.instance(),
-                                                                  1
-                                                              )),
-                                                              DateTimes.of("2010-01-01T02:00:00").getMillis(),
-                                                              Collections.singletonList(new HadoopyShardSpec(
-                                                                  NoneShardSpec.instance(),
-                                                                  2
-                                                              ))
-            ),
-            null,
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null
-        )
+        new Builder()
+            .setShardSpecs(
+                ImmutableMap.of(
+                    DateTimes.of("2010-01-01T01:00:00").getMillis(),
+                    Collections.singletonList(new HadoopyShardSpec(NoneShardSpec.instance(), 1)),
+                    DateTimes.of("2010-01-01T02:00:00").getMillis(),
+                    Collections.singletonList(new HadoopyShardSpec(NoneShardSpec.instance(), 2))
+                )
+            )
+            .setCleanOnFailure(false)
+            .build()
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");

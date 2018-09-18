@@ -191,32 +191,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskClient = createMock(KafkaIndexTaskClient.class);
     taskQueue = createMock(TaskQueue.class);
 
-    tuningConfig = new KafkaSupervisorTuningConfig(
-        1000,
-        null,
-        50000,
-        null,
-        new Period("P1Y"),
-        new File("/test"),
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        numThreads,
-        TEST_CHAT_THREADS,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-
+    tuningConfig = new KafkaSupervisorTuningConfig.Builder()
+        .setMaxRowsInMemory(1000)
+        .setMaxRowsPerSegment(50000)
+        .setIntermediatePersistePeriod(new Period("P1Y"))
+        .setBasePersistDirectory(new File("/test"))
+        .setWorkerThreads(numThreads)
+        .setChatThreads(TEST_CHAT_THREADS)
+        .setChatRetries(TEST_CHAT_RETRIES)
+        .setShutdownTimeout(TEST_SHUTDOWN_TIMEOUT)
+        .build();
     topic = getTopic();
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new ExceptionCapturingServiceEmitter();

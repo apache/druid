@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDesc;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.RowNumCounter;
@@ -70,13 +71,13 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
         .stream()
         .map(dim -> {
           ColumnValueSelector selectorWithUnsortedValues = columnSelectorFactory.makeColumnValueSelector(dim.getName());
-          return dim.getIndexer().convertUnsortedValuesToSorted(selectorWithUnsortedValues);
+          return dim.makeOrGetIndexer().convertUnsortedValuesToSorted(selectorWithUnsortedValues);
         })
         .toArray(ColumnValueSelector[]::new);
     List<DimensionHandler> dimensionHandlers = incrementalIndex
         .getDimensions()
         .stream()
-        .map(IncrementalIndex.DimensionDesc::getHandler)
+        .map(DimensionDesc::getHandler)
         .collect(Collectors.toList());
     ColumnValueSelector[] metricSelectors = incrementalIndex
         .getMetricNames()

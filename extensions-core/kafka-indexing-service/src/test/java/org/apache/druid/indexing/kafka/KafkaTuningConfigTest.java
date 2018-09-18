@@ -105,25 +105,17 @@ public class KafkaTuningConfigTest
   @Test
   public void testCopyOf()
   {
-    KafkaTuningConfig original = new KafkaTuningConfig(
-        1,
-        null,
-        2,
-        10L,
-        new Period("PT3S"),
-        new File("/tmp/xxx"),
-        4,
-        new IndexSpec(),
-        true,
-        true,
-        5L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    final KafkaTuningConfig original = new KafkaTuningConfig.Builder()
+        .setMaxRowsInMemory(1)
+        .setMaxRowsPerSegment(2)
+        .setMaxTotalRows(10L)
+        .setIntermediatePersistePeriod(new Period("PT3S"))
+        .setBasePersistDirectory(new File("/tmp/xxx"))
+        .setMaxPendingPersists(5)
+        .setIndexSpec(new IndexSpec())
+        .setReportParseExceptions(true)
+        .setHandoffConditionTimeout(5L)
+        .build();
     KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());

@@ -56,6 +56,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
+import org.apache.druid.indexing.common.task.IndexTuningConfig.Builder;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -65,17 +66,14 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
-import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
@@ -87,7 +85,6 @@ import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublis
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
@@ -99,7 +96,6 @@ import org.apache.druid.utils.CircularBuffer;
 import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -116,7 +112,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -1212,7 +1207,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig() : tuningConfig;
+      this.tuningConfig = tuningConfig == null ? new Builder().build() : tuningConfig;
     }
 
     @Override
@@ -1268,370 +1263,4 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  @JsonTypeName("index")
-  public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
-  {
-    private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
-    private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
-    private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
-    private static final boolean DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS = false;
-    private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
-    private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
-    private static final long DEFAULT_PUSH_TIMEOUT = 0;
-
-    static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
-
-    private final Integer targetPartitionSize;
-    private final int maxRowsInMemory;
-    private final long maxBytesInMemory;
-    private final Long maxTotalRows;
-    private final Integer numShards;
-    private final IndexSpec indexSpec;
-    private final File basePersistDirectory;
-    private final int maxPendingPersists;
-
-    /**
-     * This flag is to force to always use an extendableShardSpec (like {@link NumberedShardSpec} even if
-     * {@link #forceGuaranteedRollup} is set.
-     */
-    private final boolean forceExtendableShardSpecs;
-
-    /**
-     * This flag is to force _perfect rollup mode_. {@link IndexTask} will scan the whole input data twice to 1) figure
-     * out proper shard specs for each segment and 2) generate segments. Note that perfect rollup mode basically assumes
-     * that no more data will be appended in the future. As a result, in perfect rollup mode, {@link NoneShardSpec} and
-     * {@link HashBasedNumberedShardSpec} are used for a single shard and two or shards, respectively.
-     */
-    private final boolean forceGuaranteedRollup;
-    private final boolean reportParseExceptions;
-    private final long pushTimeout;
-    private final boolean logParseExceptions;
-    private final int maxParseExceptions;
-    private final int maxSavedParseExceptions;
-
-    @Nullable
-    private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
-
-    @JsonCreator
-    public IndexTuningConfig(
-        @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
-        @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-        @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-        @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
-        @JsonProperty("rowFlushBoundary") @Nullable Integer rowFlushBoundary_forBackCompatibility, // DEPRECATED
-        @JsonProperty("numShards") @Nullable Integer numShards,
-        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
-        @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
-        @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
-        @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
-        @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
-        @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
-        @JsonProperty("publishTimeout") @Nullable Long publishTimeout, // deprecated
-        @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
-        @JsonProperty("segmentWriteOutMediumFactory") @Nullable
-            SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
-        @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-        @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
-    )
-    {
-      this(
-          targetPartitionSize,
-          maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
-          maxBytesInMemory != null ? maxBytesInMemory : 0,
-          maxTotalRows,
-          numShards,
-          indexSpec,
-          maxPendingPersists,
-          forceExtendableShardSpecs,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout != null ? pushTimeout : publishTimeout,
-          null,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions
-      );
-    }
-
-    private IndexTuningConfig()
-    {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
-    }
-
-    private IndexTuningConfig(
-        @Nullable Integer targetPartitionSize,
-        @Nullable Integer maxRowsInMemory,
-        @Nullable Long maxBytesInMemory,
-        @Nullable Long maxTotalRows,
-        @Nullable Integer numShards,
-        @Nullable IndexSpec indexSpec,
-        @Nullable Integer maxPendingPersists,
-        @Nullable Boolean forceExtendableShardSpecs,
-        @Nullable Boolean forceGuaranteedRollup,
-        @Nullable Boolean reportParseExceptions,
-        @Nullable Long pushTimeout,
-        @Nullable File basePersistDirectory,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        @Nullable Boolean logParseExceptions,
-        @Nullable Integer maxParseExceptions,
-        @Nullable Integer maxSavedParseExceptions
-    )
-    {
-      Preconditions.checkArgument(
-          targetPartitionSize == null || targetPartitionSize.equals(-1) || numShards == null || numShards.equals(-1),
-          "targetPartitionSize and numShards cannot both be set"
-      );
-
-      this.targetPartitionSize = initializeTargetPartitionSize(numShards, targetPartitionSize);
-      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-      // initializing this to 0, it will be lazily initialized to a value
-      // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
-      this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-      this.maxTotalRows = initializeMaxTotalRows(numShards, maxTotalRows);
-      this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
-      this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
-      this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-      this.forceExtendableShardSpecs = forceExtendableShardSpecs == null
-                                       ? DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS
-                                       : forceExtendableShardSpecs;
-      this.forceGuaranteedRollup = forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup;
-      this.reportParseExceptions = reportParseExceptions == null
-                                   ? DEFAULT_REPORT_PARSE_EXCEPTIONS
-                                   : reportParseExceptions;
-      this.pushTimeout = pushTimeout == null ? DEFAULT_PUSH_TIMEOUT : pushTimeout;
-      this.basePersistDirectory = basePersistDirectory;
-
-      this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-
-      if (this.reportParseExceptions) {
-        this.maxParseExceptions = 0;
-        this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
-      } else {
-        this.maxParseExceptions = maxParseExceptions == null
-                                  ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
-                                  : maxParseExceptions;
-        this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                       ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
-                                       : maxSavedParseExceptions;
-      }
-      this.logParseExceptions = logParseExceptions == null
-                                ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
-                                : logParseExceptions;
-    }
-
-    private static Integer initializeTargetPartitionSize(Integer numShards, Integer targetPartitionSize)
-    {
-      if (numShards == null || numShards == -1) {
-        return targetPartitionSize == null || targetPartitionSize.equals(-1)
-               ? DEFAULT_TARGET_PARTITION_SIZE
-               : targetPartitionSize;
-      } else {
-        return null;
-      }
-    }
-
-    private static Long initializeMaxTotalRows(Integer numShards, Long maxTotalRows)
-    {
-      if (numShards == null || numShards == -1) {
-        return maxTotalRows == null ? DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
-      } else {
-        return null;
-      }
-    }
-
-    public IndexTuningConfig withBasePersistDirectory(File dir)
-    {
-      return new IndexTuningConfig(
-          targetPartitionSize,
-          maxRowsInMemory,
-          maxBytesInMemory,
-          maxTotalRows,
-          numShards,
-          indexSpec,
-          maxPendingPersists,
-          forceExtendableShardSpecs,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout,
-          dir,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions
-      );
-    }
-
-    @JsonProperty
-    public Integer getTargetPartitionSize()
-    {
-      return targetPartitionSize;
-    }
-
-    @JsonProperty
-    @Override
-    public int getMaxRowsInMemory()
-    {
-      return maxRowsInMemory;
-    }
-
-    @JsonProperty
-    @Override
-    public long getMaxBytesInMemory()
-    {
-      return maxBytesInMemory;
-    }
-
-    @JsonProperty
-    @Override
-    @Nullable
-    public Long getMaxTotalRows()
-    {
-      return maxTotalRows;
-    }
-
-    @JsonProperty
-    public Integer getNumShards()
-    {
-      return numShards;
-    }
-
-    @JsonProperty
-    @Override
-    public IndexSpec getIndexSpec()
-    {
-      return indexSpec;
-    }
-
-    @Override
-    public File getBasePersistDirectory()
-    {
-      return basePersistDirectory;
-    }
-
-    @JsonProperty
-    @Override
-    public int getMaxPendingPersists()
-    {
-      return maxPendingPersists;
-    }
-
-    /**
-     * Always returns true, doesn't affect the version being built.
-     */
-    @Deprecated
-    @JsonProperty
-    public boolean isBuildV9Directly()
-    {
-      return true;
-    }
-
-    @JsonProperty
-    public boolean isForceExtendableShardSpecs()
-    {
-      return forceExtendableShardSpecs;
-    }
-
-    @JsonProperty
-    public boolean isForceGuaranteedRollup()
-    {
-      return forceGuaranteedRollup;
-    }
-
-    @JsonProperty
-    @Override
-    public boolean isReportParseExceptions()
-    {
-      return reportParseExceptions;
-    }
-
-    @JsonProperty
-    public long getPushTimeout()
-    {
-      return pushTimeout;
-    }
-
-    @JsonProperty
-    public boolean isLogParseExceptions()
-    {
-      return logParseExceptions;
-    }
-
-    @JsonProperty
-    public int getMaxParseExceptions()
-    {
-      return maxParseExceptions;
-    }
-
-    @JsonProperty
-    public int getMaxSavedParseExceptions()
-    {
-      return maxSavedParseExceptions;
-    }
-
-    @Override
-    public Period getIntermediatePersistPeriod()
-    {
-      return new Period(Integer.MAX_VALUE); // intermediate persist doesn't make much sense for batch jobs
-    }
-
-    @Nullable
-    @Override
-    @JsonProperty
-    public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
-    {
-      return segmentWriteOutMediumFactory;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      IndexTuningConfig that = (IndexTuningConfig) o;
-      return maxRowsInMemory == that.maxRowsInMemory &&
-             Objects.equals(maxTotalRows, that.maxTotalRows) &&
-             maxPendingPersists == that.maxPendingPersists &&
-             forceExtendableShardSpecs == that.forceExtendableShardSpecs &&
-             forceGuaranteedRollup == that.forceGuaranteedRollup &&
-             reportParseExceptions == that.reportParseExceptions &&
-             pushTimeout == that.pushTimeout &&
-             Objects.equals(targetPartitionSize, that.targetPartitionSize) &&
-             Objects.equals(numShards, that.numShards) &&
-             Objects.equals(indexSpec, that.indexSpec) &&
-             Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
-             Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-             logParseExceptions == that.logParseExceptions &&
-             maxParseExceptions == that.maxParseExceptions &&
-             maxSavedParseExceptions == that.maxSavedParseExceptions;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(
-          targetPartitionSize,
-          maxRowsInMemory,
-          maxTotalRows,
-          numShards,
-          indexSpec,
-          basePersistDirectory,
-          maxPendingPersists,
-          forceExtendableShardSpecs,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions
-      );
-    }
-  }
 }

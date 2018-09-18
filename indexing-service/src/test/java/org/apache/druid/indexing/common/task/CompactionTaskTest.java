@@ -52,7 +52,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
-import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.IndexTuningConfig.Builder;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -264,31 +264,22 @@ public class CompactionTaskTest
 
   private static IndexTuningConfig createTuningConfig()
   {
-    return new IndexTuningConfig(
-        5000000,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        new IndexSpec(
-            new RoaringBitmapSerdeFactory(true),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
-        5000,
-        true,
-        false,
-        true,
-        false,
-        null,
-        100L,
-        null,
-        null,
-        null,
-        null
-    );
+    return new Builder()
+        .setTargetPartitionSize(5000000)
+        .setMaxRowsInMemory(500000)
+        .setMaxBytesInMemory(1000000L)
+        .setIndexSpec(
+            new IndexSpec(
+                new RoaringBitmapSerdeFactory(true),
+                CompressionStrategy.LZ4,
+                CompressionStrategy.LZF,
+                LongEncodingStrategy.LONGS
+            )
+        )
+        .setMaxPendingPersists(5000)
+        .setForceGuaranteedRollup(true)
+        .setPushTimeout(100L)
+        .build();
   }
 
   @Rule

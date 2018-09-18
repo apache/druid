@@ -22,13 +22,14 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.IndexTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Objects;
 
 @JsonTypeName("index_parallel")
@@ -70,6 +71,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -90,12 +92,13 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("maxNumSubTasks") @Nullable Integer maxNumSubTasks,
       @JsonProperty("maxRetry") @Nullable Integer maxRetry,
-      @JsonProperty("taskStatusCheckPeriodMs") @Nullable Integer taskStatusCheckPeriodMs,
+      @JsonProperty("taskStatusCheckPeriodMs") @Nullable Long taskStatusCheckPeriodMs,
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
       @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
   )
   {
     super(
@@ -116,7 +119,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        numFilesPerMerge
     );
 
     this.maxNumSubTasks = maxNumSubTasks == null ? DEFAULT_MAX_NUM_BATCH_TASKS : maxNumSubTasks;
@@ -191,5 +195,191 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         chatHandlerTimeout,
         chatHandlerNumRetries
     );
+  }
+
+  public static class Builder
+  {
+    private Integer targetPartitionSize;
+    private Integer maxRowsInMemory;
+    private Long maxBytesInMemory;
+    private Long maxTotalRows;
+    private Integer numShards;
+    private IndexSpec indexSpec;
+    private File basePersistDirectory;
+    private Integer maxPendingPersists;
+    private Boolean forceExtendableShardSpecs;
+    private Boolean forceGuaranteedRollup;
+    private Boolean reportParseExceptions;
+    private Long pushTimeout;
+    private Boolean logParseExceptions;
+    private Integer maxParseExceptions;
+    private Integer maxSavedParseExceptions;
+    private Integer numFilesPerMerge;
+    private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+    private Integer maxNumSubTasks;
+    private Integer maxRetry;
+    private Long taskStatusCheckPeriodMs;
+    private Duration chatHandlerTimeout;
+    private Integer chatHandlerNumRetries;
+
+    public Builder setTargetPartitionSize(int targetPartitionSize)
+    {
+      this.targetPartitionSize = targetPartitionSize;
+      return this;
+    }
+
+    public Builder setMaxRowsInMemory(int maxRowsInMemory)
+    {
+      this.maxRowsInMemory = maxRowsInMemory;
+      return this;
+    }
+
+    public Builder setMaxBytesInMemory(long maxBytesInMemory)
+    {
+      this.maxBytesInMemory = maxBytesInMemory;
+      return this;
+    }
+
+    public Builder setMaxTotalRows(long maxTotalRows)
+    {
+      this.maxTotalRows = maxTotalRows;
+      return this;
+    }
+
+    public Builder setNumShards(int numShards)
+    {
+      this.numShards = numShards;
+      return this;
+    }
+
+    public Builder setIndexSpec(IndexSpec indexSpec)
+    {
+      this.indexSpec = indexSpec;
+      return this;
+    }
+
+    public Builder setBasePersistDirectory(File basePersistDirectory)
+    {
+      this.basePersistDirectory = basePersistDirectory;
+      return this;
+    }
+
+    public Builder setMaxPendingPersists(int maxPendingPersists)
+    {
+      this.maxPendingPersists = maxPendingPersists;
+      return this;
+    }
+
+    public Builder setForceExtendableShardSpecs(boolean forceExtendableShardSpecs)
+    {
+      this.forceExtendableShardSpecs = forceExtendableShardSpecs;
+      return this;
+    }
+
+    public Builder setForceGuaranteedRollup(boolean forceGuaranteedRollup)
+    {
+      this.forceGuaranteedRollup = forceGuaranteedRollup;
+      return this;
+    }
+
+    public Builder setReportParseExceptions(boolean reportParseExceptions)
+    {
+      this.reportParseExceptions = reportParseExceptions;
+      return this;
+    }
+
+    public Builder setPushTimeout(long pushTimeout)
+    {
+      this.pushTimeout = pushTimeout;
+      return this;
+    }
+
+    public Builder setLogParseExceptions(boolean logParseExceptions)
+    {
+      this.logParseExceptions = logParseExceptions;
+      return this;
+    }
+
+    public Builder setMaxParseExceptions(int maxParseExceptions)
+    {
+      this.maxParseExceptions = maxParseExceptions;
+      return this;
+    }
+
+    public Builder setMaxSavedParseExceptions(int maxSavedParseExceptions)
+    {
+      this.maxSavedParseExceptions = maxSavedParseExceptions;
+      return this;
+    }
+
+    public Builder setNumFilesPerMerge(int numFilesPerMerge)
+    {
+      this.numFilesPerMerge = numFilesPerMerge;
+      return this;
+    }
+
+    public Builder setSegmentWriteOutMediumFactory(SegmentWriteOutMediumFactory factory)
+    {
+      this.segmentWriteOutMediumFactory = factory;
+      return this;
+    }
+
+    public Builder setMaxNumSubTasks(int maxNumSubTasks)
+    {
+      this.maxNumSubTasks = maxNumSubTasks;
+      return this;
+    }
+
+    public Builder setMaxRetry(int maxRetry)
+    {
+      this.maxRetry = maxRetry;
+      return this;
+    }
+
+    public Builder setTaskStatusCheckPeriodMs(long taskStatusCheckPeriodMs)
+    {
+      this.taskStatusCheckPeriodMs = taskStatusCheckPeriodMs;
+      return this;
+    }
+
+    public Builder setChatHandlerTimeout(Duration chatHandlerTimeout)
+    {
+      this.chatHandlerTimeout = chatHandlerTimeout;
+      return this;
+    }
+
+    public Builder setChatHandlerNumretries(int chatHandlerNumRetries)
+    {
+      this.chatHandlerNumRetries = chatHandlerNumRetries;
+      return this;
+    }
+
+    public ParallelIndexTuningConfig build()
+    {
+      return new ParallelIndexTuningConfig(
+          targetPartitionSize,
+          maxRowsInMemory,
+          maxBytesInMemory,
+          maxTotalRows,
+          numShards,
+          indexSpec,
+          maxPendingPersists,
+          forceExtendableShardSpecs,
+          forceGuaranteedRollup,
+          null,
+          pushTimeout,
+          segmentWriteOutMediumFactory,
+          maxNumSubTasks,
+          maxRetry,
+          taskStatusCheckPeriodMs,
+          chatHandlerTimeout,
+          chatHandlerNumRetries,
+          logParseExceptions,
+          maxParseExceptions,
+          maxSavedParseExceptions,
+          numFilesPerMerge
+      );
+    }
+
   }
 }
