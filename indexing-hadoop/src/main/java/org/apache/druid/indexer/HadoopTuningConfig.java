@@ -226,7 +226,7 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public boolean isIgnoreInvalidRows()
+  public Boolean isIgnoreInvalidRows()
   {
     return ignoreInvalidRows;
   }
