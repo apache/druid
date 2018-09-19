@@ -813,12 +813,9 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
 
   private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
   {
-    final List<ListenableFuture<Boolean>> futures = new ArrayList<>();
+    final List<ListenableFuture<?>> futures = new ArrayList<>();
     for (TaskGroup taskGroup : taskGroupsToVerify) {
-      futures.add(workerExec.submit(() -> {
-        verifyAndMergeCheckpoints(taskGroup);
-        return true;
-      }));
+      futures.add(workerExec.submit(() -> verifyAndMergeCheckpoints(taskGroup)));
     }
     try {
       Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
@@ -859,7 +856,8 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
         final String taskId = taskIds.get(i);
         if (checkpoints == null) {
           try {
-            futures.get(i).get(1, TimeUnit.NANOSECONDS);
+            // catch the exception in failed futures
+            futures.get(i).get();
           }
           catch (Exception e) {
             log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
