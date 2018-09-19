@@ -1,0 +1,13 @@
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = /tls/cert_db2.txt
+x509_extensions	= usr_cert
+name_opt = ca_default
+cert_opt = ca_default
+default_days = 365
+default_crl_days= 30
+default_md = default
+preserve = no
+policy = policy_match
