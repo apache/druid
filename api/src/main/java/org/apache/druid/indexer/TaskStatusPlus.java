@@ -34,6 +34,8 @@ public class TaskStatusPlus
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
   private final TaskState state;
+  @Deprecated
+  private final TaskState status;
   private final RunnerTaskState runnerTaskState;
   private final Long duration;
   private final TaskLocation location;
@@ -49,7 +51,7 @@ public class TaskStatusPlus
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
       @JsonProperty("statusCode") @Nullable TaskState state,
-      @Deprecated @JsonProperty("status") @Nullable TaskState status,
+      @Deprecated @JsonProperty("status") @Nullable TaskState status,  // present for backwards compatibility
       @JsonProperty("runnerStatusCode") @Nullable RunnerTaskState runnerTaskState,
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
@@ -65,6 +67,7 @@ public class TaskStatusPlus
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
     this.state = state;
+    this.status = status;
     this.runnerTaskState = runnerTaskState;
     this.duration = duration;
     this.location = Preconditions.checkNotNull(location, "location");
@@ -109,7 +112,7 @@ public class TaskStatusPlus
   @JsonProperty("status")
   public TaskState getStatus()
   {
-    return state;
+    return status;
   }
 
   @Nullable
