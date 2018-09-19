@@ -75,7 +75,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
     try {
       final String taskID = indexer.submitTask(indexerSpec);
       LOG.info("TaskID for loading index task %s", taskID);
-      indexer.waitUntilTaskCompletes(taskID, 60000, 20);
+      indexer.waitUntilTaskCompletes(taskID, 10000, 120);
       RetryUtil.retryUntil(
           new Callable<Boolean>()
           {

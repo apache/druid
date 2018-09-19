@@ -43,7 +43,7 @@ public class OverlordProxyServletTest
 
     EasyMock.replay(druidLeaderClient, request);
 
-    URI uri = URI.create(new OverlordProxyServlet(druidLeaderClient).rewriteTarget(request));
+    URI uri = URI.create(new OverlordProxyServlet(druidLeaderClient, null, null).rewriteTarget(request));
     Assert.assertEquals("https://overlord:port/druid/over%3Alord/worker?param1=test&param2=test2", uri.toString());
   }
 

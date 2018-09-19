@@ -22,12 +22,17 @@ package org.apache.druid.server.http;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.security.AuthConfig;
+import com.google.inject.Provider;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.proxy.ProxyServlet;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -37,13 +42,19 @@ import javax.servlet.http.HttpServletResponse;
 public class OverlordProxyServlet extends ProxyServlet
 {
   private final DruidLeaderClient druidLeaderClient;
+  private final Provider<HttpClient> httpClientProvider;
+  private final DruidHttpClientConfig httpClientConfig;
 
   @Inject
   OverlordProxyServlet(
-      @IndexingService DruidLeaderClient druidLeaderClient
+      @IndexingService DruidLeaderClient druidLeaderClient,
+      @Global Provider<HttpClient> httpClientProvider,
+      @Global DruidHttpClientConfig httpClientConfig
   )
   {
     this.druidLeaderClient = druidLeaderClient;
+    this.httpClientProvider = httpClientProvider;
+    this.httpClientConfig = httpClientConfig;
   }
 
   @Override
@@ -60,6 +71,22 @@ public class OverlordProxyServlet extends ProxyServlet
         request.getQueryString()
     );
   }
+
+  @Override
+  protected HttpClient newHttpClient()
+  {
+    return httpClientProvider.get();
+  }
+
+  @Override
+  protected HttpClient createHttpClient() throws ServletException
+  {
+    HttpClient client = super.createHttpClient();
+    // override timeout set in ProxyServlet.createHttpClient
+    setTimeout(httpClientConfig.getReadTimeout().getMillis());
+    return client;
+  }
+
 
   @Override
   protected void sendProxyRequest(

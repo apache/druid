@@ -21,7 +21,6 @@ package org.apache.druid.query.search;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
@@ -64,6 +63,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -135,7 +135,7 @@ public class SearchQueryRunnerTest
                                     .query("a")
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 279));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 93));
@@ -178,7 +178,7 @@ public class SearchQueryRunnerTest
         }
     );
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 91));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 273));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 91));
@@ -207,7 +207,7 @@ public class SearchQueryRunnerTest
                                     .query("e")
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementDimension, "preferred", 1209));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "e", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "preferred", 1209));
@@ -232,7 +232,7 @@ public class SearchQueryRunnerTest
                                     .query("e")
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "e", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementDimension, "preferred", 1209));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "preferred", 1209));
@@ -250,7 +250,7 @@ public class SearchQueryRunnerTest
                                     .query(new FragmentSearchQuerySpec(Arrays.asList("auto", "ve")))
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
 
     checkSearchQuery(searchQuery, expectedHits);
@@ -259,7 +259,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithDimensionQuality()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 279));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 93));
@@ -281,7 +281,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithDimensionProvider()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
 
     checkSearchQuery(
@@ -299,7 +299,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithDimensionsQualityAndProvider()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 279));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 93));
@@ -327,7 +327,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithDimensionsPlacementAndProvider()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
 
     checkSearchQuery(
@@ -352,7 +352,7 @@ public class SearchQueryRunnerTest
   public void testSearchWithExtractionFilter1()
   {
     final String automotiveSnowman = "automotive☃";
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, automotiveSnowman, 93));
 
     final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
@@ -391,7 +391,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithSingleFilter1()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 93));
 
     checkSearchQuery(
@@ -415,7 +415,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithSingleFilter2()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
 
     checkSearchQuery(
@@ -434,7 +434,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchMultiAndFilter()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
 
     DimFilter filter = new AndDimFilter(
@@ -458,7 +458,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithMultiOrFilter()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
 
     DimFilter filter = new OrDimFilter(
@@ -482,7 +482,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithEmptyResults()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -498,7 +498,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchWithFilterEmptyResults()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
 
     DimFilter filter = new AndDimFilter(
         new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
@@ -521,7 +521,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchNonExistingDimension()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -538,7 +538,7 @@ public class SearchQueryRunnerTest
   @Test
   public void testSearchAll()
   {
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "spot", 837));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "upfront", 186));
@@ -575,7 +575,7 @@ public class SearchQueryRunnerTest
                                     .sortSpec(new SearchSortSpec(StringComparators.NUMERIC))
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "a", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "entertainment", 93));
@@ -609,7 +609,7 @@ public class SearchQueryRunnerTest
                                     ))
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit("__time2", "Friday", 169));
 
     checkSearchQuery(searchQuery, expectedHits);
@@ -631,7 +631,7 @@ public class SearchQueryRunnerTest
                                     .query("1297123200000")
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(Column.TIME_COLUMN_NAME, "1297123200000", 13));
     checkSearchQuery(searchQuery, expectedHits);
   }
@@ -655,7 +655,7 @@ public class SearchQueryRunnerTest
                                     .query("1297123200000")
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(Column.TIME_COLUMN_NAME, "super-1297123200000", 13));
     checkSearchQuery(searchQuery, expectedHits);
   }
@@ -676,7 +676,7 @@ public class SearchQueryRunnerTest
                                     .query("100.7")
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.706057", 1));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "100.775597", 1));
     checkSearchQuery(searchQuery, expectedHits);
@@ -701,7 +701,7 @@ public class SearchQueryRunnerTest
                                     .query("100.7")
                                     .build();
 
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.706057", 1));
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.indexMetric, "super-100.775597", 1));
     checkSearchQuery(searchQuery, expectedHits);
@@ -751,7 +751,7 @@ public class SearchQueryRunnerTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     QueryRunner runner = factory.createRunner(new QueryableIndexSegment("asdf", TestIndex.persistRealtimeAndLoadMMapped(index)));
-    List<SearchHit> expectedHits = Lists.newLinkedList();
+    List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit("table", "table", 1));
     expectedHits.add(new SearchHit("table", NullHandling.defaultStringValue(), 1));
     checkSearchQuery(searchQuery, runner, expectedHits);
@@ -769,7 +769,7 @@ public class SearchQueryRunnerTest
                                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                                     .build();
 
-    List<SearchHit> noHit = Lists.newLinkedList();
+    List<SearchHit> noHit = new ArrayList<>();
     checkSearchQuery(searchQuery, noHit);
   }
 
@@ -782,7 +782,7 @@ public class SearchQueryRunnerTest
   private void checkSearchQuery(Query searchQuery, QueryRunner runner, List<SearchHit> expectedResults)
   {
     Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
-    List<SearchHit> copy = Lists.newLinkedList(expectedResults);
+    List<SearchHit> copy = new ArrayList<>(expectedResults);
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());
       Assert.assertTrue(result.getValue() instanceof Iterable);
