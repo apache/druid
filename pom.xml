@@ -1107,6 +1107,10 @@
                         <exclude>**/derby.log</exclude>
                         <exclude>**/docker/**</exclude>
                         <exclude>**/client_tls/**</exclude>
+                        <!--IDE MODULE FILES-->
+                        <exclude>**/*.iml</exclude>
+                        <!--CRASH LOGS-->
+                        <exclude>**/hs_err_pid*.log</exclude>
                     </excludes>
                 </configuration>
             </plugin>
