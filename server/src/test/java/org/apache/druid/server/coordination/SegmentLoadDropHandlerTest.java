@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.Intervals;
@@ -274,7 +273,7 @@ public class SegmentLoadDropHandlerTest
   @Test
   public void testLoadCache() throws Exception
   {
-    List<DataSegment> segments = Lists.newLinkedList();
+    List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < COUNT; ++i) {
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
@@ -406,7 +405,7 @@ public class SegmentLoadDropHandlerTest
         announcer, EasyMock.createNiceMock(DataSegmentServerAnnouncer.class), segmentManager
     );
 
-    List<DataSegment> segments = Lists.newLinkedList();
+    List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < COUNT; ++i) {
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));

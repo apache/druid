@@ -36,7 +36,7 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
   }
 
   @Override
-  public ClientResponse<StatusResponseHolder> handleResponse(HttpResponse response)
+  public ClientResponse<StatusResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     return ClientResponse.unfinished(
         new StatusResponseHolder(
@@ -49,7 +49,8 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
   @Override
   public ClientResponse<StatusResponseHolder> handleChunk(
       ClientResponse<StatusResponseHolder> response,
-      HttpChunk chunk
+      HttpChunk chunk,
+      long chunkNum
   )
   {
     final StringBuilder builder = response.getObj().getBuilder();

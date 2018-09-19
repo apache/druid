@@ -42,6 +42,7 @@ public class KafkaSupervisorReportPayload
   private final Map<Integer, Long> minimumLag;
   private final Long aggregateLag;
   private final DateTime offsetsLastUpdated;
+  private final boolean suspended;
 
   public KafkaSupervisorReportPayload(
       String dataSource,
@@ -52,7 +53,8 @@ public class KafkaSupervisorReportPayload
       @Nullable Map<Integer, Long> latestOffsets,
       @Nullable Map<Integer, Long> minimumLag,
       @Nullable Long aggregateLag,
-      @Nullable DateTime offsetsLastUpdated
+      @Nullable DateTime offsetsLastUpdated,
+      boolean suspended
   )
   {
     this.dataSource = dataSource;
@@ -66,6 +68,7 @@ public class KafkaSupervisorReportPayload
     this.minimumLag = minimumLag;
     this.aggregateLag = aggregateLag;
     this.offsetsLastUpdated = offsetsLastUpdated;
+    this.suspended = suspended;
   }
 
   public void addTask(TaskReportData data)
@@ -148,6 +151,12 @@ public class KafkaSupervisorReportPayload
     return offsetsLastUpdated;
   }
 
+  @JsonProperty
+  public boolean getSuspended()
+  {
+    return suspended;
+  }
+
   @Override
   public String toString()
   {
@@ -163,6 +172,7 @@ public class KafkaSupervisorReportPayload
            (minimumLag != null ? ", minimumLag=" + minimumLag : "") +
            (aggregateLag != null ? ", aggregateLag=" + aggregateLag : "") +
            (offsetsLastUpdated != null ? ", offsetsLastUpdated=" + offsetsLastUpdated : "") +
+           ", suspended=" + suspended +
            '}';
   }
 }

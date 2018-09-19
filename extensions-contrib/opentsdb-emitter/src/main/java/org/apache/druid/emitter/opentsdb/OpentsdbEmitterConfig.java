@@ -27,6 +27,7 @@ public class OpentsdbEmitterConfig
 {
   private static final int DEFAULT_FLUSH_THRESHOLD = 100;
   private static final int DEFAULT_MAX_QUEUE_SIZE = 1000;
+  private static final long DEFAULT_CONSUME_DELAY_MILLIS = 10000;
   private static final int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 2000;
   private static final int DEFAULT_READ_TIMEOUT_MILLIS = 2000;
 
@@ -49,6 +50,9 @@ public class OpentsdbEmitterConfig
   private final int maxQueueSize;
 
   @JsonProperty
+  private final long consumeDelay;
+
+  @JsonProperty
   private final String metricMapPath;
 
   @JsonCreator
@@ -59,6 +63,7 @@ public class OpentsdbEmitterConfig
       @JsonProperty("readTimeout") Integer readTimeout,
       @JsonProperty("flushThreshold") Integer flushThreshold,
       @JsonProperty("maxQueueSize") Integer maxQueueSize,
+      @JsonProperty("consumeDelay") Long consumeDelay,
       @JsonProperty("metricMapPath") String metricMapPath
   )
   {
@@ -71,6 +76,7 @@ public class OpentsdbEmitterConfig
         (readTimeout == null || readTimeout < 0) ? DEFAULT_READ_TIMEOUT_MILLIS : readTimeout;
     this.flushThreshold = (flushThreshold == null || flushThreshold < 0) ? DEFAULT_FLUSH_THRESHOLD : flushThreshold;
     this.maxQueueSize = (maxQueueSize == null || maxQueueSize < 0) ? DEFAULT_MAX_QUEUE_SIZE : maxQueueSize;
+    this.consumeDelay = (consumeDelay == null || consumeDelay < 0) ? DEFAULT_CONSUME_DELAY_MILLIS : consumeDelay;
     this.metricMapPath = metricMapPath;
   }
 
@@ -104,6 +110,9 @@ public class OpentsdbEmitterConfig
     if (maxQueueSize != that.maxQueueSize) {
       return false;
     }
+    if (consumeDelay != that.consumeDelay) {
+      return false;
+    }
     return metricMapPath != null ? metricMapPath.equals(that.metricMapPath)
                                  : that.metricMapPath == null;
   }
@@ -117,6 +126,7 @@ public class OpentsdbEmitterConfig
     result = 31 * result + readTimeout;
     result = 31 * result + flushThreshold;
     result = 31 * result + maxQueueSize;
+    result = 31 * result + (int) consumeDelay;
     result = 31 * result + (metricMapPath != null ? metricMapPath.hashCode() : 0);
     return result;
   }
@@ -149,6 +159,11 @@ public class OpentsdbEmitterConfig
   public int getMaxQueueSize()
   {
     return maxQueueSize;
+  }
+
+  public long getConsumeDelay()
+  {
+    return consumeDelay;
   }
 
   public String getMetricMapPath()

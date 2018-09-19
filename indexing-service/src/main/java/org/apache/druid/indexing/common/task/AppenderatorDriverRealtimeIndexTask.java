@@ -98,7 +98,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -112,20 +111,15 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
-  private static final Random random = new Random();
 
   private static String makeTaskId(RealtimeAppenderatorIngestionSpec spec)
   {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((random.nextInt() >>> (i * 4)) & 0x0F)));
-    }
     return StringUtils.format(
         "index_realtime_%s_%d_%s_%s",
         spec.getDataSchema().getDataSource(),
         spec.getTuningConfig().getShardSpec().getPartitionNum(),
         DateTimes.nowUtc(),
-        suffix
+        RealtimeIndexTask.makeRandomId()
     );
   }
 
@@ -322,9 +316,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {
-              if (addResult.getNumRowsInSegment() >= tuningConfig.getMaxRowsPerSegment()) {
+              if (addResult.isPushRequired(tuningConfig)) {
                 publishSegments(driver, publisher, committerSupplier, sequenceName);
-
                 sequenceNumber++;
                 sequenceName = makeSequenceName(getId(), sequenceNumber);
               }
@@ -542,7 +535,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = Maps.newHashMap();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        savedParseExceptions);
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
