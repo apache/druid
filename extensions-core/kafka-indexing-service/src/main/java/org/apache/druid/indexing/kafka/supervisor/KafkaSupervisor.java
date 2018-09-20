@@ -1138,11 +1138,11 @@ public class KafkaSupervisor implements Supervisor
                                 }
                             );
                             taskGroupsToVerify.put(taskGroupId, taskGroup);
-                            final TaskData prevTaskGroup = taskGroup.tasks.putIfAbsent(taskId, new TaskData());
-                            if (prevTaskGroup != null) {
+                            final TaskData prevTaskData = taskGroup.tasks.putIfAbsent(taskId, new TaskData());
+                            if (prevTaskData != null) {
                               throw new ISE(
-                                  "WTH? a taskGroup[%s] already exists for new task[%s]",
-                                  prevTaskGroup,
+                                  "WTH? a taskData[%s] already exists for new task[%s]",
+                                  prevTaskData,
                                   taskId
                               );
                             }
