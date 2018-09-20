@@ -91,7 +91,6 @@ public class SameIntervalMergeTaskTest
         indexSpec,
         true,
         null,
-        null,
         null
     );
 
@@ -151,7 +150,6 @@ public class SameIntervalMergeTaskTest
             EasyMock.anyObject(),
             EasyMock.anyObject(),
             EasyMock.anyObject(),
-            EasyMock.anyInt(),
             EasyMock.anyObject())
     ).andReturn(new MergedIndexMetadata(new File("test"), Collections.emptyList()));
     EasyMock.replay(indexMerger);

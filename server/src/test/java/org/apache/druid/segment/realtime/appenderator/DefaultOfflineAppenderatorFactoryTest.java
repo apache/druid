@@ -150,8 +150,7 @@ public class DefaultOfflineAppenderatorFactoryTest
         null,
         null,
         null,
-        null,
-        2
+        null
     );
 
     try (Appenderator appenderator = defaultOfflineAppenderatorFactory.build(

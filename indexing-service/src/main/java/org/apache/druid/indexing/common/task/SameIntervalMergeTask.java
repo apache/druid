@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -46,7 +45,6 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
   private final List<AggregatorFactory> aggregators;
   private final Boolean rollup;
   private final IndexSpec indexSpec;
-  private final int numFilesPerMerge;
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
@@ -60,7 +58,6 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
       // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
       @SuppressWarnings("unused")
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
-      @JsonProperty("numFilesPerMerge") Integer numFilesPerMerge,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -74,7 +71,6 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
     this.aggregators = Preconditions.checkNotNull(aggregators, "null aggregations");
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
-    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
@@ -94,12 +90,6 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
-  }
-
-  @JsonProperty
-  public int getNumFilesPerMerge()
-  {
-    return numFilesPerMerge;
   }
 
   /**
@@ -146,7 +136,6 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
         aggregators,
         rollup,
         indexSpec,
-        numFilesPerMerge,
         segmentWriteOutMediumFactory,
         getContext()
     );
@@ -166,7 +155,6 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
         List<AggregatorFactory> aggregators,
         Boolean rollup,
         IndexSpec indexSpec,
-        int numFilesPerMerge,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         Map<String, Object> context
     )
@@ -179,7 +167,6 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
           rollup,
           indexSpec,
           true,
-          numFilesPerMerge,
           segmentWriteOutMediumFactory,
           context
       );

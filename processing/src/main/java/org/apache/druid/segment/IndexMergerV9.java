@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
@@ -76,7 +75,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class IndexMergerV9 implements IndexMerger
@@ -105,7 +103,6 @@ public class IndexMergerV9 implements IndexMerger
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
       final boolean fillRowNumConversions,
       final IndexSpec indexSpec,
-      final int mergeDegree,
       @Nullable final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
@@ -138,11 +135,9 @@ public class IndexMergerV9 implements IndexMerger
 
     progress.progress();
 
-    final File baseOutDir = outDir.getParentFile();
-    final MergeOutDirSupplier outDirSupplier = new MergeOutDirSupplier(baseOutDir);
-    final List<File> merged = incrementalMerge(
+    mergeAndWriteFiles(
         adapters,
-        outDirSupplier,
+        outDir,
         progress,
         mergedDimensions,
         mergedMetrics,
@@ -150,147 +145,12 @@ public class IndexMergerV9 implements IndexMerger
         fillRowNumConversions,
         indexSpec,
         segmentMetadata,
-        mergeDegree,
         segmentWriteOutMediumFactory
     );
 
-    if (merged.size() == 1) {
-      if (outDir.exists()) {
-        final String[] filesInOutDir = outDir.list();
-        if (filesInOutDir != null && filesInOutDir.length > 0) {
-          log.warn("Found files[%s] in destination directory. Will delete them", Arrays.asList(filesInOutDir));
-        }
-        FileUtils.forceDelete(outDir);
-      }
+    progress.stop();
 
-      FileUtils.moveDirectory(outDirSupplier.getLast(), outDir);
-
-      progress.stop();
-
-      return outDir;
-    } else {
-      throw new ISE("WTH? We got two or more indexes[%s] after merging?", merged);
-    }
-  }
-
-  private List<File> incrementalMerge(
-      List<IndexableAdapter> indexes,
-      MergeOutDirSupplier outDirSupplier,
-      ProgressIndicator progress,
-      List<DimensionDesc> mergedDimensions,
-      List<MetricDesc> mergedMetrics,
-      Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
-      boolean fillRowNumConversions,
-      IndexSpec indexSpec,
-      @Nullable Metadata segmentMetadata,
-      int mergeDegree,
-      @Nullable final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-  ) throws IOException
-  {
-    // Merge the input files
-    final List<File> mergedDirs = new ArrayList<>();
-    for (int start = 0; start < indexes.size(); start += mergeDegree) {
-      final int end = Math.min(indexes.size(), start + mergeDegree);
-      final List<IndexableAdapter> indexesToMerge = indexes.subList(start, end);
-      final File tmpOutDir = outDirSupplier.get();
-      mergeAndWriteFiles(
-          indexesToMerge,
-          tmpOutDir,
-          progress,
-          mergedDimensions,
-          mergedMetrics,
-          rowMergerFn,
-          fillRowNumConversions,
-          indexSpec,
-          segmentMetadata,
-          segmentWriteOutMediumFactory
-      );
-      mergedDirs.add(tmpOutDir);
-    }
-    // Merge recursively
-    return recursiveMerge(
-        mergedDirs,
-        outDirSupplier,
-        progress,
-        mergedDimensions,
-        mergedMetrics,
-        rowMergerFn,
-        fillRowNumConversions,
-        indexSpec,
-        segmentMetadata,
-        mergeDegree,
-        segmentWriteOutMediumFactory
-    );
-  }
-
-  private List<File> recursiveMerge(
-      List<File> indexDirs,
-      MergeOutDirSupplier outDirSupplier,
-      ProgressIndicator progress,
-      List<DimensionDesc> mergedDimensions,
-      List<MetricDesc> mergedMetrics,
-      Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
-      boolean fillRowNumConversions,
-      IndexSpec indexSpec,
-      @Nullable Metadata segmentMetadata,
-      int mergeDegree,
-      @Nullable final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-  ) throws IOException
-  {
-    if (indexDirs.size() < 2) {
-      return indexDirs;
-    } else {
-      final List<File> mergedDirs = new ArrayList<>();
-
-      for (int start = 0; start < indexDirs.size(); start += mergeDegree) {
-        final Closer closer = Closer.create();
-        final int end = Math.min(indexDirs.size(), start + mergeDegree);
-        final List<File> dirsToMerge = indexDirs.subList(start, end);
-        final List<IndexableAdapter> indexesToMerge = dirsToMerge.stream().map(dir -> {
-          try {
-            final QueryableIndexAdapter adapter = new QueryableIndexAdapter(indexIO.loadIndex(dir));
-            // Closeables are stored in a stack in closer.
-            // The below is to close adapter first and then delete the file.
-            closer.register(() -> FileUtils.forceDelete(dir));
-            closer.register(adapter);
-            return adapter;
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }).collect(Collectors.toList());
-
-        final File tmpOutDir = outDirSupplier.get();
-        mergeAndWriteFiles(
-            indexesToMerge,
-            tmpOutDir,
-            progress,
-            mergedDimensions,
-            mergedMetrics,
-            rowMergerFn,
-            fillRowNumConversions,
-            indexSpec,
-            segmentMetadata,
-            segmentWriteOutMediumFactory
-        );
-        mergedDirs.add(tmpOutDir);
-        closer.close();
-      }
-
-      return recursiveMerge(
-          mergedDirs,
-          outDirSupplier,
-          progress,
-          mergedDimensions,
-          mergedMetrics,
-          rowMergerFn,
-          fillRowNumConversions,
-          indexSpec,
-          segmentMetadata,
-          mergeDegree,
-          segmentWriteOutMediumFactory
-      );
-    }
+    return outDir;
   }
 
   private void mergeAndWriteFiles(
@@ -918,7 +778,6 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         progress,
-        1,
         segmentWriteOutMediumFactory
     ).getFile();
   }
@@ -930,7 +789,6 @@ public class IndexMergerV9 implements IndexMerger
       final AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      int mergeDegree,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
@@ -941,7 +799,6 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         new BaseProgressIndicator(),
-        mergeDegree,
         segmentWriteOutMediumFactory
     );
   }
@@ -953,7 +810,6 @@ public class IndexMergerV9 implements IndexMerger
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      int mergeDegree,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
@@ -965,7 +821,6 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         progress,
-        mergeDegree,
         segmentWriteOutMediumFactory
     );
   }
@@ -976,11 +831,10 @@ public class IndexMergerV9 implements IndexMerger
       boolean rollup,
       final AggregatorFactory[] metricAggs,
       File outDir,
-      IndexSpec indexSpec,
-      int mergeDegree
+      IndexSpec indexSpec
   ) throws IOException
   {
-    return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), mergeDegree, null);
+    return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), null);
   }
 
   private MergedIndexMetadata merge(
@@ -990,7 +844,6 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      int mergeDegree,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
@@ -1017,42 +870,10 @@ public class IndexMergerV9 implements IndexMerger
             rowMergerFn,
             true,
             indexSpec,
-            mergeDegree,
             segmentWriteOutMediumFactory
         ),
         mergedDimensions.stream().map(DimensionDesc::getName).collect(Collectors.toList())
     );
-  }
-
-  private static class MergeOutDirSupplier implements Supplier<File>
-  {
-    private final File baseDir;
-    private int nextSuffix = 0;
-
-    MergeOutDirSupplier(File baseDir)
-    {
-      this.baseDir = baseDir;
-    }
-
-    @Override
-    public File get()
-    {
-      return createFile(nextSuffix++);
-    }
-
-    public File getLast()
-    {
-      if (nextSuffix == 0) {
-        throw new ISE("there's no valid last outDir");
-      } else {
-        return createFile(nextSuffix - 1);
-      }
-    }
-
-    private File createFile(int suffix)
-    {
-      return new File(baseDir, StringUtils.format("interm_merge_%d", suffix));
-    }
   }
 
   @Override
@@ -1081,7 +902,6 @@ public class IndexMergerV9 implements IndexMerger
           Iterables::getOnlyElement,
           false,
           indexSpec,
-          1,
           segmentWriteOutMediumFactory
       );
     }
@@ -1111,7 +931,6 @@ public class IndexMergerV9 implements IndexMerger
         MergingRowIterator::new,
         true,
         indexSpec,
-        1,
         segmentWriteOutMediumFactory
     );
   }

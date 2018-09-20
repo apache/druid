@@ -63,8 +63,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     super(
@@ -84,8 +83,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        numFilesPerMerge
+        maxSavedParseExceptions
     );
 
     this.workerThreads = workerThreads;
@@ -184,7 +182,6 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
     private Boolean logParseExceptions;
     private Integer maxParseExceptions;
     private Integer maxSavedParseExceptions;
-    private Integer numFilesPerMerge;
     private Integer workerThreads;
     private Integer chatThreads;
     private Long chatRetries;
@@ -289,12 +286,6 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
       return this;
     }
 
-    public Builder setNumFilesPerMerge(int numFilesPerMerge)
-    {
-      this.numFilesPerMerge = numFilesPerMerge;
-      return this;
-    }
-
     public Builder setWorkerThreads(int workerThreads)
     {
       this.workerThreads = workerThreads;
@@ -356,8 +347,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
           intermediateHandoffPeriod,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions,
-          numFilesPerMerge
+          maxSavedParseExceptions
       );
     }
   }

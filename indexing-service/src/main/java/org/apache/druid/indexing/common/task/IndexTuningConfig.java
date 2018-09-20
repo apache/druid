@@ -75,7 +75,6 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
-  private final int numFilesPerMerge;
 
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
@@ -101,8 +100,7 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
           SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     this(
@@ -121,8 +119,7 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        numFilesPerMerge
+        maxSavedParseExceptions
     );
   }
 
@@ -142,8 +139,7 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
-      @Nullable Integer maxSavedParseExceptions,
-      @Nullable Integer numFilesPerMerge
+      @Nullable Integer maxSavedParseExceptions
   )
   {
     Preconditions.checkArgument(
@@ -186,7 +182,6 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
-    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   private static Integer initializeTargetPartitionSize(Integer numShards, Integer targetPartitionSize)
@@ -227,8 +222,7 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        numFilesPerMerge
+        maxSavedParseExceptions
     );
   }
 
@@ -354,12 +348,6 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
   }
 
   @Override
-  public int getNumFilesPerMerge()
-  {
-    return numFilesPerMerge;
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -383,8 +371,7 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
            Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
            logParseExceptions == that.logParseExceptions &&
            maxParseExceptions == that.maxParseExceptions &&
-           maxSavedParseExceptions == that.maxSavedParseExceptions &&
-           numFilesPerMerge == that.numFilesPerMerge;
+           maxSavedParseExceptions == that.maxSavedParseExceptions;
   }
 
   @Override
@@ -405,8 +392,7 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        numFilesPerMerge
+        maxSavedParseExceptions
     );
   }
 
@@ -418,7 +404,6 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
     private Long maxTotalRows;
     private Integer numShards;
     private IndexSpec indexSpec;
-    private File basePersistDirectory;
     private Integer maxPendingPersists;
     private Boolean forceExtendableShardSpecs;
     private Boolean forceGuaranteedRollup;
@@ -427,7 +412,6 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
     private Boolean logParseExceptions;
     private Integer maxParseExceptions;
     private Integer maxSavedParseExceptions;
-    private Integer numFilesPerMerge;
     private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
     public IndexTuningConfig build()
@@ -450,8 +434,7 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions,
-          numFilesPerMerge
+          maxSavedParseExceptions
       );
     }
 
@@ -488,12 +471,6 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
     public Builder setIndexSpec(IndexSpec indexSpec)
     {
       this.indexSpec = indexSpec;
-      return this;
-    }
-
-    public Builder setBasePersistDirectory(File basePersistDirectory)
-    {
-      this.basePersistDirectory = basePersistDirectory;
       return this;
     }
 
@@ -542,12 +519,6 @@ public class IndexTuningConfig implements TuningConfig, AppenderatorConfig
     public Builder setMaxSavedParseExceptions(int maxSavedParseExceptions)
     {
       this.maxSavedParseExceptions = maxSavedParseExceptions;
-      return this;
-    }
-
-    public Builder setNumFilesPerMerge(int numFilesPerMerge)
-    {
-      this.numFilesPerMerge = numFilesPerMerge;
       return this;
     }
 

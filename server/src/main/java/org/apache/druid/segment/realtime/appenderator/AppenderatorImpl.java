@@ -723,7 +723,6 @@ public class AppenderatorImpl implements Appenderator
             schema.getAggregators(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
-            tuningConfig.getNumFilesPerMerge(),
             tuningConfig.getSegmentWriteOutMediumFactory()
         );
       }

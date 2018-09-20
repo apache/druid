@@ -389,7 +389,6 @@ public interface IndexMerger
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      int mergeDegree,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
@@ -399,7 +398,6 @@ public interface IndexMerger
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      int mergeDegree,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
@@ -410,8 +408,7 @@ public interface IndexMerger
       boolean rollup,
       AggregatorFactory[] metricAggs,
       File outDir,
-      IndexSpec indexSpec,
-      int mergeDegree
+      IndexSpec indexSpec
   ) throws IOException;
 
   // Faster than IndexMaker

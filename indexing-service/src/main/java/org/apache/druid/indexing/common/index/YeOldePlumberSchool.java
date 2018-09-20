@@ -192,7 +192,6 @@ public class YeOldePlumberSchool implements PlumberSchool
                 schema.getAggregators(),
                 fileToUpload,
                 config.getIndexSpec(),
-                config.getNumFilesPerMerge(),
                 config.getSegmentWriteOutMediumFactory()
             );
           }

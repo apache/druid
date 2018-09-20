@@ -212,7 +212,6 @@ public class TaskSerdeTest
                 null,
                 null,
                 null,
-                null,
                 null
             )
         ),
@@ -335,7 +334,6 @@ public class TaskSerdeTest
         true,
         indexSpec,
         true,
-        2,
         null,
         null
     );
@@ -357,7 +355,6 @@ public class TaskSerdeTest
         task.getAggregators().get(0).getName(),
         task2.getAggregators().get(0).getName()
     );
-    Assert.assertEquals(task.getNumFilesPerMerge(), task2.getNumFilesPerMerge());
 
     final MergeTask task3 = (MergeTask) jsonMapper.readValue(
         jsonMapper.writeValueAsString(
@@ -387,7 +384,6 @@ public class TaskSerdeTest
         true,
         indexSpec,
         true,
-        2,
         null,
         null
     );
@@ -410,7 +406,6 @@ public class TaskSerdeTest
         task.getAggregators().get(0).getName(),
         task2.getAggregators().get(0).getName()
     );
-    Assert.assertEquals(task.getNumFilesPerMerge(), task2.getNumFilesPerMerge());
   }
 
   @Test

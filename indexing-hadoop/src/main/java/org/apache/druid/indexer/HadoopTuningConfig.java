@@ -72,7 +72,6 @@ public class HadoopTuningConfig implements TuningConfig
   private final List<String> allowedHadoopPrefix;
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
-  private final int numFilesPerMerge;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -99,8 +98,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
       final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
-      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      final @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
+      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions
   )
   {
     this.workingPath = workingPath;
@@ -141,7 +139,6 @@ public class HadoopTuningConfig implements TuningConfig
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
-    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   @JsonProperty
@@ -275,12 +272,6 @@ public class HadoopTuningConfig implements TuningConfig
     return maxParseExceptions;
   }
 
-  @JsonProperty
-  public int getNumFilesPerMerge()
-  {
-    return numFilesPerMerge;
-  }
-
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -305,8 +296,7 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions,
-        numFilesPerMerge
+        maxParseExceptions
     );
   }
 
@@ -334,8 +324,7 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions,
-        numFilesPerMerge
+        maxParseExceptions
     );
   }
 
@@ -363,8 +352,7 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions,
-        numFilesPerMerge
+        maxParseExceptions
     );
   }
 
@@ -390,7 +378,6 @@ public class HadoopTuningConfig implements TuningConfig
     private List<String> allowedHadoopPrefix;
     private Boolean logParseExceptions;
     private Integer maxParseExceptions;
-    private Integer numFilesPerMerge;
 
     public Builder setWorkingPath(String workingPath)
     {
@@ -512,12 +499,6 @@ public class HadoopTuningConfig implements TuningConfig
       return this;
     }
 
-    public Builder setNumFilesPerMerge(int numFilesPerMerge)
-    {
-      this.numFilesPerMerge = numFilesPerMerge;
-      return this;
-    }
-
     public HadoopTuningConfig build()
     {
       return new HadoopTuningConfig(
@@ -542,8 +523,7 @@ public class HadoopTuningConfig implements TuningConfig
           useExplicitVersion,
           allowedHadoopPrefix,
           logParseExceptions,
-          maxParseExceptions,
-          numFilesPerMerge
+          maxParseExceptions
       );
     }
   }

@@ -81,8 +81,7 @@ public class SinkTest
         null,
         null,
         null,
-        null,
-        2
+        null
     );
     final Sink sink = new Sink(
         interval,
@@ -236,8 +235,7 @@ public class SinkTest
         null,
         null,
         null,
-        "dedupColumn",
-        2
+        "dedupColumn"
     );
     final Sink sink = new Sink(
         interval,

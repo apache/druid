@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -58,7 +59,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -323,7 +323,6 @@ public class IndexMergerTestBase
                 mergedAggregators,
                 mergedDir,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -389,7 +388,6 @@ public class IndexMergerTestBase
                 new AggregatorFactory[]{},
                 tmpDir3,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -447,7 +445,6 @@ public class IndexMergerTestBase
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 mergedDir,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -504,7 +501,6 @@ public class IndexMergerTestBase
                 mergedAggregators,
                 mergedDir,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -576,7 +572,6 @@ public class IndexMergerTestBase
                 mergedAggregators,
                 mergedDir,
                 newSpec,
-                2,
                 null
             ).getFile()
         )
@@ -790,7 +785,6 @@ public class IndexMergerTestBase
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -884,7 +878,6 @@ public class IndexMergerTestBase
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -957,7 +950,6 @@ public class IndexMergerTestBase
                   new AggregatorFactory[]{new CountAggregatorFactory("count")},
                   tmpDirMerged,
                   indexSpec,
-                  2,
                   null
               ).getFile()
           )
@@ -1087,7 +1079,6 @@ public class IndexMergerTestBase
                   new AggregatorFactory[]{new CountAggregatorFactory("count")},
                   tmpDirMerged,
                   indexSpec,
-                  2,
                   null
               ).getFile()
           )
@@ -1261,7 +1252,6 @@ public class IndexMergerTestBase
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -1392,7 +1382,6 @@ public class IndexMergerTestBase
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -1406,7 +1395,6 @@ public class IndexMergerTestBase
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged2,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )
@@ -1537,8 +1525,7 @@ public class IndexMergerTestBase
             new LongSumAggregatorFactory("C", "C"),
             },
         tmpDirMerged,
-        indexSpec,
-        2
+        indexSpec
     );
   }
 
@@ -1587,8 +1574,7 @@ public class IndexMergerTestBase
         true,
         new AggregatorFactory[]{new LongSumAggregatorFactory("A", "A"), new LongSumAggregatorFactory("C", "C")},
         tmpDirMerged,
-        indexSpec,
-        2
+        indexSpec
     ).getFile();
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
@@ -1658,8 +1644,7 @@ public class IndexMergerTestBase
             new LongSumAggregatorFactory("C", "C")
         },
         tmpDirMerged,
-        indexSpec,
-        2
+        indexSpec
     ).getFile();
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
@@ -1722,8 +1707,7 @@ public class IndexMergerTestBase
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
-        indexSpec,
-        2
+        indexSpec
     ).getFile();
 
     // Since D was not present in any of the indices, it is not present in the output
@@ -1767,8 +1751,7 @@ public class IndexMergerTestBase
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
-        indexSpec,
-        2
+        indexSpec
     ).getFile();
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(
         closer.closeLater(indexIO.loadIndex(merged))
@@ -1802,7 +1785,6 @@ public class IndexMergerTestBase
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 tmpDirMerged,
                 indexSpec,
-                2,
                 null
             ).getFile()
         )

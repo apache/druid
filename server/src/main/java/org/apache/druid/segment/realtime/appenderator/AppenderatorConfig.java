@@ -70,6 +70,4 @@ public interface AppenderatorConfig
 
   @Nullable
   SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
-
-  int getNumFilesPerMerge();
 }

@@ -88,8 +88,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         defaultHandoffConditionTimeout,
         defaultAlertTimeout,
         null,
-        defaultDedupColumn,
-        TuningConfig.DEFAULT_NUM_FILES_PER_MERGE
+        defaultDedupColumn
     );
   }
 
@@ -112,7 +111,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   @Nullable
   private final String dedupColumn;
-  private final int numFilesPerMerge;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -134,8 +132,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @JsonProperty("dedupColumn") @Nullable String dedupColumn,
-      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
+      @JsonProperty("dedupColumn") @Nullable String dedupColumn
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
@@ -168,7 +165,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.dedupColumn = dedupColumn == null ? defaultDedupColumn : dedupColumn;
-    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   @Override
@@ -285,13 +281,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     return segmentWriteOutMediumFactory;
   }
 
-  @Override
-  @JsonProperty
-  public int getNumFilesPerMerge()
-  {
-    return numFilesPerMerge;
-  }
-
   @JsonProperty
   @Nullable
   public String getDedupColumn()
@@ -319,8 +308,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn,
-        numFilesPerMerge
+        dedupColumn
     );
   }
 
@@ -344,8 +332,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn,
-        numFilesPerMerge
+        dedupColumn
     );
   }
 
@@ -368,7 +355,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     private Long alertTimeout;
     private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
     private String dedupColumn;
-    private Integer numFilesPerMerge;
 
     public Builder setMaxRowsInMemory(int maxRowsInMemory)
     {
@@ -472,12 +458,6 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       return this;
     }
 
-    public Builder setNumFilesPerMerge(int numFilesPerMerge)
-    {
-      this.numFilesPerMerge = numFilesPerMerge;
-      return this;
-    }
-
     public RealtimeTuningConfig build()
     {
       return new RealtimeTuningConfig(
@@ -498,8 +478,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
           handoffConditionTimeout,
           alertTimeout,
           segmentWriteOutMediumFactory,
-          dedupColumn,
-          numFilesPerMerge
+          dedupColumn
       );
     }
   }

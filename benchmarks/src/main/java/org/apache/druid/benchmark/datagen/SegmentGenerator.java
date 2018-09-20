@@ -42,7 +42,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
@@ -155,8 +154,7 @@ public class SegmentGenerator implements Closeable
                           .map(AggregatorFactory::getCombiningFactory)
                           .toArray(AggregatorFactory[]::new),
                 new File(tempDir, "merged"),
-                new IndexSpec(),
-                TuningConfig.DEFAULT_NUM_FILES_PER_MERGE
+                new IndexSpec()
             ).getFile()
         );
 

@@ -607,7 +607,6 @@ public class IndexGeneratorJob implements Jobby
           aggs,
           file,
           config.getIndexSpec(),
-          config.getNumFilesPerMerge(),
           progressIndicator,
           null
       ).getFile();

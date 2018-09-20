@@ -29,7 +29,6 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.Objects;
 
 @JsonTypeName("index_parallel")
@@ -52,7 +51,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   public static ParallelIndexTuningConfig defaultConfig()
   {
     return new ParallelIndexTuningConfig(
-        null,
         null,
         null,
         null,
@@ -97,8 +95,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     super(
@@ -119,8 +116,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        numFilesPerMerge
+        maxSavedParseExceptions
     );
 
     this.maxNumSubTasks = maxNumSubTasks == null ? DEFAULT_MAX_NUM_BATCH_TASKS : maxNumSubTasks;
@@ -205,7 +201,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     private Long maxTotalRows;
     private Integer numShards;
     private IndexSpec indexSpec;
-    private File basePersistDirectory;
     private Integer maxPendingPersists;
     private Boolean forceExtendableShardSpecs;
     private Boolean forceGuaranteedRollup;
@@ -214,7 +209,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     private Boolean logParseExceptions;
     private Integer maxParseExceptions;
     private Integer maxSavedParseExceptions;
-    private Integer numFilesPerMerge;
     private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
     private Integer maxNumSubTasks;
     private Integer maxRetry;
@@ -255,12 +249,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     public Builder setIndexSpec(IndexSpec indexSpec)
     {
       this.indexSpec = indexSpec;
-      return this;
-    }
-
-    public Builder setBasePersistDirectory(File basePersistDirectory)
-    {
-      this.basePersistDirectory = basePersistDirectory;
       return this;
     }
 
@@ -312,12 +300,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       return this;
     }
 
-    public Builder setNumFilesPerMerge(int numFilesPerMerge)
-    {
-      this.numFilesPerMerge = numFilesPerMerge;
-      return this;
-    }
-
     public Builder setSegmentWriteOutMediumFactory(SegmentWriteOutMediumFactory factory)
     {
       this.segmentWriteOutMediumFactory = factory;
@@ -366,7 +348,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
           maxPendingPersists,
           forceExtendableShardSpecs,
           forceGuaranteedRollup,
-          null,
+          reportParseExceptions,
           pushTimeout,
           segmentWriteOutMediumFactory,
           maxNumSubTasks,
@@ -376,8 +358,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
           chatHandlerNumRetries,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions,
-          numFilesPerMerge
+          maxSavedParseExceptions
       );
     }
 

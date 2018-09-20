@@ -57,7 +57,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
-  private final int numFilesPerMerge;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -78,8 +77,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("numFilesPerMerge") @Nullable Integer numFilesPerMerge
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -125,7 +123,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
-    this.numFilesPerMerge = TuningConfig.validateAndGetNumFilesPerMerge(numFilesPerMerge);
   }
 
   public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
@@ -147,8 +144,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         config.intermediateHandoffPeriod,
         config.logParseExceptions,
         config.maxParseExceptions,
-        config.maxSavedParseExceptions,
-        config.numFilesPerMerge
+        config.maxSavedParseExceptions
     );
   }
 
@@ -248,12 +244,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return segmentWriteOutMediumFactory;
   }
 
-  @Override
-  public int getNumFilesPerMerge()
-  {
-    return numFilesPerMerge;
-  }
-
   @JsonProperty
   public Period getIntermediateHandoffPeriod()
   {
@@ -297,8 +287,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        numFilesPerMerge
+        maxSavedParseExceptions
     );
   }
 
@@ -327,8 +316,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod) &&
            logParseExceptions == that.logParseExceptions &&
            maxParseExceptions == that.maxParseExceptions &&
-           maxSavedParseExceptions == that.maxSavedParseExceptions &&
-           numFilesPerMerge == that.numFilesPerMerge;
+           maxSavedParseExceptions == that.maxSavedParseExceptions;
   }
 
   @Override
@@ -350,8 +338,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        numFilesPerMerge
+        maxSavedParseExceptions
     );
   }
 
@@ -375,7 +362,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            ", logParseExceptions=" + logParseExceptions +
            ", maxParseExceptions=" + maxParseExceptions +
            ", maxSavedParseExceptions=" + maxSavedParseExceptions +
-           ", numFilesPerMerge=" + numFilesPerMerge +
            '}';
   }
 
@@ -397,7 +383,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     private Boolean logParseExceptions;
     private Integer maxParseExceptions;
     private Integer maxSavedParseExceptions;
-    private Integer numFilesPerMerge;
 
     public Builder setMaxRowsInMemory(int maxRowsInMemory)
     {
@@ -506,12 +491,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       return this;
     }
 
-    public Builder setNumFilesPerMerge(int numFilesPerMerge)
-    {
-      this.numFilesPerMerge = numFilesPerMerge;
-      return this;
-    }
-
     public KafkaTuningConfig build()
     {
       return new KafkaTuningConfig(
@@ -531,8 +510,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
           intermediateHandoffPeriod,
           logParseExceptions,
           maxParseExceptions,
-          maxSavedParseExceptions,
-          numFilesPerMerge
+          maxSavedParseExceptions
       );
     }
   }
