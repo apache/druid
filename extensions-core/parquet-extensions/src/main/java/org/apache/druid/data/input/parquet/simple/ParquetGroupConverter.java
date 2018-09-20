@@ -278,7 +278,7 @@ class ParquetGroupConverter
           case TIME_MILLIS:
             return g.getInteger(fieldIndex, index);
           case TIMESTAMP_MICROS:
-            return g.getLong(fieldIndex, index);
+            return TimeUnit.MILLISECONDS.convert(g.getLong(fieldIndex, index), TimeUnit.MICROSECONDS);
           case TIMESTAMP_MILLIS:
             return g.getLong(fieldIndex, index);
           case INTERVAL:
