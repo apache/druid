@@ -52,8 +52,7 @@ public class DruidParquetReadSupport extends GroupReadSupport
     ParseSpec parseSpec = config.getParser().getParseSpec();
 
     // todo: this is kind of lame, maybe we can still trim what we read if we
-    // parse the flatten spec and determine it isn't auto discovering props
-    System.out.println(fullSchema.toString());
+    // parse the flatten spec and determine it isn't auto discovering props?
     if (parseSpec instanceof ParquetParseSpec) {
       if (((ParquetParseSpec) parseSpec).getFlattenSpec() != null) {
         return fullSchema;
