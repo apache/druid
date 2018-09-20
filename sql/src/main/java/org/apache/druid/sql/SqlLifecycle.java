@@ -40,7 +40,6 @@ import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -66,7 +65,6 @@ public class SqlLifecycle
   private final PlannerFactory plannerFactory;
   private final ServiceEmitter emitter;
   private final SqlRequestLogger requestLogger;
-  private final AuthorizerMapper authorizerMapper;
   private final long startMs;
   private final long startNs;
   private final Object lock = new Object();
@@ -85,7 +83,6 @@ public class SqlLifecycle
       PlannerFactory plannerFactory,
       ServiceEmitter emitter,
       SqlRequestLogger requestLogger,
-      AuthorizerMapper authorizerMapper,
       long startMs,
       long startNs
   )
@@ -93,7 +90,6 @@ public class SqlLifecycle
     this.plannerFactory = plannerFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
-    this.authorizerMapper = authorizerMapper;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -180,7 +176,7 @@ public class SqlLifecycle
                     plannerResult.datasourceNames(),
                     AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
                 ),
-                authorizerMapper
+                plannerFactory.getAuthorizerMapper()
             )
         );
       }
@@ -190,7 +186,7 @@ public class SqlLifecycle
           AuthorizationUtils.authorizeAllResourceActions(
               plannerContext.getAuthenticationResult(),
               Iterables.transform(plannerResult.datasourceNames(), AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR),
-              authorizerMapper
+              plannerFactory.getAuthorizerMapper()
           )
       );
     }

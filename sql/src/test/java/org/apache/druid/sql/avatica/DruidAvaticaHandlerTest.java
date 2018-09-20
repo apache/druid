@@ -43,10 +43,12 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -60,6 +62,8 @@ import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
+import org.apache.druid.sql.log.SqlRequestLogLine;
+import org.apache.druid.sql.log.TestSqlRequestLogger;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -147,6 +151,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   private DruidMeta druidMeta;
   private String url;
   private Injector injector;
+  private TestSqlRequestLogger testSqlRequestLogger;
 
   @Before
   public void setUp() throws Exception
@@ -175,17 +180,22 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             }
         )
     );
+
+    testSqlRequestLogger = new TestSqlRequestLogger();
+    final PlannerFactory plannerFactory = new PlannerFactory(
+        druidSchema,
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        operatorTable,
+        macroTable,
+        plannerConfig,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
+    );
     druidMeta = new DruidMeta(
-        CalciteTests.createSqlLifecycleFactory(
-          new PlannerFactory(
-              druidSchema,
-              CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-              operatorTable,
-              macroTable,
-              plannerConfig,
-              CalciteTests.TEST_AUTHORIZER_MAPPER,
-              CalciteTests.getJsonMapper()
-          )
+        new SqlLifecycleFactory(
+            plannerFactory,
+            new NoopServiceEmitter(),
+            testSqlRequestLogger
         ),
         AVATICA_CONFIG,
         injector
@@ -823,6 +833,48 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ),
         rows
     );
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testSqlRequestLog() throws Exception
+  {
+    // valid sql
+    for (int i = 0; i < 3; i++) {
+      client.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+    }
+    Assert.assertEquals(3, testSqlRequestLogger.getLogs().size());
+    for (SqlRequestLogLine logLine : testSqlRequestLogger.getLogs()) {
+      final Map<String, Object> stats = logLine.getQueryStats().getStats();
+      Assert.assertEquals(true, stats.get("success"));
+      Assert.assertEquals("regularUser", stats.get("identity"));
+      Assert.assertTrue(stats.containsKey("sqlQuery/time"));
+      Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
+    }
+
+    // invalid sql
+    testSqlRequestLogger.clear();
+    try {
+      client.createStatement().executeQuery("SELECT notexist FROM druid.foo");
+      Assert.fail("invalid sql should throw SQLException");
+    }
+    catch (SQLException e) {
+    }
+    Assert.assertEquals(1, testSqlRequestLogger.getLogs().size());
+    final Map<String, Object> stats = testSqlRequestLogger.getLogs().get(0).getQueryStats().getStats();
+    Assert.assertEquals(false, stats.get("success"));
+    Assert.assertEquals("regularUser", stats.get("identity"));
+    Assert.assertTrue(stats.containsKey("exception"));
+
+    // unauthorized sql
+    testSqlRequestLogger.clear();
+    try {
+      client.createStatement().executeQuery("SELECT count(*) FROM druid.forbiddenDatasource");
+      Assert.fail("unauthorzed sql should throw SQLException");
+    }
+    catch (SQLException e) {
+    }
+    Assert.assertEquals(0, testSqlRequestLogger.getLogs().size());
   }
 
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException

@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 
@@ -337,7 +338,9 @@ public class DruidStatement implements Closeable
       if (oldState != State.DONE) {
         // First close. Run the onClose function.
         try {
-          sqlLifecycle.emitLogsAndMetrics(this.throwable, null, -1);
+          if (!(this.throwable instanceof ForbiddenException)) {
+            sqlLifecycle.emitLogsAndMetrics(this.throwable, null, -1);
+          }
           onClose.run();
         }
         catch (Throwable t) {

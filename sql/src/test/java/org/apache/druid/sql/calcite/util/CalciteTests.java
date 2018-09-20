@@ -441,8 +441,7 @@ public class CalciteTests
     return new SqlLifecycleFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopSqlRequestLoggerProvider().get(),
-        plannerFactory.getAuthorizerMapper()
+        new NoopSqlRequestLoggerProvider().get()
     );
   }
 

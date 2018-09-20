@@ -47,4 +47,11 @@ public class TestSqlRequestLogger implements SqlRequestLogger
       return ImmutableList.copyOf(logs);
     }
   }
+
+  public void clear()
+  {
+    synchronized (logs) {
+      logs.clear();
+    }
+  }
 }
