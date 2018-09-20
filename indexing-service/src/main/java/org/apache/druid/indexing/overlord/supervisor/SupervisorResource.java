@@ -282,8 +282,7 @@ public class SupervisorResource
   public Response terminateAll()
   {
     return asLeaderWithSupervisorManager(
-        manager ->
-        {
+        manager -> {
           Set<String> supervisorIds = manager.getSupervisorIds();
           supervisorIds.forEach(manager::stopAndRemoveSupervisor);
           return Response.ok(ImmutableMap.of(
@@ -436,8 +435,7 @@ public class SupervisorResource
   private Response specSuspendAllOrResumeAll(boolean suspend)
   {
     return asLeaderWithSupervisorManager(
-        manager ->
-        {
+        manager -> {
           Set<String> supervisorIds = manager.getSupervisorIds();
           List<String> successes = new ArrayList<>();
           List<String> errors = new ArrayList<>();
