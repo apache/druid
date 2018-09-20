@@ -34,7 +34,6 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -50,14 +49,14 @@ import java.util.Random;
 //TODO: need more refactoring for run()
 public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask implements ChatHandler
 {
-  private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);
   private static final Random RANDOM = new Random();
-  private static final String TYPE = "index_seekable_stream";
   protected final DataSchema dataSchema;
   protected final InputRowParser<ByteBuffer> parser;
   protected final SeekableStreamTuningConfig tuningConfig;
   protected final SeekableStreamIOConfig<T1, T2> ioConfig;
   protected final Optional<ChatHandlerProvider> chatHandlerProvider;
+  protected final String type;
+  protected CircularBuffer<Throwable> savedParseExceptions;
 
   @JsonCreator
   public SeekableStreamIndexTask(
@@ -69,23 +68,23 @@ public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask imple
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      String type
   )
   {
     super(
-        id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt()) : id,
-        StringUtils.format("%s_%s", TYPE, dataSchema.getDataSource()),
+        id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt(), type) : id,
+        StringUtils.format("%s_%s", type, dataSchema.getDataSource()),
         taskResource,
         dataSchema.getDataSource(),
         context
     );
-
+    this.type = type;
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.parser = Preconditions.checkNotNull((InputRowParser<ByteBuffer>) dataSchema.getParser(), "parser");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
-    final CircularBuffer<Throwable> savedParseExceptions;
     if (tuningConfig.getMaxSavedParseExceptions() > 0) {
       savedParseExceptions = new CircularBuffer<>(tuningConfig.getMaxSavedParseExceptions());
     } else {
@@ -93,13 +92,13 @@ public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask imple
     }
   }
 
-  private static String makeTaskId(String dataSource, int randomBits)
+  private static String makeTaskId(String dataSource, int randomBits, String type)
   {
     final StringBuilder suffix = new StringBuilder(8);
     for (int i = 0; i < Integer.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
     }
-    return Joiner.on("_").join(TYPE, dataSource, suffix);
+    return Joiner.on("_").join(type, dataSource, suffix);
   }
 
   @Override
@@ -111,7 +110,7 @@ public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask imple
   @Override
   public String getType()
   {
-    return TYPE;
+    return type;
   }
 
   @Override
@@ -139,7 +138,7 @@ public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask imple
   }
 
   @Override
-  public abstract TaskStatus run(TaskToolbox toolbox);
+  public abstract TaskStatus run(TaskToolbox toolbox) throws Exception;
 
   @Override
   public abstract boolean canRestore();

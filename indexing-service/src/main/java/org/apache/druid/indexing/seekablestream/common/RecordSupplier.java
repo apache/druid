@@ -24,8 +24,6 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
-// TODO: need to integrate this with Kafka
-
 /**
  * The RecordSupplier interface is a wrapper for the incoming seekable data stream
  * (i.e. Kafka consumer)

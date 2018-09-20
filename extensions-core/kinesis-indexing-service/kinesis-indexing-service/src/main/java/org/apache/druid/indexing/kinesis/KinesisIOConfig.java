@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,27 +21,19 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import org.apache.druid.segment.indexing.IOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.joda.time.DateTime;
 
 import java.util.Set;
 
-public class KinesisIOConfig implements IOConfig
+public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
 {
-  private static final boolean DEFAULT_USE_TRANSACTION = true;
   private static final boolean DEFAULT_PAUSE_AFTER_READ = true;
   private static final int DEFAULT_RECORDS_PER_FETCH = 4000;
   private static final int DEFAULT_FETCH_DELAY_MILLIS = 0;
 
-  private final String baseSequenceName;
-  private final KinesisPartitions startPartitions;
-  private final KinesisPartitions endPartitions;
-  private final boolean useTransaction;
   private final boolean pauseAfterRead;
-  private final Optional<DateTime> minimumMessageTime;
-  private final Optional<DateTime> maximumMessageTime;
   private final String endpoint;
   private final Integer recordsPerFetch;
   private final Integer fetchDelayMillis;
@@ -72,13 +64,16 @@ public class KinesisIOConfig implements IOConfig
       @JsonProperty("deaggregate") boolean deaggregate
   )
   {
-    this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
-    this.startPartitions = Preconditions.checkNotNull(startPartitions, "startPartitions");
-    this.endPartitions = Preconditions.checkNotNull(endPartitions, "endPartitions");
-    this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
+    super(
+        null,
+        baseSequenceName,
+        startPartitions,
+        endPartitions,
+        useTransaction,
+        minimumMessageTime,
+        maximumMessageTime
+    );
     this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
-    this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
-    this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
     this.endpoint = Preconditions.checkNotNull(endpoint, "endpoint");
     this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : DEFAULT_RECORDS_PER_FETCH;
     this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : DEFAULT_FETCH_DELAY_MILLIS;
@@ -89,59 +84,12 @@ public class KinesisIOConfig implements IOConfig
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
 
-    Preconditions.checkArgument(
-        startPartitions.getStream().equals(endPartitions.getStream()),
-        "start stream and end stream must match"
-    );
-
-    Preconditions.checkArgument(
-        startPartitions.getPartitionSequenceNumberMap()
-                       .keySet()
-                       .equals(endPartitions.getPartitionSequenceNumberMap().keySet()),
-        "start partition set and end partition set must match"
-    );
-  }
-
-  @JsonProperty
-  public String getBaseSequenceName()
-  {
-    return baseSequenceName;
-  }
-
-  @JsonProperty
-  public KinesisPartitions getStartPartitions()
-  {
-    return startPartitions;
-  }
-
-  @JsonProperty
-  public KinesisPartitions getEndPartitions()
-  {
-    return endPartitions;
-  }
-
-  @JsonProperty
-  public boolean isUseTransaction()
-  {
-    return useTransaction;
   }
 
   @JsonProperty
   public boolean isPauseAfterRead()
   {
     return pauseAfterRead;
-  }
-
-  @JsonProperty
-  public Optional<DateTime> getMinimumMessageTime()
-  {
-    return minimumMessageTime;
-  }
-
-  @JsonProperty
-  public Optional<DateTime> getMaximumMessageTime()
-  {
-    return maximumMessageTime;
   }
 
   @JsonProperty
@@ -174,6 +122,7 @@ public class KinesisIOConfig implements IOConfig
     return awsSecretAccessKey;
   }
 
+  @Override
   @JsonProperty
   public Set<String> getExclusiveStartSequenceNumberPartitions()
   {
@@ -199,16 +148,30 @@ public class KinesisIOConfig implements IOConfig
   }
 
   @Override
+  @JsonProperty
+  public KinesisPartitions getStartPartitions()
+  {
+    return (KinesisPartitions) super.getStartPartitions();
+  }
+
+  @Override
+  @JsonProperty
+  public KinesisPartitions getEndPartitions()
+  {
+    return (KinesisPartitions) super.getEndPartitions();
+  }
+
+  @Override
   public String toString()
   {
     return "KinesisIOConfig{" +
-           "baseSequenceName='" + baseSequenceName + '\'' +
-           ", startPartitions=" + startPartitions +
-           ", endPartitions=" + endPartitions +
-           ", useTransaction=" + useTransaction +
+           "baseSequenceName='" + getBaseSequenceName() + '\'' +
+           ", startPartitions=" + getStartPartitions() +
+           ", endPartitions=" + getEndPartitions() +
+           ", useTransaction=" + isUseTransaction() +
            ", pauseAfterRead=" + pauseAfterRead +
-           ", minimumMessageTime=" + minimumMessageTime +
-           ", maximumMessageTime=" + maximumMessageTime +
+           ", minimumMessageTime=" + getMinimumMessageTime() +
+           ", maximumMessageTime=" + getMaximumMessageTime() +
            ", endpoint='" + endpoint + '\'' +
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +

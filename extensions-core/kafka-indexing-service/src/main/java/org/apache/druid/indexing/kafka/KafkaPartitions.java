@@ -21,15 +21,14 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Map;
-import java.util.Objects;
 
 public class KafkaPartitions extends SeekableStreamPartitions<Integer, Long>
 {
+
+  public static final long NO_END_SEQUENCE_NUMBER = Long.MAX_VALUE;
 
   @JsonCreator
   public KafkaPartitions(
@@ -42,17 +41,12 @@ public class KafkaPartitions extends SeekableStreamPartitions<Integer, Long>
         partitionOffsetMap
     );
 
-    // Validate partitionOffsetMap
-    for (Map.Entry<Integer, Long> entry : partitionOffsetMap.entrySet()) {
-      Preconditions.checkArgument(
-          entry.getValue() >= 0,
-          StringUtils.format(
-              "partition[%d] offset[%d] invalid",
-              entry.getKey(),
-              entry.getValue()
-          )
-      );
-    }
+  }
+
+  @Override
+  public Long getNoEndSequenceNumber()
+  {
+    return Long.MAX_VALUE;
   }
 
   @JsonProperty
@@ -67,32 +61,4 @@ public class KafkaPartitions extends SeekableStreamPartitions<Integer, Long>
     return getPartitionSequenceMap();
   }
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    KafkaPartitions that = (KafkaPartitions) o;
-    return Objects.equals(getTopic(), that.getTopic()) &&
-           Objects.equals(getPartitionOffsetMap(), that.getPartitionOffsetMap());
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(getTopic(), getPartitionOffsetMap());
-  }
-
-  @Override
-  public String toString()
-  {
-    return "KafkaPartitions{" +
-           "topic='" + getTopic() + '\'' +
-           ", partitionOffsetMap=" + getPartitionOffsetMap() +
-           '}';
-  }
 }

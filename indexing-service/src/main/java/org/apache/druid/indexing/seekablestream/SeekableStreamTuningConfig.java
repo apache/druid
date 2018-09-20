@@ -36,6 +36,7 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
 {
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
+  private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
@@ -53,6 +54,7 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   private final Period intermediateHandoffPeriod;
+  private final boolean skipSequenceNumberAvailabilityCheck;
 
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
@@ -73,6 +75,7 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
       @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") @Nullable Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") @Nullable Boolean resetOffsetAutomatically,
+      @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
@@ -108,6 +111,9 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
     this.intermediateHandoffPeriod = intermediateHandoffPeriod == null
                                      ? new Period().withDays(Integer.MAX_VALUE)
                                      : intermediateHandoffPeriod;
+    this.skipSequenceNumberAvailabilityCheck = skipSequenceNumberAvailabilityCheck == null
+                                               ? DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK
+                                               : skipSequenceNumberAvailabilityCheck;
 
     if (this.reportParseExceptions) {
       this.maxParseExceptions = 0;
@@ -244,6 +250,12 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
   public int getMaxSavedParseExceptions()
   {
     return maxSavedParseExceptions;
+  }
+
+  @JsonProperty
+  public boolean isSkipSequenceNumberAvailabilityCheck()
+  {
+    return skipSequenceNumberAvailabilityCheck;
   }
 
   public abstract SeekableStreamTuningConfig withBasePersistDirectory(File dir);

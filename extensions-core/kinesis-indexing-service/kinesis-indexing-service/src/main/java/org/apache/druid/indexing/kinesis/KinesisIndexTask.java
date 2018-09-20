@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -27,18 +27,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.LookupNodeService;
@@ -51,17 +47,15 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.kinesis.common.Record;
-import org.apache.druid.indexing.kinesis.common.RecordSupplier;
-import org.apache.druid.indexing.kinesis.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.common.Record;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -84,7 +78,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -95,7 +88,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
 
 import javax.servlet.http.HttpServletRequest;
@@ -117,7 +109,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
@@ -128,37 +119,23 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-public class KinesisIndexTask extends AbstractTask implements ChatHandler
+public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 {
   public static final long PAUSE_FOREVER = -1L;
 
-  public enum Status
-  {
-    NOT_STARTED,
-    STARTING,
-    READING,
-    PAUSED,
-    PUBLISHING
-  }
-
   private static final EmittingLogger log = new EmittingLogger(KinesisIndexTask.class);
-  private static final String TYPE = "index_kinesis";
-  private static final Random RANDOM = new Random();
+
   private static final long POLL_TIMEOUT = 100;
   private static final long POLL_RETRY_MS = 30000;
   private static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
 
-  private final DataSchema dataSchema;
-  private final InputRowParser<ByteBuffer> parser;
-  private final KinesisTuningConfig tuningConfig;
-  private final KinesisIOConfig ioConfig;
   private final AuthorizerMapper authorizerMapper;
-  private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   private final Map<String, String> endOffsets = new ConcurrentHashMap<>();
   private final Map<String, String> lastOffsets = new ConcurrentHashMap<>();
-
+  private final KinesisIOConfig ioConfig;
+  private final KinesisTuningConfig tuningConfig;
   private ObjectMapper mapper;
 
   private volatile Appenderator appenderator = null;
@@ -205,7 +182,6 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
   private final Object statusLock = new Object();
 
   private final RowIngestionMeters rowIngestionMeters;
-  private CircularBuffer<Throwable> savedParseExceptions;
   private IngestionState ingestionState;
 
   private volatile boolean pauseRequested = false;
@@ -225,70 +201,24 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
   )
   {
     super(
-        id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt()) : id,
-        String.format("%s_%s", TYPE, dataSchema.getDataSource()),
+        id,
         taskResource,
-        dataSchema.getDataSource(),
-        context
+        dataSchema,
+        tuningConfig,
+        ioConfig,
+        context,
+        chatHandlerProvider,
+        authorizerMapper,
+        rowIngestionMetersFactory,
+        "index_kinesis"
     );
 
-    this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
-    this.parser = Preconditions.checkNotNull((InputRowParser<ByteBuffer>) dataSchema.getParser(), "parser");
-    this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
-    this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     this.authorizerMapper = authorizerMapper;
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
     this.ingestionState = IngestionState.NOT_STARTED;
-    if (tuningConfig.getMaxSavedParseExceptions() > 0) {
-      savedParseExceptions = new CircularBuffer<Throwable>(tuningConfig.getMaxSavedParseExceptions());
-    }
-    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionSequenceNumberMap());
-  }
-
-  private static String makeTaskId(String dataSource, int randomBits)
-  {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Ints.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
-    }
-    return Joiner.on("_").join(TYPE, dataSource, suffix);
-  }
-
-  @Override
-  public int getPriority()
-  {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_REALTIME_TASK_PRIORITY);
-  }
-
-  @Override
-  public String getType()
-  {
-    return TYPE;
-  }
-
-  @Override
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception
-  {
-    return true;
-  }
-
-  @JsonProperty
-  public DataSchema getDataSchema()
-  {
-    return dataSchema;
-  }
-
-  @JsonProperty
-  public KinesisTuningConfig getTuningConfig()
-  {
-    return tuningConfig;
-  }
-
-  @JsonProperty("ioConfig")
-  public KinesisIOConfig getIOConfig()
-  {
-    return ioConfig;
+    this.ioConfig = ioConfig;
+    this.tuningConfig = tuningConfig;
+    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionSequenceMap());
   }
 
   @Override
@@ -334,41 +264,41 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
     try (
         final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
         final StreamAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
-        final RecordSupplier recordSupplier = getRecordSupplier()
+        final RecordSupplier<String, String> recordSupplier = getRecordSupplier()
     ) {
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
       toolbox.getDataSegmentServerAnnouncer().announce();
 
       appenderator = appenderator0;
 
-      final String topic = ioConfig.getStartPartitions().getStream();
+      final String topic = ioConfig.getStartPartitions().getId();
 
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
       if (restoredMetadata == null) {
-        lastOffsets.putAll(ioConfig.getStartPartitions().getPartitionSequenceNumberMap());
+        lastOffsets.putAll(ioConfig.getStartPartitions().getPartitionSequenceMap());
       } else {
         final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
         final KinesisPartitions restoredNextPartitions = toolbox.getObjectMapper().convertValue(
             restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
             KinesisPartitions.class
         );
-        lastOffsets.putAll(restoredNextPartitions.getPartitionSequenceNumberMap());
+        lastOffsets.putAll(restoredNextPartitions.getPartitionSequenceMap());
 
         // Sanity checks.
-        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartPartitions().getStream())) {
+        if (!restoredNextPartitions.getId().equals(ioConfig.getStartPartitions().getId())) {
           throw new ISE(
               "WTF?! Restored stream[%s] but expected stream[%s]",
-              restoredNextPartitions.getStream(),
-              ioConfig.getStartPartitions().getStream()
+              restoredNextPartitions.getId(),
+              ioConfig.getStartPartitions().getId()
           );
         }
 
-        if (!lastOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet())) {
+        if (!lastOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionSequenceMap().keySet())) {
           throw new ISE(
               "WTF?! Restored partitions[%s] but expected partitions[%s]",
               lastOffsets.keySet(),
-              ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet()
+              ioConfig.getStartPartitions().getPartitionSequenceMap().keySet()
           );
         }
       }
@@ -404,7 +334,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
             {
               return ImmutableMap.of(
                   METADATA_NEXT_PARTITIONS, new KinesisPartitions(
-                      ioConfig.getStartPartitions().getStream(),
+                      ioConfig.getStartPartitions().getId(),
                       snapshot
                   )
               );
@@ -445,7 +375,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
             break;
           }
 
-          Record record = recordSupplier.poll(POLL_TIMEOUT);
+          Record<String, String> record = recordSupplier.poll(POLL_TIMEOUT);
 
           if (record == null) {
             continue;
@@ -593,7 +523,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
         );
 
         // Sanity check, we should only be publishing things that match our desired end state.
-        if (!endOffsets.equals(finalPartitions.getPartitionSequenceNumberMap())) {
+        if (!endOffsets.equals(finalPartitions.getPartitionSequenceMap())) {
           throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
         }
 
@@ -717,7 +647,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
     if (tuningConfig.isLogParseExceptions()) {
       log.error(
           pe,
-          "Encountered parse exception on row from partition[%d] sequenceNumber[%s]",
+          "Encountered parse exception on row from partition[%s] sequenceNumber[%s]",
           record.getPartitionId(),
           record.getSequenceNumber()
       );
@@ -1074,7 +1004,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
   private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
     final int maxRowsInMemoryPerPartition = (tuningConfig.getMaxRowsInMemory() /
-                                             ioConfig.getStartPartitions().getPartitionSequenceNumberMap().size());
+                                             ioConfig.getStartPartitions().getPartitionSequenceMap().size());
     return Appenderators.createRealtime(
         dataSchema,
         tuningConfig.withBasePersistDirectory(new File(toolbox.getPersistDir(), "persist"))
@@ -1123,11 +1053,11 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  private RecordSupplier getRecordSupplier()
+  private RecordSupplier<String, String> getRecordSupplier()
   {
     int fetchThreads = tuningConfig.getFetchThreads() != null
                        ? tuningConfig.getFetchThreads()
-                       : Math.max(1, ioConfig.getStartPartitions().getPartitionSequenceNumberMap().size());
+                       : Math.max(1, ioConfig.getStartPartitions().getPartitionSequenceMap().size());
 
     return new KinesisRecordSupplier(
         ioConfig.getEndpoint(),
@@ -1180,7 +1110,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
   }
 
   private void seekToStartingRecords(
-      RecordSupplier recordSupplier,
+      RecordSupplier<String, String> recordSupplier,
       String topic,
       Set<String> assignment,
       TaskToolbox toolbox
@@ -1189,7 +1119,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
     // Seek to starting offsets.
     for (final String partition : assignment) {
       final String offset = lastOffsets.get(partition);
-      final StreamPartition streamPartition = StreamPartition.of(topic, partition);
+      final StreamPartition<String> streamPartition = StreamPartition.of(topic, partition);
 
       if (!tuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
         try {
@@ -1200,7 +1130,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
               try {
                 sendResetRequestAndWait(
                     assignment.stream()
-                              .collect(Collectors.toMap((x) -> new StreamPartition(topic, x), lastOffsets::get)),
+                              .collect(Collectors.toMap((x) -> new StreamPartition<>(topic, x), lastOffsets::get)),
                     toolbox
                 );
               }
@@ -1290,7 +1220,10 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
     return false;
   }
 
-  private void sendResetRequestAndWait(Map<StreamPartition, String> outOfRangePartitions, TaskToolbox taskToolbox)
+  private void sendResetRequestAndWait(
+      Map<StreamPartition<String>, String> outOfRangePartitions,
+      TaskToolbox taskToolbox
+  )
       throws IOException
   {
     Map<String, String> partitionOffsetMap = outOfRangePartitions
@@ -1302,7 +1235,7 @@ public class KinesisIndexTask extends AbstractTask implements ChatHandler
             new ResetDataSourceMetadataAction(
                 getDataSource(),
                 new KinesisDataSourceMetadata(
-                    new KinesisPartitions(ioConfig.getStartPartitions().getStream(), partitionOffsetMap)
+                    new KinesisPartitions(ioConfig.getStartPartitions().getId(), partitionOffsetMap)
                 )
             )
         );

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.indexing.kinesis;
 
 import com.amazonaws.ClientConfiguration;
@@ -16,15 +35,16 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.indexing.kinesis.aws.ConstructibleAWSCredentialsConfig;
-import org.apache.druid.indexing.kinesis.common.Record;
-import org.apache.druid.indexing.kinesis.common.RecordSupplier;
-import org.apache.druid.indexing.kinesis.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.common.Record;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -40,7 +60,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class KinesisRecordSupplier implements RecordSupplier
+public class KinesisRecordSupplier implements RecordSupplier<String, String>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
@@ -48,7 +68,7 @@ public class KinesisRecordSupplier implements RecordSupplier
 
   private class PartitionResource
   {
-    private final StreamPartition streamPartition;
+    private final StreamPartition<String> streamPartition;
     private final IKinesisProxy kinesisProxy;
     private final ScheduledExecutorService scheduledExec;
     private final Object startLock = new Object();
@@ -58,7 +78,7 @@ public class KinesisRecordSupplier implements RecordSupplier
     private volatile boolean stopRequested;
 
     public PartitionResource(
-        StreamPartition streamPartition,
+        StreamPartition<String> streamPartition,
         IKinesisProxy kinesisProxy,
         ScheduledExecutorService scheduledExec
     )
@@ -116,7 +136,7 @@ public class KinesisRecordSupplier implements RecordSupplier
             log.info("shardIterator[%s] has been closed and has no more records", streamPartition.getPartitionId());
 
             // add an end-of-shard marker so caller knows this shard is closed
-            Record endOfShardRecord = new Record(
+            Record<String, String> endOfShardRecord = new Record<String, String>(
                 streamPartition.getStreamName(), streamPartition.getPartitionId(), Record.END_OF_SHARD_MARKER, null
             );
 
@@ -145,7 +165,7 @@ public class KinesisRecordSupplier implements RecordSupplier
               data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
             }
 
-            final Record record = new Record(
+            final Record<String, String> record = new Record<>(
                 streamPartition.getStreamName(),
                 streamPartition.getPartitionId(),
                 kinesisRecord.getSequenceNumber(),
@@ -214,8 +234,8 @@ public class KinesisRecordSupplier implements RecordSupplier
   private final ScheduledExecutorService scheduledExec;
 
   private final Map<String, IKinesisProxy> kinesisProxies = new ConcurrentHashMap<>();
-  private final Map<StreamPartition, PartitionResource> partitionResources = new ConcurrentHashMap<>();
-  private final BlockingQueue<Record> records;
+  private final Map<StreamPartition<String>, PartitionResource> partitionResources = new ConcurrentHashMap<>();
+  private final BlockingQueue<Record<String, String>> records;
 
   private volatile boolean checkPartitionsStarted = false;
   private volatile boolean closed = false;
@@ -279,7 +299,7 @@ public class KinesisRecordSupplier implements RecordSupplier
   }
 
   @Override
-  public void assign(Set<StreamPartition> collection)
+  public void assign(Set<StreamPartition<String>> collection)
   {
     checkIfClosed();
 
@@ -290,9 +310,9 @@ public class KinesisRecordSupplier implements RecordSupplier
         )
     );
 
-    for (Iterator<Map.Entry<StreamPartition, PartitionResource>> i = partitionResources.entrySet()
-                                                                                       .iterator(); i.hasNext(); ) {
-      Map.Entry<StreamPartition, PartitionResource> entry = i.next();
+    for (Iterator<Map.Entry<StreamPartition<String>, PartitionResource>> i = partitionResources.entrySet()
+                                                                                               .iterator(); i.hasNext(); ) {
+      Map.Entry<StreamPartition<String>, PartitionResource> entry = i.next();
       if (!collection.contains(entry.getKey())) {
         i.remove();
         entry.getValue().stop();
@@ -301,45 +321,52 @@ public class KinesisRecordSupplier implements RecordSupplier
   }
 
   @Override
-  public void seek(StreamPartition partition, String sequenceNumber)
+  public void seek(StreamPartition<String> partition, String sequenceNumber)
   {
     checkIfClosed();
     seekInternal(partition, sequenceNumber, ShardIteratorType.AT_SEQUENCE_NUMBER);
   }
 
   @Override
-  public void seekAfter(StreamPartition partition, String sequenceNumber)
+  public void seekAfter(StreamPartition<String> partition, String sequenceNumber)
   {
     checkIfClosed();
     seekInternal(partition, sequenceNumber, ShardIteratorType.AFTER_SEQUENCE_NUMBER);
   }
 
   @Override
-  public void seekToEarliest(StreamPartition partition)
+  public void seekToEarliest(Set<StreamPartition<String>> partitions)
   {
     checkIfClosed();
-    seekInternal(partition, null, ShardIteratorType.TRIM_HORIZON);
+    partitions.forEach(partition -> seekInternal(partition, null, ShardIteratorType.TRIM_HORIZON));
+
   }
 
   @Override
-  public void seekToLatest(StreamPartition partition)
+  public void seekToLatest(Set<StreamPartition<String>> partitions)
   {
     checkIfClosed();
-    seekInternal(partition, null, ShardIteratorType.LATEST);
+    partitions.forEach(partition -> seekInternal(partition, null, ShardIteratorType.LATEST));
   }
 
   @Override
-  public Record poll(long timeout)
+  public Collection<StreamPartition<String>> getAssignment()
+  {
+    return null;
+  }
+
+  @Override
+  public Record<String, String> poll(long timeout)
   {
     checkIfClosed();
     if (checkPartitionsStarted) {
-      partitionResources.values().stream().forEach(PartitionResource::start);
+      partitionResources.values().forEach(PartitionResource::start);
       checkPartitionsStarted = false;
     }
 
     try {
       while (true) {
-        Record record = records.poll(timeout, TimeUnit.MILLISECONDS);
+        Record<String, String> record = records.poll(timeout, TimeUnit.MILLISECONDS);
         if (record == null || partitionResources.containsKey(record.getStreamPartition())) {
           return record;
         } else if (log.isTraceEnabled()) {
@@ -359,17 +386,23 @@ public class KinesisRecordSupplier implements RecordSupplier
   }
 
   @Override
-  public String getLatestSequenceNumber(StreamPartition partition) throws TimeoutException
+  public String getLatestSequenceNumber(StreamPartition<String> partition) throws TimeoutException
   {
     checkIfClosed();
     return getSequenceNumberInternal(partition, ShardIteratorType.LATEST);
   }
 
   @Override
-  public String getEarliestSequenceNumber(StreamPartition partition) throws TimeoutException
+  public String getEarliestSequenceNumber(StreamPartition<String> partition) throws TimeoutException
   {
     checkIfClosed();
     return getSequenceNumberInternal(partition, ShardIteratorType.TRIM_HORIZON);
+  }
+
+  @Override
+  public String position(StreamPartition<String> partition)
+  {
+    return null;
   }
 
   @Override
@@ -412,7 +445,7 @@ public class KinesisRecordSupplier implements RecordSupplier
     return kinesisProxies.get(streamName);
   }
 
-  private void seekInternal(StreamPartition partition, String sequenceNumber, ShardIteratorType iteratorEnum)
+  private void seekInternal(StreamPartition<String> partition, String sequenceNumber, ShardIteratorType iteratorEnum)
   {
     PartitionResource resource = partitionResources.get(partition);
     if (resource == null) {
@@ -432,7 +465,7 @@ public class KinesisRecordSupplier implements RecordSupplier
     checkPartitionsStarted = true;
   }
 
-  private String getSequenceNumberInternal(StreamPartition partition, ShardIteratorType iteratorEnum)
+  private String getSequenceNumberInternal(StreamPartition<String> partition, ShardIteratorType iteratorEnum)
       throws TimeoutException
   {
     long timeoutMillis = System.currentTimeMillis() + fetchSequenceNumberTimeout;

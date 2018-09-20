@@ -48,14 +48,12 @@ import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.utils.CircularBuffer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -64,8 +62,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 {
 
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTask.class);
-  private static final String TYPE = "index_kafka"; //TODO: figure something out about TYPE
-  private static final Random RANDOM = new Random();
   static final long POLL_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(100);
   static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
 
@@ -73,7 +69,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
-
 
   @JsonCreator
   public KafkaIndexTask(
@@ -97,16 +92,9 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         context,
         chatHandlerProvider,
         authorizerMapper,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        "index_kafka"
     );
-
-    final CircularBuffer<Throwable> savedParseExceptions;
-    if (tuningConfig.getMaxSavedParseExceptions() > 0) {
-      savedParseExceptions = new CircularBuffer<>(tuningConfig.getMaxSavedParseExceptions());
-    } else {
-      savedParseExceptions = null;
-    }
-
     if (context != null && context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
         && ((boolean) context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
       runner = new IncrementalPublishingKafkaIndexTaskRunner(

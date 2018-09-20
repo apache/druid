@@ -33,8 +33,9 @@ public class TaskReportData<T1, T2>
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
-  private final Map<T1, T2> currentOffsets;
+  private Map<T1, T2> currentOffsets;
   private final Map<T1, T2> lag;
+
   public TaskReportData(
       String id,
       @Nullable Map<T1, T2> startingOffsets,
@@ -97,6 +98,11 @@ public class TaskReportData<T1, T2>
   public Map<T1, T2> getLag()
   {
     return lag;
+  }
+
+  public void setCurrentSequenceNumbers(Map<T1, T2> currentOffsets)
+  {
+    this.currentOffsets = currentOffsets;
   }
 
   @Override

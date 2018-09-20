@@ -39,8 +39,11 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Maps;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.java.util.common.IAE;
 
+import java.util.Map;
 import java.util.Objects;
 
 public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSourceMetadata
@@ -70,28 +73,108 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
   @Override
   public boolean matches(DataSourceMetadata other)
   {
-    if (getClass() != other.getClass()) {
+    if (!getClass().equals(other.getClass())) {
       return false;
     }
 
     return plus(other).equals(other.plus(this));
   }
 
-  @Override
-  public abstract DataSourceMetadata plus(DataSourceMetadata other);
 
   @Override
-  public abstract DataSourceMetadata minus(DataSourceMetadata other);
+  public DataSourceMetadata plus(DataSourceMetadata other)
+  {
+    if (!(this.getClass().isInstance(other))) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          this.getClass().getCanonicalName(),
+          other.getClass().getCanonicalName()
+      );
+    }
+
+    @SuppressWarnings("unchecked")
+    final SeekableStreamDataSourceMetadata<T1, T2> that = (SeekableStreamDataSourceMetadata<T1, T2>) other;
+
+    if (that.getSeekableStreamPartitions().getId().equals(seekableStreamPartitions.getId())) {
+      // Same topic, merge offsets.
+      final Map<T1, T2> newMap = Maps.newHashMap();
+
+      for (Map.Entry<T1, T2> entry : seekableStreamPartitions.getPartitionSequenceMap().entrySet()) {
+        newMap.put(entry.getKey(), entry.getValue());
+      }
+
+      for (Map.Entry<T1, T2> entry : that.getSeekableStreamPartitions().getPartitionSequenceMap().entrySet()) {
+        newMap.put(entry.getKey(), entry.getValue());
+      }
+
+      return createConcretDataSourceMetaData(seekableStreamPartitions.getId(), newMap);
+    } else {
+      // Different topic, prefer "other".
+      return other;
+    }
+  }
+
 
   @Override
-  public abstract boolean equals(Object o);
+  public DataSourceMetadata minus(DataSourceMetadata other)
+  {
+    if (!(this.getClass().isInstance(other))) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          this.getClass().getCanonicalName(),
+          other.getClass().getCanonicalName()
+      );
+    }
+
+    @SuppressWarnings("unchecked")
+    final SeekableStreamDataSourceMetadata<T1, T2> that = (SeekableStreamDataSourceMetadata<T1, T2>) other;
+
+    if (that.getSeekableStreamPartitions().getId().equals(seekableStreamPartitions.getId())) {
+      // Same stream, remove partitions present in "that" from "this"
+      final Map<T1, T2> newMap = Maps.newHashMap();
+
+      for (Map.Entry<T1, T2> entry : seekableStreamPartitions.getPartitionSequenceMap().entrySet()) {
+        if (!that.getSeekableStreamPartitions().getPartitionSequenceMap().containsKey(entry.getKey())) {
+          newMap.put(entry.getKey(), entry.getValue());
+        }
+      }
+
+      return createConcretDataSourceMetaData(seekableStreamPartitions.getId(), newMap);
+    } else {
+      // Different stream, prefer "this".
+      return this;
+    }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || !getClass().equals(o.getClass())) {
+      return false;
+    }
+    SeekableStreamDataSourceMetadata that = (SeekableStreamDataSourceMetadata) o;
+    return Objects.equals(getSeekableStreamPartitions(), that.getSeekableStreamPartitions());
+  }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(seekableStreamPartitions);
+    return Objects.hash(getSeekableStreamPartitions());
   }
 
   @Override
-  public abstract String toString();
+  public String toString()
+  {
+    return "SeekableStreamDataSourceMetadata{" +
+           "SeekableStreamPartitions=" + getSeekableStreamPartitions() +
+           '}';
+  }
+
+  protected abstract SeekableStreamDataSourceMetadata<T1, T2> createConcretDataSourceMetaData(
+      String streamId,
+      Map<T1, T2> newMap
+  );
 }

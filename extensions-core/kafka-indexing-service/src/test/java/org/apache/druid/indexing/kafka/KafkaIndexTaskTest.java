@@ -605,7 +605,7 @@ public class KafkaIndexTaskTest
           )
       );
       final ListenableFuture<TaskStatus> future = runTask(task);
-      while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
+      while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.PAUSED) {
         Thread.sleep(10);
       }
       final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
@@ -613,7 +613,7 @@ public class KafkaIndexTaskTest
       Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets));
       task.getRunner().setEndOffsets(currentOffsets, false);
 
-      while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
+      while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.PAUSED) {
         Thread.sleep(10);
       }
 

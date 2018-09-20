@@ -21,13 +21,9 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Maps;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.java.util.common.IAE;
 
 import java.util.Map;
-import java.util.Objects;
 
 public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Integer, Long>
 {
@@ -46,97 +42,11 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
     return (KafkaPartitions) super.getSeekableStreamPartitions();
   }
 
-
   @Override
-  public DataSourceMetadata plus(DataSourceMetadata other)
+  protected SeekableStreamDataSourceMetadata<Integer, Long> createConcretDataSourceMetaData(
+      String streamId, Map<Integer, Long> newMap
+  )
   {
-    KafkaPartitions kafkaPartitions = getKafkaPartitions();
-
-    if (!(other instanceof KafkaDataSourceMetadata)) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          KafkaDataSourceMetadata.class.getCanonicalName(),
-          other.getClass().getCanonicalName()
-      );
-    }
-
-    final KafkaDataSourceMetadata that = (KafkaDataSourceMetadata) other;
-
-    if (that.getKafkaPartitions().getTopic().equals(kafkaPartitions.getTopic())) {
-      // Same topic, merge offsets.
-      final Map<Integer, Long> newMap = Maps.newHashMap();
-
-      for (Map.Entry<Integer, Long> entry : kafkaPartitions.getPartitionOffsetMap().entrySet()) {
-        newMap.put(entry.getKey(), entry.getValue());
-      }
-
-      for (Map.Entry<Integer, Long> entry : that.getKafkaPartitions().getPartitionOffsetMap().entrySet()) {
-        newMap.put(entry.getKey(), entry.getValue());
-      }
-
-      return new KafkaDataSourceMetadata(new KafkaPartitions(kafkaPartitions.getTopic(), newMap));
-    } else {
-      // Different topic, prefer "other".
-      return other;
-    }
-  }
-
-  @Override
-  public DataSourceMetadata minus(DataSourceMetadata other)
-  {
-    KafkaPartitions kafkaPartitions = getKafkaPartitions();
-
-    if (!(other instanceof KafkaDataSourceMetadata)) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          KafkaDataSourceMetadata.class.getCanonicalName(),
-          other.getClass().getCanonicalName()
-      );
-    }
-
-    final KafkaDataSourceMetadata that = (KafkaDataSourceMetadata) other;
-
-    if (that.getKafkaPartitions().getTopic().equals(kafkaPartitions.getTopic())) {
-      // Same topic, remove partitions present in "that" from "this"
-      final Map<Integer, Long> newMap = Maps.newHashMap();
-
-      for (Map.Entry<Integer, Long> entry : kafkaPartitions.getPartitionOffsetMap().entrySet()) {
-        if (!that.getKafkaPartitions().getPartitionOffsetMap().containsKey(entry.getKey())) {
-          newMap.put(entry.getKey(), entry.getValue());
-        }
-      }
-
-      return new KafkaDataSourceMetadata(new KafkaPartitions(kafkaPartitions.getTopic(), newMap));
-    } else {
-      // Different topic, prefer "this".
-      return this;
-    }
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    KafkaDataSourceMetadata that = (KafkaDataSourceMetadata) o;
-    return Objects.equals(getKafkaPartitions(), that.getKafkaPartitions());
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(getKafkaPartitions());
-  }
-
-  @Override
-  public String toString()
-  {
-    return "KafkaDataSourceMetadata{" +
-           "kafkaPartitions=" + getKafkaPartitions() +
-           '}';
+    return new KafkaDataSourceMetadata(new KafkaPartitions(streamId, newMap));
   }
 }

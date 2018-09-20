@@ -20,29 +20,31 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 
-public class SequenceNumberPlus
+public class SequenceNumberPlus<T>
 {
-  private final String sequenceNumber;
+  private final T sequenceNumber;
   private final boolean exclusive;
+  private final boolean useExclusive;
 
-  private SequenceNumberPlus(String sequenceNumber, boolean exclusive)
+  private SequenceNumberPlus(T sequenceNumber, boolean useExclusive, boolean exclusive)
   {
     this.sequenceNumber = sequenceNumber;
     this.exclusive = exclusive;
+    this.useExclusive = useExclusive;
   }
 
-  public static SequenceNumberPlus of(String sequenceNumber, boolean exclusive)
+  public static <T> SequenceNumberPlus<T> of(T sequenceNumber, boolean useExclusive, boolean exclusive)
   {
-    return new SequenceNumberPlus(sequenceNumber, exclusive);
+    return new SequenceNumberPlus<>(sequenceNumber, useExclusive, exclusive);
   }
 
-  public String get()
+  public T get()
   {
     return sequenceNumber;
   }
 
   public boolean isExclusive()
   {
-    return exclusive;
+    return useExclusive && exclusive;
   }
 }

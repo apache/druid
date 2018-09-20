@@ -21,34 +21,49 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 import java.util.Objects;
 
+// TODO: may consider deleting Kinesis and KafaPartitions classes and just use this instead
 public abstract class SeekableStreamPartitions<T1, T2>
 {
   private final String id;
-  private final Map<T1, T2> partitionOffsetMap;
+  private final Map<T1, T2> partitionSequenceMap;
 
   @JsonCreator
   public SeekableStreamPartitions(
       @JsonProperty("id") final String id,
-      @JsonProperty("partitionOffsetMap") final Map<T1, T2> partitionOffsetMap
+      @JsonProperty("partitionSequenceMap") final Map<T1, T2> partitionOffsetMap
   )
   {
     this.id = id;
-    this.partitionOffsetMap = ImmutableMap.copyOf(partitionOffsetMap);
+    this.partitionSequenceMap = ImmutableMap.copyOf(partitionOffsetMap);
+    // Validate partitionSequenceNumberMap
+    for (Map.Entry<T1, T2> entry : partitionOffsetMap.entrySet()) {
+      Preconditions.checkArgument(
+          entry.getValue() != null,
+          String.format(
+              "partition id[%s] sequence/offset number[%s] invalid",
+              entry.getKey(),
+              entry.getValue()
+          )
+      );
+    }
   }
 
+  @JsonProperty
   public String getId()
   {
     return id;
   }
 
+  @JsonProperty
   public Map<T1, T2> getPartitionSequenceMap()
   {
-    return partitionOffsetMap;
+    return partitionSequenceMap;
   }
 
   @Override
@@ -62,16 +77,23 @@ public abstract class SeekableStreamPartitions<T1, T2>
     }
     SeekableStreamPartitions that = (SeekableStreamPartitions) o;
     return Objects.equals(id, that.id) &&
-           Objects.equals(partitionOffsetMap, that.partitionOffsetMap);
+           Objects.equals(partitionSequenceMap, that.partitionSequenceMap);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, partitionOffsetMap);
+    return Objects.hash(id, partitionSequenceMap);
   }
 
   @Override
-  public abstract String toString();
+  public String toString()
+  {
+    return "SeekableStreamPartitions{" +
+           "stream/topic='" + id + '\'' +
+           ", partitionSequenceMap=" + partitionSequenceMap +
+           '}';
+  }
 
+  public abstract T2 getNoEndSequenceNumber();
 }

@@ -351,7 +351,5 @@ public abstract class SeekableStreamIndexTaskClient<T1, T2> extends IndexTaskCli
 
   protected abstract JavaType constructMapType(Class<? extends Map> mapType);
 
-  public abstract Class<? extends SeekableStreamIndexTask> getTaskClassType();
-
 }
 

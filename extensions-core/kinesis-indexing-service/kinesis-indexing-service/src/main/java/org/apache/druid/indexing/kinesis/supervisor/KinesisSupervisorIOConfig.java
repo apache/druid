@@ -1,18 +1,18 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -21,25 +21,14 @@ package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
-import org.joda.time.Duration;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.joda.time.Period;
 
-public class KinesisSupervisorIOConfig
+public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
-  private final String stream;
   private final String endpoint;
-  private final Integer replicas;
-  private final Integer taskCount;
-  private final Duration taskDuration;
-  private final Duration startDelay;
-  private final Duration period;
-  private final boolean useEarliestSequenceNumber;
-  private final Duration completionTimeout;
-  private final Optional<Duration> lateMessageRejectionPeriod;
-  private final Optional<Duration> earlyMessageRejectionPeriod;
 
   // In determining a suitable value for recordsPerFetch:
   //   - Each data record can be up to 1 MB in size
@@ -83,23 +72,21 @@ public class KinesisSupervisorIOConfig
       @JsonProperty("deaggregate") boolean deaggregate
   )
   {
-    this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
+    super(
+        Preconditions.checkNotNull(stream, "stream"),
+        replicas,
+        taskCount,
+        taskDuration,
+        startDelay,
+        period,
+        useEarliestSequenceNumber,
+        completionTimeout,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod
+    );
     this.endpoint = endpoint != null
                     ? endpoint
                     : (region != null ? region.getEndpoint() : KinesisRegion.US_EAST_1.getEndpoint());
-    this.replicas = replicas != null ? replicas : 1;
-    this.taskCount = taskCount != null ? taskCount : 1;
-    this.taskDuration = defaultDuration(taskDuration, "PT1H");
-    this.startDelay = defaultDuration(startDelay, "PT5S");
-    this.period = defaultDuration(period, "PT30S");
-    this.useEarliestSequenceNumber = useEarliestSequenceNumber != null ? useEarliestSequenceNumber : false;
-    this.completionTimeout = defaultDuration(completionTimeout, "PT6H");
-    this.lateMessageRejectionPeriod = lateMessageRejectionPeriod == null
-                                      ? Optional.<Duration>absent()
-                                      : Optional.of(lateMessageRejectionPeriod.toStandardDuration());
-    this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
-                                       ? Optional.<Duration>absent()
-                                       : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
     this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : 4000;
     this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : 0;
     this.awsAccessKeyId = awsAccessKeyId;
@@ -112,67 +99,13 @@ public class KinesisSupervisorIOConfig
   @JsonProperty
   public String getStream()
   {
-    return stream;
+    return getId();
   }
 
   @JsonProperty
   public String getEndpoint()
   {
     return endpoint;
-  }
-
-  @JsonProperty
-  public Integer getReplicas()
-  {
-    return replicas;
-  }
-
-  @JsonProperty
-  public Integer getTaskCount()
-  {
-    return taskCount;
-  }
-
-  @JsonProperty
-  public Duration getTaskDuration()
-  {
-    return taskDuration;
-  }
-
-  @JsonProperty
-  public Duration getStartDelay()
-  {
-    return startDelay;
-  }
-
-  @JsonProperty
-  public Duration getPeriod()
-  {
-    return period;
-  }
-
-  @JsonProperty
-  public boolean isUseEarliestSequenceNumber()
-  {
-    return useEarliestSequenceNumber;
-  }
-
-  @JsonProperty
-  public Duration getCompletionTimeout()
-  {
-    return completionTimeout;
-  }
-
-  @JsonProperty
-  public Optional<Duration> getLateMessageRejectionPeriod()
-  {
-    return lateMessageRejectionPeriod;
-  }
-
-  @JsonProperty
-  public Optional<Duration> getEarlyMessageRejectionPeriod()
-  {
-    return earlyMessageRejectionPeriod;
   }
 
   @JsonProperty
@@ -221,17 +154,17 @@ public class KinesisSupervisorIOConfig
   public String toString()
   {
     return "KinesisSupervisorIOConfig{" +
-           "stream='" + stream + '\'' +
+           "stream='" + getStream() + '\'' +
            ", endpoint='" + endpoint + '\'' +
-           ", replicas=" + replicas +
-           ", taskCount=" + taskCount +
-           ", taskDuration=" + taskDuration +
-           ", startDelay=" + startDelay +
-           ", period=" + period +
-           ", useEarliestSequenceNumber=" + useEarliestSequenceNumber +
-           ", completionTimeout=" + completionTimeout +
-           ", lateMessageRejectionPeriod=" + lateMessageRejectionPeriod +
-           ", earlyMessageRejectionPeriod=" + earlyMessageRejectionPeriod +
+           ", replicas=" + getReplicas() +
+           ", taskCount=" + getTaskCount() +
+           ", taskDuration=" + getTaskDuration() +
+           ", startDelay=" + getStartDelay() +
+           ", period=" + getPeriod() +
+           ", useEarliestSequenceNumber=" + isUseEarliestSequenceNumber() +
+           ", completionTimeout=" + getCompletionTimeout() +
+           ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
+           ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
            ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
@@ -242,8 +175,4 @@ public class KinesisSupervisorIOConfig
            '}';
   }
 
-  private static Duration defaultDuration(final Period period, final String theDefault)
-  {
-    return (period == null ? new Period(theDefault) : period).toStandardDuration();
-  }
 }

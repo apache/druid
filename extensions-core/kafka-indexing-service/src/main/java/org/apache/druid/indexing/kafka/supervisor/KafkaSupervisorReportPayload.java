@@ -94,7 +94,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
            (getLatestOffsets() != null ? ", latestOffsets=" + getLatestOffsets() : "") +
            (getMinimumLag() != null ? ", minimumLag=" + getMinimumLag() : "") +
            (getAggregateLag() != null ? ", aggregateLag=" + getAggregateLag() : "") +
-           (getOffsetsLastUpdated() != null ? ", offsetsLastUpdated=" + getOffsetsLastUpdated() : "") +
+           (getOffsetsLastUpdated() != null ? ", sequenceLastUpdated=" + getOffsetsLastUpdated() : "") +
            ", suspended=" + getSuspended() +
            '}';
   }

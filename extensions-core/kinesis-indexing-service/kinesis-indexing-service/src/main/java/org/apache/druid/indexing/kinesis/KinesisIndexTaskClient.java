@@ -1,32 +1,30 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package org.apache.druid.indexing.kinesis;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.indexer.TaskLocation;
@@ -35,11 +33,10 @@ import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -49,7 +46,6 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -57,11 +53,9 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
-import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
-public class KinesisIndexTaskClient
+public class KinesisIndexTaskClient extends SeekableStreamIndexTaskClient<String, String>
 {
   public static class NoTaskLocationException extends RuntimeException
   {
@@ -79,8 +73,8 @@ public class KinesisIndexTaskClient
     }
   }
 
+  private static ObjectMapper mapper = new ObjectMapper();
   public static final int MAX_RETRY_WAIT_SECONDS = 10;
-
   private static final int MIN_RETRY_WAIT_SECONDS = 2;
   private static final EmittingLogger log = new EmittingLogger(KinesisIndexTaskClient.class);
   private static final String BASE_PATH = "/druid/worker/v1/chat";
@@ -104,6 +98,15 @@ public class KinesisIndexTaskClient
       long numRetries
   )
   {
+    super(
+        httpClient,
+        jsonMapper,
+        taskInfoProvider,
+        dataSource,
+        numThreads,
+        httpTimeout,
+        numRetries
+    );
     this.httpClient = httpClient;
     this.jsonMapper = jsonMapper;
     this.taskInfoProvider = taskInfoProvider;
@@ -122,318 +125,18 @@ public class KinesisIndexTaskClient
     );
   }
 
+  @Override
+  protected JavaType constructMapType(Class<? extends Map> mapType)
+  {
+    return mapper.getTypeFactory().constructMapType(mapType, String.class, String.class);
+  }
+
+  @Override
   public void close()
   {
     executorService.shutdownNow();
   }
 
-  public boolean stop(final String id, final boolean publish)
-  {
-    log.debug("Stop task[%s] publish[%s]", id, publish);
-
-    try {
-      final FullResponseHolder response = submitRequest(
-          id, HttpMethod.POST, "stop", publish ? "publish=true" : null, true
-      );
-      return response.getStatus().getCode() / 100 == 2;
-    }
-    catch (NoTaskLocationException e) {
-      return false;
-    }
-    catch (TaskNotRunnableException e) {
-      log.info("Task [%s] couldn't be stopped because it is no longer running", id);
-      return true;
-    }
-    catch (Exception e) {
-      log.warn(e, "Exception while stopping task [%s]", id);
-      return false;
-    }
-  }
-
-  public boolean resume(final String id)
-  {
-    log.debug("Resume task[%s]", id);
-
-    try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.POST, "resume", null, true);
-      return response.getStatus().getCode() / 100 == 2;
-    }
-    catch (NoTaskLocationException e) {
-      return false;
-    }
-  }
-
-  public Map<String, String> pause(final String id)
-  {
-    return pause(id, 0);
-  }
-
-  public Map<String, String> pause(final String id, final long timeout)
-  {
-    log.debug("Pause task[%s] timeout[%d]", id, timeout);
-
-    try {
-      final FullResponseHolder response = submitRequest(
-          id,
-          HttpMethod.POST,
-          "pause",
-          timeout > 0 ? String.format("timeout=%d", timeout) : null,
-          true
-      );
-
-      if (response.getStatus().equals(HttpResponseStatus.OK)) {
-        log.info("Task [%s] paused successfully", id);
-        return jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, String>>() {});
-      }
-
-      final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-      while (true) {
-        if (getStatus(id) == KinesisIndexTask.Status.PAUSED) {
-          return getCurrentOffsets(id, true);
-        }
-
-        final Duration delay = retryPolicy.getAndIncrementRetryDelay();
-        if (delay == null) {
-          log.error("Task [%s] failed to pause, aborting", id);
-          throw new ISE("Task [%s] failed to pause, aborting", id);
-        } else {
-          final long sleepTime = delay.getMillis();
-          log.info(
-              "Still waiting for task [%s] to pause; will try again in [%s]",
-              id,
-              new Duration(sleepTime).toString()
-          );
-          Thread.sleep(sleepTime);
-        }
-      }
-    }
-    catch (NoTaskLocationException e) {
-      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
-      return ImmutableMap.of();
-    }
-    catch (IOException | InterruptedException e) {
-      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public KinesisIndexTask.Status getStatus(final String id)
-  {
-    log.debug("GetStatus task[%s]", id);
-
-    try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "status", null, true);
-      return jsonMapper.readValue(response.getContent(), KinesisIndexTask.Status.class);
-    }
-    catch (NoTaskLocationException e) {
-      return KinesisIndexTask.Status.NOT_STARTED;
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public DateTime getStartTime(final String id)
-  {
-    log.debug("GetStartTime task[%s]", id);
-
-    try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "time/start", null, true);
-      return response.getContent() == null || response.getContent().isEmpty()
-             ? null
-             : jsonMapper.readValue(response.getContent(), DateTime.class);
-    }
-    catch (NoTaskLocationException e) {
-      return null;
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public Map<String, String> getCurrentOffsets(final String id, final boolean retry)
-  {
-    log.debug("GetCurrentOffsets task[%s] retry[%s]", id, retry);
-
-    try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "offsets/current", null, retry);
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, String>>() {});
-    }
-    catch (NoTaskLocationException e) {
-      return ImmutableMap.of();
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public Map<String, String> getEndOffsets(final String id)
-  {
-    log.debug("GetEndOffsets task[%s]", id);
-
-    try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "offsets/end", null, true);
-      return jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, String>>() {});
-    }
-    catch (NoTaskLocationException e) {
-      return ImmutableMap.of();
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public boolean setEndOffsets(final String id, final Map<String, String> endOffsets)
-  {
-    return setEndOffsets(id, endOffsets, false);
-  }
-
-  public boolean setEndOffsets(final String id, final Map<String, String> endOffsets, final boolean resume)
-  {
-    log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s]", id, endOffsets, resume);
-
-    try {
-      final FullResponseHolder response = submitRequest(
-          id,
-          HttpMethod.POST,
-          "offsets/end",
-          resume ? "resume=true" : null,
-          jsonMapper.writeValueAsBytes(endOffsets),
-          true
-      );
-      return response.getStatus().getCode() / 100 == 2;
-    }
-    catch (NoTaskLocationException e) {
-      return false;
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public ListenableFuture<Boolean> stopAsync(final String id, final boolean publish)
-  {
-    return executorService.submit(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call() throws Exception
-          {
-            return stop(id, publish);
-          }
-        }
-    );
-  }
-
-  public ListenableFuture<Boolean> resumeAsync(final String id)
-  {
-    return executorService.submit(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call() throws Exception
-          {
-            return resume(id);
-          }
-        }
-    );
-  }
-
-  public ListenableFuture<Map<String, String>> pauseAsync(final String id)
-  {
-    return pauseAsync(id, 0);
-  }
-
-  public ListenableFuture<Map<String, String>> pauseAsync(final String id, final long timeout)
-  {
-    return executorService.submit(
-        new Callable<Map<String, String>>()
-        {
-          @Override
-          public Map<String, String> call() throws Exception
-          {
-            return pause(id, timeout);
-          }
-        }
-    );
-  }
-
-  public ListenableFuture<KinesisIndexTask.Status> getStatusAsync(final String id)
-  {
-    return executorService.submit(
-        new Callable<KinesisIndexTask.Status>()
-        {
-          @Override
-          public KinesisIndexTask.Status call() throws Exception
-          {
-            return getStatus(id);
-          }
-        }
-    );
-  }
-
-  public ListenableFuture<DateTime> getStartTimeAsync(final String id)
-  {
-    return executorService.submit(
-        new Callable<DateTime>()
-        {
-          @Override
-          public DateTime call() throws Exception
-          {
-            return getStartTime(id);
-          }
-        }
-    );
-  }
-
-  public ListenableFuture<Map<String, String>> getCurrentOffsetsAsync(final String id, final boolean retry)
-  {
-    return executorService.submit(
-        new Callable<Map<String, String>>()
-        {
-          @Override
-          public Map<String, String> call() throws Exception
-          {
-            return getCurrentOffsets(id, retry);
-          }
-        }
-    );
-  }
-
-  public ListenableFuture<Map<String, String>> getEndOffsetsAsync(final String id)
-  {
-    return executorService.submit(
-        new Callable<Map<String, String>>()
-        {
-          @Override
-          public Map<String, String> call() throws Exception
-          {
-            return getEndOffsets(id);
-          }
-        }
-    );
-  }
-
-  public ListenableFuture<Boolean> setEndOffsetsAsync(final String id, final Map<String, String> endOffsets)
-  {
-    return setEndOffsetsAsync(id, endOffsets, false);
-  }
-
-  public ListenableFuture<Boolean> setEndOffsetsAsync(
-      final String id, final Map<String, String> endOffsets, final boolean resume
-  )
-  {
-    return executorService.submit(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call() throws Exception
-          {
-            return setEndOffsets(id, endOffsets, resume);
-          }
-        }
-    );
-  }
 
   @VisibleForTesting
   RetryPolicyFactory createRetryPolicyFactory()
@@ -449,49 +152,13 @@ public class KinesisIndexTaskClient
     );
   }
 
+  @Override
   @VisibleForTesting
-  void checkConnection(String host, int port) throws IOException
+  protected void checkConnection(String host, int port) throws IOException
   {
     new Socket(host, port).close();
   }
 
-  public Map<String, Object> getMovingAverages(final String id)
-  {
-    log.debug("GetMovingAverages task[%s]", id);
-
-    try {
-      final FullResponseHolder response = submitRequest(
-          id,
-          HttpMethod.GET,
-          "rowStats",
-          null,
-          true
-      );
-      return response.getContent() == null || response.getContent().isEmpty()
-             ? Collections.emptyMap()
-             : jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
-    }
-    catch (NoTaskLocationException e) {
-      return Collections.emptyMap();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(final String id)
-  {
-    return executorService.submit(
-        new Callable<Map<String, Object>>()
-        {
-          @Override
-          public Map<String, Object> call()
-          {
-            return getMovingAverages(id);
-          }
-        }
-    );
-  }
 
   private FullResponseHolder submitRequest(String id, HttpMethod method, String pathSuffix, String query, boolean retry)
   {

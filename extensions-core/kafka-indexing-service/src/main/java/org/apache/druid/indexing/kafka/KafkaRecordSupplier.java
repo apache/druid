@@ -1,5 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.indexing.kafka;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.Record;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -116,10 +136,12 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   public Set<Integer> getPartitionIds(String streamName)
   {
     final Map<String, List<PartitionInfo>> topics = consumer.listTopics();
-    if (topics == null || !topics.containsKey(streamName)) {
-      throw new ISE("Could not retrieve partitions for topic [%s]", streamName);
+    if (!topics.containsKey(streamName)) {
+      throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", streamName);
     }
-    return topics.get(streamName).stream().map(PartitionInfo::partition).collect(Collectors.toSet());
+    return topics == null
+           ? ImmutableSet.of()
+           : topics.get(streamName).stream().map(PartitionInfo::partition).collect(Collectors.toSet());
   }
 
   @Override

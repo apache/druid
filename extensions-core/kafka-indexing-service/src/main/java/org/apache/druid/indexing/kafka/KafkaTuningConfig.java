@@ -66,6 +66,7 @@ public class KafkaTuningConfig extends SeekableStreamTuningConfig
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
+        false,
         segmentWriteOutMediumFactory,
         intermediateHandoffPeriod,
         logParseExceptions,
