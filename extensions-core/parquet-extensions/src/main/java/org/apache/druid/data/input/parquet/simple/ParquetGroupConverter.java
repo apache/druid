@@ -330,11 +330,13 @@ class ParquetGroupConverter
             return g.getLong(fieldIndex, index);
           case DECIMAL:
           /*
-          DECIMAL can be used to annotate the following types:
-            int32: for 1 <= precision <= 9
-            int64: for 1 <= precision <= 18; precision < 10 will produce a warning
-            fixed_len_byte_array: precision is limited by the array size. Length n can store <= floor(log_10(2^(8*n - 1) - 1)) base-10 digits
-            binary: precision is not limited, but is required. The minimum number of bytes to store the unscaled value should be used.
+            DECIMAL can be used to annotate the following types:
+              int32: for 1 <= precision <= 9
+              int64: for 1 <= precision <= 18; precision < 10 will produce a warning
+              fixed_len_byte_array: precision is limited by the array size. Length n can
+                store <= floor(log_10(2^(8*n - 1) - 1)) base-10 digits
+              binary: precision is not limited, but is required. The minimum number of bytes to store
+                the unscaled value should be used.
            */
             int precision = pt.asPrimitiveType().getDecimalMetadata().getPrecision();
             int scale = pt.asPrimitiveType().getDecimalMetadata().getScale();
@@ -347,14 +349,21 @@ class ParquetGroupConverter
               case BINARY:
                 Binary value = g.getBinary(fieldIndex, index);
                 return convertBinaryToDecimal(value, precision, scale);
+              default:
+                throw new RE(
+                    "Unknown 'DECIMAL' type supplied to primitive conversion: %s (this should never happen)",
+                    pt.getPrimitiveTypeName()
+                );
             }
-            return null;
           case UTF8:
           case ENUM:
+          case JSON:
             return g.getString(fieldIndex, index);
           case LIST:
           case MAP:
           case MAP_KEY_VALUE:
+          case BSON:
+          default:
             throw new RE(
                 "Non-primitive supplied to primitive conversion: %s (this should never happen)",
                 ot.name()
@@ -385,10 +394,10 @@ class ParquetGroupConverter
             } else {
               return Arrays.toString(bytes);
             }
+          default:
+            throw new RE("Unknown primitive conversion: %s", ot.name());
         }
       }
-
-      return null;
     }
     catch (Exception ex) {
       return null;
