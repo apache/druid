@@ -261,34 +261,35 @@ public class SupervisorResource
   }
 
   @POST
-  @Path("/shutdownAll")
+  @Path("/suspendAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response shutdownAll()
+  public Response specSuspendAll()
+  {
+    return specSuspendAllOrResumeAll(true);
+  }
+
+  @POST
+  @Path("/resumeAll")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response specResumeAll()
+  {
+    return specSuspendAllOrResumeAll(false);
+  }
+
+  @POST
+  @Path("/terminateAll")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response terminateAll()
   {
     return asLeaderWithSupervisorManager(
-        new Function<SupervisorManager, Response>()
+        manager ->
         {
-          @Override
-          public Response apply(SupervisorManager manager)
-          {
-            Set<String> supervisorIds = manager.getSupervisorIds();
-            List<String> successes = new ArrayList<>();
-            List<String> errors = new ArrayList<>();
-
-            for (String id : supervisorIds) {
-              if (manager.stopAndRemoveSupervisor(id)) {
-                successes.add(id);
-              } else {
-                errors.add(id);
-              }
-            }
-            return Response.ok(ImmutableMap.of(
-                "success",
-                String.join(",", successes),
-                "error",
-                StringUtils.format("[%s] do not exist", String.join(",", errors))
-            )).build();
-          }
+          Set<String> supervisorIds = manager.getSupervisorIds();
+          supervisorIds.forEach(manager::stopAndRemoveSupervisor);
+          return Response.ok(ImmutableMap.of(
+              "ids",
+              String.join(",", supervisorIds)
+          )).build();
         }
     );
   }
@@ -428,6 +429,34 @@ public class SupervisorResource
           manager.suspendOrResumeSupervisor(id, suspend);
           spec = manager.getSupervisorSpec(id);
           return Response.ok(spec.get()).build();
+        }
+    );
+  }
+
+  private Response specSuspendAllOrResumeAll(boolean suspend)
+  {
+    return asLeaderWithSupervisorManager(
+        manager ->
+        {
+          Set<String> supervisorIds = manager.getSupervisorIds();
+          List<String> successes = new ArrayList<>();
+          List<String> errors = new ArrayList<>();
+
+          supervisorIds.forEach(id -> {
+            Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
+            if (spec.get().isSuspended() == suspend) {
+              errors.add(id);
+            } else {
+              manager.suspendOrResumeSupervisor(id, suspend);
+              successes.add(id);
+            }
+          });
+          return Response.ok(ImmutableMap.of(
+              "success",
+              String.join(",", successes),
+              "error",
+              StringUtils.format("[%s] are already %s", String.join(",", errors), suspend ? "suspended" : "running")
+          )).build();
         }
     );
   }
