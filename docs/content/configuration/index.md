@@ -347,6 +347,37 @@ Composite Request Logger emits request logs to multiple request loggers.
 |--------|-----------|-------|
 |`druid.request.logging.loggerProviders`|List of request loggers for emitting request logs.|none|
 
+### SQL Request Logging
+
+Brokers can be configured to log the sql request (both from HTTP and JDBC) they see.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.sql.request.logging.type`|Choices: noop, file, filtered, composing. How to log every sql request.|noop|
+
+#### File SQL Request Logging
+
+Daily sql request logs are stored on disk.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.sql.request.logging.dir`|the directory to store the sql request logs in|none|
+
+#### Filtered SQL Request Logging
+Filtered SQL Request Logger filters requests based on a configurable sqlQuery/time threshold. Only request logs where sqlQuery/time is above the threshold are emitted.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.sql.request.logging.sqlTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
+|`druid.sql.request.logging.delegate.type`|Type of delegate sql request logger to log requests.|none|
+
+#### Composite SQL Request Logging
+Composite SQL Request Logger emits sql request logs to multiple sql request loggers.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.sql.request.logging.loggerProviders`|List of sql request loggers for emitting sql request logs.|none|
+
 ### Enabling Metrics
 
 Druid nodes periodically emit metrics and different metrics monitors can be included. Each node can overwrite the default list of monitors.

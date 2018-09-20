@@ -32,7 +32,9 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopSqlRequestLoggerProvider.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "noop", value = NoopSqlRequestLoggerProvider.class),
-    @JsonSubTypes.Type(name = "file", value = FileSqlRequestLoggerProvider.class)
+    @JsonSubTypes.Type(name = "file", value = FileSqlRequestLoggerProvider.class),
+    @JsonSubTypes.Type(name = "filtered", value = FilteredSqlRequestLoggerProvider.class),
+    @JsonSubTypes.Type(name = "composing", value = ComposingSqlRequestLoggerProvider.class),
 })
 public interface SqlRequestLoggerProvider extends Provider<SqlRequestLogger>
 {

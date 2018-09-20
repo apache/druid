@@ -452,10 +452,15 @@ Druid SQL supports setting connection parameters on the client. The parameters i
 All other context parameters you provide will be attached to Druid queries and can affect how they run. See
 [Query context](query-context.html) for details on the possible options.
 
+Note that to specify an unique identifier for SQL query, use `sqlQueryId` instead of `queryId`. Setting `queryId` for a SQL
+request has no effect, all native queries underlying SQL will use auto-generated queryId, which will be returned to
+users in `X-Druid-Native-Query-Ids` header if HTTP is used.
+
 Connection context can be specified as JDBC connection properties or as a "context" object in the JSON API.
 
 |Parameter|Description|Default value|
 |---------|-----------|-------------|
+|`sqlQueryId`|Unique identifier given to this SQL query. For HTTP client, it will be returned in `X-Druid-SQL-Query-Id` header.|auto-generated|
 |`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|druid.sql.planner.sqlTimeZone on the broker (default: UTC)|
 |`useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the broker (default: true)|
 |`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.html) will be used instead.|druid.sql.planner.useApproximateTopN on the broker (default: true)|
@@ -542,3 +547,44 @@ The Druid SQL server is configured through the following properties on the broke
 |`druid.sql.planner.useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|false|
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries wihout filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
+
+## SQL Request Logging
+
+Brokers can be configured to log the sql request (both from HTTP and JDBC) they see.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.sql.request.logging.type`|Choices: noop, file, filtered, composing. How to log every sql request.|noop|
+
+### File SQL Request Logging
+
+Daily sql request logs are stored on disk.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.sql.request.logging.dir`|the directory to store the sql request logs in|none|
+
+### Filtered SQL Request Logging
+Filtered SQL Request Logger filters requests based on a configurable sqlQuery/time threshold. Only request logs where sqlQuery/time is above the threshold are emitted.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.sql.request.logging.sqlTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
+|`druid.sql.request.logging.delegate.type`|Type of delegate sql request logger to log requests.|none|
+
+### Composite SQL Request Logging
+Composite SQL Request Logger emits sql request logs to multiple sql request loggers.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.sql.request.logging.loggerProviders`|List of sql request loggers for emitting sql request logs.|none|
+
+## SQL Metrics
+
+Broker will emit the following metrics for SQL.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`sqlQuery/time`|Milliseconds taken to complete a sql.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
+|`sqlQuery/bytes`|number of bytes returned in sql response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
+

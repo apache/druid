@@ -61,12 +61,7 @@ public class FileSqlRequestLogger extends AbstractFileRequestLogger implements S
   @Override
   public void log(SqlRequestLogLine sqlRequestLogLine) throws IOException
   {
-    String message = "# " + String.valueOf(sqlRequestLogLine.getTimestamp()) + " "
-                     + sqlRequestLogLine.getRemoteAddr() + " "
-                     + objectMapper.writeValueAsString(sqlRequestLogLine.getQueryStats()) + "\n"
-                     + sqlRequestLogLine.getSql() + "\n";
-
-    logToFile(message);
+    logToFile(sqlRequestLogLine.getLine(objectMapper));
   }
 
   @Override

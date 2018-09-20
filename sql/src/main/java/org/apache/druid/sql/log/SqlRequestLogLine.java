@@ -20,6 +20,8 @@
 package org.apache.druid.sql.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLineBase;
 import org.joda.time.DateTime;
@@ -34,6 +36,14 @@ public class SqlRequestLogLine extends RequestLogLineBase
   {
     super(timestamp, remoteAddr, queryStats);
     this.sql = sql;
+  }
+
+  public String getLine(ObjectMapper objectMapper) throws JsonProcessingException
+  {
+    return "# " + String.valueOf(timestamp) + " "
+           + remoteAddr + " "
+           + objectMapper.writeValueAsString(queryStats) + "\n"
+           + sql + "\n";
   }
 
   @JsonProperty("sql")
