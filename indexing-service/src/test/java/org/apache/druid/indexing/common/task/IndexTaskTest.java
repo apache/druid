@@ -62,6 +62,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -1633,6 +1634,15 @@ public class IndexTaskTest
 
     indexTask.isReady(box.getTaskActionClient());
     TaskStatus status = indexTask.run(box);
+
+    segments.sort((s1, s2) -> {
+      final int comp = Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval());
+      if (comp != 0) {
+        return comp;
+      }
+      //noinspection SubtractionInCompareTo
+      return s1.getShardSpec().getPartitionNum() - s2.getShardSpec().getPartitionNum();
+    });
 
     return Pair.of(status, segments);
   }
