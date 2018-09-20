@@ -291,7 +291,7 @@ public class QueryMaker
     final String queryId = UUID.randomUUID().toString();
     plannerContext.addNativeQueryId(queryId);
     query = query.withId(queryId)
-                 .withSqlId(plannerContext.getSqlId());
+                 .withSqlQueryId(plannerContext.getSqlQueryId());
 
     final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
     return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);

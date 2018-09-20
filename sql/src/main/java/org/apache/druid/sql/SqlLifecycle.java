@@ -104,7 +104,7 @@ public class SqlLifecycle
       transition(State.NEW, State.INITIALIZED);
       this.sql = sqlQuery.getQuery();
       this.queryContext = contextWithSqlId(sqlQuery.getContext());
-      return sqlId();
+      return sqlQueryId();
     }
   }
 
@@ -114,7 +114,7 @@ public class SqlLifecycle
       transition(State.NEW, State.INITIALIZED);
       this.sql = sql;
       this.queryContext = contextWithSqlId(queryContext);
-      return sqlId();
+      return sqlQueryId();
     }
   }
 
@@ -124,15 +124,15 @@ public class SqlLifecycle
     if (queryContext != null) {
       newContext.putAll(queryContext);
     }
-    if (!newContext.containsKey(PlannerContext.CTX_SQL_ID)) {
-      newContext.put(PlannerContext.CTX_SQL_ID, UUID.randomUUID().toString());
+    if (!newContext.containsKey(PlannerContext.CTX_SQL_QUERY_ID)) {
+      newContext.put(PlannerContext.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
     }
     return newContext;
   }
 
-  private String sqlId()
+  private String sqlQueryId()
   {
-    return (String) this.queryContext.get(PlannerContext.CTX_SQL_ID);
+    return (String) this.queryContext.get(PlannerContext.CTX_SQL_QUERY_ID);
   }
 
   public PlannerContext plan(AuthenticationResult authenticationResult)
@@ -285,7 +285,7 @@ public class SqlLifecycle
       }
 
       if (state == State.DONE) {
-        log.warn("Tried to emit logs and metrics twice for query[%s]!", sqlId());
+        log.warn("Tried to emit logs and metrics twice for query[%s]!", sqlQueryId());
       }
 
       state = State.DONE;
@@ -296,7 +296,7 @@ public class SqlLifecycle
       try {
         ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
         if (plannerContext != null) {
-          metricBuilder.setDimension("id", plannerContext.getSqlId());
+          metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
           metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
         }
         if (plannerResult != null) {
@@ -304,14 +304,14 @@ public class SqlLifecycle
         }
         metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));
         metricBuilder.setDimension("success", String.valueOf(success));
-        emitter.emit(metricBuilder.build("sql/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
+        emitter.emit(metricBuilder.build("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
         if (bytesWritten >= 0) {
-          emitter.emit(metricBuilder.build("sql/bytes", bytesWritten));
+          emitter.emit(metricBuilder.build("sqlQuery/bytes", bytesWritten));
         }
 
         final Map<String, Object> statsMap = new LinkedHashMap<>();
-        statsMap.put("sql/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
-        statsMap.put("sql/bytes", bytesWritten);
+        statsMap.put("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
+        statsMap.put("sqlQuery/bytes", bytesWritten);
         statsMap.put("success", success);
         statsMap.put("context", queryContext);
         if (plannerContext != null) {

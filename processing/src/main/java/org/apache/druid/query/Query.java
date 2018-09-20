@@ -108,12 +108,12 @@ public interface Query<T>
 
   String getId();
 
-  default Query<T> withSqlId(String sqlId)
+  default Query<T> withSqlQueryId(String sqlQueryId)
   {
     return this;
   }
 
-  default String getSqlId()
+  default String getSqlQueryId()
   {
     return null;
   }

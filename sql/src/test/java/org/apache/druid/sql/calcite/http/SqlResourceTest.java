@@ -76,7 +76,7 @@ import java.util.stream.Collectors;
 public class SqlResourceTest extends CalciteTestBase
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-  private static final String DUMMY_SQL_ID = "dummy";
+  private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -424,7 +424,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testExplainCountStar() throws Exception
   {
-    Map<String, Object> queryContext = ImmutableMap.of(PlannerContext.CTX_SQL_ID, DUMMY_SQL_ID);
+    Map<String, Object> queryContext = ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", ResultFormat.OBJECT, queryContext)
     ).rhs;
@@ -433,7 +433,9 @@ public class SqlResourceTest extends CalciteTestBase
         ImmutableList.of(
             ImmutableMap.<String, Object>of(
                 "PLAN",
-                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlId\":\"%s\"}}], signature=[{a0:LONG}])\n", DUMMY_SQL_ID)
+                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\"}}], signature=[{a0:LONG}])\n",
+                                   DUMMY_SQL_QUERY_ID
+                )
             )
         ),
         rows

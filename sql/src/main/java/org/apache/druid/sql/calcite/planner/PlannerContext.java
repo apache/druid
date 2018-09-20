@@ -46,7 +46,7 @@ import java.util.UUID;
 public class PlannerContext
 {
   // query context keys
-  public static final String CTX_SQL_ID = "sqlId";
+  public static final String CTX_SQL_QUERY_ID = "sqlQueryId";
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
 
@@ -59,7 +59,7 @@ public class PlannerContext
   private final DateTime localNow;
   private final Map<String, Object> queryContext;
   private final AuthenticationResult authenticationResult;
-  private final String sqlId;
+  private final String sqlQueryId;
   private final List<String> nativeQueryIds = Lists.newCopyOnWriteArrayList();
 
   private PlannerContext(
@@ -78,12 +78,12 @@ public class PlannerContext
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
 
-    String sqlId = (String) this.queryContext.get(CTX_SQL_ID);
+    String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
-    if (Strings.isNullOrEmpty(sqlId)) {
-      sqlId = UUID.randomUUID().toString();
+    if (Strings.isNullOrEmpty(sqlQueryId)) {
+      sqlQueryId = UUID.randomUUID().toString();
     }
-    this.sqlId = sqlId;
+    this.sqlQueryId = sqlQueryId;
   }
 
   public static PlannerContext create(
@@ -162,9 +162,9 @@ public class PlannerContext
     return authenticationResult;
   }
 
-  public String getSqlId()
+  public String getSqlQueryId()
   {
-    return sqlId;
+    return sqlQueryId;
   }
 
   public List<String> getNativeQueryIds()

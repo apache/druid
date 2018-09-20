@@ -110,7 +110,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       return 4;
     }
   };
-  private static final String DUMMY_SQL_ID = "dummy";
+  private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -210,7 +210,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
     propertiesLosAngeles.setProperty("user", "regularUserLA");
-    propertiesLosAngeles.setProperty("sqlId", DUMMY_SQL_ID);
+    propertiesLosAngeles.setProperty("sqlQueryId", DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
   }
 
@@ -335,7 +335,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n", DUMMY_SQL_ID)
+                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
+                                   DUMMY_SQL_QUERY_ID
+                )
             )
         ),
         getRows(resultSet)

@@ -50,8 +50,8 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     }
   }
 
-  public static final String QUERYID = "queryId";
-  public static final String SQLID = "sqlId";
+  public static final String QUERY_ID = "queryId";
+  public static final String SQL_QUERY_ID = "sqlQueryId";
   private final DataSource dataSource;
   private final boolean descending;
   private final Map<String, Object> context;
@@ -225,25 +225,25 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public String getId()
   {
-    return (String) getContextValue(QUERYID);
+    return (String) getContextValue(QUERY_ID);
   }
 
   @Override
   public Query withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(QUERYID, id));
+    return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
   }
 
   @Override
-  public String getSqlId()
+  public String getSqlQueryId()
   {
-    return (String) getContextValue(SQLID);
+    return (String) getContextValue(SQL_QUERY_ID);
   }
 
   @Override
-  public Query<T> withSqlId(String sqlId)
+  public Query<T> withSqlQueryId(String sqlQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(SQLID, sqlId));
+    return withOverriddenContext(ImmutableMap.of(SQL_QUERY_ID, sqlQueryId));
   }
 
   @Override

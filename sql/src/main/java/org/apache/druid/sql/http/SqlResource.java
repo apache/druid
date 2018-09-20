@@ -85,13 +85,13 @@ public class SqlResource
   ) throws IOException
   {
     final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-    final String sqlId = lifecycle.initialize(sqlQuery);
+    final String sqlQueryId = lifecycle.initialize(sqlQuery);
     final String remoteAddr = req.getRemoteAddr();
     final String currThreadName = Thread.currentThread().getName();
 
     try {
       Thread.currentThread()
-            .setName(StringUtils.format("sql[%s]", sqlId));
+            .setName(StringUtils.format("sql[%s]", sqlQueryId));
 
       final PlannerContext plannerContext = lifecycle.planAndAuthorize(req);
       final DateTimeZone timeZone = plannerContext.getTimeZone();
@@ -158,7 +158,7 @@ public class SqlResource
                     }
                     catch (Exception ex) {
                       e = ex;
-                      log.error(ex, "Unable to send sql response [%s]", sqlId);
+                      log.error(ex, "Unable to send sql response [%s]", sqlQueryId);
                       throw Throwables.propagate(ex);
                     }
                     finally {
@@ -168,7 +168,7 @@ public class SqlResource
                   }
                 }
             )
-            .header("X-Druid-SQL-Id", sqlId)
+            .header("X-Druid-SQL-Query-Id", sqlQueryId)
             .header("X-Druid-Native-Query-Ids", joiner.join(plannerContext.getNativeQueryIds()))
             .header("X-Druid-Column-Names", jsonMapper.writeValueAsString(columnNames))
             .header("X-Druid-Column-Types", jsonMapper.writeValueAsString(columnTypes))
