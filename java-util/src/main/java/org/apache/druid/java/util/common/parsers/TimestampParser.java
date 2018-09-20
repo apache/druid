@@ -86,7 +86,7 @@ public class TimestampParser
       };
     } else {
       try {
-        final DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format));
+        final DateTimes.SysFormatter formatter = new DateTimes.SysFormatter(DateTimeFormat.forPattern(format));
         return input -> {
           Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
           return formatter.parse(ParserUtils.stripQuotes(input));
