@@ -43,7 +43,6 @@ import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelecto
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -88,11 +87,6 @@ public class QueryableIndexAdapter implements IndexableAdapter
     this.availableDimensions = availableDimensions.build();
 
     this.metadata = input.getMetadata();
-  }
-
-  public File getBaseDir()
-  {
-    return input.getBaseDir();
   }
 
   @Override

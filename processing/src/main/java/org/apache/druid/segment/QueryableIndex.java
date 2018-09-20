@@ -25,7 +25,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -38,7 +37,6 @@ import java.util.Map;
  */
 public interface QueryableIndex extends ColumnSelector, Closeable
 {
-  File getBaseDir();
   Interval getDataInterval();
   int getNumRows();
   Indexed<String> getAvailableDimensions();

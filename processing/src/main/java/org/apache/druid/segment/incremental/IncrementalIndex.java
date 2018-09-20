@@ -62,6 +62,7 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.MetricDesc;
 import org.apache.druid.segment.MetricDescImpl;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
@@ -236,7 +237,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final boolean reportParseExceptions;
   private final Metadata metadata;
 
-  private final Map<String, MetricDescImpl> metricDescs;
+  private final Map<String, MetricDesc> metricDescs;
 
   private final Map<String, DimensionDesc> dimensionDescs;
   private final List<DimensionDesc> dimensionDescsList;
@@ -291,7 +292,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     this.metricDescs = Maps.newLinkedHashMap();
     for (AggregatorFactory metric : metrics) {
-      MetricDescImpl metricDesc = new MetricDescImpl(metricDescs.size(), metric);
+      MetricDesc metricDesc = new MetricDescImpl(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
       columnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
     }
@@ -835,13 +836,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   @Nullable
   public String getMetricType(String metric)
   {
-    final MetricDescImpl metricDesc = metricDescs.get(metric);
+    final MetricDesc metricDesc = metricDescs.get(metric);
     return metricDesc != null ? metricDesc.getType() : null;
   }
 
   public ColumnValueSelector<?> makeMetricColumnValueSelector(String metric, IncrementalIndexRowHolder currEntry)
   {
-    MetricDescImpl metricDesc = metricDescs.get(metric);
+    MetricDesc metricDesc = metricDescs.get(metric);
     if (metricDesc == null) {
       return NilColumnValueSelector.instance();
     }
@@ -1404,7 +1405,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private Class classOfObject;
 
     public ObjectMetricColumnSelector(
-        MetricDescImpl metricDesc,
+        MetricDesc metricDesc,
         IncrementalIndexRowHolder currEntry,
         int metricIndex
     )
