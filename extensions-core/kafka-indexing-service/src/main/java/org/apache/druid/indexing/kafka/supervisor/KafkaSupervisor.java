@@ -367,8 +367,9 @@ public class KafkaSupervisor implements Supervisor
         exec.submit(
             () -> {
               try {
+                long pollTimeout = Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS);
                 while (!Thread.currentThread().isInterrupted() && !stopped) {
-                  final Notice notice = notices.take();
+                  final Notice notice = notices.poll(pollTimeout, TimeUnit.MILLISECONDS);
 
                   try {
                     notice.handle();
