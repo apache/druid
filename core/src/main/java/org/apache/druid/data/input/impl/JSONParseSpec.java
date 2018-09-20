@@ -34,10 +34,9 @@ import java.util.Objects;
 
 /**
  */
-public class JSONParseSpec extends ParseSpec
+public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
 {
   private final ObjectMapper objectMapper;
-  private final JSONPathSpec flattenSpec;
   private final Map<String, Boolean> featureSpec;
 
   @JsonCreator
@@ -48,10 +47,9 @@ public class JSONParseSpec extends ParseSpec
       @JsonProperty("featureSpec") Map<String, Boolean> featureSpec
   )
   {
-    super(timestampSpec, dimensionsSpec);
+    super(timestampSpec, dimensionsSpec, flattenSpec != null ? flattenSpec : JSONPathSpec.DEFAULT);
     this.objectMapper = new ObjectMapper();
-    this.flattenSpec = flattenSpec != null ? flattenSpec : JSONPathSpec.DEFAULT;
-    this.featureSpec = (featureSpec == null) ? new HashMap<String, Boolean>() : featureSpec;
+    this.featureSpec = (featureSpec == null) ? new HashMap<>() : featureSpec;
     for (Map.Entry<String, Boolean> entry : this.featureSpec.entrySet()) {
       Feature feature = Feature.valueOf(entry.getKey());
       objectMapper.configure(feature, entry.getValue());
@@ -72,7 +70,7 @@ public class JSONParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new JSONPathParser(flattenSpec, objectMapper);
+    return new JSONPathParser(getFlattenSpec(), objectMapper);
   }
 
   @Override
@@ -85,12 +83,6 @@ public class JSONParseSpec extends ParseSpec
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
     return new JSONParseSpec(getTimestampSpec(), spec, getFlattenSpec(), getFeatureSpec());
-  }
-
-  @JsonProperty
-  public JSONPathSpec getFlattenSpec()
-  {
-    return flattenSpec;
   }
 
   @JsonProperty
@@ -112,14 +104,13 @@ public class JSONParseSpec extends ParseSpec
       return false;
     }
     final JSONParseSpec that = (JSONParseSpec) o;
-    return Objects.equals(flattenSpec, that.flattenSpec) &&
-           Objects.equals(featureSpec, that.featureSpec);
+    return Objects.equals(featureSpec, that.featureSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), flattenSpec, featureSpec);
+    return Objects.hash(super.hashCode(), featureSpec);
   }
 
   @Override
@@ -128,7 +119,7 @@ public class JSONParseSpec extends ParseSpec
     return "JSONParseSpec{" +
            "timestampSpec=" + getTimestampSpec() +
            ", dimensionsSpec=" + getDimensionsSpec() +
-           ", flattenSpec=" + flattenSpec +
+           ", flattenSpec=" + getFlattenSpec() +
            ", featureSpec=" + featureSpec +
            '}';
   }

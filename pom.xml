@@ -134,6 +134,7 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
+        <module>extensions-core/parquet-extensions</module>
         <module>extensions-core/postgresql-metadata-storage</module>
         <module>extensions-core/protobuf-extensions</module>
         <module>extensions-core/lookups-cached-global</module>
@@ -151,7 +152,6 @@
         <module>extensions-contrib/kafka-eight-simpleConsumer</module>
         <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
-        <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/orc-extensions</module>
         <module>extensions-contrib/time-min-max</module>
