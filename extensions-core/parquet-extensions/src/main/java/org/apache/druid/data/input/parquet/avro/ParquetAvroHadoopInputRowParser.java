@@ -21,6 +21,7 @@ package org.apache.druid.data.input.parquet.avro;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import org.apache.avro.LogicalType;
 import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
@@ -29,7 +30,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.avro.AvroFlattenerMaker;
 import org.apache.druid.data.input.avro.AvroParseSpec;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -49,7 +49,6 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
 {
   private final ParseSpec parseSpec;
   private final boolean binaryAsString;
-  private final List<String> dimensions;
   private final TimestampSpec timestampSpec;
   private final ObjectFlattener<GenericRecord> recordFlattener;
 
@@ -63,12 +62,6 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
     this.parseSpec = parseSpec;
     this.timestampSpec = parseSpec.getTimestampSpec();
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
-
-    List<DimensionSchema> dimensionSchema = parseSpec.getDimensionsSpec().getDimensions();
-    this.dimensions = new ArrayList<>();
-    for (DimensionSchema dim : dimensionSchema) {
-      this.dimensions.add(dim.getName());
-    }
 
     final JSONPathSpec flattenSpec;
     if (parseSpec != null && (parseSpec instanceof AvroParseSpec)) {
@@ -101,6 +94,16 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
   public List<InputRow> parseBatch(GenericRecord record)
   {
     Map<String, Object> row = recordFlattener.flatten(record);
+
+    final List<String> dimensions = parseSpec.getDimensionsSpec().hasCustomDimensions()
+                                    ? parseSpec.getDimensionsSpec().getDimensionNames()
+                                    : new ArrayList(
+                                        Sets.difference(
+                                            row.keySet(),
+                                            parseSpec.getDimensionsSpec()
+                                                     .getDimensionExclusions()
+                                        )
+                                    );
     // check for parquet Date
     // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#date
     LogicalType logicalType = determineTimestampSpecLogicalType(record.getSchema(), timestampSpec.getTimestampColumn());

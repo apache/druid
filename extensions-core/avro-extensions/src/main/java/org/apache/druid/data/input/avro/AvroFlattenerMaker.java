@@ -49,12 +49,36 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   private static final EnumSet<Schema.Type> ROOT_TYPES = EnumSet.of(
       Schema.Type.STRING,
       Schema.Type.BYTES,
-      Schema.Type.ARRAY,
       Schema.Type.INT,
       Schema.Type.LONG,
       Schema.Type.FLOAT,
       Schema.Type.DOUBLE
   );
+
+  private static boolean isPrimitive(Schema schema)
+  {
+    return ROOT_TYPES.contains(schema.getType());
+  }
+  private static boolean isPrimitiveArray(Schema schema)
+  {
+    return schema.getType().equals(Schema.Type.ARRAY) && isPrimitive(schema.getElementType());
+  }
+
+  private static boolean isOptionalPrimitive(Schema schema)
+  {
+    return schema.getType().equals(Schema.Type.UNION) &&
+           schema.getTypes().size() == 2 &&
+           schema.getTypes().get(0).getType().equals(Schema.Type.NULL) &&
+           (isPrimitive(schema.getTypes().get(1)) || isPrimitiveArray(schema.getTypes().get(1)));
+  }
+
+  private static boolean isFieldPrimitive(Schema.Field field)
+  {
+    return isPrimitive(field.schema()) ||
+           isPrimitiveArray(field.schema()) ||
+           isOptionalPrimitive(field.schema());
+  }
+
 
   private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
@@ -71,7 +95,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
     return obj.getSchema()
               .getFields()
               .stream()
-              .filter(field -> ROOT_TYPES.contains(field.schema().getType()))
+              .filter(AvroFlattenerMaker::isFieldPrimitive)
               .map(Schema.Field::name)
               .collect(Collectors.toSet());
   }
