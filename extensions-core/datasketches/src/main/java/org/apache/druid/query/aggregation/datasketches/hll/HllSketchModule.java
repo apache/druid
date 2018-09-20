@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.Module;
@@ -63,7 +63,7 @@ public class HllSketchModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.asList(
+    return Collections.singletonList(
         new SimpleModule("HllSketchModule").registerSubtypes(
             new NamedType(HllSketchMergeAggregatorFactory.class, MERGE_TYPE_NAME),
             new NamedType(HllSketchBuildAggregatorFactory.class, BUILD_TYPE_NAME),
