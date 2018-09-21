@@ -307,6 +307,7 @@ public class OverlordResource
     return Response.status(status).entity(response).build();
   }
 
+  @Deprecated
   @GET
   @Path("/task/{taskid}/segments")
   @Produces(MediaType.APPLICATION_JSON)

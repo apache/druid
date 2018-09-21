@@ -16,32 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.druid.indexing.common.actions;
 
-import com.google.inject.Inject;
-import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskStorage;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
+ * The configuration for task audit logging.
+ * This class will be removed in future releases. See https://github.com/apache/incubator-druid/issues/5859.
  */
-public class LocalTaskActionClientFactory implements TaskActionClientFactory
+@Deprecated
+public class TaskAuditLogConfig
 {
-  private final TaskStorage storage;
-  private final TaskActionToolbox toolbox;
-  private final TaskAuditLogConfig auditLogConfig;
+  @JsonProperty
+  private final boolean enabled;
 
-  @Inject
-  public LocalTaskActionClientFactory(TaskStorage storage, TaskActionToolbox toolbox, TaskAuditLogConfig auditLogConfig)
+  @JsonCreator
+  public TaskAuditLogConfig(@JsonProperty("enabled") boolean enabled)
   {
-    this.storage = storage;
-    this.toolbox = toolbox;
-    this.auditLogConfig = auditLogConfig;
+    this.enabled = enabled;
   }
 
-  @Override
-  public TaskActionClient create(Task task)
+  @JsonProperty("enabled")
+  public boolean isEnabled()
   {
-    return new LocalTaskActionClient(task, storage, toolbox, auditLogConfig);
+    return enabled;
   }
 }
