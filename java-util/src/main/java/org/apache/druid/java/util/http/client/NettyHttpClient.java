@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -71,13 +72,6 @@ public class NettyHttpClient extends AbstractHttpClient
   private final ResourcePool<String, ChannelFuture> pool;
   private final HttpClientConfig.CompressionCodec compressionCodec;
   private final Duration defaultReadTimeout;
-
-  public NettyHttpClient(
-      ResourcePool<String, ChannelFuture> pool
-  )
-  {
-    this(pool, null, HttpClientConfig.DEFAULT_COMPRESSION_CODEC, null);
-  }
 
   NettyHttpClient(
       ResourcePool<String, ChannelFuture> pool,
@@ -138,6 +132,9 @@ public class NettyHttpClient extends AbstractHttpClient
       );
     } else {
       channel = channelFuture.getChannel();
+
+      // In case we get a channel that never had its readability turned back on.
+      channel.setReadable(true);
     }
     final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
     final HttpRequest httpRequest = new DefaultHttpRequest(
@@ -183,6 +180,16 @@ public class NettyHttpClient extends AbstractHttpClient
         {
           private volatile ClientResponse<Intermediate> response = null;
 
+          // Chunk number most recently assigned.
+          private long currentChunkNum = 0;
+
+          // Suspend and resume watermarks (respectively: last chunk number that triggered a suspend, and that was
+          // provided to the TrafficCop's resume method). Synchronized access since they are not always accessed
+          // from an I/O thread. (TrafficCops can be called from any thread.)
+          private final Object watermarkLock = new Object();
+          private long suspendWatermark = -1;
+          private long resumeWatermark = -1;
+
           @Override
           public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
           {
@@ -198,10 +205,24 @@ public class NettyHttpClient extends AbstractHttpClient
                   log.debug("[%s] Got response: %s", requestDesc, httpResponse.getStatus());
                 }
 
-                response = handler.handleResponse(httpResponse);
+                HttpResponseHandler.TrafficCop trafficCop = resumeChunkNum -> {
+                  synchronized (watermarkLock) {
+                    resumeWatermark = Math.max(resumeWatermark, resumeChunkNum);
+
+                    if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
+                      suspendWatermark = -1;
+                      channel.setReadable(true);
+                      log.debug("[%s] Resumed reads from channel (chunkNum = %,d).", requestDesc, resumeChunkNum);
+                    }
+                  }
+                };
+                response = handler.handleResponse(httpResponse, trafficCop);
                 if (response.isFinished()) {
                   retVal.set((Final) response.getObj());
                 }
+
+                assert currentChunkNum == 0;
+                possiblySuspendReads(response);
 
                 if (!httpResponse.isChunked()) {
                   finishRequest();
@@ -220,10 +241,11 @@ public class NettyHttpClient extends AbstractHttpClient
                 if (httpChunk.isLast()) {
                   finishRequest();
                 } else {
-                  response = handler.handleChunk(response, httpChunk);
+                  response = handler.handleChunk(response, httpChunk, ++currentChunkNum);
                   if (response.isFinished() && !retVal.isDone()) {
                     retVal.set((Final) response.getObj());
                   }
+                  possiblySuspendReads(response);
                 }
               } else {
                 throw new IllegalStateException(StringUtils.format("Unknown message type[%s]", msg.getClass()));
@@ -242,22 +264,37 @@ public class NettyHttpClient extends AbstractHttpClient
             }
           }
 
+          private void possiblySuspendReads(ClientResponse<?> response)
+          {
+            if (!response.isContinueReading()) {
+              synchronized (watermarkLock) {
+                suspendWatermark = Math.max(suspendWatermark, currentChunkNum);
+                if (suspendWatermark > resumeWatermark) {
+                  channel.setReadable(false);
+                  log.debug("[%s] Suspended reads from channel (chunkNum = %,d).", requestDesc, currentChunkNum);
+                }
+              }
+            }
+          }
+
           private void finishRequest()
           {
             ClientResponse<Final> finalResponse = handler.done(response);
-            if (!finalResponse.isFinished()) {
-              throw new IllegalStateException(
-                  StringUtils.format(
-                      "[%s] Didn't get a completed ClientResponse Object from [%s]",
-                      requestDesc,
-                      handler.getClass()
-                  )
+
+            if (!finalResponse.isFinished() || !finalResponse.isContinueReading()) {
+              throw new ISE(
+                  "[%s] Didn't get a completed ClientResponse Object from [%s] (finished = %s, continueReading = %s)",
+                  requestDesc,
+                  handler.getClass(),
+                  finalResponse.isFinished(),
+                  finalResponse.isContinueReading()
               );
             }
             if (!retVal.isDone()) {
               retVal.set(finalResponse.getObj());
             }
             removeHandlers();
+            channel.setReadable(true);
             channelResourceContainer.returnResource();
           }
 

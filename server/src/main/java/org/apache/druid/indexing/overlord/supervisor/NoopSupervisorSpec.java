@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
 import javax.annotation.Nullable;
@@ -44,14 +45,28 @@ public class NoopSupervisorSpec implements SupervisorSpec
   @JsonProperty("id")
   private String id;
 
+  @JsonProperty("suspended")
+  private boolean suspended; //ignored
+
+  @VisibleForTesting
+  public NoopSupervisorSpec(
+      String id,
+      List<String> datasources
+  )
+  {
+    this(id, datasources, null);
+  }
+
   @JsonCreator
   public NoopSupervisorSpec(
       @Nullable @JsonProperty("id") String id,
-      @Nullable @JsonProperty("dataSources") List<String> datasources
+      @Nullable @JsonProperty("dataSources") List<String> datasources,
+      @Nullable @JsonProperty("suspended") Boolean suspended
   )
   {
     this.id = id;
     this.datasources = datasources == null ? new ArrayList<>() : datasources;
+    this.suspended = false; // ignore
   }
 
   @Override
@@ -59,6 +74,22 @@ public class NoopSupervisorSpec implements SupervisorSpec
   public String getId()
   {
     return id;
+  }
+
+
+  @Override
+  @Nullable
+  @JsonProperty("dataSources")
+  public List<String> getDataSources()
+  {
+    return datasources;
+  }
+
+  @Override
+  @JsonProperty("suspended")
+  public boolean isSuspended()
+  {
+    return suspended;
   }
 
   @Override
@@ -95,11 +126,15 @@ public class NoopSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  @Nullable
-  @JsonProperty("dataSources")
-  public List<String> getDataSources()
+  public SupervisorSpec createRunningSpec()
   {
-    return datasources;
+    return new NoopSupervisorSpec(id, datasources);
+  }
+
+  @Override
+  public SupervisorSpec createSuspendedSpec()
+  {
+    return new NoopSupervisorSpec(id, datasources);
   }
 
   @Override

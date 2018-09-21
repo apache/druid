@@ -27,7 +27,7 @@ Druid uses the Mozilla Rhino engine at optimization level 9 to compile and execu
 Druid does not execute JavaScript functions in a sandbox, so they have full access to the machine. So Javascript
 functions allow users to execute arbitrary code inside druid process. So, by default, Javascript is disabled.
 However, on dev/staging environments or secured production environments you can enable those by setting
-the [configuration property](../configuration/index.html)
+the [configuration property](../configuration/index.html#javascript)
 `druid.javascript.enabled = true`.
 
 ## Global variables

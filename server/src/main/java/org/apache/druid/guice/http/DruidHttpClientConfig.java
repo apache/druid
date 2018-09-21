@@ -58,6 +58,13 @@ public class DruidHttpClientConfig
   @JsonProperty
   private Period unusedConnectionTimeout = new Period("PT4M");
 
+  /**
+   * Maximum number of bytes queued per query before exerting backpressure. Not always used; currently, it's only
+   * respected by CachingClusteredClient (broker -> data server communication).
+   */
+  @JsonProperty
+  private long maxQueuedBytes = 0L;
+
   public int getNumConnections()
   {
     return numConnections;
@@ -100,5 +107,10 @@ public class DruidHttpClientConfig
       );
     }
     return unusedConnectionTimeout == null ? null : unusedConnectionTimeout.toStandardDuration();
+  }
+
+  public long getMaxQueuedBytes()
+  {
+    return maxQueuedBytes;
   }
 }

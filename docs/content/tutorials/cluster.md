@@ -358,4 +358,4 @@ You can add more Brokers as needed based on query load.
 ## Loading data
 
 Congratulations, you now have a Druid cluster! The next step is to learn about recommended ways to load data into
-Druid based on your use case. Read more about [loading data](ingestion.html).
+Druid based on your use case. Read more about [loading data](../ingestion/index.html).

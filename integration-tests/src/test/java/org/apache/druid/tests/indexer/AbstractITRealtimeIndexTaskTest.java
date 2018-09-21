@@ -142,8 +142,8 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
             }
           },
           true,
-          60000,
-          10,
+          10000,
+          60,
           "Real-time generated segments loaded"
       );
 

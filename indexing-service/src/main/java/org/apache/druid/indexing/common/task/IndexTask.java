@@ -1563,8 +1563,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
      * Return the max number of total rows in appenderator. This returns null if it's not specified in tuningConfig.
      * Please use {@link IndexTask#getValidMaxTotalRows} instead to get the valid value.
      */
-    @Nullable
     @JsonProperty
+    @Override
+    @Nullable
     public Long getMaxTotalRows()
     {
       return maxTotalRows;

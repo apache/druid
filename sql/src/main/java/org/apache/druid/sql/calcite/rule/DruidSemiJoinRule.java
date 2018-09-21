@@ -21,10 +21,6 @@ package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.apache.druid.sql.calcite.rel.DruidSemiJoin;
-import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
@@ -37,6 +33,10 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.rel.DruidRel;
+import org.apache.druid.sql.calcite.rel.DruidSemiJoin;
+import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
 /**
  * Planner rule adapted from Calcite 1.11.0's SemiJoinRule.
@@ -59,7 +59,7 @@ public class DruidSemiJoinRule extends RelOptRule
       };
 
   private static final Predicate<DruidRel> IS_GROUP_BY = druidRel ->
-      druidRel.getPartialDruidQuery().getAggregate() != null;
+      druidRel.getPartialDruidQuery() != null && druidRel.getPartialDruidQuery().getAggregate() != null;
 
   private static final DruidSemiJoinRule INSTANCE = new DruidSemiJoinRule();
 
@@ -73,7 +73,12 @@ public class DruidSemiJoinRule extends RelOptRule
                 null,
                 IS_LEFT_OR_INNER,
                 some(
-                    operand(DruidRel.class, null, Predicates.not(IS_GROUP_BY), any()),
+                    operand(
+                        DruidRel.class,
+                        null,
+                        Predicates.and(DruidRules.CAN_BUILD_ON, Predicates.not(IS_GROUP_BY)),
+                        any()
+                    ),
                     operand(DruidRel.class, null, IS_GROUP_BY, any())
                 )
             )

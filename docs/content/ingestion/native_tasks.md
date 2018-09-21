@@ -28,7 +28,7 @@ which specifies a split and submits worker tasks using those specs. As a result,
 the implementation of splittable firehoses. Please note that multiple tasks can be created for the same worker task spec
 if one of them fails.
 
-Since this task doesn't shuffle intermediate data, it isn't available for [perfect rollup](../design/index.html). 
+Since this task doesn't shuffle intermediate data, it isn't available for [perfect rollup](../ingestion/index.html#roll-up-modes). 
 
 An example ingestion spec is:
 
@@ -114,7 +114,7 @@ An example ingestion spec is:
 
 This field is required.
 
-See [Ingestion](../ingestion/index.html)
+See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
 
 #### IOConfig
 
@@ -141,7 +141,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
-|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "SegmentWriteOutMediumFactory" section for explanation and available options.|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used|no|
+|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.html#segmentwriteoutmediumfactory) for explanation and available options.|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used|no|
 |maxNumSubTasks|Maximum number of tasks which can be run at the same time.|Integer.MAX_VALUE|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |taskStatusCheckPeriodMs|Polling period in milleseconds to check running task statuses.|1000|no|
@@ -453,7 +453,7 @@ The Local Index Task is designed to be used for smaller data sets. The task exec
 
 This field is required.
 
-See [Ingestion](../ingestion/index.html)
+See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
 
 #### IOConfig
 
@@ -478,10 +478,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
 |forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../design/index.html). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. This flag cannot be used with either `appendToExisting` of IOConfig or `forceExtendableShardSpecs`. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.html#roll-up-modes). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. This flag cannot be used with either `appendToExisting` of IOConfig or `forceExtendableShardSpecs`. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
-|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "SegmentWriteOutMediumFactory" section for explanation and available options.|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used|no|
+|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.html#segmentwriteoutmediumfactory) for explanation and available options.|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used|no|
 
 #### IndexSpec
 
@@ -514,7 +514,7 @@ For Roaring bitmaps:
 
 While ingesting data using the Index task, it creates segments from the input data and pushes them. For segment pushing,
 the Index task supports two segment pushing modes, i.e., _bulk pushing mode_ and _incremental pushing mode_ for
-[perfect rollup and best-effort rollup](../design/index.html), respectively.
+[perfect rollup and best-effort rollup](../ingestion/index.html#roll-up-modes), respectively.
 
 In the bulk pushing mode, every segment is pushed at the very end of the index task. Until then, created segments
 are stored in the memory and local storage of the node running the index task. As a result, this mode might cause a

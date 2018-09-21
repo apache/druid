@@ -24,6 +24,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
@@ -33,6 +34,7 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -50,7 +52,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
-import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
@@ -295,6 +296,13 @@ public class CachingClusteredClientFunctionalityTest
           public int getCacheBulkMergeLimit()
           {
             return mergeLimit;
+          }
+        },
+        new DruidHttpClientConfig() {
+          @Override
+          public long getMaxQueuedBytes()
+          {
+            return 0L;
           }
         }
     );
