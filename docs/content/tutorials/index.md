@@ -95,7 +95,7 @@ Once every service has started, you are now ready to load data.
 All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the druid-#{DRUIDVERSION} package root. 
 
 Later on, if you'd like to stop the services, CTRL-C to exit from the running java processes. If you
-want a clean start after stopping the services, delete the `log` and `var` directory and run the `init` script again.
+want a clean start after stopping the services, delete the `log` and `var` directory and run the `init` script again, then shut down Zookeper and delete the Zookeeper dataDir under `/tmp/zookeeper`.
 
 From the druid-#{DRUIDVERSION} directory:
 
@@ -104,6 +104,23 @@ rm -rf log
 rm -rf var
 bin/init
 ```
+
+If you ran the [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html), you should shut down Kafka before shutting down Zookeeper, and then delete the Kafka log directory, which is at `/tmp/kafka-logs`.
+
+Ctrl-C to shut down the Kafka broker, and then delete the log directory:
+
+```bash
+rm -rf /tmp/kafka-logs
+```
+
+Now stop Zookeeper and clear its state. From the zookeeper-3.4.10 directory:
+
+```bash
+./bin/zkServer.sh stop
+rm -rf /tmp/zookeeper
+```
+
+After clearing out Druid and Zookeeper state, restart Zookeeper and then restart the Druid services.
 
 ## Loading Data
 
