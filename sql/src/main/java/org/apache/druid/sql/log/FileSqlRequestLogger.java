@@ -20,7 +20,6 @@
 package org.apache.druid.sql.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.server.log.AbstractFileRequestLogger;
@@ -30,6 +29,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class FileSqlRequestLogger extends AbstractFileRequestLogger implements SqlRequestLogger
@@ -47,7 +47,7 @@ public class FileSqlRequestLogger extends AbstractFileRequestLogger implements S
   {
     return new OutputStreamWriter(
         new FileOutputStream(new File(baseDir, currentDay.toString("'sql.'yyyy-MM-dd'.log'")), true),
-        Charsets.UTF_8
+        StandardCharsets.UTF_8
     );
   }
 
