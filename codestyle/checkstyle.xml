@@ -197,5 +197,6 @@
     <module name="PackageName">
       <property name="format" value="^org.apache.druid.*$"/>
     </module>
+    <module name="PackageDeclaration"/>
   </module>
 </module>

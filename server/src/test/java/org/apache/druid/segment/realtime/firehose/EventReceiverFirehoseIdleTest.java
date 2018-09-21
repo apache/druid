@@ -26,7 +26,6 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
