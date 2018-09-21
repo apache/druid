@@ -33,8 +33,10 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -117,6 +119,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final CachePopulator cachePopulator;
   private final CacheConfig cacheConfig;
   private final ForkJoinPool mergeFjp;
+  private final DruidHttpClientConfig httpClientConfig;
 
   @Inject
   public CachingClusteredClient(
@@ -127,7 +130,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Smile ObjectMapper objectMapper,
       @Processing ForkJoinPool mergeFjp,
       CachePopulator cachePopulator,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      @Client DruidHttpClientConfig httpClientConfig
   )
   {
     this.conglomerate = conglomerate;
@@ -138,6 +142,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.cachePopulator = cachePopulator;
     this.cacheConfig = cacheConfig;
     this.mergeFjp = mergeFjp;
+    this.httpClientConfig = httpClientConfig;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -335,8 +340,16 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Stream<Pair<ServerToSegment, Optional<T>>> cacheResolvedResults = deserializeFromCache(
           maybeFetchCacheResults(queryCacheKey, segments)
       );
-      return groupCachedResultsByServer(cacheResolvedResults)
-          .map(this::runOnServer)
+      final Pair<Integer, Stream<List<ServerMaybeSegmentMaybeCache<T>>>> serverCountAndStream =
+          groupCachedResultsByServer(cacheResolvedResults);
+
+      // Divide user-provided maxQueuedBytes by the number of servers, and limit each server to that much.
+      final long maxQueuedBytes = QueryContexts.getMaxQueuedBytes(query, httpClientConfig.getMaxQueuedBytes());
+      final long maxQueuedBytesPerServer = maxQueuedBytes / serverCountAndStream.getLhs();
+
+      return serverCountAndStream
+          .getRhs()
+          .map(s -> this.runOnServer(s, maxQueuedBytesPerServer))
           // We do a hard materialization here so that the resulting spliterators have properties that we want
           // Otherwise the stream's spliterator is of a hash map entry spliterator from the group-by-server operation
           // This also causes eager initialization of the **sequences**, aka forking off the direct druid client requests
@@ -570,7 +583,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
      *
      * @return A sequence of either the merged cached results, or the server results from any particular server
      */
-    private Sequence<T> runOnServer(List<ServerMaybeSegmentMaybeCache<T>> segmentOrResult)
+    private Sequence<T> runOnServer(List<ServerMaybeSegmentMaybeCache<T>> segmentOrResult, long maxQueuedBytesPerServer)
     {
       final List<SegmentDescriptor> segmentsOfServer = segmentOrResult
           .stream()
@@ -605,12 +618,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final MultipleSpecificSegmentSpec segmentsOfServerSpec = new MultipleSpecificSegmentSpec(segmentsOfServer);
 
       final Sequence<T> serverResults;
+
       if (isBySegment) {
-        serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec);
+        serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec, maxQueuedBytesPerServer);
       } else if (!server.segmentReplicatable() || !populateCache) {
-        serverResults = getSimpleServerResults(serverRunner, segmentsOfServerSpec);
+        serverResults = getSimpleServerResults(serverRunner, segmentsOfServerSpec, maxQueuedBytesPerServer);
       } else {
-        serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
+        serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec, maxQueuedBytesPerServer);
       }
       return serverResults;
     }
@@ -641,18 +655,20 @@ public class CachingClusteredClient implements QuerySegmentWalker
      * entries' getServer is the same. Each entry will either have a present segemnt descriptor or a present result,
      * but not both. Downstream consumers should check each and handle appropriately.
      *
-     * @param cacheResolvedStream A stream of the cached results for different segment queries
+     * @param cacheResolvedStream A pair of the count of servers (for backpressure calculations)
      *
      * @return A stream of potentially cached results per server
      */
 
-    private Stream<List<ServerMaybeSegmentMaybeCache<T>>> groupCachedResultsByServer(
+    private Pair<Integer, Stream<List<ServerMaybeSegmentMaybeCache<T>>>> groupCachedResultsByServer(
         Stream<Pair<ServerToSegment, Optional<T>>> cacheResolvedStream
     )
     {
-      return cacheResolvedStream
+
+      final Map<DruidServer, List<ServerMaybeSegmentMaybeCache<T>>> groupedServers = cacheResolvedStream
           .map(this::pickServer)
-          .collect(Collectors.groupingBy(ServerMaybeSegmentMaybeCache::getServer))
+          .collect(Collectors.groupingBy(ServerMaybeSegmentMaybeCache::getServer));
+      return Pair.of(groupedServers.size(), groupedServers
           .values()
           // At this point we have the segments per server, and a special entry for the pre-cached results.
           // As of the time of this writing, this results in a java.util.HashMap.ValueSpliterator which
@@ -662,7 +678,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           .stream()
           .filter(l -> !l.isEmpty())
           // Get rid of any alerted conditions missing queryableDruidServer
-          .filter(l -> l.get(0).getCachedValue() != null || l.get(0).getSegmentDescriptor() != null);
+          .filter(l -> l.get(0).getCachedValue() != null || l.get(0).getSegmentDescriptor() != null));
     }
 
     private Stream<Pair<ServerToSegment, Optional<T>>> deserializeFromCache(
@@ -705,11 +721,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
     @SuppressWarnings("unchecked")
     private Sequence<T> getBySegmentServerResults(
         final QueryRunner serverRunner,
-        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec,
+        long maxQueuedBytesPerServer
     )
     {
       Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner
-          .run(queryPlus.withQuerySegmentSpec(segmentsOfServerSpec), responseContext);
+          .run(
+              queryPlus.withQuerySegmentSpec(segmentsOfServerSpec).withMaxQueuedBytes(maxQueuedBytesPerServer),
+              responseContext
+          );
       // bySegment results need to be de-serialized, see DirectDruidClient.run()
       return (Sequence<T>) resultsBySegments
           .map(result -> result
@@ -722,10 +742,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
     @SuppressWarnings("unchecked")
     private Sequence<T> getSimpleServerResults(
         final QueryRunner serverRunner,
-        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec,
+        long maxQueuedBytesPerServer
     )
     {
-      return serverRunner.run(queryPlus.withQuerySegmentSpec(segmentsOfServerSpec), responseContext);
+      return serverRunner.run(
+          queryPlus.withQuerySegmentSpec(segmentsOfServerSpec).withMaxQueuedBytes(maxQueuedBytesPerServer),
+          responseContext
+      );
     }
 
     private Sequence<T> bySegmentWithCachePopulator(
@@ -750,14 +774,16 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     private Sequence<T> getAndCacheServerResults(
         final QueryRunner serverRunner,
-        final MultipleSpecificSegmentSpec segmentsOfServerSpec
+        final MultipleSpecificSegmentSpec segmentsOfServerSpec,
+        long maxQueuedBytesPerServer
     )
     {
       @SuppressWarnings("unchecked")
       final Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner.run(
           queryPlus
               .withQuery((Query<Result<BySegmentResultValueClass<T>>>) downstreamQuery)
-              .withQuerySegmentSpec(segmentsOfServerSpec),
+              .withQuerySegmentSpec(segmentsOfServerSpec)
+              .withMaxQueuedBytes(maxQueuedBytesPerServer),
           responseContext
       );
       final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache()::apply;

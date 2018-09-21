@@ -34,6 +34,7 @@ public class QueryContexts
   public static final String PRIORITY_KEY = "priority";
   public static final String TIMEOUT_KEY = "timeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
+  public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
   public static final String INTERMEDIATE_MERGE_BATCH_THRESHOLD = "intermediateMergeBatchThreshold";
@@ -193,6 +194,10 @@ public class QueryContexts
     return optionalLong;
   }
 
+  public static <T> long getMaxQueuedBytes(Query<T> query, long defaultValue)
+  {
+    return parseLong(query, MAX_QUEUED_BYTES_KEY, defaultValue);
+  }
 
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
   {

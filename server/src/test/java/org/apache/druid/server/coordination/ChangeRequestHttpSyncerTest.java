@@ -190,13 +190,13 @@ public class ChangeRequestHttpSyncerTest
             HttpResponseStatus.INTERNAL_SERVER_ERROR
         );
         httpResponse.setContent(ChannelBuffers.buffer(0));
-        httpResponseHandler.handleResponse(httpResponse);
+        httpResponseHandler.handleResponse(httpResponse, null);
         return Futures.immediateFailedFuture(new RuntimeException("server error"));
       }
 
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       httpResponse.setContent(ChannelBuffers.buffer(0));
-      httpResponseHandler.handleResponse(httpResponse);
+      httpResponseHandler.handleResponse(httpResponse, null);
       try {
         return results.take();
       }
