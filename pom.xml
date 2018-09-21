@@ -1441,6 +1441,8 @@
                                 <exclude>.travis.yml</exclude>
                                 <!--DEV and IT-TESTS-->
                                 <exclude>**/*.json</exclude>
+                                <exclude>**/*.parq</exclude>
+                                <exclude>**/*.parquet</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/quickstart/protobuf/**</exclude>
                                 <exclude>**/tutorial/conf/**</exclude>
