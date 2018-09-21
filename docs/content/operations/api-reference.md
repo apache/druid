@@ -412,9 +412,17 @@ druid.query.segmentMetadata.defaultHistory
 
 Returns the dimensions of the datasource.
 
+<div class="note caution">
+This API is deprecated and will be removed in future releases.
+</div>
+
 * `/druid/v2/datasources/{dataSourceName}/metrics`
 
 Returns the metrics of the datasource.
+
+<div class="note caution">
+This API is deprecated and will be removed in future releases.
+</div>
 
 * `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals-in-ISO8601-format}&numCandidates={numCandidates}`
 
