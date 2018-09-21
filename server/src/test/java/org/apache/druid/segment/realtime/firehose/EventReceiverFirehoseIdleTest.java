@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.realtime.firehose;
+package org.apache.druid.segment.realtime.firehose;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
@@ -39,7 +39,7 @@ import org.junit.Test;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Locale;
 
-public class EventReceiverFirehostIdleTest
+public class EventReceiverFirehoseIdleTest
 {
   private static final int CAPACITY = 300;
   private static final long MAX_IDLE_TIME = 5_000L;
