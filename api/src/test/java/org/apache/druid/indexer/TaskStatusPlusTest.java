@@ -51,7 +51,6 @@ public class TaskStatusPlusTest
         DateTimes.nowUtc(),
         DateTimes.nowUtc(),
         TaskState.RUNNING,
-        TaskState.RUNNING,
         RunnerTaskState.RUNNING,
         1000L,
         TaskLocation.create("testHost", 1010, -1),
@@ -90,9 +89,9 @@ public class TaskStatusPlusTest
                         + "}";
     TaskStatusPlus taskStatusPlus = mapper.readValue(json, TaskStatusPlus.class);
     Assert.assertNotNull(taskStatusPlus);
-    Assert.assertNotNull(taskStatusPlus.getState());
-    Assert.assertTrue(taskStatusPlus.getState().isRunnable());
-    Assert.assertNotNull(taskStatusPlus.getRunnerTaskState());
+    Assert.assertNotNull(taskStatusPlus.getStatusCode());
+    Assert.assertTrue(taskStatusPlus.getStatusCode().isRunnable());
+    Assert.assertNotNull(taskStatusPlus.getRunnerStatusCode());
 
     String serialized = mapper.writeValueAsString(taskStatusPlus);
 

@@ -882,7 +882,7 @@ public class OverlordResourceTest
         TaskStatusResponse.class
     );
     TaskStatusPlus tsp = taskStatusResponse1.getStatus();
-    Assert.assertEquals(tsp.getState(), tsp.getStatus());
+    Assert.assertEquals(tsp.getStatusCode(), tsp.getStatus());
     Assert.assertEquals(
         new TaskStatusResponse(
             "mytask",
@@ -891,7 +891,6 @@ public class OverlordResourceTest
                 "noop",
                 DateTimes.of("2018-01-01"),
                 DateTimes.EPOCH,
-                TaskState.RUNNING,
                 TaskState.RUNNING,
                 RunnerTaskState.RUNNING,
                 -1L,
