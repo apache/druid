@@ -62,6 +62,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     this.size = size;
   }
 
+  @SuppressWarnings("ResultOfObjectAllocationIgnored")
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
