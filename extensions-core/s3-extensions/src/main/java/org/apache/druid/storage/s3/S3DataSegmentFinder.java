@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentFinder;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -65,7 +66,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
   @Override
   public Set<DataSegment> findSegments(String workingDirPath, boolean updateDescriptor) throws SegmentLoadingException
   {
-    final Map<String, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
+    final Map<SegmentId, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
 
     try {
       final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
@@ -87,7 +88,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
                  S3ObjectInputStream is = indexObject.getObjectContent()) {
               final ObjectMetadata objectMetadata = indexObject.getObjectMetadata();
               final DataSegment dataSegment = jsonMapper.readValue(is, DataSegment.class);
-              log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);
+              log.info("Found segment [%s] located at [%s]", dataSegment.getId(), indexZip);
 
               final Map<String, Object> loadSpec = dataSegment.getLoadSpec();
               if (!S3StorageDruidModule.SCHEME.equals(loadSpec.get("type")) ||

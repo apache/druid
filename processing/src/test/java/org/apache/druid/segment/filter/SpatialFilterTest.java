@@ -102,10 +102,10 @@ public class SpatialFilterTest
                 new IncrementalIndexSegment(rtIndex, null)
             },
             {
-                new QueryableIndexSegment(null, mMappedTestIndex)
+                new QueryableIndexSegment(mMappedTestIndex, null)
             },
             {
-                new QueryableIndexSegment(null, mergedRealtimeIndex)
+                new QueryableIndexSegment(mergedRealtimeIndex, null)
             }
         }
     );

@@ -20,18 +20,18 @@
 package org.apache.druid.curator.inventory;
 
 import com.google.common.collect.Sets;
-import org.apache.druid.curator.cache.PathChildrenCacheFactory;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.curator.cache.PathChildrenCacheFactory;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -264,7 +264,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             final ContainerHolder removed = containers.remove(containerKey);
             if (removed == null) {
-              log.warn("Container[%s] removed that wasn't a container!?", child.getPath());
+              log.error("Container[%s] removed that wasn't a container!?", child.getPath());
               break;
             }
 
@@ -287,10 +287,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             byte[] data = getZkDataForNode(child.getPath());
             if (data == null) {
-              log.info("Ignoring event: Type - %s , Path - %s , Version - %s",
+              log.info(
+                  "Ignoring event: Type - %s , Path - %s , Version - %s",
                   event.getType(),
                   child.getPath(),
-                  child.getStat().getVersion());
+                  child.getStat().getVersion()
+              );
               return;
             }
 
@@ -301,7 +303,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             log.debug("Container[%s] updated.", child.getPath());
             ContainerHolder holder = containers.get(containerKey);
             if (holder == null) {
-              log.warn("Container update[%s], but the old container didn't exist!?  Ignoring.", child.getPath());
+              log.error("Container update[%s], but the old container didn't exist!?  Ignoring.", child.getPath());
             } else {
               synchronized (holder) {
                 holder.setContainer(strategy.updateContainer(holder.getContainer(), container));
@@ -311,7 +313,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           break;
         case INITIALIZED:
           synchronized (lock) {
-            // must await initialized of all containerholders
+            // must await initialized of all container holders
             for (ContainerHolder holder : containers.values()) {
               synchronized (holder) {
                 if (!holder.initialized) {

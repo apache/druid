@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 public interface InventoryViewUtils
 {
@@ -45,11 +46,7 @@ public interface InventoryViewUtils
                               .stream()
                               .flatMap(server -> server.getDataSources().stream())
                               .map(DruidDataSource::toImmutableDruidDataSource)
-                              .collect(
-                                  () -> new TreeSet<>(comparingByName()),
-                                  TreeSet::add,
-                                  TreeSet::addAll
-                              );
+                              .collect(Collectors.toCollection(() -> new TreeSet<>(comparingByName())));
   }
 
   static SortedSet<ImmutableDruidDataSource> getSecuredDataSources(

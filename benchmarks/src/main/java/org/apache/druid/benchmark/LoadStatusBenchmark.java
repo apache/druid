@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -67,10 +68,10 @@ public class LoadStatusBenchmark
   @Setup(Level.Invocation)
   public void setup()
   {
-    Map<String, DataSegment> immutableDatasourceSegmentsMap;
-    ConcurrentHashMap<String, DataSegment> serverSegmentsMap;
+    Map<SegmentId, DataSegment> immutableDatasourceSegmentsMap;
+    ConcurrentHashMap<SegmentId, DataSegment> serverSegmentsMap;
 
-    HashMap<String, DataSegment> datasourceSegmentsMap = Maps.newHashMap();
+    HashMap<SegmentId, DataSegment> datasourceSegmentsMap = Maps.newHashMap();
     serverSegmentsMap = new ConcurrentHashMap<>();
 
     for (int i = 0; i < totalSegmentsCount; i++) {
@@ -86,10 +87,10 @@ public class LoadStatusBenchmark
           1
       );
 
-      datasourceSegmentsMap.put(segment.getIdentifier(), segment);
+      datasourceSegmentsMap.put(segment.getId(), segment);
 
       if (serverHasAllSegments || i % 2 == 0) {
-        serverSegmentsMap.put(segment.getIdentifier(), segment);
+        serverSegmentsMap.put(segment.getId(), segment);
       }
     }
 

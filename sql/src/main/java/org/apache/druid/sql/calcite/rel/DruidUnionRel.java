@@ -180,10 +180,10 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   }
 
   @Override
-  public List<String> getDatasourceNames()
+  public List<String> getDataSourceNames()
   {
     return rels.stream()
-               .flatMap(rel -> ((DruidRel<?>) rel).getDatasourceNames().stream())
+               .flatMap(rel -> ((DruidRel<?>) rel).getDataSourceNames().stream())
                .distinct()
                .collect(Collectors.toList());
   }

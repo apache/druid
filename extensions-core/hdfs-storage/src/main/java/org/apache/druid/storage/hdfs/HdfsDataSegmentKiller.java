@@ -58,7 +58,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
     final Path segmentPath = getPath(segment);
-    log.info("Killing segment[%s] mapped to path[%s]", segment.getIdentifier(), segmentPath);
+    log.info("Killing segment[%s] mapped to path[%s]", segment.getId(), segmentPath);
 
     try {
       String filename = segmentPath.getName();

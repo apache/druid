@@ -19,16 +19,15 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -264,7 +263,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      Iterable<DataSegment> segments = server.getServer().getSegments().values();
+      Iterable<DataSegment> segments = server.getServer().getSegments();
       for (DataSegment s : segments) {
         cost += computeJointSegmentsCost(s, segments);
       }
@@ -286,7 +285,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      for (DataSegment segment : server.getServer().getSegments().values()) {
+      for (DataSegment segment : server.getServer().getSegments()) {
         cost += computeJointSegmentsCost(segment, segment);
       }
     }
@@ -338,10 +337,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     // the sum of the costs of other (exclusive of the proposalSegment) segments on the server
     cost += computeJointSegmentsCost(
         proposalSegment,
-        Iterables.filter(
-            server.getServer().getSegments().values(),
-            Predicates.not(Predicates.equalTo(proposalSegment))
-        )
+        Iterables.filter(server.getServer().getSegments(), segment -> !proposalSegment.equals(segment))
     );
 
     // plus the costs of segments that will be loaded

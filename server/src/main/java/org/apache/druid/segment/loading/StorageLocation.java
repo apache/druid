@@ -90,7 +90,7 @@ class StorageLocation
     if (available() < segment.getSize()) {
       log.warn(
           "Segment[%s:%,d] too large for storage[%s:%,d]. Check your druid.segmentCache.locations maxSize param",
-          segment.getIdentifier(), segment.getSize(), getPath(), available()
+          segment.getId(), segment.getSize(), getPath(), available()
       );
       return false;
     }
@@ -100,7 +100,7 @@ class StorageLocation
       if ((freeSpaceToKeep + segment.getSize()) > currFreeSpace) {
         log.warn(
             "Segment[%s:%,d] too large for storage[%s:%,d] to maintain suggested freeSpace[%d], current freeSpace is [%d].",
-            segment.getIdentifier(),
+            segment.getId(),
             segment.getSize(),
             getPath(),
             available(),

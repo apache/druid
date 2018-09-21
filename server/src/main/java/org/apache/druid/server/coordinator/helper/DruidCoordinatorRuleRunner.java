@@ -31,6 +31,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
@@ -130,7 +131,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     DateTime now = DateTimes.nowUtc();
     MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
 
-    final List<String> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
+    final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
     for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
@@ -145,7 +146,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
       if (!foundMatchingRule) {
         if (segmentsWithMissingRules.size() < MAX_MISSING_RULES) {
-          segmentsWithMissingRules.add(segment.getIdentifier());
+          segmentsWithMissingRules.add(segment.getId());
         }
         missingRules++;
       }

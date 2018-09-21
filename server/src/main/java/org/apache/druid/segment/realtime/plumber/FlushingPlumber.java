@@ -124,7 +124,7 @@ public class FlushingPlumber extends RealtimePlumber
   {
     log.info(
         "Abandoning segment %s at %s",
-        sink.getSegment().getIdentifier(),
+        sink.getSegment().getId(),
         DateTimes.nowUtc().plusMillis((int) flushDuration.getMillis())
     );
 
@@ -136,7 +136,7 @@ public class FlushingPlumber extends RealtimePlumber
           @Override
           public ScheduledExecutors.Signal call()
           {
-            log.info("Abandoning segment %s", sink.getSegment().getIdentifier());
+            log.info("Abandoning segment %s", sink.getSegment().getId());
             abandonSegment(truncatedTime, sink);
             return ScheduledExecutors.Signal.STOP;
           }

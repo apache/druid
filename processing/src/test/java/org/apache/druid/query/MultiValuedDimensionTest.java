@@ -61,6 +61,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -168,8 +169,8 @@ public class MultiValuedDimensionTest
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
-            new QueryableIndexSegment("sid1", queryableIndex),
-            new IncrementalIndexSegment(incrementalIndex, "sid2")
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
         ),
         query
     );
@@ -203,8 +204,8 @@ public class MultiValuedDimensionTest
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
-            new QueryableIndexSegment("sid1", queryableIndex),
-            new IncrementalIndexSegment(incrementalIndex, "sid2")
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
         ),
         query
     );
@@ -235,8 +236,8 @@ public class MultiValuedDimensionTest
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
-            new QueryableIndexSegment("sid1", queryableIndex),
-            new IncrementalIndexSegment(incrementalIndex, "sid2")
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
         ),
         query
     );
@@ -276,7 +277,7 @@ public class MultiValuedDimensionTest
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
           factory,
-          new QueryableIndexSegment("sid1", queryableIndex),
+          new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
       Map<String, Object> context = Maps.newHashMap();

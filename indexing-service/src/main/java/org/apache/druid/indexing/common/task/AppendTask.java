@@ -98,7 +98,7 @@ public class AppendTask extends MergeTaskBase
                             input.getInterval(),
                             Preconditions.checkNotNull(
                                 segments.get(segment),
-                                "File for segment %s", segment.getIdentifier()
+                                "File for segment %s", segment.getId()
                             )
                         );
                       }

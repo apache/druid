@@ -25,6 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidServer;
@@ -48,10 +51,8 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.utils.ZKPaths;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;
@@ -347,9 +348,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     segmentAddedLatch = new CountDownLatch(1);
 
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
-    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(sourceSegments.get(2));
+    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(sourceSegments.get(2));
     EasyMock.replay(druidDataSource);
-    EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
+    EasyMock.expect(databaseSegmentManager.getDataSource(EasyMock.anyString())).andReturn(druidDataSource);
     EasyMock.replay(databaseSegmentManager);
 
     coordinator.moveSegment(
@@ -363,18 +364,18 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     // remove load queue key from destination server to trigger adding drop to load queue
-    curator.delete().guaranteed().forPath(ZKPaths.makePath(DESTINATION_LOAD_PATH, segmentToMove.getIdentifier()));
+    curator.delete().guaranteed().forPath(ZKPaths.makePath(DESTINATION_LOAD_PATH, segmentToMove.getId().toString()));
 
     // wait for drop
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
     // clean up drop from load queue
-    curator.delete().guaranteed().forPath(ZKPaths.makePath(SOURCE_LOAD_PATH, segmentToMove.getIdentifier()));
+    curator.delete().guaranteed().forPath(ZKPaths.makePath(SOURCE_LOAD_PATH, segmentToMove.getId().toString()));
 
     List<DruidServer> servers = serverView.getInventory().stream().collect(Collectors.toList());
 
-    Assert.assertEquals(2, servers.get(0).getSegments().size());
-    Assert.assertEquals(2, servers.get(1).getSegments().size());
+    Assert.assertEquals(2, servers.get(0).getTotalSegments());
+    Assert.assertEquals(2, servers.get(1).getTotalSegments());
   }
 
   private static class TestDruidLeaderSelector implements DruidLeaderSelector

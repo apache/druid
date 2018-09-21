@@ -179,7 +179,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                                             indexIO.loadIndex(
                                                 Preconditions.checkNotNull(
                                                     segmentFileMap.get(segment),
-                                                    "File for segment %s", segment.getIdentifier()
+                                                    "File for segment %s", segment.getId()
                                                 )
                                             )
                                         ),

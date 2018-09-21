@@ -22,19 +22,19 @@ package org.apache.druid.indexing.appenderator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 /**
  * This class is used in {@link ActionBasedSegmentAllocator} and expected to generate a
- * {@link TaskAction<SegmentIdentifier>} which is submitted to overlords to allocate a new segment.
- * The {@link #generate} method can return any implementation of {@link TaskAction<SegmentIdentifier>}.
+ * {@link TaskAction<  SegmentIdWithShardSpec  >} which is submitted to overlords to allocate a new segment.
+ * The {@link #generate} method can return any implementation of {@link TaskAction<  SegmentIdWithShardSpec  >}.
  *
  * @see org.apache.druid.indexing.common.actions.SegmentAllocateAction
  * @see org.apache.druid.indexing.common.actions.SurrogateAction
  */
 public interface SegmentAllocateActionGenerator
 {
-  TaskAction<SegmentIdentifier> generate(
+  TaskAction<SegmentIdWithShardSpec> generate(
       DataSchema dataSchema,
       InputRow row,
       String sequenceName,

@@ -3766,17 +3766,12 @@ public class TopNQueryRunnerTest
     );
 
     @SuppressWarnings("unused") // TODO: fix this test
-    List<Result<BySegmentResultValueClass>> expectedResults = Collections.singletonList(
-        new Result<BySegmentResultValueClass>(
+    List<Result<BySegmentResultValueClass<Result<TopNResultValue>>>> expectedResults = Collections.singletonList(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new BySegmentResultValueClass(
-                Collections.singletonList(
-                    new Result<TopNResultValue>(
-                        DateTimes.of("2011-01-12T00:00:00.000Z"),
-                        topNResult
-                    )
-                ),
-                QueryRunnerTestHelper.segmentId,
+            new BySegmentResultValueClass<>(
+                Collections.singletonList(new Result<>(DateTimes.of("2011-01-12T00:00:00.000Z"), topNResult)),
+                QueryRunnerTestHelper.segmentId.toString(),
                 Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z")
             )
         )

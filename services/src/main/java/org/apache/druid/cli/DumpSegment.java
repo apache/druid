@@ -81,6 +81,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
@@ -480,11 +481,12 @@ public class DumpSegment extends GuiceRunnable
   private static <T> Sequence<T> executeQuery(final Injector injector, final QueryableIndex index, final Query<T> query)
   {
     final QueryRunnerFactoryConglomerate conglomerate = injector.getInstance(QueryRunnerFactoryConglomerate.class);
-    final QueryRunnerFactory factory = conglomerate.findFactory(query);
-    final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
-    final Sequence results = factory.getToolchest().mergeResults(
-        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner))
-    ).run(QueryPlus.wrap(query), Maps.newHashMap());
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+    final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment(index, SegmentId.dummy("segment")));
+    final Sequence results = factory
+        .getToolchest()
+        .mergeResults(factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner)))
+        .run(QueryPlus.wrap(query), Maps.newHashMap());
     return (Sequence<T>) results;
   }
 

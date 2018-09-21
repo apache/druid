@@ -57,7 +57,7 @@ public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
   @Override
   public String asString()
   {
-    return StringUtils.format("DROP: %s", segment.getIdentifier());
+    return StringUtils.format("DROP: %s", segment.getId());
   }
 
   @Override

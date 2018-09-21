@@ -90,7 +90,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   {
     final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment, useUniquePath));
 
-    log.info("Copying segment[%s] to S3 at location[%s]", inSegment.getIdentifier(), s3Path);
+    log.info("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
 
     final File zipOutFile = File.createTempFile("druid", "index.zip");
     final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);

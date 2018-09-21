@@ -85,7 +85,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
 
           BySegmentResultValue<T> resultsClass = result.getValue();
 
-          return (T) new Result<BySegmentResultValueClass>(
+          return (T) new Result<>(
               result.getTimestamp(),
               new BySegmentResultValueClass(
                   Lists.transform(resultsClass.getResults(), baseFinalizer),

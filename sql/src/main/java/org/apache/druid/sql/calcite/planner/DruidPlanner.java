@@ -162,7 +162,7 @@ public class DruidPlanner implements Closeable
         root.rel
     );
 
-    List<String> datasourceNames = druidRel.getDatasourceNames();
+    List<String> datasourceNames = druidRel.getDataSourceNames();
     // we'll eventually run a second authorization check at QueryLifecycle.runSimple(), so store the
     // authentication result in the planner context.
     Access authResult;
@@ -237,7 +237,7 @@ public class DruidPlanner implements Closeable
           public void visit(RelNode node, int ordinal, RelNode parent)
           {
             if (node instanceof DruidRel) {
-              datasourceNames.addAll(((DruidRel) node).getDatasourceNames());
+              datasourceNames.addAll(((DruidRel) node).getDataSourceNames());
             }
             if (node instanceof Bindables.BindableTableScan) {
               Bindables.BindableTableScan bts = (Bindables.BindableTableScan) node;

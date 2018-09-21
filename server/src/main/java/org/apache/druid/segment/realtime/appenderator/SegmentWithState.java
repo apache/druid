@@ -63,7 +63,7 @@ public class SegmentWithState
     }
   }
 
-  private final SegmentIdentifier segmentIdentifier;
+  private final SegmentIdWithShardSpec segmentIdentifier;
   private SegmentState state;
 
   /**
@@ -72,21 +72,22 @@ public class SegmentWithState
    */
   @Nullable private DataSegment dataSegment;
 
-  static SegmentWithState newSegment(SegmentIdentifier segmentIdentifier)
+  static SegmentWithState newSegment(SegmentIdWithShardSpec segmentIdentifier)
   {
     return new SegmentWithState(segmentIdentifier, SegmentState.APPENDING, null);
   }
 
-  static SegmentWithState newSegment(SegmentIdentifier segmentIdentifier, SegmentState state)
+  static SegmentWithState newSegment(SegmentIdWithShardSpec segmentIdentifier, SegmentState state)
   {
     return new SegmentWithState(segmentIdentifier, state, null);
   }
 
   @JsonCreator
   public SegmentWithState(
-      @JsonProperty("segmentIdentifier") SegmentIdentifier segmentIdentifier,
+      @JsonProperty("segmentIdentifier") SegmentIdWithShardSpec segmentIdentifier,
       @JsonProperty("state") SegmentState state,
-      @JsonProperty("dataSegment") @Nullable DataSegment dataSegment)
+      @JsonProperty("dataSegment") @Nullable DataSegment dataSegment
+  )
   {
     this.segmentIdentifier = segmentIdentifier;
     this.state = state;
@@ -123,7 +124,7 @@ public class SegmentWithState
   }
 
   @JsonProperty
-  public SegmentIdentifier getSegmentIdentifier()
+  public SegmentIdWithShardSpec getSegmentIdentifier()
   {
     return segmentIdentifier;
   }

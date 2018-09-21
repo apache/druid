@@ -32,14 +32,12 @@ import java.util.Map;
 /**
  * An extendable linear shard spec.  {@link #partitionNum} represents an unique id of a partition.
  */
-public class LinearShardSpec implements ShardSpec
+public final class LinearShardSpec implements ShardSpec
 {
-  private int partitionNum;
+  private final int partitionNum;
 
   @JsonCreator
-  public LinearShardSpec(
-      @JsonProperty("partitionNum") Integer partitionNum
-  )
+  public LinearShardSpec(@JsonProperty("partitionNum") Integer partitionNum)
   {
     this.partitionNum = Preconditions.checkNotNull(partitionNum, "Must set partitionNum on LinearShardSpec");
   }
@@ -72,13 +70,32 @@ public class LinearShardSpec implements ShardSpec
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return new LinearPartitionChunk<T>(partitionNum, obj);
+    return new LinearPartitionChunk<>(partitionNum, obj);
   }
 
   @Override
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
     return true;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof LinearShardSpec)) {
+      return false;
+    }
+    LinearShardSpec that = (LinearShardSpec) o;
+    return partitionNum == that.partitionNum;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return partitionNum;
   }
 
   @Override

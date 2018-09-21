@@ -647,13 +647,7 @@ public class ScanQueryRunnerTest
         end = group.size();
       }
       events.addAll(group.subList(offset, end));
-      expected.add(
-          new ScanResultValue(
-              QueryRunnerTestHelper.segmentId,
-              columns,
-              events
-          )
-      );
+      expected.add(new ScanResultValue(QueryRunnerTestHelper.segmentId.toString(), columns, events));
     }
     return expected;
   }

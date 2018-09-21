@@ -61,7 +61,8 @@ public class SegmentChangeRequestDropTest
     final SegmentChangeRequestDrop segmentDrop = new SegmentChangeRequestDrop(segment);
 
     Map<String, Object> objectMap = mapper.readValue(
-        mapper.writeValueAsString(segmentDrop), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+        mapper.writeValueAsString(segmentDrop),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
     Assert.assertEquals(11, objectMap.size());

@@ -26,7 +26,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -46,11 +46,11 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
   }
 
   @Override
-  public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers) throws IOException
+  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException
   {
     // Group by dataSource
-    final Map<String, Set<SegmentIdentifier>> identifiersByDataSource = Maps.newTreeMap();
-    for (SegmentIdentifier identifier : identifiers) {
+    final Map<String, Set<SegmentIdWithShardSpec>> identifiersByDataSource = Maps.newTreeMap();
+    for (SegmentIdWithShardSpec identifier : identifiers) {
       if (!identifiersByDataSource.containsKey(identifier.getDataSource())) {
         identifiersByDataSource.put(identifier.getDataSource(), Sets.newHashSet());
       }
@@ -59,12 +59,12 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
 
     final Set<DataSegment> retVal = Sets.newHashSet();
 
-    for (Map.Entry<String, Set<SegmentIdentifier>> entry : identifiersByDataSource.entrySet()) {
+    for (Map.Entry<String, Set<SegmentIdWithShardSpec>> entry : identifiersByDataSource.entrySet()) {
       final List<Interval> intervals = JodaUtils.condenseIntervals(
-          Iterables.transform(entry.getValue(), new Function<SegmentIdentifier, Interval>()
+          Iterables.transform(entry.getValue(), new Function<SegmentIdWithShardSpec, Interval>()
           {
             @Override
-            public Interval apply(SegmentIdentifier input)
+            public Interval apply(SegmentIdWithShardSpec input)
             {
               return input.getInterval();
             }
@@ -76,7 +76,7 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
       );
 
       for (DataSegment segment : usedSegmentsForIntervals) {
-        if (identifiers.contains(SegmentIdentifier.fromDataSegment(segment))) {
+        if (identifiers.contains(SegmentIdWithShardSpec.fromDataSegment(segment))) {
           retVal.add(segment);
         }
       }

@@ -58,6 +58,7 @@ import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -750,7 +751,9 @@ public class SearchQueryRunnerTest
         toolChest,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    QueryRunner runner = factory.createRunner(new QueryableIndexSegment("asdf", TestIndex.persistRealtimeAndLoadMMapped(index)));
+    QueryRunner runner = factory.createRunner(
+        new QueryableIndexSegment(TestIndex.persistRealtimeAndLoadMMapped(index), SegmentId.dummy("asdf"))
+    );
     List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit("table", "table", 1));
     expectedHits.add(new SearchHit("table", NullHandling.defaultStringValue(), 1));

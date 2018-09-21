@@ -17,21 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.appenderator;
+package org.apache.druid.java.util.common;
 
-import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.IOException;
-import java.util.Set;
-
-public interface UsedSegmentChecker
+public class DateTimesTest
 {
-  /**
-   * For any identifiers that exist and are actually used, returns the corresponding DataSegment objects.
-   *
-   * @param identifiers identifiers to search for
-   *
-   * @return used DataSegments
-   */
-  Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException;
+
+  @Test
+  public void testCommonDateTimePattern()
+  {
+    DateTime dt1 = DateTimes.nowUtc();
+    DateTime dt2 = new DateTime(System.currentTimeMillis(), DateTimeZone.forID("IST"));
+    DateTime dt3 = new DateTime(System.currentTimeMillis(), DateTimeZone.forOffsetHoursMinutes(1, 30));
+
+    for (DateTime dt : new DateTime[] {dt1, dt2, dt3}) {
+      Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt.toString()).matches());
+    }
+  }
 }

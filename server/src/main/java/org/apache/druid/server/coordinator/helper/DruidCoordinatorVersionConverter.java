@@ -57,7 +57,7 @@ public class DruidCoordinatorVersionConverter implements DruidCoordinatorHelper
         final Integer binaryVersion = dataSegment.getBinaryVersion();
 
         if (binaryVersion == null || binaryVersion < IndexIO.CURRENT_VERSION_ID) {
-          log.info("Upgrading version on segment[%s]", dataSegment.getIdentifier());
+          log.info("Upgrading version on segment[%s]", dataSegment.getId());
           indexingServiceClient.upgradeSegment(dataSegment);
         }
       }

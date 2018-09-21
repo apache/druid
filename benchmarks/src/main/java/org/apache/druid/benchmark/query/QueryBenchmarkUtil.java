@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.util.Map;
 
@@ -38,13 +39,14 @@ public class QueryBenchmarkUtil
 {
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
+    return new FinalizeResultsQueryRunner<>(
+        new BySegmentQueryRunner<>(
+            segmentId,
+            adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()

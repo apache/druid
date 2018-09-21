@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.Committer;
@@ -58,7 +59,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -414,7 +415,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
                                             ? Utils.nullableListOf((InputRow) null)
                                             : parser.parseBatch(ByteBuffer.wrap(valueBytes));
                 boolean isPersistRequired = false;
-                final Map<String, Set<SegmentIdentifier>> segmentsToMoveOut = new HashMap<>();
+                final Map<String, Set<SegmentIdWithShardSpec>> segmentsToMoveOut = new HashMap<>();
 
                 for (InputRow row : rows) {
                   if (row != null && task.withinMinMaxRecordTime(row)) {
@@ -529,13 +530,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
           sequenceNames.values()
       ).get();
 
-      final List<String> publishedSegments = published.getSegments()
-                                                       .stream()
-                                                       .map(DataSegment::getIdentifier)
-                                                       .collect(Collectors.toList());
-
+      String publishedSegments = Lists.transform(published.getSegments(), DataSegment::getId).toString();
       log.info(
-          "Published segments[%s] with metadata[%s].",
+          "Published segments %s with metadata[%s].",
           publishedSegments,
           Preconditions.checkNotNull(published.getCommitMetadata(), "commitMetadata")
       );
@@ -556,11 +553,11 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       }
 
       if (handedOff == null) {
-        log.warn("Failed to handoff segments[%s]", publishedSegments);
+        log.warn("Failed to handoff segments %s", publishedSegments);
       } else {
         log.info(
-            "Handoff completed for segments[%s] with metadata[%s]",
-            handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList()),
+            "Handoff completed for segments %s with metadata[%s]",
+            Lists.transform(handedOff.getSegments(), DataSegment::getId),
             Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
         );
       }

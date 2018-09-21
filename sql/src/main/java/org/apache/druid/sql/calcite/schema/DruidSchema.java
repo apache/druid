@@ -24,10 +24,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
@@ -57,8 +60,6 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.sql.calcite.view.DruidViewMacro;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.calcite.schema.Table;
-import org.apache.calcite.schema.impl.AbstractSchema;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -327,16 +328,16 @@ public class DruidSchema extends AbstractSchema
         segmentsNeedingRefresh.add(segment);
 
         if (!server.segmentReplicatable()) {
-          log.debug("Added new mutable segment[%s].", segment.getIdentifier());
+          log.debug("Added new mutable segment[%s].", segment.getId());
           mutableSegments.add(segment);
         } else {
-          log.debug("Added new immutable segment[%s].", segment.getIdentifier());
+          log.debug("Added new immutable segment[%s].", segment.getId());
         }
       } else if (server.segmentReplicatable()) {
         // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
         // even if it's also available on non-replicatable (realtime) servers.
         mutableSegments.remove(segment);
-        log.debug("Segment[%s] has become immutable.", segment.getIdentifier());
+        log.debug("Segment[%s] has become immutable.", segment.getId());
       }
 
       if (!tables.containsKey(segment.getDataSource())) {
@@ -350,7 +351,7 @@ public class DruidSchema extends AbstractSchema
   private void removeSegment(final DataSegment segment)
   {
     synchronized (lock) {
-      log.debug("Segment[%s] is gone.", segment.getIdentifier());
+      log.debug("Segment[%s] is gone.", segment.getId());
 
       dataSourcesNeedingRebuild.add(segment.getDataSource());
       segmentsNeedingRefresh.remove(segment);
@@ -397,22 +398,15 @@ public class DruidSchema extends AbstractSchema
    * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource. Returns the set of
    * segments actually refreshed, which may be a subset of the asked-for set.
    */
-  private Set<DataSegment> refreshSegmentsForDataSource(
-      final String dataSource,
-      final Set<DataSegment> segments
-  ) throws IOException
+  private Set<DataSegment> refreshSegmentsForDataSource(final String dataSource, final Set<DataSegment> segments)
+      throws IOException
   {
     log.debug("Refreshing metadata for dataSource[%s].", dataSource);
 
     final long startTime = System.currentTimeMillis();
 
-    // Segment identifier -> segment object.
-    final Map<String, DataSegment> segmentMap = segments.stream().collect(
-        Collectors.toMap(
-            DataSegment::getIdentifier,
-            Function.identity()
-        )
-    );
+    // Segment id -> segment object.
+    final Map<String, DataSegment> segmentMap = Maps.uniqueIndex(segments, segment -> segment.getId().toString());
 
     final Set<DataSegment> retVal = new HashSet<>();
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
@@ -432,7 +426,7 @@ public class DruidSchema extends AbstractSchema
           log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
+          log.debug("Segment[%s] has signature[%s].", segment.getId(), rowSignature);
           setSegmentSignature(segment, rowSignature);
           retVal.add(segment);
         }

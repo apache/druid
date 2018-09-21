@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
@@ -681,10 +681,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
 
       for (SegmentsAndMetadata handedOff : handedOffList) {
         log.info(
-            "Handoff completed for segments[%s] with metadata[%s].",
-            Joiner.on(", ").join(
-                handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
-            ),
+            "Handoff completed for segments %s with metadata[%s].",
+            Lists.transform(handedOff.getSegments(), DataSegment::getId),
             Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
         );
       }
@@ -824,11 +822,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           public void onSuccess(SegmentsAndMetadata publishedSegmentsAndMetadata)
           {
             log.info(
-                "Published segments[%s] with metadata[%s].",
-                publishedSegmentsAndMetadata.getSegments()
-                                            .stream()
-                                            .map(DataSegment::getIdentifier)
-                                            .collect(Collectors.toList()),
+                "Published segments %s with metadata[%s].",
+                Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::getId),
                 Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
             );
 
@@ -853,11 +848,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
                   {
                     if (handoffSegmentsAndMetadata == null) {
                       log.warn(
-                          "Failed to handoff segments[%s]",
-                          publishedSegmentsAndMetadata.getSegments()
-                                                      .stream()
-                                                      .map(DataSegment::getIdentifier)
-                                                      .collect(Collectors.toList())
+                          "Failed to handoff segments %s",
+                          Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::getId)
                       );
                     }
                     handoffFuture.set(handoffSegmentsAndMetadata);

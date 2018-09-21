@@ -53,7 +53,7 @@ public class ImmutableDruidDataSourceTest
     final ImmutableDruidDataSource dataSource = new ImmutableDruidDataSource(
         "test",
         ImmutableMap.of("prop1", "val1", "prop2", "val2"),
-        ImmutableSortedMap.of(segment.getIdentifier(), segment)
+        ImmutableSortedMap.of(segment.getId(), segment)
     );
 
     final ObjectMapper objectMapper = new DefaultObjectMapper()

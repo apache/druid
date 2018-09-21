@@ -36,6 +36,7 @@ import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -115,22 +116,22 @@ public class HttpLoadQueuePeonTest
 
     httpLoadQueuePeon.start();
 
-    Map<String, CountDownLatch> latches = ImmutableMap.of(
-        segment1.getIdentifier(), new CountDownLatch(1),
-        segment2.getIdentifier(), new CountDownLatch(1),
-        segment3.getIdentifier(), new CountDownLatch(1),
-        segment4.getIdentifier(), new CountDownLatch(1)
+    Map<SegmentId, CountDownLatch> latches = ImmutableMap.of(
+        segment1.getId(), new CountDownLatch(1),
+        segment2.getId(), new CountDownLatch(1),
+        segment3.getId(), new CountDownLatch(1),
+        segment4.getId(), new CountDownLatch(1)
     );
 
-    httpLoadQueuePeon.dropSegment(segment1, () -> latches.get(segment1.getIdentifier()).countDown());
-    httpLoadQueuePeon.loadSegment(segment2, () -> latches.get(segment2.getIdentifier()).countDown());
-    httpLoadQueuePeon.dropSegment(segment3, () -> latches.get(segment3.getIdentifier()).countDown());
-    httpLoadQueuePeon.loadSegment(segment4, () -> latches.get(segment4.getIdentifier()).countDown());
+    httpLoadQueuePeon.dropSegment(segment1, () -> latches.get(segment1.getId()).countDown());
+    httpLoadQueuePeon.loadSegment(segment2, () -> latches.get(segment2.getId()).countDown());
+    httpLoadQueuePeon.dropSegment(segment3, () -> latches.get(segment3.getId()).countDown());
+    httpLoadQueuePeon.loadSegment(segment4, () -> latches.get(segment4.getId()).countDown());
 
-    latches.get(segment1.getIdentifier()).await();
-    latches.get(segment2.getIdentifier()).await();
-    latches.get(segment3.getIdentifier()).await();
-    latches.get(segment4.getIdentifier()).await();
+    latches.get(segment1.getId()).await();
+    latches.get(segment2.getId()).await();
+    latches.get(segment3.getId()).await();
+    latches.get(segment4.getId()).await();
 
     httpLoadQueuePeon.stop();
   }
@@ -152,22 +153,22 @@ public class HttpLoadQueuePeonTest
 
     httpLoadQueuePeon.start();
 
-    Map<String, CountDownLatch> latches = ImmutableMap.of(
-        segment1.getIdentifier(), new CountDownLatch(1),
-        segment2.getIdentifier(), new CountDownLatch(1),
-        segment3.getIdentifier(), new CountDownLatch(1),
-        segment4.getIdentifier(), new CountDownLatch(1)
+    Map<SegmentId, CountDownLatch> latches = ImmutableMap.of(
+        segment1.getId(), new CountDownLatch(1),
+        segment2.getId(), new CountDownLatch(1),
+        segment3.getId(), new CountDownLatch(1),
+        segment4.getId(), new CountDownLatch(1)
     );
 
-    httpLoadQueuePeon.dropSegment(segment1, () -> latches.get(segment1.getIdentifier()).countDown());
-    httpLoadQueuePeon.loadSegment(segment2, () -> latches.get(segment2.getIdentifier()).countDown());
-    latches.get(segment1.getIdentifier()).await();
-    latches.get(segment2.getIdentifier()).await();
+    httpLoadQueuePeon.dropSegment(segment1, () -> latches.get(segment1.getId()).countDown());
+    httpLoadQueuePeon.loadSegment(segment2, () -> latches.get(segment2.getId()).countDown());
+    latches.get(segment1.getId()).await();
+    latches.get(segment2.getId()).await();
     httpLoadQueuePeon.stop();
-    httpLoadQueuePeon.dropSegment(segment3, () -> latches.get(segment3.getIdentifier()).countDown());
-    httpLoadQueuePeon.loadSegment(segment4, () -> latches.get(segment4.getIdentifier()).countDown());
-    latches.get(segment3.getIdentifier()).await();
-    latches.get(segment4.getIdentifier()).await();
+    httpLoadQueuePeon.dropSegment(segment3, () -> latches.get(segment3.getId()).countDown());
+    httpLoadQueuePeon.loadSegment(segment4, () -> latches.get(segment4.getId()).countDown());
+    latches.get(segment3.getId()).await();
+    latches.get(segment4.getId()).await();
 
   }
 

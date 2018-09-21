@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -33,7 +34,6 @@ import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.IndexBuilder;
@@ -43,8 +43,9 @@ import org.apache.druid.segment.QueryableIndexIndexableAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.Closeable;
 import java.io.File;
@@ -127,7 +128,7 @@ public class SegmentGenerator implements Closeable
       }
 
       if (rows.size() % MAX_ROWS_IN_MEMORY == 0) {
-        indexes.add(makeIndex(dataSegment.getIdentifier(), indexes.size(), rows, indexSchema));
+        indexes.add(makeIndex(dataSegment.getId(), indexes.size(), rows, indexSchema));
         rows.clear();
       }
     }
@@ -135,7 +136,7 @@ public class SegmentGenerator implements Closeable
     log.info("%,d/%,d rows generated.", numRows, numRows);
 
     if (rows.size() > 0) {
-      indexes.add(makeIndex(dataSegment.getIdentifier(), indexes.size(), rows, indexSchema));
+      indexes.add(makeIndex(dataSegment.getId(), indexes.size(), rows, indexSchema));
       rows.clear();
     }
 
@@ -177,7 +178,7 @@ public class SegmentGenerator implements Closeable
   }
 
   private QueryableIndex makeIndex(
-      final String identifier,
+      final SegmentId identifier,
       final int indexNumber,
       final List<InputRow> rows,
       final IncrementalIndexSchema indexSchema
@@ -186,7 +187,7 @@ public class SegmentGenerator implements Closeable
     return IndexBuilder
         .create()
         .schema(indexSchema)
-        .tmpDir(new File(new File(tempDir, identifier), String.valueOf(indexNumber)))
+        .tmpDir(new File(new File(tempDir, identifier.toString()), String.valueOf(indexNumber)))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .rows(rows)
         .buildMMappedIndex();

@@ -34,7 +34,6 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 public class ServerHolderTest
 {
@@ -64,18 +63,8 @@ public class ServerHolderTest
   );
 
   private static final Map<String, ImmutableDruidDataSource> dataSources = ImmutableMap.of(
-      "src1",
-      new ImmutableDruidDataSource(
-          "src1",
-          Collections.emptyMap(),
-          new TreeMap<>()
-      ),
-      "src2",
-      new ImmutableDruidDataSource(
-          "src2",
-          Collections.emptyMap(),
-          new TreeMap<>()
-      )
+      "src1", new ImmutableDruidDataSource("src1", Collections.emptyMap(), Collections.singletonList(segments.get(0))),
+      "src2", new ImmutableDruidDataSource("src2", Collections.emptyMap(), Collections.singletonList(segments.get(1)))
   );
 
   @Test
@@ -86,14 +75,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
             0L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );
@@ -103,14 +86,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name1", "host1", null, 200L, ServerType.HISTORICAL, "tier1", 0),
             100L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );
@@ -120,14 +97,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name1", "host1", null, 1000L, ServerType.HISTORICAL, "tier1", 0),
             990L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );
@@ -137,14 +108,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name1", "host1", null, 50L, ServerType.HISTORICAL, "tier1", 0),
             0L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );
@@ -161,14 +126,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
             0L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );
@@ -177,14 +136,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name2", "host1", null, 200L, ServerType.HISTORICAL, "tier1", 0),
             100L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );
@@ -193,14 +146,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name1", "host2", null, 200L, ServerType.HISTORICAL, "tier1", 0),
             100L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );
@@ -209,14 +156,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name1", "host1", null, 200L, ServerType.HISTORICAL, "tier2", 0),
             100L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );
@@ -225,14 +166,8 @@ public class ServerHolderTest
         new ImmutableDruidServer(
             new DruidServerMetadata("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0),
             0L,
-            ImmutableMap.of(
-                "src1",
-                dataSources.get("src1")
-            ),
-            ImmutableMap.of(
-                "segment1",
-                segments.get(0)
-            )
+            ImmutableMap.of("src1", dataSources.get("src1")),
+            1
         ),
         new LoadQueuePeonTester()
     );

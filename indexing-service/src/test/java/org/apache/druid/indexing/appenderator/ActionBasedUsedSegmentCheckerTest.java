@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -98,9 +98,9 @@ public class ActionBasedUsedSegmentCheckerTest
     final UsedSegmentChecker checker = new ActionBasedUsedSegmentChecker(taskActionClient);
     final Set<DataSegment> segments = checker.findUsedSegments(
         ImmutableSet.of(
-            new SegmentIdentifier("foo", Intervals.of("2000/P1D"), "a", new LinearShardSpec(1)),
-            new SegmentIdentifier("foo", Intervals.of("2001/P1D"), "b", new LinearShardSpec(0)),
-            new SegmentIdentifier("bar", Intervals.of("2002/P1D"), "b", new LinearShardSpec(0))
+            new SegmentIdWithShardSpec("foo", Intervals.of("2000/P1D"), "a", new LinearShardSpec(1)),
+            new SegmentIdWithShardSpec("foo", Intervals.of("2001/P1D"), "b", new LinearShardSpec(0)),
+            new SegmentIdWithShardSpec("bar", Intervals.of("2002/P1D"), "b", new LinearShardSpec(0))
         )
     );
 

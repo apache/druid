@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -47,6 +47,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -217,12 +218,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 @Override
                 public Integer withHandle(Handle handle)
                 {
-                  return handle.createStatement(
-                      StringUtils.format(
-                          "UPDATE %s SET used = false WHERE id = :id",
-                          derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
-                      )
-                  ).bind("id", segment.getIdentifier()).execute();
+                  String request = StringUtils.format(
+                      "UPDATE %s SET used = false WHERE id = :id",
+                      derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
+                  );
+                  return handle.createStatement(request).bind("id", segment.getId().toString()).execute();
                 }
               }
           )
@@ -230,7 +230,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     }
   }
 
-  private List<String> getUsedIdentifiers()
+  private List<String> getUsedSegmentIds()
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
     return derbyConnector.retryWithHandle(
@@ -253,19 +253,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.announceHistoricalSegments(SEGMENTS);
     for (DataSegment segment : SEGMENTS) {
       Assert.assertArrayEquals(
-          mapper.writeValueAsString(segment).getBytes("UTF-8"),
+          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
           derbyConnector.lookup(
               derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
               "id",
               "payload",
-              segment.getIdentifier()
+              segment.getId().toString()
           )
       );
     }
 
     Assert.assertEquals(
-        ImmutableList.of(defaultSegment.getIdentifier(), defaultSegment2.getIdentifier()),
-        getUsedIdentifiers()
+        ImmutableList.of(defaultSegment.getId().toString(), defaultSegment2.getId().toString()),
+        getUsedSegmentIds()
     );
 
     // Should not update dataSource metadata.
@@ -281,17 +281,17 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
-          mapper.writeValueAsString(segment).getBytes("UTF-8"),
+          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
           derbyConnector.lookup(
               derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
               "id",
               "payload",
-              segment.getIdentifier()
+              segment.getId().toString()
           )
       );
     }
 
-    Assert.assertEquals(ImmutableList.of(defaultSegment4.getIdentifier()), getUsedIdentifiers());
+    Assert.assertEquals(ImmutableList.of(defaultSegment4.getId().toString()), getUsedSegmentIds());
   }
 
   @Test
@@ -306,12 +306,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
 
     Assert.assertArrayEquals(
-        mapper.writeValueAsString(defaultSegment).getBytes("UTF-8"),
+        mapper.writeValueAsString(defaultSegment).getBytes(StandardCharsets.UTF_8),
         derbyConnector.lookup(
             derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
             "id",
             "payload",
-            defaultSegment.getIdentifier()
+            defaultSegment.getId().toString()
         )
     );
 
@@ -324,12 +324,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment2), true), result2);
 
     Assert.assertArrayEquals(
-        mapper.writeValueAsString(defaultSegment2).getBytes("UTF-8"),
+        mapper.writeValueAsString(defaultSegment2).getBytes(StandardCharsets.UTF_8),
         derbyConnector.lookup(
             derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
             "id",
             "payload",
-            defaultSegment2.getIdentifier()
+            defaultSegment2.getId().toString()
         )
     );
 
@@ -380,12 +380,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
 
     Assert.assertArrayEquals(
-        mapper.writeValueAsString(defaultSegment).getBytes("UTF-8"),
+        mapper.writeValueAsString(defaultSegment).getBytes(StandardCharsets.UTF_8),
         derbyConnector.lookup(
             derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
             "id",
             "payload",
-            defaultSegment.getIdentifier()
+            defaultSegment.getId().toString()
         )
     );
 
@@ -401,12 +401,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment2), true), result2);
 
     Assert.assertArrayEquals(
-        mapper.writeValueAsString(defaultSegment2).getBytes("UTF-8"),
+        mapper.writeValueAsString(defaultSegment2).getBytes(StandardCharsets.UTF_8),
         derbyConnector.lookup(
             derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
             "id",
             "payload",
-            defaultSegment2.getIdentifier()
+            defaultSegment2.getId().toString()
         )
     );
 
@@ -817,19 +817,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     for (DataSegment segment : segments) {
       Assert.assertArrayEquals(
-          mapper.writeValueAsString(segment).getBytes("UTF-8"),
+          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
           derbyConnector.lookup(
               derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
               "id",
               "payload",
-              segment.getIdentifier()
+              segment.getId().toString()
           )
       );
     }
 
     Assert.assertEquals(
-        segments.stream().map(DataSegment::getIdentifier).collect(Collectors.toList()),
-        getUsedIdentifiers()
+        segments.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList()),
+        getUsedSegmentIds()
     );
 
     // Should not update dataSource metadata.
@@ -841,7 +841,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
-    final SegmentIdentifier identifier = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
         dataSource,
         "seq",
         null,
@@ -852,7 +852,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
 
-    final SegmentIdentifier identifier1 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier1 = coordinator.allocatePendingSegment(
         dataSource,
         "seq",
         identifier.toString(),
@@ -863,7 +863,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
 
-    final SegmentIdentifier identifier2 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier2 = coordinator.allocatePendingSegment(
         dataSource,
         "seq",
         identifier1.toString(),
@@ -874,7 +874,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
 
-    final SegmentIdentifier identifier3 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier3 = coordinator.allocatePendingSegment(
         dataSource,
         "seq",
         identifier1.toString(),
@@ -886,7 +886,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier3.toString());
     Assert.assertEquals(identifier2, identifier3);
 
-    final SegmentIdentifier identifier4 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier4 = coordinator.allocatePendingSegment(
         dataSource,
         "seq1",
         null,
@@ -908,7 +908,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final DateTime begin = DateTimes.nowUtc();
 
     for (int i = 0; i < 10; i++) {
-      final SegmentIdentifier identifier = coordinator.allocatePendingSegment(
+      final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
           dataSource,
           "seq",
           prevSegmentId,
@@ -922,7 +922,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final DateTime secondBegin = DateTimes.nowUtc();
     for (int i = 0; i < 5; i++) {
-      final SegmentIdentifier identifier = coordinator.allocatePendingSegment(
+      final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
           dataSource,
           "seq",
           prevSegmentId,

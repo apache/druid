@@ -115,7 +115,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   public void announceSegment(DataSegment segment) throws IOException
   {
     if (segmentLookup.containsKey(segment)) {
-      log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getIdentifier());
+      log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
       return;
     }
 
@@ -145,7 +145,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
             log.info(
                 "Announcing segment[%s] at existing path[%s]",
-                toAnnounce.getIdentifier(),
+                toAnnounce.getId(),
                 availableZNode.getPath()
             );
             announcer.update(availableZNode.getPath(), availableZNode.getBytes());
@@ -171,7 +171,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
         availableZNode.addSegment(toAnnounce);
 
-        log.info("Announcing segment[%s] at new path[%s]", toAnnounce.getIdentifier(), availableZNode.getPath());
+        log.info("Announcing segment[%s] at new path[%s]", toAnnounce.getId(), availableZNode.getPath());
         announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
         segmentLookup.put(toAnnounce, availableZNode);
         availableZNodes.add(availableZNode);
@@ -186,7 +186,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       final SegmentZNode segmentZNode = segmentLookup.remove(segment);
 
       if (segmentZNode == null) {
-        log.warn("No path to unannounce segment[%s]", segment.getIdentifier());
+        log.warn("No path to unannounce segment[%s]", segment.getId());
         return;
       }
 
@@ -198,7 +198,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
       segmentZNode.removeSegment(segment);
 
-      log.info("Unannouncing segment[%s] at path[%s]", segment.getIdentifier(), segmentZNode.getPath());
+      log.info("Unannouncing segment[%s] at path[%s]", segment.getId(), segmentZNode.getPath());
       if (segmentZNode.getCount() == 0) {
         availableZNodes.remove(segmentZNode);
         announcer.unannounce(segmentZNode.getPath());
@@ -223,7 +223,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       for (DataSegment ds : segments) {
 
         if (segmentLookup.containsKey(ds)) {
-          log.info("Skipping announcement of segment [%s]. Announcement exists already.", ds.getIdentifier());
+          log.info("Skipping announcement of segment [%s]. Announcement exists already.", ds.getId());
           return;
         }
 
@@ -252,7 +252,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
           byteSize = 0;
         }
 
-        log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), segmentZNode.getPath());
+        log.info("Announcing segment[%s] at path[%s]", segment.getId(), segmentZNode.getPath());
         segmentLookup.put(segment, segmentZNode);
         batch.add(segment);
         count++;

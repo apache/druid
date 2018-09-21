@@ -150,36 +150,12 @@ public class CoordinatorResource
             new Function<LoadQueuePeon, Object>()
             {
               @Override
-              public Object apply(LoadQueuePeon input)
+              public Object apply(LoadQueuePeon peon)
               {
-                return new ImmutableMap.Builder<>()
-                    .put(
-                        "segmentsToLoad",
-                        Collections2.transform(
-                            input.getSegmentsToLoad(),
-                            new Function<DataSegment, Object>()
-                            {
-                              @Override
-                              public String apply(DataSegment segment)
-                              {
-                                return segment.getIdentifier();
-                              }
-                            }
-                        )
-                    )
-                    .put(
-                        "segmentsToDrop", Collections2.transform(
-                            input.getSegmentsToDrop(),
-                            new Function<DataSegment, Object>()
-                            {
-                              @Override
-                              public String apply(DataSegment segment)
-                              {
-                                return segment.getIdentifier();
-                              }
-                            }
-                        )
-                    )
+                return ImmutableMap
+                    .builder()
+                    .put("segmentsToLoad", Collections2.transform(peon.getSegmentsToLoad(), DataSegment::getId))
+                    .put("segmentsToDrop", Collections2.transform(peon.getSegmentsToDrop(), DataSegment::getId))
                     .build();
               }
             }

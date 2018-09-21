@@ -34,6 +34,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -84,10 +85,10 @@ public class MetadataResource
       @Context final HttpServletRequest req
   )
   {
-    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getInventory();
+    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
     final Set<String> dataSourceNamesPreAuth;
     if (includeDisabled != null) {
-      dataSourceNamesPreAuth = Sets.newTreeSet(metadataSegmentManager.getAllDatasourceNames());
+      dataSourceNamesPreAuth = Sets.newTreeSet(metadataSegmentManager.getAllDataSourceNames());
     } else {
       dataSourceNamesPreAuth = Sets.newTreeSet(
           Iterables.transform(druidDataSources, ImmutableDruidDataSource::getName)
@@ -128,7 +129,7 @@ public class MetadataResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    ImmutableDruidDataSource dataSource = metadataSegmentManager.getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -145,7 +146,7 @@ public class MetadataResource
       @QueryParam("full") String full
   )
   {
-    ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    ImmutableDruidDataSource dataSource = metadataSegmentManager.getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -155,19 +156,7 @@ public class MetadataResource
       return builder.entity(dataSource.getSegments()).build();
     }
 
-    return builder.entity(
-        Iterables.transform(
-            dataSource.getSegments(),
-            new Function<DataSegment, String>()
-            {
-              @Override
-              public String apply(DataSegment segment)
-              {
-                return segment.getIdentifier();
-              }
-            }
-        )
-    ).build();
+    return builder.entity(Collections2.transform(dataSource.getSegments(), DataSegment::getId)).build();
   }
 
   @POST
@@ -187,7 +176,7 @@ public class MetadataResource
       return builder.entity(segments).build();
     }
 
-    return builder.entity(Iterables.transform(segments, DataSegment::getIdentifier)).build();
+    return builder.entity(Collections2.transform(segments, DataSegment::getId)).build();
   }
 
   @GET
@@ -199,13 +188,14 @@ public class MetadataResource
       @PathParam("segmentId") String segmentId
   )
   {
-    ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    ImmutableDruidDataSource dataSource = metadataSegmentManager.getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
 
-    for (DataSegment segment : dataSource.getSegments()) {
-      if (segment.getIdentifier().equalsIgnoreCase(segmentId)) {
+    for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId)) {
+      DataSegment segment = dataSource.getSegment(possibleSegmentId);
+      if (segment != null) {
         return Response.status(Response.Status.OK).entity(segment).build();
       }
     }

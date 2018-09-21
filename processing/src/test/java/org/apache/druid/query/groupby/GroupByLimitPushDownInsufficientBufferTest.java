@@ -78,6 +78,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -611,8 +612,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
     QueryableIndex index = groupByIndices.get(0);
     QueryRunner<Row> runner = makeQueryRunner(
         groupByFactory,
-        index.toString(),
-        new QueryableIndexSegment(index.toString(), index)
+        SegmentId.dummy(index.toString()),
+        new QueryableIndexSegment(index, SegmentId.dummy(index.toString()))
     );
     runners.add(groupByFactory.getToolchest().preMergeQueryDecoration(runner));
     return runners;
@@ -624,8 +625,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
     QueryableIndex index2 = groupByIndices.get(1);
     QueryRunner<Row> tooSmallRunner = makeQueryRunner(
         tooSmallGroupByFactory,
-        index2.toString(),
-        new QueryableIndexSegment(index2.toString(), index2)
+        SegmentId.dummy(index2.toString()),
+        new QueryableIndexSegment(index2, SegmentId.dummy(index2.toString()))
     );
     runners.add(tooSmallGroupByFactory.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
@@ -661,15 +662,12 @@ public class GroupByLimitPushDownInsufficientBufferTest
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+    return new FinalizeResultsQueryRunner<>(
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }

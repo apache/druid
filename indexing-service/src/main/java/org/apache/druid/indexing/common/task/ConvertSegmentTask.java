@@ -266,12 +266,12 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
                   } else if (force) {
                     log.info(
                         "Segment[%s] already at version[%s], forcing conversion",
-                        segment.getIdentifier(),
+                        segment.getId(),
                         segmentVersion
                     );
                     return true;
                   } else {
-                    log.info("Skipping[%s], already version[%s]", segment.getIdentifier(), segmentVersion);
+                    log.info("Skipping[%s], already version[%s]", segment.getId(), segmentVersion);
                     return false;
                   }
                 }

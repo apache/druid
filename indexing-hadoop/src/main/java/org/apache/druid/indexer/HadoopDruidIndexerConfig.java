@@ -556,7 +556,8 @@ public class HadoopDruidIndexerConfig
 
   public Path makeDescriptorInfoPath(DataSegment segment)
   {
-    return new Path(makeDescriptorInfoDir(), StringUtils.format("%s.json", segment.getIdentifier().replace(":", "")));
+    String fileName = StringUtils.format("%s.json", segment.getId().toString().replace(":", ""));
+    return new Path(makeDescriptorInfoDir(), fileName);
   }
 
   public void addJobProperties(Job job)

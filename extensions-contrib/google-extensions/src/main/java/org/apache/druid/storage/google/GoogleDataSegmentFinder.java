@@ -82,7 +82,7 @@ public class GoogleDataSegmentFinder implements DataSegmentFinder
                 InputStream is = storage.get(item.getBucket(), item.getName());
                 final DataSegment dataSegment = jsonMapper.readValue(is, DataSegment.class);
 
-                LOG.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);
+                LOG.info("Found segment [%s] located at [%s]", dataSegment.getId(), indexZip);
 
                 Map<String, Object> loadSpec = dataSegment.getLoadSpec();
 

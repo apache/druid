@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -31,6 +32,7 @@ public class DruidServerMetadata
 {
   private final String name;
   private final String hostAndPort;
+  @Nullable
   private final String hostAndTlsPort;
   private final long maxSize;
   private final String tier;
@@ -41,7 +43,7 @@ public class DruidServerMetadata
   public DruidServerMetadata(
       @JsonProperty("name") String name,
       @JsonProperty("host") String hostAndPort,
-      @JsonProperty("hostAndTlsPort") String hostAndTlsPort,
+      @JsonProperty("hostAndTlsPort") @Nullable String hostAndTlsPort,
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") ServerType type,
       @JsonProperty("tier") String tier,
@@ -74,6 +76,7 @@ public class DruidServerMetadata
     return hostAndPort;
   }
 
+  @Nullable
   @JsonProperty
   public String getHostAndTlsPort()
   {

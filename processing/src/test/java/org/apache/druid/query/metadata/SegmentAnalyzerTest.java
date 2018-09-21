@@ -34,6 +34,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,7 +60,7 @@ public class SegmentAnalyzerTest
   private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), null),
+        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SegmentId.dummy("ds")),
         analyses
     );
 
@@ -118,7 +119,7 @@ public class SegmentAnalyzerTest
   private void testMappedWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
-        new QueryableIndexSegment("test_1", TestIndex.getMMappedTestIndex()),
+        new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SegmentId.dummy("test_1")),
         analyses
     );
 

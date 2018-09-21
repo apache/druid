@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.MergeSequence;
@@ -40,10 +42,8 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -123,20 +123,14 @@ public class MultiSegmentScanQueryTest
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
   }
 
-  private static String makeIdentifier(IncrementalIndex index, String version)
+  private static SegmentId makeIdentifier(IncrementalIndex index, String version)
   {
     return makeIdentifier(index.getInterval(), version);
   }
 
-  private static String makeIdentifier(Interval interval, String version)
+  private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return DataSegment.makeDataSegmentIdentifier(
-        QueryRunnerTestHelper.dataSource,
-        interval.getStart(),
-        interval.getEnd(),
-        version,
-        NoneShardSpec.instance()
-    );
+    return SegmentId.of(QueryRunnerTestHelper.dataSource, interval, version, NoneShardSpec.instance());
   }
 
   private static IncrementalIndex newIndex(String minTimeStamp)

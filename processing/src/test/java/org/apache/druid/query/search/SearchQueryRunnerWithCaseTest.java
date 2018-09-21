@@ -35,6 +35,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -93,26 +94,26 @@ public class SearchQueryRunnerWithCaseTest
       runners.addAll(Arrays.asList(
           makeQueryRunner(
               makeRunnerFactory(config),
-              "index1",
-              new IncrementalIndexSegment(index1, "index1"),
+              SegmentId.dummy("index1"),
+              new IncrementalIndexSegment(index1, SegmentId.dummy("index1")),
               "index1"
           ),
           makeQueryRunner(
               makeRunnerFactory(config),
-              "index2",
-              new IncrementalIndexSegment(index2, "index2"),
+              SegmentId.dummy("index2"),
+              new IncrementalIndexSegment(index2, SegmentId.dummy("index2")),
               "index2"
           ),
           makeQueryRunner(
               makeRunnerFactory(config),
-              "index3",
-              new QueryableIndexSegment("index3", index3),
+              SegmentId.dummy("index3"),
+              new QueryableIndexSegment(index3, SegmentId.dummy("index3")),
               "index3"
           ),
           makeQueryRunner(
               makeRunnerFactory(config),
-              "index4",
-              new QueryableIndexSegment("index4", index4),
+              SegmentId.dummy("index4"),
+              new QueryableIndexSegment(index4, SegmentId.dummy("index4")),
               "index4"
           )
       ));

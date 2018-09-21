@@ -21,13 +21,15 @@ package org.apache.druid.client;
 
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 
 /**
  */
 public interface InventoryView
 {
-  DruidServer getInventoryValue(String string);
+  @Nullable
+  DruidServer getInventoryValue(String serverKey);
   Collection<DruidServer> getInventory();
   boolean isStarted();
   boolean isSegmentLoadedByServer(String serverKey, DataSegment segment);

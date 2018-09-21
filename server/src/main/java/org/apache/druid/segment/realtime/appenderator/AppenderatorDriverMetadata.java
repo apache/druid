@@ -44,8 +44,8 @@ public class AppenderatorDriverMetadata
       @JsonProperty("lastSegmentIds") Map<String, String> lastSegmentIds,
       @JsonProperty("callerMetadata") Object callerMetadata,
       // Next two properties are for backwards compatibility, should be removed on versions greater than 0.12.x
-      @JsonProperty("activeSegments") Map<String, List<SegmentIdentifier>> activeSegments,
-      @JsonProperty("publishPendingSegments") Map<String, List<SegmentIdentifier>> publishPendingSegments
+      @JsonProperty("activeSegments") Map<String, List<SegmentIdWithShardSpec>> activeSegments,
+      @JsonProperty("publishPendingSegments") Map<String, List<SegmentIdWithShardSpec>> publishPendingSegments
   )
   {
     Preconditions.checkState(

@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -31,17 +32,13 @@ import java.util.Map;
  */
 public class BySegmentQueryRunner<T> implements QueryRunner<T>
 {
-  private final String segmentIdentifier;
+  private final SegmentId segmentId;
   private final DateTime timestamp;
   private final QueryRunner<T> base;
 
-  public BySegmentQueryRunner(
-      String segmentIdentifier,
-      DateTime timestamp,
-      QueryRunner<T> base
-  )
+  public BySegmentQueryRunner(SegmentId segmentId, DateTime timestamp, QueryRunner<T> base)
   {
-    this.segmentIdentifier = segmentIdentifier;
+    this.segmentId = segmentId;
     this.timestamp = timestamp;
     this.base = base;
   }
@@ -55,11 +52,11 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
       final List<T> results = baseSequence.toList();
       return Sequences.simple(
           Collections.singletonList(
-              (T) new Result<BySegmentResultValueClass<T>>(
+              (T) new Result<>(
                   timestamp,
-                  new BySegmentResultValueClass<T>(
+                  new BySegmentResultValueClass<>(
                       results,
-                      segmentIdentifier,
+                      segmentId.toString(),
                       queryPlus.getQuery().getIntervals().get(0)
                   )
               )

@@ -29,6 +29,10 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -50,7 +54,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -71,10 +74,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -247,7 +247,7 @@ public class DruidCoordinator
         ((LoadRule) rule)
             .getTieredReplicants()
             .forEach((final String tier, final Integer ruleReplicants) -> {
-              int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getIdentifier(), tier);
+              int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
               retVal
                   .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
                   .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
@@ -268,7 +268,7 @@ public class DruidCoordinator
     }
 
     for (DataSegment segment : getAvailableDataSegments()) {
-      if (segmentReplicantLookup.getLoadedReplicants(segment.getIdentifier()) == 0) {
+      if (segmentReplicantLookup.getLoadedReplicants(segment.getId()) == 0) {
         retVal.addTo(segment.getDataSource(), 1);
       } else {
         retVal.addTo(segment.getDataSource(), 0);
@@ -278,19 +278,10 @@ public class DruidCoordinator
     return retVal;
   }
 
-  boolean hasLoadPending(final String dataSource)
-  {
-    return loadManagementPeons
-        .values()
-        .stream()
-        .flatMap((final LoadQueuePeon peon) -> peon.getSegmentsToLoad().stream())
-        .anyMatch((final DataSegment segment) -> segment.getDataSource().equals(dataSource));
-  }
-
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Double> loadStatus = Maps.newHashMap();
-    for (ImmutableDruidDataSource dataSource : metadataSegmentManager.getInventory()) {
+    for (ImmutableDruidDataSource dataSource : metadataSegmentManager.getDataSources()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int availableSegmentSize = segments.size();
 
@@ -341,7 +332,7 @@ public class DruidCoordinator
   public void removeSegment(DataSegment segment)
   {
     log.info("Removing Segment[%s]", segment);
-    metadataSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
+    metadataSegmentManager.removeSegment(segment.getId());
   }
 
   public String getCurrentLeader()
@@ -363,23 +354,23 @@ public class DruidCoordinator
       }
       throw new ISE("Cannot move null DataSegment");
     }
-    String segmentName = segment.getIdentifier();
+    SegmentId segmentId = segment.getId();
     try {
       if (fromServer.getMetadata().equals(toServer.getMetadata())) {
-        throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentName, fromServer.getName());
+        throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentId, fromServer.getName());
       }
 
-      ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(segment.getDataSource());
+      ImmutableDruidDataSource dataSource = metadataSegmentManager.getDataSource(segment.getDataSource());
       if (dataSource == null) {
-        throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentName);
+        throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentId);
       }
 
       // get segment information from MetadataSegmentManager instead of getting it from fromServer's.
       // This is useful when MetadataSegmentManager and fromServer DataSegment's are different for same
       // identifier (say loadSpec differs because of deep storage migration).
-      final DataSegment segmentToLoad = dataSource.getSegment(segment.getIdentifier());
+      final DataSegment segmentToLoad = dataSource.getSegment(segment.getId());
       if (segmentToLoad == null) {
-        throw new IAE("No segment metadata found for segment Id [%s]", segment.getIdentifier());
+        throw new IAE("No segment metadata found for segment Id [%s]", segment.getId());
       }
       final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
@@ -402,12 +393,8 @@ public class DruidCoordinator
         );
       }
 
-      final String toLoadQueueSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(
-              zkPaths.getLoadQueuePath(),
-              toServer.getName()
-          ), segmentName
-      );
+      final String toLoadQueueSegPath =
+          ZKPaths.makePath(zkPaths.getLoadQueuePath(), toServer.getName(), segmentId.toString());
 
       final LoadPeonCallback loadPeonCallback = () -> {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
@@ -444,7 +431,7 @@ public class DruidCoordinator
       }
     }
     catch (Exception e) {
-      log.makeAlert(e, "Exception moving segment %s", segmentName).emit();
+      log.makeAlert(e, "Exception moving segment %s", segmentId).emit();
       if (callback != null) {
         callback.execute();
       }
@@ -471,7 +458,7 @@ public class DruidCoordinator
 
   private List<DataSegment> getAvailableDataSegments()
   {
-    return metadataSegmentManager.getInventory()
+    return metadataSegmentManager.getDataSources()
                                  .stream()
                                  .flatMap(source -> source.getSegments().stream())
                                  .collect(Collectors.toList());
@@ -665,7 +652,7 @@ public class DruidCoordinator
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
                                          .withStartTime(startTime)
-                                         .withDataSources(metadataSegmentManager.getInventory())
+                                         .withDataSources(metadataSegmentManager.getDataSources())
                                          .withDynamicConfigs(getDynamicConfigs())
                                          .withCompactionConfig(getCompactionConfig())
                                          .withEmitter(emitter)
@@ -698,10 +685,12 @@ public class DruidCoordinator
               new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this),
               params -> {
                 // Display info about all historical servers
-                Iterable<ImmutableDruidServer> servers = FunctionalIterable
-                    .create(serverInventoryView.getInventory())
+                Iterable<ImmutableDruidServer> servers = serverInventoryView
+                    .getInventory()
+                    .stream()
                     .filter(DruidServer::segmentReplicatable)
-                    .transform(DruidServer::toImmutableDruidServer);
+                    .map(DruidServer::toImmutableDruidServer)
+                    .collect(Collectors.toList());
 
                 if (log.isDebugEnabled()) {
                   log.debug("Servers");

@@ -92,7 +92,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
     }
 
     if (killAllDataSources) {
-      whitelist = segmentManager.getAllDatasourceNames();
+      whitelist = segmentManager.getAllDataSourceNames();
     }
 
     if (whitelist != null && whitelist.size() > 0 && (lastKillTime + period) < System.currentTimeMillis()) {

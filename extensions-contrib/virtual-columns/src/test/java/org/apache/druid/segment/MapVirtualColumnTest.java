@@ -46,6 +46,7 @@ import org.apache.druid.query.select.SelectQueryRunnerFactory;
 import org.apache.druid.query.select.SelectResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -111,14 +112,14 @@ public class MapVirtualColumnTest
         Arrays.asList(
             QueryRunnerTestHelper.makeQueryRunner(
                 factory,
-                "index1",
-                new IncrementalIndexSegment(index1, "index1"),
+                SegmentId.dummy("index1"),
+                new IncrementalIndexSegment(index1, SegmentId.dummy("index1")),
                 "incremental"
             ),
             QueryRunnerTestHelper.makeQueryRunner(
                 factory,
-                "index2",
-                new QueryableIndexSegment("index2", index2),
+                SegmentId.dummy("index2"),
+                new QueryableIndexSegment(index2, SegmentId.dummy("index2")),
                 "queryable"
             )
         )

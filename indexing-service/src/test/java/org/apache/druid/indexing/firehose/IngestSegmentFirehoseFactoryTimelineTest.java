@@ -67,6 +67,7 @@ import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
@@ -398,15 +399,15 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     @Override
     public String toString()
     {
-      final List<String> segmentIdentifiers = Lists.newArrayList();
+      final List<SegmentId> segmentIds = Lists.newArrayList();
       for (DataSegment segment : segments) {
-        segmentIdentifiers.add(segment.getIdentifier());
+        segmentIds.add(segment.getId());
       }
       return "TestCase{" +
              "interval=" + interval +
              ", expectedCount=" + expectedCount +
              ", expectedSum=" + expectedSum +
-             ", segments=" + segmentIdentifiers +
+             ", segments=" + segmentIds +
              '}';
     }
   }

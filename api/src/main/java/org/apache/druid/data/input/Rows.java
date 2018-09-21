@@ -38,8 +38,6 @@ import java.util.Set;
  */
 public class Rows
 {
-  public static final Long LONG_ZERO = 0L;
-
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
    * @param inputRow  input row
@@ -55,10 +53,7 @@ public class Rows
         dims.put(dim, dimValues);
       }
     }
-    return ImmutableList.of(
-        timeStamp,
-        dims
-    );
+    return ImmutableList.of(timeStamp, dims);
   }
 
   /**

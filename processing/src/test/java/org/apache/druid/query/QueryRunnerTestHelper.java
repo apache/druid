@@ -60,6 +60,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
@@ -82,7 +83,7 @@ public class QueryRunnerTestHelper
 
   public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
 
-  public static final String segmentId = "testSegment";
+  public static final SegmentId segmentId = SegmentId.dummy("testSegment");
   public static final String dataSource = "testing";
   public static final UnionDataSource unionDataSource = new UnionDataSource(
       Lists.transform(
@@ -345,15 +346,15 @@ public class QueryRunnerTestHelper
     final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     return ImmutableList.of(
-        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
+        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), ("rtIndex")),
         makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, segmentId), "noRollupRtIndex"),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, segmentId), "mMappedTestIndex"),
         makeQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, noRollupMMappedTestIndex),
+            new QueryableIndexSegment(noRollupMMappedTestIndex, segmentId),
             "noRollupMMappedTestIndex"
         ),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex), "mergedRealtimeIndex")
+        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, segmentId), "mergedRealtimeIndex")
     );
   }
 
@@ -368,10 +369,10 @@ public class QueryRunnerTestHelper
 
     return Arrays.asList(
         makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
-        makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
+        makeUnionQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, segmentId), "mMappedTestIndex"),
         makeUnionQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, mergedRealtimeIndex),
+            new QueryableIndexSegment(mergedRealtimeIndex, segmentId),
             "mergedRealtimeIndex"
         )
     );
@@ -402,14 +403,15 @@ public class QueryRunnerTestHelper
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter,
       final String runnerName
   )
   {
     return new FinalizeResultsQueryRunner<T>(
         new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
+            segmentId,
+            adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()

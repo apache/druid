@@ -93,13 +93,13 @@ public class MoveTask extends AbstractFixedIntervalTask
       if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
         throw new ISE(
             "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
-            unusedSegment.getIdentifier(),
+            unusedSegment.getId(),
             unusedSegment.getVersion(),
             myLock.getVersion()
         );
       }
 
-      log.info("OK to move segment: %s", unusedSegment.getIdentifier());
+      log.info("OK to move segment: %s", unusedSegment.getId());
     }
 
     // Move segments

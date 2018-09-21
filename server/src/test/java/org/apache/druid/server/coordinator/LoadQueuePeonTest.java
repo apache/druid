@@ -194,7 +194,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     for (DataSegment segment : segmentToDrop) {
       loadQueuePeon.dropSegment(
-          segment, new LoadPeonCallback()
+          segment,
+          new LoadPeonCallback()
           {
             @Override
             public void execute()
@@ -207,7 +208,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     for (DataSegment segment : segmentToLoad) {
       loadQueuePeon.loadSegment(
-          segment, new LoadPeonCallback()
+          segment,
+          new LoadPeonCallback()
           {
             @Override
             public void execute()
@@ -223,7 +225,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     Assert.assertEquals(5, loadQueuePeon.getSegmentsToDrop().size());
 
     for (DataSegment segment : segmentToDrop) {
-      String dropRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getIdentifier());
+      String dropRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getId().toString());
       Assert.assertTrue(timing.forWaiting().awaitLatch(dropRequestSignal[requestSignalIdx.get()]));
       Assert.assertNotNull(curator.checkExists().forPath(dropRequestPath));
       Assert.assertEquals(
@@ -256,7 +258,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     }
 
     for (DataSegment segment : expectedLoadOrder) {
-      String loadRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getIdentifier());
+      String loadRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getId().toString());
       Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestSignal[requestSignalIdx.get()]));
       Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));
       Assert.assertEquals(
@@ -318,7 +320,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
     loadQueueCache.start();
 
     loadQueuePeon.loadSegment(
-        segment, new LoadPeonCallback()
+        segment,
+        new LoadPeonCallback()
         {
           @Override
           public void execute()
@@ -328,7 +331,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
         }
     );
 
-    String loadRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getIdentifier());
+    String loadRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getId().toString());
     Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestSignal));
     Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));
     Assert.assertEquals(

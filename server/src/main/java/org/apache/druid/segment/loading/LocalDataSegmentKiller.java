@@ -48,7 +48,7 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
     final File path = getPath(segment);
-    log.info("killing segment[%s] mapped to path[%s]", segment.getIdentifier(), path);
+    log.info("killing segment[%s] mapped to path[%s]", segment.getId(), path);
 
     try {
       if (path.getName().endsWith(".zip")) {

@@ -266,7 +266,7 @@ public class HadoopConverterJobTest
       Thread.sleep(10);
     }
     manager.poll();
-    final ImmutableDruidDataSource druidDataSource = manager.getInventoryValue(DATASOURCE);
+    final ImmutableDruidDataSource druidDataSource = manager.getDataSource(DATASOURCE);
     manager.stop();
     return Lists.newArrayList(druidDataSource.getSegments());
   }
@@ -333,7 +333,7 @@ public class HadoopConverterJobTest
       @Override
       public int compare(DataSegment o1, DataSegment o2)
       {
-        return o1.getIdentifier().compareTo(o2.getIdentifier());
+        return o1.getId().compareTo(o2.getId());
       }
     };
     Collections.sort(

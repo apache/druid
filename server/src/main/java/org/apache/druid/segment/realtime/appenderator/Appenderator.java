@@ -56,9 +56,9 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   Object startJob();
 
   /**
-   * Same as {@link #add(SegmentIdentifier, InputRow, Supplier, boolean)}, with allowIncrementalPersists set to true
+   * Same as {@link #add(SegmentIdWithShardSpec, InputRow, Supplier, boolean)}, with allowIncrementalPersists set to true
    */
-  default AppenderatorAddResult add(SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier)
+  default AppenderatorAddResult add(SegmentIdWithShardSpec identifier, InputRow row, Supplier<Committer> committerSupplier)
       throws IndexSizeExceededException, SegmentNotWritableException
   {
     return add(identifier, row, committerSupplier, true);
@@ -95,7 +95,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * @throws SegmentNotWritableException if the requested segment is known, but has been closed
    */
   AppenderatorAddResult add(
-      SegmentIdentifier identifier,
+      SegmentIdWithShardSpec identifier,
       InputRow row,
       @Nullable Supplier<Committer> committerSupplier,
       boolean allowIncrementalPersists
@@ -105,7 +105,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   /**
    * Returns a list of all currently active segments.
    */
-  List<SegmentIdentifier> getSegments();
+  List<SegmentIdWithShardSpec> getSegments();
 
   /**
    * Returns the number of rows in a particular pending segment.
@@ -116,7 +116,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    *
    * @throws IllegalStateException if the segment is unknown
    */
-  int getRowCount(SegmentIdentifier identifier);
+  int getRowCount(SegmentIdWithShardSpec identifier);
 
   /**
    * Returns the number of total rows in this appenderator of all segments pending push.
@@ -147,7 +147,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    *
    * @return future that resolves when data is dropped
    */
-  ListenableFuture<?> drop(SegmentIdentifier identifier);
+  ListenableFuture<?> drop(SegmentIdWithShardSpec identifier);
 
   /**
    * Persist any in-memory indexed data to durable storage. This may be only somewhat durable, e.g. the
@@ -183,7 +183,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * that have been pushed and the commit metadata from the Committer.
    */
   ListenableFuture<SegmentsAndMetadata> push(
-      Collection<SegmentIdentifier> identifiers,
+      Collection<SegmentIdWithShardSpec> identifiers,
       @Nullable Committer committer,
       boolean useUniquePath
   );
@@ -205,14 +205,14 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   void closeNow();
 
   /**
-   * Result of {@link Appenderator#add(SegmentIdentifier, InputRow, Supplier, boolean)} containing following information
-   * - SegmentIdentifier - identifier of segment to which rows are being added
+   * Result of {@link Appenderator#add} containing following information
+   * - {@link SegmentIdWithShardSpec} - identifier of segment to which rows are being added
    * - int - positive number indicating how many summarized rows exist in this segment so far and
    * - boolean - true if {@param allowIncrementalPersists} is set to false and persist is required; false otherwise
    */
   class AppenderatorAddResult
   {
-    private final SegmentIdentifier segmentIdentifier;
+    private final SegmentIdWithShardSpec segmentIdentifier;
     private final int numRowsInSegment;
     private final boolean isPersistRequired;
 
@@ -220,7 +220,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
     private final ParseException parseException;
 
     AppenderatorAddResult(
-        SegmentIdentifier identifier,
+        SegmentIdWithShardSpec identifier,
         int numRowsInSegment,
         boolean isPersistRequired,
         @Nullable ParseException parseException
@@ -232,7 +232,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
       this.parseException = parseException;
     }
 
-    SegmentIdentifier getSegmentIdentifier()
+    SegmentIdWithShardSpec getSegmentIdentifier()
     {
       return segmentIdentifier;
     }

@@ -121,11 +121,11 @@ public class SQLMetadataSegmentManagerTest
     Assert.assertTrue(manager.isStarted());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
-        manager.getAllDatasourceNames()
+        manager.getAllDataSourceNames()
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(manager.getInventoryValue("wikipedia").getSegments())
+        ImmutableSet.copyOf(manager.getDataSource("wikipedia").getSegments())
     );
   }
 
@@ -153,7 +153,7 @@ public class SQLMetadataSegmentManagerTest
     Assert.assertTrue(manager.isStarted());
 
     Assert.assertEquals(
-        "wikipedia", Iterables.getOnlyElement(manager.getInventory()).getName()
+        "wikipedia", Iterables.getOnlyElement(manager.getDataSources()).getName()
     );
   }
 
@@ -163,7 +163,7 @@ public class SQLMetadataSegmentManagerTest
     manager.start();
     manager.poll();
     Assert.assertTrue(manager.isStarted());
-    Assert.assertTrue(manager.removeDatasource("wikipedia"));
+    Assert.assertTrue(manager.removeDataSource("wikipedia"));
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
@@ -202,8 +202,8 @@ public class SQLMetadataSegmentManagerTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(manager.getInventoryValue(newDataSource));
-    Assert.assertTrue(manager.removeDatasource(newDataSource));
+    Assert.assertNull(manager.getDataSource(newDataSource));
+    Assert.assertTrue(manager.removeDataSource(newDataSource));
   }
 
   @Test
@@ -232,8 +232,8 @@ public class SQLMetadataSegmentManagerTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(manager.getInventoryValue(newDataSource));
-    Assert.assertTrue(manager.removeSegment(newDataSource, newSegment.getIdentifier()));
+    Assert.assertNull(manager.getDataSource(newDataSource));
+    Assert.assertTrue(manager.removeSegment(newSegment.getId()));
   }
 
   @Test

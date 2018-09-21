@@ -70,6 +70,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -319,8 +320,8 @@ public class TopNBenchmark
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "incIndex",
-        new IncrementalIndexSegment(incIndexes.get(0), "incIndex")
+        SegmentId.dummy("incIndex"),
+        new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
     );
 
     List<Result<TopNResultValue>> results = TopNBenchmark.runQuery(factory, runner, query);
@@ -336,8 +337,8 @@ public class TopNBenchmark
   {
     final QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "qIndex",
-        new QueryableIndexSegment("qIndex", qIndexes.get(0))
+        SegmentId.dummy("qIndex"),
+        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     List<Result<TopNResultValue>> results = TopNBenchmark.runQuery(factory, runner, query);
@@ -354,11 +355,11 @@ public class TopNBenchmark
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = Lists.newArrayList();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
       QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          segmentId,
+          new QueryableIndexSegment(qIndexes.get(i), segmentId)
       );
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }

@@ -381,7 +381,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
         log.warn(
             "Server[%s] cannot load segment[%s] because load queue peon is stopped.",
             serverId,
-            segment.getIdentifier()
+            segment.getId()
         );
         callback.execute();
         return;
@@ -390,7 +390,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       SegmentHolder holder = segmentsToLoad.get(segment);
 
       if (holder == null) {
-        log.debug("Server[%s] to load segment[%s] queued.", serverId, segment.getIdentifier());
+        log.debug("Server[%s] to load segment[%s] queued.", serverId, segment.getId());
         segmentsToLoad.put(segment, new LoadSegmentHolder(segment, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
@@ -407,7 +407,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
         log.warn(
             "Server[%s] cannot drop segment[%s] because load queue peon is stopped.",
             serverId,
-            segment.getIdentifier()
+            segment.getId()
         );
         callback.execute();
         return;
@@ -415,7 +415,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       SegmentHolder holder = segmentsToDrop.get(segment);
 
       if (holder == null) {
-        log.debug("Server[%s] to drop segment[%s] queued.", serverId, segment.getIdentifier());
+        log.debug("Server[%s] to drop segment[%s] queued.", serverId, segment.getId());
         segmentsToDrop.put(segment, new DropSegmentHolder(segment, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
@@ -531,7 +531,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       log.info(
           "Server[%s] Successfully processed segment[%s] request[%s].",
           serverId,
-          segment.getIdentifier(),
+          segment.getId(),
           changeRequest.getClass().getSimpleName()
       );
 
@@ -549,7 +549,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       log.error(
           "Server[%s] Failed segment[%s] request[%s] with cause [%s].",
           serverId,
-          segment.getIdentifier(),
+          segment.getId(),
           changeRequest.getClass().getSimpleName(),
           failureCause
       );

@@ -562,8 +562,7 @@ public class LookupReferencesManager
     }
   }
 
-  private FullResponseHolder fetchLookupsForTier(String tier)
-      throws InterruptedException, IOException
+  private FullResponseHolder fetchLookupsForTier(String tier) throws InterruptedException, IOException
   {
     return druidLeaderClient.go(
         druidLeaderClient.makeRequest(

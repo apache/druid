@@ -86,6 +86,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.After;
@@ -712,8 +713,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     QueryableIndex index = groupByIndices.get(qIndexNumber);
     QueryRunner<Row> runner = makeQueryRunner(
         groupByFactory,
-        index.toString(),
-        new QueryableIndexSegment(index.toString(), index)
+        SegmentId.dummy(index.toString()),
+        new QueryableIndexSegment(index, SegmentId.dummy(index.toString()))
     );
     runners.add(groupByFactory.getToolchest().preMergeQueryDecoration(runner));
     return runners;
@@ -725,8 +726,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     QueryableIndex index2 = groupByIndices.get(qIndexNumber);
     QueryRunner<Row> tooSmallRunner = makeQueryRunner(
         groupByFactory2,
-        index2.toString(),
-        new QueryableIndexSegment(index2.toString(), index2)
+        SegmentId.dummy(index2.toString()),
+        new QueryableIndexSegment(index2, SegmentId.dummy(index2.toString()))
     );
     runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
@@ -762,13 +763,14 @@ public class GroupByLimitPushDownMultiNodeMergeTest
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
     return new FinalizeResultsQueryRunner<T>(
         new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
+            segmentId,
+            adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()

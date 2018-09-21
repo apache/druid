@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Days;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -45,9 +46,9 @@ public class ReferenceCountingSegmentTest
         new AbstractSegment()
         {
           @Override
-          public String getIdentifier()
+          public SegmentId getId()
           {
-            return "test_segment";
+            return SegmentId.dummy("test_segment");
           }
 
           @Override

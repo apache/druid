@@ -25,9 +25,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.utils.CircularBuffer;
 
 import java.util.ArrayList;
@@ -35,16 +35,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * This class keeps a bounded list of segment updates made on the server such as adding/dropping segments.
  *
- * Clients call addSegmentChangeRequest(DataSegmentChangeRequest) or addSegmentChangeRequests(List<DataSegmentChangeRequest>)
- * to add segment updates.
+ * Clients call {@link #addChangeRequest} or {@link #addChangeRequests} to add updates (e. g. of segments).
  *
- * Clients call ListenableFuture<SegmentChangeRequestsSnapshot> getRequestsSince(final Counter counter) to get segment
- * updates since given counter.
+ * Clients call {@link #getRequestsSince} to get updates since given counter.
  */
 public class ChangeRequestHistory<T>
 {
@@ -55,7 +52,7 @@ public class ChangeRequestHistory<T>
   private final CircularBuffer<Holder<T>> changes;
 
   @VisibleForTesting
-  final LinkedHashMap<CustomSettableFuture, Counter> waitingFutures;
+  final LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures;
 
   private final ExecutorService singleThreadedExecutor;
   private final Runnable resolveWaitingFuturesRunnable;
@@ -68,26 +65,13 @@ public class ChangeRequestHistory<T>
   public ChangeRequestHistory(int maxSize)
   {
     this.maxSize = maxSize;
-    this.changes = new CircularBuffer(maxSize);
+    this.changes = new CircularBuffer<>(maxSize);
 
     this.waitingFutures = new LinkedHashMap<>();
 
-    this.resolveWaitingFuturesRunnable = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        resolveWaitingFutures();
-      }
-    };
+    this.resolveWaitingFuturesRunnable = this::resolveWaitingFutures;
 
-    this.singleThreadedExecutor = Executors.newSingleThreadExecutor(
-        new ThreadFactoryBuilder().setDaemon(true)
-                                  .setNameFormat(
-                                      "SegmentChangeRequestHistory"
-                                  )
-                                  .build()
-    );
+    this.singleThreadedExecutor = Execs.singleThreaded("SegmentChangeRequestHistory");
   }
 
   /**
@@ -96,7 +80,7 @@ public class ChangeRequestHistory<T>
   public synchronized void addChangeRequests(List<T> requests)
   {
     for (T request : requests) {
-      changes.add(new Holder(request, getLastCounter().inc()));
+      changes.add(new Holder<>(request, getLastCounter().inc()));
     }
 
     singleThreadedExecutor.execute(resolveWaitingFuturesRunnable);
@@ -111,11 +95,11 @@ public class ChangeRequestHistory<T>
   }
 
   /**
-   * Returns a Future that , on completion, returns list of segment updates and associated counter.
+   * Returns a Future that, on completion, returns list of segment updates and associated counter.
    * If there are no update since given counter then Future completion waits till an updates is provided.
    *
-   * If counter is older than max number of changes maintained then SegmentChangeRequestsSnapshot is returned
-   * with resetCounter set to True.
+   * If counter is older than max number of changes maintained then {@link ChangeRequestsSnapshot} is returned
+   * with {@link ChangeRequestsSnapshot#resetCounter} set to True.
    *
    * If there were no updates to provide immediately then a future is created and returned to caller. This future
    * is added to the "waitingFutures" list and all the futures in the list get resolved as soon as a segment
@@ -123,7 +107,7 @@ public class ChangeRequestHistory<T>
    */
   public synchronized ListenableFuture<ChangeRequestsSnapshot<T>> getRequestsSince(final Counter counter)
   {
-    final CustomSettableFuture future = new CustomSettableFuture(waitingFutures);
+    final CustomSettableFuture<T> future = new CustomSettableFuture<>(waitingFutures);
 
     if (counter.counter < 0) {
       future.setException(new IAE("counter[%s] must be >= 0", counter));
@@ -134,13 +118,10 @@ public class ChangeRequestHistory<T>
 
     if (counter.counter == lastCounter.counter) {
       if (!counter.matches(lastCounter)) {
-        future.set(ChangeRequestsSnapshot.fail(
-            StringUtils.format(
-                "counter[%s] failed to match with [%s]",
-                counter,
-                lastCounter
-            )
-        ));
+        ChangeRequestsSnapshot<T> reset = ChangeRequestsSnapshot.fail(
+            StringUtils.format("counter[%s] failed to match with [%s]", counter, lastCounter)
+        );
+        future.set(reset);
       } else {
         synchronized (waitingFutures) {
           waitingFutures.put(future, counter);
@@ -296,7 +277,7 @@ public class ChangeRequestHistory<T>
     }
   }
 
-  // Future with cancel() implementation to remove it from "waitingFutures" list
+  /** Future with cancel() implementation to remove it from {@link #waitingFutures} */
   private static class CustomSettableFuture<T> extends AbstractFuture<ChangeRequestsSnapshot<T>>
   {
     private final LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures;

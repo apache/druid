@@ -128,7 +128,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment("foo");
 
-    throttler.registerReplicantCreation(DruidServer.DEFAULT_TIER, segment.getIdentifier(), "hostNorm");
+    throttler.registerReplicantCreation(DruidServer.DEFAULT_TIER, segment.getId(), "hostNorm");
     EasyMock.expectLastCall().once();
 
     EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
