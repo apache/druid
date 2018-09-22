@@ -534,9 +534,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   /**
    * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
    * (i. e. promoted to old generation), try to keep them alive. In {@link #poll()}, we fetch and deserialize all
-   * existing segments each time, and them replace them in {@link #dataSourcesRef}. This method allows to use already
+   * existing segments each time, and then replace them in {@link #dataSourcesRef}. This method allows to use already
    * existing (old) segments when possible, effectively interning them a-la {@link String#intern} or {@link
-   * com.google.common.collect.Interner}, aiming to make the most of {@link DataSegment} objects garbage soon after
+   * com.google.common.collect.Interner}, aiming to make the majority of {@link DataSegment} objects garbage soon after
    * they are deserialized and to die in young generation. It allows to avoid fragmentation of the old generation and
    * full GCs.
    */
