@@ -35,6 +35,7 @@ import org.openjdk.jmh.annotations.State;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -56,7 +57,7 @@ public class CostBalancerStrategyBenchmark
   {
     segment = createSegment(t0);
 
-    Random r = new Random(1234);
+    Random r = ThreadLocalRandom.current();
     segments = new ArrayList<>(n);
     for (int i = 0; i < n; ++i) {
       final DateTime t = t0.minusHours(r.nextInt(365 * 24) - 365 * 12);

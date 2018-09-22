@@ -61,7 +61,7 @@
       "type" : "realtime",
       "maxRowsInMemory": 500000,
       "intermediatePersistPeriod": "PT3M",
-      "windowPeriod": "PT1M",
+      "windowPeriod": "PT150S",
       "basePersistDirectory": "/home/y/var/druid_state/kafka_test/realtime/basePersist"
     }
   }

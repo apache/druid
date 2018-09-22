@@ -62,7 +62,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public abstract class BaseJettyTest
@@ -155,15 +155,13 @@ public abstract class BaseJettyTest
   public static class SlowResource
   {
 
-    public static Random random = new Random();
-
     @GET
     @Path("/hello")
     @Produces(MediaType.APPLICATION_JSON)
     public Response hello()
     {
       try {
-        TimeUnit.MILLISECONDS.sleep(500 + random.nextInt(1600));
+        TimeUnit.MILLISECONDS.sleep(500 + ThreadLocalRandom.current().nextInt(1600));
       }
       catch (InterruptedException e) {
         //

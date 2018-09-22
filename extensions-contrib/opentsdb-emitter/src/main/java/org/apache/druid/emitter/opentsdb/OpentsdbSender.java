@@ -20,6 +20,7 @@
 package org.apache.druid.emitter.opentsdb;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -29,8 +30,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class OpentsdbSender
@@ -40,28 +43,40 @@ public class OpentsdbSender
    */
   private static final String PATH = "/api/put";
   private static final Logger log = new Logger(OpentsdbSender.class);
+  private static final long FLUSH_TIMEOUT = 60000; // default flush wait 1 min
 
   private final AtomicLong countLostEvents = new AtomicLong(0);
   private final int flushThreshold;
-  private final List<OpentsdbEvent> events;
   private final BlockingQueue<OpentsdbEvent> eventQueue;
+  private final ScheduledExecutorService scheduler;
+  private final EventConsumer eventConsumer;
+  private final long consumeDelay;
   private final Client client;
   private final WebResource webResource;
-  private final ExecutorService executor = Executors.newFixedThreadPool(1);
-  private volatile boolean running = true;
 
-  public OpentsdbSender(String host, int port, int connectionTimeout, int readTimeout, int flushThreshold, int maxQueueSize)
+  public OpentsdbSender(
+      String host,
+      int port,
+      int connectionTimeout,
+      int readTimeout,
+      int flushThreshold,
+      int maxQueueSize,
+      long consumeDelay
+  )
   {
     this.flushThreshold = flushThreshold;
-    events = new ArrayList<>(flushThreshold);
+    this.consumeDelay = consumeDelay;
     eventQueue = new ArrayBlockingQueue<>(maxQueueSize);
+    scheduler = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
+        .setDaemon(true)
+        .setNameFormat("OpentsdbEventSender-%s")
+        .build());
+    eventConsumer = new EventConsumer();
 
     client = Client.create();
     client.setConnectTimeout(connectionTimeout);
     client.setReadTimeout(readTimeout);
     webResource = client.resource("http://" + host + ":" + port + PATH);
-
-    executor.execute(new EventConsumer());
   }
 
   public void enqueue(OpentsdbEvent event)
@@ -76,46 +91,70 @@ public class OpentsdbSender
     }
   }
 
+  public void start()
+  {
+    scheduler.scheduleWithFixedDelay(
+        eventConsumer,
+        consumeDelay,
+        consumeDelay,
+        TimeUnit.MILLISECONDS
+    );
+  }
+
   public void flush()
   {
-    sendEvents();
+    try {
+      EventConsumer flushConsumer = new EventConsumer();
+      Future future = scheduler.schedule(flushConsumer, 0, TimeUnit.MILLISECONDS);
+      future.get(FLUSH_TIMEOUT, TimeUnit.MILLISECONDS);
+      // send remaining events which size may less than flushThreshold
+      eventConsumer.sendEvents();
+      flushConsumer.sendEvents();
+    }
+    catch (Exception e) {
+      log.warn(e, e.getMessage());
+    }
   }
 
   public void close()
   {
     flush();
     client.destroy();
-    running = false;
-    executor.shutdown();
-  }
-
-  private void sendEvents()
-  {
-    if (!events.isEmpty()) {
-      try {
-        webResource.entity(events, MediaType.APPLICATION_JSON_TYPE).post();
-      }
-      catch (Exception e) {
-        log.error(e, "send to opentsdb server failed");
-      }
-      finally {
-        events.clear();
-      }
-    }
+    scheduler.shutdown();
   }
 
   private class EventConsumer implements Runnable
   {
+    private final List<OpentsdbEvent> events;
+
+    public EventConsumer()
+    {
+      events = new ArrayList<>(flushThreshold);
+    }
+
     @Override
     public void run()
     {
-      while (running) {
-        if (!eventQueue.isEmpty()) {
-          OpentsdbEvent event = eventQueue.poll();
-          events.add(event);
-          if (events.size() >= flushThreshold) {
-            sendEvents();
-          }
+      while (!eventQueue.isEmpty() && !scheduler.isShutdown()) {
+        OpentsdbEvent event = eventQueue.poll();
+        events.add(event);
+        if (events.size() >= flushThreshold) {
+          sendEvents();
+        }
+      }
+    }
+
+    public void sendEvents()
+    {
+      if (!events.isEmpty()) {
+        try {
+          webResource.entity(events, MediaType.APPLICATION_JSON_TYPE).post();
+        }
+        catch (Exception e) {
+          log.error(e, "error occurred when sending metrics to opentsdb server.");
+        }
+        finally {
+          events.clear();
         }
       }
     }

@@ -93,9 +93,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class DruidAvaticaHandlerTest extends CalciteTestBase
 {
@@ -201,7 +201,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
-    final int port = new Random().nextInt(9999) + 10000;
+    final int port = ThreadLocalRandom.current().nextInt(9999) + 10000;
     server = new Server(new InetSocketAddress("127.0.0.1", port));
     server.setHandler(handler);
     server.start();
@@ -802,7 +802,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
-    final int port = new Random().nextInt(9999) + 20000;
+    final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
     Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
     smallFrameServer.setHandler(handler);
     smallFrameServer.start();
