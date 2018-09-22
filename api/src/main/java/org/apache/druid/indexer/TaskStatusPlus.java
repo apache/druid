@@ -36,7 +36,7 @@ public class TaskStatusPlus
   private final String type;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
-  private final TaskState state;
+  private final TaskState statusCode;
   @Deprecated
   private final TaskState status;
   private final RunnerTaskState runnerTaskState;
@@ -48,16 +48,16 @@ public class TaskStatusPlus
   private final String errorMsg;
 
   public TaskStatusPlus(
-      @JsonProperty("id") String id,
-      @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
-      @JsonProperty("createdTime") DateTime createdTime,
-      @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
-      @JsonProperty("statusCode") @Nullable TaskState statusCode,
-      @JsonProperty("runnerStatusCode") @Nullable RunnerTaskState runnerStatusCode,
-      @JsonProperty("duration") @Nullable Long duration,
-      @JsonProperty("location") TaskLocation location,
-      @JsonProperty("dataSource") @Nullable String dataSource, // nullable for backward compatibility
-      @JsonProperty("errorMsg") @Nullable String errorMsg
+      String id,
+      String type, // nullable for backward compatibility
+      DateTime createdTime,
+      DateTime queueInsertionTime,
+      @Nullable TaskState statusCode,
+      @Nullable RunnerTaskState runnerStatusCode,
+      @Nullable Long duration,
+      TaskLocation location,
+      @Nullable String dataSource, // nullable for backward compatibility
+      @Nullable String errorMsg
   )
   {
     this(
@@ -77,7 +77,7 @@ public class TaskStatusPlus
 
 
   @JsonCreator
-  private TaskStatusPlus(
+  public TaskStatusPlus(
       @JsonProperty("id") String id,
       @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
@@ -100,16 +100,16 @@ public class TaskStatusPlus
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
     //checks for deserialization safety
     if (statusCode != null && status == null) {
-      this.state = statusCode;
+      this.statusCode = statusCode;
       this.status = statusCode;
     } else if (statusCode == null && status != null) {
-      this.state = status;
+      this.statusCode = status;
       this.status = status;
     } else {
       if (statusCode != null && status != null && statusCode != status) {
         log.error("statusCode[%s] and status[%s] must be same", statusCode, status);
       }
-      this.state = statusCode;
+      this.statusCode = statusCode;
       this.status = status;
     }
     this.runnerTaskState = runnerTaskState;
@@ -148,7 +148,7 @@ public class TaskStatusPlus
   @JsonProperty("statusCode")
   public TaskState getStatusCode()
   {
-    return state;
+    return statusCode;
   }
 
   @Deprecated
@@ -237,7 +237,7 @@ public class TaskStatusPlus
            ", type='" + type + '\'' +
            ", createdTime=" + createdTime +
            ", queueInsertionTime=" + queueInsertionTime +
-           ", state=" + state +
+           ", statusCode=" + statusCode +
            ", duration=" + duration +
            ", location=" + location +
            ", dataSource='" + dataSource + '\'' +
