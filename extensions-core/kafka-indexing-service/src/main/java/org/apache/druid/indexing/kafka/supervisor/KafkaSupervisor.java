@@ -370,6 +370,9 @@ public class KafkaSupervisor implements Supervisor
                 long pollTimeout = Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS);
                 while (!Thread.currentThread().isInterrupted() && !stopped) {
                   final Notice notice = notices.poll(pollTimeout, TimeUnit.MILLISECONDS);
+                  if (notice == null) {
+                    continue;
+                  }
 
                   try {
                     notice.handle();
