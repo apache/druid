@@ -87,6 +87,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -321,13 +322,28 @@ public class CompactionTask extends AbstractTask
     if (keepSegmentGranularity) {
       // If keepSegmentGranularity = true, create indexIngestionSpec per segment interval, so that we can run an index
       // task per segment interval.
-      final List<IndexIngestionSpec> specs = new ArrayList<>(queryableIndexAndSegments.size());
-      for (Pair<QueryableIndex, DataSegment> queryableIndexAndDataSegment : queryableIndexAndSegments) {
-        final DataSegment dataSegment = queryableIndexAndDataSegment.rhs;
+
+      //noinspection SSBasedInspection,unchecked
+      final Map<Interval, List<Pair<QueryableIndex, DataSegment>>> intervalToSegments = queryableIndexAndSegments
+          .stream()
+          .collect(
+              Collectors.toMap(
+                  p -> p.rhs.getInterval(),
+                  Lists::newArrayList,
+                  (l1, l2) -> {
+                    l1.addAll(l2);
+                    return l1;
+                  }
+              )
+          );
+      final List<IndexIngestionSpec> specs = new ArrayList<>(intervalToSegments.size());
+      for (Entry<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
+        final Interval interval = entry.getKey();
+        final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.getValue();
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
-            dataSegment.getInterval(),
-            Collections.singletonList(queryableIndexAndDataSegment),
+            interval,
+            segmentsToCompact,
             dimensionsSpec,
             jsonMapper
         );
@@ -335,7 +351,7 @@ public class CompactionTask extends AbstractTask
         specs.add(
             new IndexIngestionSpec(
                 dataSchema,
-                createIoConfig(toolbox, dataSchema, dataSegment.getInterval()),
+                createIoConfig(toolbox, dataSchema, interval),
                 compactionTuningConfig
             )
         );
@@ -670,7 +686,7 @@ public class CompactionTask extends AbstractTask
         Preconditions.checkState(targetPartitionSize > 0, "Negative targetPartitionSize[%s]", targetPartitionSize);
 
         log.info(
-            "Computed targetPartitionSize[%d] from avgRowsPerByte[%f] and targetCompactionSizeBytes[%d]",
+            "Estimated targetPartitionSize[%d] = avgRowsPerByte[%f] * targetCompactionSizeBytes[%d]",
             targetPartitionSize,
             avgRowsPerByte,
             targetCompactionSizeBytes
