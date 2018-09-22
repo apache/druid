@@ -468,7 +468,7 @@ plan SQL queries. This metadata is cached on broker startup and also updated per
 [SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
-Druid exposes system information through special system tables. There are two such schemas available: Information Schema and System Schema
+Druid exposes system information through special system tables. There are two such schemas available: Information Schema and System Schema.
 Information schema provides details about table and column types. Sys schema provides information about Druid internals like segments/tasks/servers.
 
 ## INFORMATION SCHEMA
@@ -526,7 +526,7 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 
 ## SYSTEM SCHEMA
 
-The SYS schema provides visibility into Druid segments, servers and tasks.
+The sys schema provides visibility into Druid segments, servers and tasks.
 For example to retrieve all segments for datasource "wikipedia", use the query:
 ```sql
 SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
@@ -545,7 +545,7 @@ Segments table provides details on all Druid segments, whether they are publishe
 |size|Size of segment in bytes|
 |version|Version number (generally an ISO8601 timestamp corresponding to when the segment set was first started)|
 |partition_num|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
-|num_replicas|Number replicas of this segment currently being served|
+|num_replicas|Number of replicas of this segment currently being served|
 |num_rows|Number of rows in current segment, this value could be null if unkown to broker at query time|
 |is_published|True if this segment has been published to the metadata store|
 |is_available|True if this segment is currently being served by any server|
@@ -559,7 +559,7 @@ Servers table lists all data servers(any server that hosts a segment). It includ
 |------|-----|
 |server|Server name in the form host:port|
 |scheme|Server scheme http or https|
-|server_type|Type of druid service for example historical, realtime, bridge, indexer_executor|
+|server_type|Type of Druid service. Possible values include: historical, realtime, bridge and indexer_executor.|
 |tier|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
 |current_size|Current size of segments in bytes on this server|
 |max_size|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
@@ -586,7 +586,7 @@ SELECT * FROM sys.segment_servers;
 ### TASKS table
 
 The tasks table provides information about active and recently-completed indexing tasks. For more information 
-checkout out [ingestion tasks](#../ingestion/tasks.html)
+check out [ingestion tasks](#../ingestion/tasks.html)
 
 |Column|Notes|
 |------|-----|

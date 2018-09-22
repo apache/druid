@@ -106,6 +106,7 @@ public class SystemSchema extends AbstractSchema
   private static final RowSignature SERVERS_SIGNATURE = RowSignature
       .builder()
       .add("server", ValueType.STRING)
+      .add("server_host", ValueType.STRING)
       .add("scheme", ValueType.STRING)
       .add("server_type", ValueType.STRING)
       .add("tier", ValueType.STRING)
@@ -150,11 +151,12 @@ public class SystemSchema extends AbstractSchema
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
+    BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper),
+        SEGMENTS_TABLE, new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper, responseHandler),
         SERVERS_TABLE, new ServersTable(serverView),
         SEGMENT_SERVERS_TABLE, new ServerSegmentsTable(serverView),
-        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, new BytesAccumulatingResponseHandler())
+        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler)
     );
   }
 
@@ -169,16 +171,19 @@ public class SystemSchema extends AbstractSchema
     private final DruidSchema druidSchema;
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
+    private final BytesAccumulatingResponseHandler responseHandler;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
         DruidLeaderClient druidLeaderClient,
-        ObjectMapper jsonMapper
+        ObjectMapper jsonMapper,
+        BytesAccumulatingResponseHandler responseHandler
     )
     {
       this.druidSchema = druidSchemna;
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
+      this.responseHandler = responseHandler;
     }
 
     @Override
@@ -209,7 +214,8 @@ public class SystemSchema extends AbstractSchema
       //get published segments from coordinator
       final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
           druidLeaderClient,
-          jsonMapper
+          jsonMapper,
+          responseHandler
       );
 
       Set<String> availableSegmentIds = new HashSet<>();
@@ -281,7 +287,8 @@ public class SystemSchema extends AbstractSchema
     // Note that coordinator must be up to get segments
     JsonParserIterator<DataSegment> getMetadataSegments(
         DruidLeaderClient coordinatorClient,
-        ObjectMapper jsonMapper
+        ObjectMapper jsonMapper,
+        BytesAccumulatingResponseHandler responseHandler
     )
     {
 
@@ -295,7 +302,6 @@ public class SystemSchema extends AbstractSchema
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-      BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = coordinatorClient.goStream(
           request,
           responseHandler
@@ -306,7 +312,7 @@ public class SystemSchema extends AbstractSchema
       catch (InterruptedException | ExecutionException e) {
         throw new RuntimeException(e);
       }
-      if (responseHandler.status != HttpServletResponse.SC_OK) {
+      if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
         throw new ISE(
             "Error while fetching metadata segments status[%s] description[%s]",
             responseHandler.status,
@@ -357,6 +363,7 @@ public class SystemSchema extends AbstractSchema
           .from(serverViewClients.values())
           .transform(val -> new Object[]{
               val.getServer().getHost(),
+              val.getServer().getHost().split(":")[0],
               val.getServer().getScheme(),
               val.getServer().getType(),
               val.getServer().getTier(),
@@ -537,7 +544,7 @@ public class SystemSchema extends AbstractSchema
       catch (InterruptedException | ExecutionException e) {
         throw new RuntimeException(e);
       }
-      if (responseHandler.status != HttpServletResponse.SC_OK) {
+      if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
         throw new ISE(
             "Error while fetching tasks status[%s] description[%s]",
             responseHandler.status,
@@ -561,7 +568,7 @@ public class SystemSchema extends AbstractSchema
 
   static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
   {
-    protected int status;
+    private int status;
     private String description;
 
     @Override
@@ -570,6 +577,11 @@ public class SystemSchema extends AbstractSchema
       status = response.getStatus().getCode();
       description = response.getStatus().getReasonPhrase();
       return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
+    }
+
+    protected int getStatus()
+    {
+      return status;
     }
   }
 }

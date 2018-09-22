@@ -139,10 +139,7 @@ public class DruidLeaderClient
       final HttpResponseHandler<Intermediate, Final> handler
   )
   {
-    return httpClient.go(
-        request,
-        handler
-    );
+    return httpClient.go(request, handler);
   }
 
   /**

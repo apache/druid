@@ -141,7 +141,7 @@ public class MetadataResource
   @Path("/segments")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getDatabaseSegmentSegments()
+  public Response getDatabaseSegments()
   {
     final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getInventory();
     final Set<DataSegment> metadataSegments = druidDataSources

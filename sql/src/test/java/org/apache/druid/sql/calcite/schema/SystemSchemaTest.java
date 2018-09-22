@@ -23,11 +23,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -52,7 +53,9 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.ReflectionQueryToolChestWarehouse;
@@ -79,7 +82,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -93,6 +96,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -120,6 +125,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private FullResponseHolder responseHolder;
   private SystemSchema.BytesAccumulatingResponseHandler responseHandler;
   private Request request;
+  private DruidSchema druidSchema;
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
 
@@ -148,7 +154,15 @@ public class SystemSchemaTest extends CalciteTestBase
     client = EasyMock.createMock(DruidLeaderClient.class);
     mapper = TestHelper.makeJsonMapper();
     responseHolder = EasyMock.createMock(FullResponseHolder.class);
-    responseHandler = EasyMock.createMock(SystemSchema.BytesAccumulatingResponseHandler.class);
+    responseHandler = EasyMock.createMockBuilder(SystemSchema.BytesAccumulatingResponseHandler.class)
+                              .withConstructor()
+                              .addMockedMethod(
+                                      "handleResponse",
+                                      HttpResponse.class,
+                                      HttpResponseHandler.TrafficCop.class
+                                  )
+                              .addMockedMethod("getStatus")
+                              .createMock();
     request = EasyMock.createMock(Request.class);
 
     final File tmpDir = temporaryFolder.newFolder();
@@ -206,17 +220,17 @@ public class SystemSchemaTest extends CalciteTestBase
         index2
     );
 
-    DruidSchema druidShema = new DruidSchema(
+    druidSchema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments()),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
         new NoopEscalator()
     );
-    druidShema.start();
-    druidShema.awaitInitialization();
+    druidSchema.start();
+    druidSchema.awaitInitialization();
     schema = new SystemSchema(
-        druidShema,
+        druidSchema,
         serverView,
         EasyMock.createStrictMock(AuthorizerMapper.class),
         client,
@@ -409,26 +423,85 @@ public class SystemSchemaTest extends CalciteTestBase
     // segment 3 is published but not served
     // segment 2 is served by 2 servers, so num_replicas=2
 
-    final SystemSchema.SegmentsTable segmentsTable = (SystemSchema.SegmentsTable) schema.getTableMap().get("segments");
-    final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
-    final List<RelDataTypeField> fields = rowType.getFieldList();
+    final SystemSchema.SegmentsTable segmentsTable = EasyMock.createMockBuilder(SystemSchema.SegmentsTable.class).withConstructor(
+        druidSchema, client, mapper, responseHandler).createMock();
+    EasyMock.replay(segmentsTable);
 
-    Assert.assertEquals(13, fields.size());
-
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments"))
-            .andReturn(request)
-            .once();
-    //EasyMock.expect(client.go(request)).andReturn(responseHolder).once();
-    ListenableFuture<InputStream> future = EasyMock.createMock(ListenableFuture.class);
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments")).andReturn(request).anyTimes();
+    SettableFuture<InputStream> future = SettableFuture.create();
     EasyMock.expect(client.goStream(request, responseHandler)).andReturn(future).once();
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).once();
-    String jsonValue = mapper.writeValueAsString(ImmutableList.of(dataSource1, dataSource2, dataSource3));
-    EasyMock.expect(responseHolder.getContent()).andReturn(jsonValue).once();
+    final int ok = HttpServletResponse.SC_OK;
+    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).once();
 
-    EasyMock.expect(serverView.getClients())
+    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/coordinator/v1/metadata/segments")).anyTimes();
+
+    AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    final String json = "[{\n"
+                        + "\t\"dataSource\": \"wikipedia-kafka\",\n"
+                        + "\t\"interval\": \"2018-08-07T23:00:00.000Z/2018-08-08T00:00:00.000Z\",\n"
+                        + "\t\"version\": \"2018-08-07T23:00:00.059Z\",\n"
+                        + "\t\"loadSpec\": {\n"
+                        + "\t\t\"type\": \"local\",\n"
+                        + "\t\t\"path\": \"/var/druid/segments/wikipedia-kafka/2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z/2018-08-07T23:00:00.059Z/51/1578eb79-0e44-4b41-a87b-65e40c52be53/index.zip\"\n"
+                        + "\t},\n"
+                        + "\t\"dimensions\": \"isRobot,channel,flags,isUnpatrolled,page,diffUrl,comment,isNew,isMinor,user,namespace,commentLength,deltaBucket,cityName,countryIsoCode,countryName,isAnonymous,regionIsoCode,regionName,added,deleted,delta\",\n"
+                        + "\t\"metrics\": \"count,user_unique\",\n"
+                        + "\t\"shardSpec\": {\n"
+                        + "\t\t\"type\": \"numbered\",\n"
+                        + "\t\t\"partitionNum\": 51,\n"
+                        + "\t\t\"partitions\": 0\n"
+                        + "\t},\n"
+                        + "\t\"binaryVersion\": 9,\n"
+                        + "\t\"size\": 47406,\n"
+                        + "\t\"identifier\": \"wikipedia-kafka_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z_51\"\n"
+                        + "}, {\n"
+                        + "\t\"dataSource\": \"wikipedia-kafka\",\n"
+                        + "\t\"interval\": \"2018-08-07T18:00:00.000Z/2018-08-07T19:00:00.000Z\",\n"
+                        + "\t\"version\": \"2018-08-07T18:00:00.117Z\",\n"
+                        + "\t\"loadSpec\": {\n"
+                        + "\t\t\"type\": \"local\",\n"
+                        + "\t\t\"path\": \"/var/druid/segments/wikipedia-kafka/2018-08-07T18:00:00.000Z_2018-08-07T19:00:00.000Z/2018-08-07T18:00:00.117Z/9/a2646827-b782-424c-9eed-e48aa448d2c5/index.zip\"\n"
+                        + "\t},\n"
+                        + "\t\"dimensions\": \"isRobot,channel,flags,isUnpatrolled,page,diffUrl,comment,isNew,isMinor,user,namespace,commentLength,deltaBucket,cityName,countryIsoCode,countryName,isAnonymous,metroCode,regionIsoCode,regionName,added,deleted,delta\",\n"
+                        + "\t\"metrics\": \"count,user_unique\",\n"
+                        + "\t\"shardSpec\": {\n"
+                        + "\t\t\"type\": \"numbered\",\n"
+                        + "\t\t\"partitionNum\": 9,\n"
+                        + "\t\t\"partitions\": 0\n"
+                        + "\t},\n"
+                        + "\t\"binaryVersion\": 9,\n"
+                        + "\t\"size\": 83846,\n"
+                        + "\t\"identifier\": \"wikipedia-kafka_2018-08-07T18:00:00.000Z_2018-08-07T19:00:00.000Z_2018-08-07T18:00:00.117Z_9\"\n"
+                        + "}, {\n"
+                        + "\t\"dataSource\": \"wikipedia-kafka\",\n"
+                        + "\t\"interval\": \"2018-08-07T23:00:00.000Z/2018-08-08T00:00:00.000Z\",\n"
+                        + "\t\"version\": \"2018-08-07T23:00:00.059Z\",\n"
+                        + "\t\"loadSpec\": {\n"
+                        + "\t\t\"type\": \"local\",\n"
+                        + "\t\t\"path\": \"/var/druid/segments/wikipedia-kafka/2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z/2018-08-07T23:00:00.059Z/50/87c5457e-c39b-4c03-9df8-e2b20b210dfc/index.zip\"\n"
+                        + "\t},\n"
+                        + "\t\"dimensions\": \"isRobot,channel,flags,isUnpatrolled,page,diffUrl,comment,isNew,isMinor,user,namespace,commentLength,deltaBucket,cityName,countryIsoCode,countryName,isAnonymous,metroCode,regionIsoCode,regionName,added,deleted,delta\",\n"
+                        + "\t\"metrics\": \"count,user_unique\",\n"
+                        + "\t\"shardSpec\": {\n"
+                        + "\t\t\"type\": \"numbered\",\n"
+                        + "\t\t\"partitionNum\": 50,\n"
+                        + "\t\t\"partitions\": 0\n"
+                        + "\t},\n"
+                        + "\t\"binaryVersion\": 9,\n"
+                        + "\t\"size\": 53527,\n"
+                        + "\t\"identifier\": \"wikipedia-kafka_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z_50\"\n"
+                        + "}]";
+    byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
+    in.add(bytesToWrite);
+    in.done();
+    future.set(in);
+    //String jsonValue = mapper.writeValueAsString(ImmutableList.of(dataSource1, dataSource2, dataSource3));
+    //EasyMock.expect(responseHolder.getContent()).andReturn(jsonValue).once();
+
+    /*EasyMock.expect(serverView.getClients())
             .andReturn(serverViewClients)
-            .once();
-    EasyMock.replay(client, request, responseHolder, serverView);
+            .once();*/
+    EasyMock.replay(client, request, responseHolder, responseHandler);
     DataContext dataContext = new DataContext()
     {
       @Override
@@ -456,6 +529,10 @@ public class SystemSchemaTest extends CalciteTestBase
       }
     };
     Enumerable<Object[]> rows = segmentsTable.scan(dataContext);
+    Enumerator enumerator = rows.enumerator();
+    while (enumerator.moveNext()) {
+      System.out.println(enumerator.current());
+    }
 
     Assert.assertEquals(5, rows.count());
     Enumerable<Object[]> distinctRows = rows.distinct();
@@ -486,7 +563,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType rowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
-    Assert.assertEquals(6, fields.size());
+    Assert.assertEquals(7, fields.size());
 
     Assert.assertEquals("server", fields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(0).getType().getSqlTypeName());
@@ -525,30 +602,65 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(2, rows.count());
     Object[] row1 = rows.first();
     Assert.assertEquals("localhost", row1[0]);
-    Assert.assertEquals("realtime", row1[2].toString());
+    Assert.assertEquals("realtime", row1[3].toString());
     Object[] row2 = rows.last();
     Assert.assertEquals("server2", row2[0]);
-    Assert.assertEquals("historical", row2[2].toString());
+    Assert.assertEquals("historical", row2[3].toString());
   }
 
   @Test
-  @Ignore
   public void testTasksTable() throws Exception
   {
 
     SystemSchema.TasksTable tasksTable = EasyMock.createMockBuilder(SystemSchema.TasksTable.class).withConstructor(client, mapper, responseHandler).createMock();
-
     EasyMock.replay(tasksTable);
-
     EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks")).andReturn(request).anyTimes();
-    ListenableFuture<InputStream> future = EasyMock.createMock(ListenableFuture.class);
-    EasyMock.expect(client.goStream(request, responseHandler)).andReturn(future);
-    EasyMock.expect(responseHandler.status).andReturn(HttpServletResponse.SC_OK).once();
+    SettableFuture<InputStream> future = SettableFuture.create();
+    EasyMock.expect(client.goStream(request, responseHandler)).andReturn(future).once();
+    final int ok = HttpServletResponse.SC_OK;
+    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).once();
+    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
-    String jsonValue = mapper.writeValueAsString(ImmutableList.of(task1, task2, task3));
+    AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
 
-    EasyMock.expect(responseHolder.getContent()).andReturn(jsonValue).once();
-    EasyMock.replay(client, request, responseHolder, responseHandler);
+
+    String json = "[{\n"
+                  + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
+                  + "\t\"type\": \"index\",\n"
+                  + "\t\"createdTime\": \"2018-09-20T22:33:44.922Z\",\n"
+                  + "\t\"queueInsertionTime\": \"1970-01-01T00:00:00.000Z\",\n"
+                  + "\t\"statusCode\": \"FAILED\",\n"
+                  + "\t\"runnerStatusCode\": \"NONE\",\n"
+                  + "\t\"duration\": -1,\n"
+                  + "\t\"location\": {\n"
+                  + "\t\t\"host\": \"testHost\",\n"
+                  + "\t\t\"port\": 1234,\n"
+                  + "\t\t\"tlsPort\": -1\n"
+                  + "\t},\n"
+                  + "\t\"dataSource\": \"wikipedia\",\n"
+                  + "\t\"errorMsg\": null\n"
+                  + "}, {\n"
+                  + "\t\"id\": \"index_wikipedia_2018-09-21T18:38:47.773Z\",\n"
+                  + "\t\"type\": \"index\",\n"
+                  + "\t\"createdTime\": \"2018-09-21T18:38:47.873Z\",\n"
+                  + "\t\"queueInsertionTime\": \"2018-09-21T18:38:47.910Z\",\n"
+                  + "\t\"statusCode\": \"RUNNING\",\n"
+                  + "\t\"runnerStatusCode\": \"RUNNING\",\n"
+                  + "\t\"duration\": null,\n"
+                  + "\t\"location\": {\n"
+                  + "\t\t\"host\": \"192.168.1.6\",\n"
+                  + "\t\t\"port\": 8100,\n"
+                  + "\t\t\"tlsPort\": -1\n"
+                  + "\t},\n"
+                  + "\t\"dataSource\": \"wikipedia\",\n"
+                  + "\t\"errorMsg\": null\n"
+                  + "}]";
+    byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
+    in.add(bytesToWrite);
+    in.done();
+    future.set(in);
+
+    EasyMock.replay(client, request, responseHandler);
     DataContext dataContext = new DataContext()
     {
       @Override
@@ -576,22 +688,25 @@ public class SystemSchemaTest extends CalciteTestBase
       }
     };
     Enumerable<Object[]> rows = tasksTable.scan(dataContext);
-    Assert.assertEquals(3, rows.count());
-    //task1 is running
-    //task2 and task3 are completed
-    for (Object[] row : rows) {
-      String id = (String) row[0];
-      if ("task1".equals(id)) {
-        Assert.assertEquals("RUNNING", row[5].toString());
-        Assert.assertEquals("RUNNING", row[6].toString());
-        Assert.assertEquals(-1L, row[7]);
-        Assert.assertEquals("testHost:1010", row[8]);
-      } else {
-        Assert.assertEquals("NONE", row[6].toString());
-        Assert.assertEquals(1000L, row[7]);
-        Assert.assertEquals("null:-1", row[8]);
-      }
-    }
+    Enumerator<Object[]> enumerator = rows.enumerator();
+
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row1 = enumerator.current();
+    Assert.assertEquals("index_wikipedia_2018-09-20T22:33:44.911Z", row1[0].toString());
+    Assert.assertEquals("FAILED", row1[5].toString());
+    Assert.assertEquals("NONE", row1[6].toString());
+    Assert.assertEquals(-1L, row1[7]);
+    Assert.assertEquals("testHost:1234", row1[8]);
+
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row2 = enumerator.current();
+    Assert.assertEquals("index_wikipedia_2018-09-21T18:38:47.773Z", row2[0].toString());
+    Assert.assertEquals("RUNNING", row2[5].toString());
+    Assert.assertEquals("RUNNING", row2[6].toString());
+    Assert.assertEquals(null, row2[7]);
+    Assert.assertEquals("192.168.1.6:8100", row2[8]);
+
+    Assert.assertEquals(false, enumerator.moveNext());
   }
 
 }
