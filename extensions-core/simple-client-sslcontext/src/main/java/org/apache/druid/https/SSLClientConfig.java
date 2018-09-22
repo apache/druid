@@ -39,6 +39,24 @@ public class SSLClientConfig
   @JsonProperty("trustStorePassword")
   private PasswordProvider trustStorePasswordProvider;
 
+  @JsonProperty
+  private String keyStorePath;
+
+  @JsonProperty
+  private String keyStoreType;
+
+  @JsonProperty
+  private String certAlias;
+
+  @JsonProperty("keyStorePassword")
+  private PasswordProvider keyStorePasswordProvider;
+
+  @JsonProperty("keyManagerPassword")
+  private PasswordProvider keyManagerPasswordProvider;
+
+  @JsonProperty
+  private String keyManagerFactoryAlgorithm;
+
   public String getProtocol()
   {
     return protocol;
@@ -64,6 +82,36 @@ public class SSLClientConfig
     return trustStorePasswordProvider;
   }
 
+  public String getKeyStorePath()
+  {
+    return keyStorePath;
+  }
+
+  public String getKeyStoreType()
+  {
+    return keyStoreType;
+  }
+
+  public PasswordProvider getKeyStorePasswordProvider()
+  {
+    return keyStorePasswordProvider;
+  }
+
+  public String getCertAlias()
+  {
+    return certAlias;
+  }
+
+  public PasswordProvider getKeyManagerPasswordProvider()
+  {
+    return keyManagerPasswordProvider;
+  }
+
+  public String getKeyManagerFactoryAlgorithm()
+  {
+    return keyManagerFactoryAlgorithm;
+  }
+
   @Override
   public String toString()
   {
@@ -72,6 +120,10 @@ public class SSLClientConfig
            ", trustStoreType='" + trustStoreType + '\'' +
            ", trustStorePath='" + trustStorePath + '\'' +
            ", trustStoreAlgorithm='" + trustStoreAlgorithm + '\'' +
+           ", keyStorePath='" + keyStorePath + '\'' +
+           ", keyStoreType='" + keyStoreType + '\'' +
+           ", certAlias='" + certAlias + '\'' +
+           ", keyManagerFactoryAlgorithm='" + keyManagerFactoryAlgorithm + '\'' +
            '}';
   }
 }

@@ -17,7 +17,9 @@
  * under the License.
  */
 
+//CHECKSTYLE.OFF: PackageName
 package org.apache.hadoop.fs;
+//CHECKSTYLE.ON: PackageName
 
 import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.logger.Logger;

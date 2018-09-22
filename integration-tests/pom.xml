@@ -89,6 +89,11 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>simple-client-sslcontext</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
@@ -227,6 +232,12 @@
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
                                 -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
+                                -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
+                                -Ddruid.client.https.trustStorePassword=druid123
+                                -Ddruid.client.https.keyStorePath=client_tls/client.jks
+                                -Ddruid.client.https.certAlias=druid
+                                -Ddruid.client.https.keyManagerPassword=druid123
+                                -Ddruid.client.https.keyStorePassword=druid123
                             </argLine>
                             <suiteXmlFiles>
                                 <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
@@ -276,6 +287,12 @@
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.type=configFile
                                 -Ddruid.test.config.configFile=${env.CONFIG_FILE}
+                                -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
+                                -Ddruid.client.https.trustStorePassword=druid123
+                                -Ddruid.client.https.keyStorePath=client_tls/client.jks
+                                -Ddruid.client.https.certAlias=druid
+                                -Ddruid.client.https.keyManagerPassword=druid123
+                                -Ddruid.client.https.keyStorePassword=druid123
                             </argLine>
                             <suiteXmlFiles>
                                 <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>

@@ -17,10 +17,10 @@
  * under the License.
  */
 
+package org.apache.druid.emitter.statsd;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.timgroup.statsd.StatsDClient;
-import org.apache.druid.emitter.statsd.StatsDEmitter;
-import org.apache.druid.emitter.statsd.StatsDEmitterConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Test;

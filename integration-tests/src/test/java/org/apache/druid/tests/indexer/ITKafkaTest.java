@@ -226,7 +226,7 @@ public class ITKafkaTest extends AbstractIndexerTest
     LOG.info("-------------SUBMITTED TASK");
 
     // wait for the task to finish
-    indexer.waitUntilTaskCompletes(taskID, 20000, 30);
+    indexer.waitUntilTaskCompletes(taskID, 10000, 60);
 
     // wait for segments to be handed off
     try {
@@ -240,8 +240,8 @@ public class ITKafkaTest extends AbstractIndexerTest
             }
           },
           true,
-          30000,
-          10,
+          10000,
+          30,
           "Real-time generated segments loaded"
       );
     }

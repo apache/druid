@@ -278,8 +278,8 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
             }
           },
           true,
-          30000,
-          10,
+          10000,
+          30,
           "Real-time generated segments loaded"
       );
     }
