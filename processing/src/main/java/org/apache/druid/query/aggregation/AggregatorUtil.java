@@ -100,6 +100,9 @@ public class AggregatorUtil
   public static final byte STRING_FIRST_CACHE_TYPE_ID = 0x2B;
   public static final byte STRING_LAST_CACHE_TYPE_ID = 0x2C;
 
+  public static final byte BLOOM_FILTER_CACHE_TYPE_ID = 0x30;
+  public static final byte BLOOM_FILTER_MERGE_CACHE_TYPE_ID = 0x31;
+
   // Suppressed aggregator
   public static final byte SUPPRESSED_AGG_CACHE_TYPE_ID = 0x2D;
 
