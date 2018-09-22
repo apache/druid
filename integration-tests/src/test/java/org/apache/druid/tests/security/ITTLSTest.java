@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.tests.security;
+package org.apache.druid.tests.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
