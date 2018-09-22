@@ -193,5 +193,10 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use org.apache.druid.common.config.NullHandling.nullToEmptyIfNeeded instead"/>
     </module>
+
+    <module name="PackageName">
+      <property name="format" value="^org.apache.druid.*$"/>
+    </module>
+    <module name="PackageDeclaration"/>
   </module>
 </module>
