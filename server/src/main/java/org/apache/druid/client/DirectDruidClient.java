@@ -203,16 +203,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       {
         private final AtomicLong totalByteCount = new AtomicLong(0);
         private final AtomicLong queuedByteCount = new AtomicLong(0);
-        private final AtomicLong channelClosedTime = new AtomicLong(0);
+        private final AtomicLong channelSuspendedTime = new AtomicLong(0);
         private final BlockingQueue<InputStreamHolder> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
-        private final AtomicBoolean channelReadable = new AtomicBoolean(true);
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
 
         private QueryMetrics<? super Query<T>> queryMetrics;
         private long responseStartTimeNs;
-        private long backPressureStartTimeNs;
 
         private QueryMetrics<? super Query<T>> acquireResponseMetrics()
         {
@@ -234,11 +232,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final long currentQueuedByteCount = queuedByteCount.addAndGet(holder.getLength());
           queue.put(holder);
 
-          if (usingBackpressure && currentQueuedByteCount >= maxQueuedBytes && channelReadable.get()) {
-            backPressureStartTimeNs = System.nanoTime();
-            channelReadable.set(false);
-          }
-
           // True if we should keep reading.
           return !usingBackpressure || currentQueuedByteCount < maxQueuedBytes;
         }
@@ -252,15 +245,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           final long currentQueuedByteCount = queuedByteCount.addAndGet(-holder.getLength());
           if (usingBackpressure && currentQueuedByteCount < maxQueuedBytes) {
-            Preconditions.checkNotNull(trafficCopRef.get(), "No TrafficCop, how can this be?")
-                         .resume(holder.getChunkNum());
-
-            //If channel is currently closed for reads, reopen and record time that it was closed for
-            if (!channelReadable.get()) {
-              channelReadable.set(true);
-              long backPressureReleaseTimeNs = System.nanoTime();
-              channelClosedTime.addAndGet(backPressureReleaseTimeNs - backPressureStartTimeNs);
-            }
+            long backPressureTime = Preconditions.checkNotNull(trafficCopRef.get(), "No TrafficCop, how can this be?")
+                                                 .resume(holder.getChunkNum());
+            channelSuspendedTime.addAndGet(backPressureTime);
           }
 
           return holder.getStream();
@@ -397,7 +384,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
           responseMetrics.reportNodeTime(nodeTimeNs);
           responseMetrics.reportNodeBytes(totalByteCount.get());
-          responseMetrics.reportBackPressureTime(channelClosedTime.get());
+
+          if (usingBackpressure) {
+            responseMetrics.reportBackPressureTime(channelSuspendedTime.get());
+          }
+
           responseMetrics.emit(emitter);
           synchronized (done) {
             try {
