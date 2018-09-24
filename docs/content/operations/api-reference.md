@@ -368,6 +368,10 @@ Retrieve the status of a task.
 
 Retrieve information about the segments of a task.
 
+* `/druid/indexer/v1/task/{taskId}/reports`
+
+Retrieve a [task completion report](../ingestion/reports.html) for a task. Only works for completed tasks. 
+
 #### POST
 
 * `/druid/indexer/v1/task` 
@@ -388,7 +392,16 @@ The MiddleManager does not have any API endpoints beyond the [common endpoints](
 
 ## Peon
 
-The Peon does not have any API endpoints beyond the [common endpoints](#common).
+#### GET
+
+* `/druid/worker/v1/chat/{taskId}/rowStats`
+
+Retrieve a live row stats report from a peon. See [task reports](../ingestion/reports.html) for more details.
+
+* `/druid/worker/v1/chat/{taskId}/unparseableEvents`
+
+Retrieve an unparseable events report from a peon. See [task reports](../ingestion/reports.html) for more details.
+
 
 ## Broker
 
