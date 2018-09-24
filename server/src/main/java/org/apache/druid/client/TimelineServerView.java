@@ -38,7 +38,6 @@ public interface TimelineServerView extends ServerView
   @Nullable
   TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource);
 
-  @Nullable
   Map<String, QueryableDruidServer> getClients();
 
   <T> QueryRunner<T> getQueryRunner(DruidServer server);

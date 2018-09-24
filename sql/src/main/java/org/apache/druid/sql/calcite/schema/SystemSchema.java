@@ -106,8 +106,9 @@ public class SystemSchema extends AbstractSchema
   private static final RowSignature SERVERS_SIGNATURE = RowSignature
       .builder()
       .add("server", ValueType.STRING)
-      .add("server_host", ValueType.STRING)
-      .add("scheme", ValueType.STRING)
+      .add("host", ValueType.STRING)
+      .add("plaintext_port", ValueType.STRING)
+      .add("tls_port", ValueType.STRING)
       .add("server_type", ValueType.STRING)
       .add("tier", ValueType.STRING)
       .add("curr_size", ValueType.LONG)
@@ -129,7 +130,7 @@ public class SystemSchema extends AbstractSchema
       .add("queue_insertion_time", ValueType.STRING)
       .add("status", ValueType.STRING)
       .add("runner_status", ValueType.STRING)
-      .add("duration", ValueType.STRING)
+      .add("duration", ValueType.LONG)
       .add("location", ValueType.STRING)
       .add("error_msg", ValueType.STRING)
       .build();
@@ -283,55 +284,55 @@ public class SystemSchema extends AbstractSchema
       return Linq4j.asEnumerable(allSegments).where(t -> t != null);
 
     }
+  }
 
-    // Note that coordinator must be up to get segments
-    JsonParserIterator<DataSegment> getMetadataSegments(
-        DruidLeaderClient coordinatorClient,
-        ObjectMapper jsonMapper,
-        BytesAccumulatingResponseHandler responseHandler
-    )
-    {
+  // Note that coordinator must be up to get segments
+  private static JsonParserIterator<DataSegment> getMetadataSegments(
+      DruidLeaderClient coordinatorClient,
+      ObjectMapper jsonMapper,
+      BytesAccumulatingResponseHandler responseHandler
+  )
+  {
 
-      Request request;
-      try {
-        request = coordinatorClient.makeRequest(
-            HttpMethod.GET,
-            StringUtils.format("/druid/coordinator/v1/metadata/segments")
-        );
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      ListenableFuture<InputStream> future = coordinatorClient.goStream(
-          request,
-          responseHandler
+    Request request;
+    try {
+      request = coordinatorClient.makeRequest(
+          HttpMethod.GET,
+          StringUtils.format("/druid/coordinator/v1/metadata/segments")
       );
-      try {
-        future.get();
-      }
-      catch (InterruptedException | ExecutionException e) {
-        throw new RuntimeException(e);
-      }
-      if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-        throw new ISE(
-            "Error while fetching metadata segments status[%s] description[%s]",
-            responseHandler.status,
-            responseHandler.description
-        );
-      }
-      final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
-      {
-      });
-      JsonParserIterator<DataSegment> iterator = new JsonParserIterator<>(
-          typeRef,
-          future,
-          request.getUrl().toString(),
-          null,
-          request.getUrl().getHost(),
-          jsonMapper
-      );
-      return iterator;
     }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    ListenableFuture<InputStream> future = coordinatorClient.goStream(
+        request,
+        responseHandler
+    );
+    try {
+      future.get();
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+    if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
+      throw new ISE(
+          "Error while fetching metadata segments status[%s] description[%s]",
+          responseHandler.status,
+          responseHandler.description
+      );
+    }
+    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
+    {
+    });
+    JsonParserIterator<DataSegment> iterator = new JsonParserIterator<>(
+        typeRef,
+        future,
+        request.getUrl().toString(),
+        null,
+        request.getUrl().getHost(),
+        jsonMapper
+    );
+    return iterator;
   }
 
   static class ServersTable extends AbstractTable implements ScannableTable
@@ -364,7 +365,8 @@ public class SystemSchema extends AbstractSchema
           .transform(val -> new Object[]{
               val.getServer().getHost(),
               val.getServer().getHost().split(":")[0],
-              val.getServer().getScheme(),
+              val.getServer().getHostAndPort() == null ? -1 : val.getServer().getHostAndPort().split(":")[1],
+              val.getServer().getHostAndTlsPort() == null ? -1 : val.getServer().getHostAndTlsPort().split(":")[1],
               val.getServer().getType(),
               val.getServer().getTier(),
               val.getServer().getCurrSize(),
@@ -515,55 +517,55 @@ public class SystemSchema extends AbstractSchema
 
       return new TasksEnumerable(getTasks(druidLeaderClient, jsonMapper, responseHandler));
     }
+  }
 
-    //Note that overlord must be up to get tasks
-    protected JsonParserIterator<TaskStatusPlus> getTasks(
-        DruidLeaderClient indexingServiceClient,
-        ObjectMapper jsonMapper,
-        BytesAccumulatingResponseHandler responseHandler
-    )
-    {
+  //Note that overlord must be up to get tasks
+  private static JsonParserIterator<TaskStatusPlus> getTasks(
+      DruidLeaderClient indexingServiceClient,
+      ObjectMapper jsonMapper,
+      BytesAccumulatingResponseHandler responseHandler
+  )
+  {
 
-      Request request;
-      try {
-        request = indexingServiceClient.makeRequest(
-            HttpMethod.GET,
-            StringUtils.format("/druid/indexer/v1/tasks")
-        );
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      ListenableFuture<InputStream> future = indexingServiceClient.goStream(
-          request,
-          responseHandler
+    Request request;
+    try {
+      request = indexingServiceClient.makeRequest(
+          HttpMethod.GET,
+          StringUtils.format("/druid/indexer/v1/tasks")
       );
-      try {
-        future.get();
-      }
-      catch (InterruptedException | ExecutionException e) {
-        throw new RuntimeException(e);
-      }
-      if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-        throw new ISE(
-            "Error while fetching tasks status[%s] description[%s]",
-            responseHandler.status,
-            responseHandler.description
-        );
-      }
-      final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
-      {
-      });
-      JsonParserIterator<TaskStatusPlus> iterator = new JsonParserIterator<>(
-          typeRef,
-          future,
-          request.getUrl().toString(),
-          null,
-          request.getUrl().getHost(),
-          jsonMapper
-      );
-      return iterator;
     }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    ListenableFuture<InputStream> future = indexingServiceClient.goStream(
+        request,
+        responseHandler
+    );
+    try {
+      future.get();
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+    if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
+      throw new ISE(
+          "Error while fetching tasks status[%s] description[%s]",
+          responseHandler.status,
+          responseHandler.description
+      );
+    }
+    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
+    {
+    });
+    JsonParserIterator<TaskStatusPlus> iterator = new JsonParserIterator<>(
+        typeRef,
+        future,
+        request.getUrl().toString(),
+        null,
+        request.getUrl().getHost(),
+        jsonMapper
+    );
+    return iterator;
   }
 
   static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler

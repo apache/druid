@@ -550,7 +550,7 @@ Segments table provides details on all Druid segments, whether they are publishe
 |is_published|True if this segment has been published to the metadata store|
 |is_available|True if this segment is currently being served by any server|
 |is_realtime|True if this segment is being served on a realtime server|
-|payload|Jsonified datasegment payload|
+|payload|JSON-serialized datasegment payload|
 
 ### SERVERS table
 Servers table lists all data servers(any server that hosts a segment). It includes both historicals and peons.
@@ -558,8 +558,10 @@ Servers table lists all data servers(any server that hosts a segment). It includ
 |Column|Notes|
 |------|-----|
 |server|Server name in the form host:port|
-|scheme|Server scheme http or https|
-|server_type|Type of Druid service. Possible values include: historical, realtime, bridge and indexer_executor.|
+|host|Hostname of the server|
+|plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|tls_port|TLS port of the server, or -1 if TLS is disabled|
+|server_type|Type of Druid service. Possible values include: historical, realtime and indexer_executor.|
 |tier|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
 |current_size|Current size of segments in bytes on this server|
 |max_size|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
@@ -571,16 +573,23 @@ SELECT * FROM sys.servers;
 
 ### SEGMENT_SERVERS table
 
-SEGMENT_SERVERS is used to join SEGMENTS with SERVERS table
+SEGMENT_SERVERS is used to join segments with servers table
 
 |Column|Notes|
 |------|-----|
 |server|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
 |segment_id|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
 
-To retrieve information from segment_servers table, use the query:
+JOIN between "segments" and "servers" can be used to query the number of segments for a specific datasource, 
+grouped by server, example query:
 ```sql
-SELECT * FROM sys.segment_servers;
+SELECT count(segments.segment_id) as num_segments from sys.segments as segments 
+INNER JOIN sys.segment_servers as segment_servers 
+ON segments.segment_id  = segment_servers.segment_id 
+INNER JOIN sys.servers as servers 
+ON servers.server = segment_servers.server
+WHERE segments.datasource = 'wikipedia' 
+GROUP BY servers.server;
 ```
 
 ### TASKS table

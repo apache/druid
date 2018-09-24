@@ -336,13 +336,13 @@ public class SystemSchemaTest extends CalciteTestBase
   );
   private final QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
       new DruidServer(
-          "server1", "localhost", null, 0, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0)
+          "server1", "localhost:0000", null, 0, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0)
           .addDataSegment(segment1).addDataSegment(segment2), client1
   );
 
   private final QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
       new DruidServer(
-          "server2", "server2", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+          "server2", "server2:1234", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
           .addDataSegment(segment2).addDataSegment(segment4).addDataSegment(segment5), client2
   );
   private final Map<String, QueryableDruidServer> serverViewClients = ImmutableMap.of(
@@ -563,7 +563,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType rowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
-    Assert.assertEquals(7, fields.size());
+    Assert.assertEquals(8, fields.size());
 
     Assert.assertEquals("server", fields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(0).getType().getSqlTypeName());
@@ -601,11 +601,11 @@ public class SystemSchemaTest extends CalciteTestBase
     Enumerable<Object[]> rows = serversTable.scan(dataContext);
     Assert.assertEquals(2, rows.count());
     Object[] row1 = rows.first();
-    Assert.assertEquals("localhost", row1[0]);
-    Assert.assertEquals("realtime", row1[3].toString());
+    Assert.assertEquals("localhost:0000", row1[0]);
+    Assert.assertEquals("realtime", row1[4].toString());
     Object[] row2 = rows.last();
-    Assert.assertEquals("server2", row2[0]);
-    Assert.assertEquals("historical", row2[3].toString());
+    Assert.assertEquals("server2:1234", row2[0]);
+    Assert.assertEquals("historical", row2[4].toString());
   }
 
   @Test
