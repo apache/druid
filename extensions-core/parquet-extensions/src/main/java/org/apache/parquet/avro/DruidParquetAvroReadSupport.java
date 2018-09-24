@@ -43,7 +43,7 @@ import java.util.Set;
 /**
  * This class must in package org.apache.parquet.avro to access the AvroRecordMaterializer constructor
  */
-public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
+public class DruidParquetAvroReadSupport extends AvroReadSupport<GenericRecord>
 {
 
   /**
