@@ -141,7 +141,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
           : null;
       final DateTimeZone timeZone =
           operands.size() > 3 && !RexLiteral.isNullLiteral(operands.get(3))
-          ? DateTimes.inferTzfromString(RexLiteral.stringValue(operands.get(3)))
+          ? DateTimes.inferTzFromString(RexLiteral.stringValue(operands.get(3)))
           : plannerContext.getTimeZone();
       final PeriodGranularity granularity = new PeriodGranularity(period, origin, timeZone);
       return applyTimestampFloor(druidExpressions.get(0), granularity, plannerContext.getExprMacroTable());

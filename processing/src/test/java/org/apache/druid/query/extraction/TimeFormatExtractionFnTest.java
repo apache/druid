@@ -89,7 +89,7 @@ public class TimeFormatExtractionFnTest
   {
     TimeFormatExtractionFn fn = new TimeFormatExtractionFn(
         "'In Berlin ist es schon 'EEEE",
-        DateTimes.inferTzfromString("Europe/Berlin"),
+        DateTimes.inferTzFromString("Europe/Berlin"),
         "de",
         null,
         false
@@ -101,7 +101,7 @@ public class TimeFormatExtractionFnTest
     Assert.assertEquals("In Berlin ist es schon Sonntag", fn.apply(timestamps[4]));
     Assert.assertEquals("In Berlin ist es schon Dienstag", fn.apply(timestamps[5]));
 
-    testSerde(fn, "'In Berlin ist es schon 'EEEE", DateTimes.inferTzfromString("Europe/Berlin"), "de", Granularities.NONE);
+    testSerde(fn, "'In Berlin ist es schon 'EEEE", DateTimes.inferTzFromString("Europe/Berlin"), "de", Granularities.NONE);
   }
 
   public void testSerde(
@@ -149,7 +149,7 @@ public class TimeFormatExtractionFnTest
   {
     TimeFormatExtractionFn fn = new TimeFormatExtractionFn(
         "'In Berlin ist es schon 'EEEE",
-        DateTimes.inferTzfromString("Europe/Berlin"),
+        DateTimes.inferTzFromString("Europe/Berlin"),
         "de",
         null,
         false
@@ -157,7 +157,7 @@ public class TimeFormatExtractionFnTest
 
     TimeFormatExtractionFn fn2 = new TimeFormatExtractionFn(
         "'In Berlin ist es schon 'EEEE",
-        DateTimes.inferTzfromString("Europe/Berlin"),
+        DateTimes.inferTzFromString("Europe/Berlin"),
         "de",
         null,
         true
@@ -165,7 +165,7 @@ public class TimeFormatExtractionFnTest
 
     TimeFormatExtractionFn fn3 = new TimeFormatExtractionFn(
         "'In Berlin ist es schon 'EEEE",
-        DateTimes.inferTzfromString("Europe/Berlin"),
+        DateTimes.inferTzFromString("Europe/Berlin"),
         "de",
         null,
         true

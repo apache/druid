@@ -31,7 +31,7 @@ public class DateTimesTest
   public void testCommonDateTimePattern()
   {
     DateTime dt1 = DateTimes.nowUtc();
-    DateTime dt2 = new DateTime(System.currentTimeMillis(), DateTimeZone.forID("IST"));
+    DateTime dt2 = new DateTime(System.currentTimeMillis(), DateTimes.inferTzFromString("IST"));
     DateTime dt3 = new DateTime(System.currentTimeMillis(), DateTimeZone.forOffsetHoursMinutes(1, 30));
 
     for (DateTime dt : new DateTime[] {dt1, dt2, dt3}) {

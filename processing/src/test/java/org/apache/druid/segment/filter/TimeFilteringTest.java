@@ -227,7 +227,7 @@ public class TimeFilteringTest extends BaseFilterTest
   {
     ExtractionFn exfn = new TimeFormatExtractionFn(
         "EEEE",
-        DateTimes.inferTzfromString("America/New_York"),
+        DateTimes.inferTzFromString("America/New_York"),
         "en",
         null,
         false

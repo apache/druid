@@ -86,17 +86,7 @@ public class QueryRunnerTestHelper
   public static final SegmentId segmentId = SegmentId.dummy("testSegment");
   public static final String dataSource = "testing";
   public static final UnionDataSource unionDataSource = new UnionDataSource(
-      Lists.transform(
-          Lists.newArrayList(dataSource, dataSource, dataSource, dataSource), new Function<String, TableDataSource>()
-          {
-            @Nullable
-            @Override
-            public TableDataSource apply(@Nullable String input)
-            {
-              return new TableDataSource(input);
-            }
-          }
-      )
+      Lists.transform(Lists.newArrayList(dataSource, dataSource, dataSource, dataSource), TableDataSource::new)
   );
 
   public static final Granularity dayGran = Granularities.DAY;

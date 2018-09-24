@@ -54,7 +54,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
     final DateTimeZone timeZone;
 
     if (args.size() > 2 && args.get(2).getLiteralValue() != null) {
-      timeZone = DateTimes.inferTzfromString((String) args.get(2).getLiteralValue());
+      timeZone = DateTimes.inferTzFromString((String) args.get(2).getLiteralValue());
     } else {
       timeZone = DateTimeZone.UTC;
     }

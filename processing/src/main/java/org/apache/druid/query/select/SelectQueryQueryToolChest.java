@@ -286,22 +286,22 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
             Map<String, Integer> pageIdentifier = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Map<String, Integer>>() {}
-                );
-            Set<String> dimensionSet = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Set<String>>() {}
+                resultIter.next(),
+                new TypeReference<Map<String, Integer>>() {}
             );
-            Set<String> metricSet = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Set<String>>() {}
-            );
+            Set<String> dimensionSet = jsonMapper.convertValue(resultIter.next(), new TypeReference<Set<String>>() {});
+            Set<String> metricSet = jsonMapper.convertValue(resultIter.next(), new TypeReference<Set<String>>() {});
             List<EventHolder> eventHolders = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<List<EventHolder>>() {}
-                );
+                resultIter.next(),
+                new TypeReference<List<EventHolder>>() {}
+            );
             // check the condition that outputName of cached result should be updated
             if (resultIter.hasNext()) {
               List<String> cachedOutputNames = (List<String>) resultIter.next();
-              Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
-                  "Cache hit but different number of dimensions??");
+              Preconditions.checkArgument(
+                  cachedOutputNames.size() == dimOutputNames.size(),
+                  "Cache hit but different number of dimensions??"
+              );
               for (int idx = 0; idx < dimOutputNames.size(); idx++) {
                 if (!cachedOutputNames.get(idx).equals(dimOutputNames.get(idx))) {
                   // rename outputName in the EventHolder
@@ -317,12 +317,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
             return new Result<>(
                 timestamp,
-                new SelectResultValue(
-                    pageIdentifier,
-                    dimensionSet,
-                    metricSet,
-                    eventHolders
-                )
+                new SelectResultValue(pageIdentifier, dimensionSet, metricSet, eventHolders)
             );
           }
         };

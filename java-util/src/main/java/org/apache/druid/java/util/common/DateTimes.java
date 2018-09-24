@@ -51,7 +51,7 @@ public final class DateTimes
       "[0-9]{4}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]\\.[0-9]{3}(Z|[+\\-][0-9]{2}(:[0-9]{2}))"
   );
 
-  public static DateTimeZone inferTzfromString(String tzId)
+  public static DateTimeZone inferTzFromString(String tzId)
   {
     try {
       return DateTimeZone.forID(tzId);

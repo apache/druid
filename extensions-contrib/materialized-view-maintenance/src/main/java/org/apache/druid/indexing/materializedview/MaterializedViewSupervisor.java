@@ -326,7 +326,7 @@ public class MaterializedViewSupervisor implements Supervisor
     Map<Interval, String> maxCreatedDate = baseSegmentsSnapshot.lhs;
     Map<Interval, String> derivativeVersion = derivativeSegmentsSnapshot.lhs;
     SortedMap<Interval, String> sortedToBuildInterval = Maps.newTreeMap(
-        Comparators.inverse(Comparators.intervalsByStartThenEnd())
+        Comparators.intervalsByStartThenEnd().reversed()
     );
     // find the intervals to drop and to build
     MapDifference<Interval, String> difference = Maps.difference(maxCreatedDate, derivativeVersion);

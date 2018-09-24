@@ -48,7 +48,7 @@ public class ExprUtils
     }
 
     final Object literalValue = timeZoneArg.getLiteralValue();
-    return literalValue == null ? DateTimeZone.UTC : DateTimes.inferTzfromString((String) literalValue);
+    return literalValue == null ? DateTimeZone.UTC : DateTimes.inferTzFromString((String) literalValue);
   }
 
   public static PeriodGranularity toPeriodGranularity(
@@ -66,7 +66,7 @@ public class ExprUtils
       timeZone = null;
     } else {
       final String value = timeZoneArg.eval(bindings).asString();
-      timeZone = value != null ? DateTimes.inferTzfromString(value) : null;
+      timeZone = value != null ? DateTimes.inferTzFromString(value) : null;
     }
 
     if (originArg == null) {

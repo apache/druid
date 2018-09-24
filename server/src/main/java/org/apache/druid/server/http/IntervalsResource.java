@@ -69,7 +69,7 @@ public class IntervalsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getIntervals(@Context final HttpServletRequest req)
   {
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
     final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
         req,
         serverInventoryView,
@@ -108,7 +108,7 @@ public class IntervalsResource
         authorizerMapper
     );
 
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
 
     if (full != null) {
       final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);

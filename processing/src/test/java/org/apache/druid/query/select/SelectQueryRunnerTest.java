@@ -56,7 +56,9 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Test;
@@ -110,7 +112,11 @@ public class SelectQueryRunnerTest
 
   private static final String segmentIdString = QueryRunnerTestHelper.segmentId.toString();
 
-  public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(Intervals.of("2011-01-12/2011-01-14"));
+
+  private static final Interval I_0112_0114 = Intervals.of("2011-01-12/2011-01-14");
+  public static final QuerySegmentSpec I_0112_0114_SPEC = new LegacySegmentSpec(I_0112_0114);
+  private static final SegmentId SEGMENT_ID_I_0112_0114 = QueryRunnerTestHelper.segmentId.withInterval(I_0112_0114);
+
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
   private static final boolean DEFAULT_FROM_NEXT = true;
@@ -165,7 +171,7 @@ public class SelectQueryRunnerTest
   public void testFullOnSelect()
   {
     SelectQuery query = newTestQuery()
-        .intervals(I_0112_0114)
+        .intervals(I_0112_0114_SPEC)
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -208,7 +214,7 @@ public class SelectQueryRunnerTest
     int[] dsc = {-3, -6, -9, -12, -15, -18, -21, -24, -26};
     int[] expected = descending ? dsc : asc;
 
-    SelectQuery query = newTestQuery().intervals(I_0112_0114).build();
+    SelectQuery query = newTestQuery().intervals(I_0112_0114_SPEC).build();
     for (int offset : expected) {
       List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
@@ -216,13 +222,13 @@ public class SelectQueryRunnerTest
 
       SelectResultValue result = results.get(0).getValue();
       Map<String, Integer> pagingIdentifiers = result.getPagingIdentifiers();
-      Assert.assertEquals(offset, pagingIdentifiers.get(segmentIdString).intValue());
+      Assert.assertEquals(offset, pagingIdentifiers.get(SEGMENT_ID_I_0112_0114.toString()).intValue());
 
       Map<String, Integer> next = PagingSpec.next(pagingIdentifiers, descending);
       query = query.withPagingSpec(new PagingSpec(next, 3, false));
     }
 
-    query = newTestQuery().intervals(I_0112_0114).build();
+    query = newTestQuery().intervals(I_0112_0114_SPEC).build();
     for (int offset : expected) {
       List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
@@ -230,7 +236,7 @@ public class SelectQueryRunnerTest
 
       SelectResultValue result = results.get(0).getValue();
       Map<String, Integer> pagingIdentifiers = result.getPagingIdentifiers();
-      Assert.assertEquals(offset, pagingIdentifiers.get(segmentIdString).intValue());
+      Assert.assertEquals(offset, pagingIdentifiers.get(SEGMENT_ID_I_0112_0114.toString()).intValue());
 
       // use identifier as-is but with fromNext=true
       query = query.withPagingSpec(new PagingSpec(pagingIdentifiers, 3, true));
@@ -371,7 +377,7 @@ public class SelectQueryRunnerTest
   public void testSelectWithDimsAndMets()
   {
     SelectQuery query = newTestQuery()
-        .intervals(I_0112_0114)
+        .intervals(I_0112_0114_SPEC)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.marketDimension))
         .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
@@ -407,7 +413,7 @@ public class SelectQueryRunnerTest
   public void testSelectPagination()
   {
     SelectQuery query = newTestQuery()
-        .intervals(I_0112_0114)
+        .intervals(I_0112_0114_SPEC)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
         .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .pagingSpec(new PagingSpec(toPagingIdentifier(3, descending), 3))
@@ -439,7 +445,7 @@ public class SelectQueryRunnerTest
     // startDelta + threshold pairs
     for (int[] param : new int[][]{{3, 3}, {0, 1}, {5, 5}, {2, 7}, {3, 0}}) {
       SelectQuery query = newTestQuery()
-          .intervals(I_0112_0114)
+          .intervals(I_0112_0114_SPEC)
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .granularity(QueryRunnerTestHelper.dayGran)
           .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
@@ -557,7 +563,7 @@ public class SelectQueryRunnerTest
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
     SelectQuery query = newTestQuery()
-        .intervals(I_0112_0114)
+        .intervals(I_0112_0114_SPEC)
         .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "replaced", lookupExtractionFn))
         .granularity(QueryRunnerTestHelper.dayGran)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
@@ -607,7 +613,7 @@ public class SelectQueryRunnerTest
   public void testFullSelectNoResults()
   {
     SelectQuery query = newTestQuery()
-        .intervals(I_0112_0114)
+        .intervals(I_0112_0114_SPEC)
         .filters(
             new AndDimFilter(
                 Arrays.asList(
@@ -658,7 +664,7 @@ public class SelectQueryRunnerTest
   public void testFullSelectNoDimensionAndMetric()
   {
     SelectQuery query = newTestQuery()
-        .intervals(I_0112_0114)
+        .intervals(I_0112_0114_SPEC)
         .dimensionSpecs(DefaultDimensionSpec.toSpec("foo"))
         .metrics(Collections.singletonList("foo2"))
         .build();
@@ -696,7 +702,7 @@ public class SelectQueryRunnerTest
     SelectQuery query = newTestQuery()
         .dimensionSpecs(dimSpecs)
         .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
-        .intervals(I_0112_0114)
+        .intervals(I_0112_0114_SPEC)
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -811,7 +817,7 @@ public class SelectQueryRunnerTest
     SelectQuery query = newTestQuery()
         .dimensionSpecs(dimSpecs)
         .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
-        .intervals(I_0112_0114)
+        .intervals(I_0112_0114_SPEC)
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();

@@ -8,7 +8,6 @@ org.joda.time.DateTime#<init>(int, int, int, int, int, int, int)
 org.joda.time.DateTime#now()
 org.joda.time.DateTime#parse(java.lang.String)
 org.joda.time.DateTime#parse(java.lang.String, org.joda.time.format.DateTimeFormatter)
-org.joda.time.DateTimeZone#forID(java.lang.String)
 org.joda.time.base.BaseDateTime#<init>()
 org.joda.time.base.BaseDateTime#<init>(long)
 org.joda.time.base.BaseDateTime#<init>(int, int, int, int, int, int, int)
@@ -58,6 +57,8 @@ org.joda.time.MutableInterval#<init>()
 org.joda.time.MutableInterval#<init>(long, long)
 org.joda.time.MutableInterval#<init>(java.lang.Object)
 org.joda.time.MutableInterval#parse(java.lang.String)
+
+org.joda.time.DateTimeZone#forID(java.lang.String) @ Use DateTimes.inferTzFromString() instead
 
 @defaultMessage Uses default time zone, use DateTimes.UtcFormatter to parse.
 org.joda.time.format.DateTimeFormatter#parseInto(org.joda.time.ReadWritableInstant, java.lang.String, int)
