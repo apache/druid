@@ -15,5 +15,6 @@ druid.extensions.loadList=["druid-datasketches"]
 The following modules are available:
 
 * [Theta sketch](datasketches-theta.html) - approximate distinct counting with set operations (union, intersection and set difference).
-* [Tuple sketch](datasketches-tuple.html) - extension of Theta sketch to support values associated with distinct keys (arrays of numeric values in this specialized implementation)
+* [Tuple sketch](datasketches-tuple.html) - extension of Theta sketch to support values associated with distinct keys (arrays of numeric values in this specialized implementation).
 * [Quantiles sketch](datasketches-quantiles.html) - approximate distribution of comparable values to obtain ranks, quantiles and histograms. This is a specialized implementation for numeric values.
+* [HLL sketch](datasketches-hll.html) - approximate distinct counting using very compact HLL sketch.
