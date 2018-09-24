@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.tuple;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.druid.query.aggregation.datasketches.RawInputValueExtractor;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 
-public class ArrayOfDoublesSketchBuildComplexMetricSerde extends ArrayOfDoublesSketchMergeComplexMetricSerde
+public class HllSketchBuildComplexMetricSerde extends HllSketchMergeComplexMetricSerde
 {
 
   @Override
