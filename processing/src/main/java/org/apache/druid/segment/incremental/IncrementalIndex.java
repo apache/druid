@@ -53,6 +53,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractIndex;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDesc;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionIndexer;
@@ -61,6 +62,8 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.MetricDesc;
+import org.apache.druid.segment.MetricDescImpl;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.StorageAdapter;
@@ -289,7 +292,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     this.metricDescs = Maps.newLinkedHashMap();
     for (AggregatorFactory metric : metrics) {
-      MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
+      MetricDesc metricDesc = new MetricDescImpl(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
       columnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
     }
@@ -667,7 +670,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           desc = addNewDimension(dimension, capabilities, handler);
         }
         DimensionHandler handler = desc.getHandler();
-        DimensionIndexer indexer = desc.getIndexer();
+        DimensionIndexer indexer = desc.makeOrGetIndexer();
         Object dimsKey = null;
         try {
           dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
@@ -1005,7 +1008,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                   theVals.put(dimensionName, null);
                   continue;
                 }
-                final DimensionIndexer indexer = dimensionDesc.getIndexer();
+                final DimensionIndexer indexer = dimensionDesc.makeOrGetIndexer();
                 Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
                 theVals.put(dimensionName, rowVals);
               }
@@ -1031,99 +1034,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   public DateTime getMaxIngestedEventTime()
   {
     return maxIngestedEventTime;
-  }
-
-  public static final class DimensionDesc
-  {
-    private final int index;
-    private final String name;
-    private final ColumnCapabilitiesImpl capabilities;
-    private final DimensionHandler handler;
-    private final DimensionIndexer indexer;
-
-    public DimensionDesc(int index, String name, ColumnCapabilitiesImpl capabilities, DimensionHandler handler)
-    {
-      this.index = index;
-      this.name = name;
-      this.capabilities = capabilities;
-      this.handler = handler;
-      this.indexer = handler.makeIndexer();
-    }
-
-    public int getIndex()
-    {
-      return index;
-    }
-
-    public String getName()
-    {
-      return name;
-    }
-
-    public ColumnCapabilitiesImpl getCapabilities()
-    {
-      return capabilities;
-    }
-
-    public DimensionHandler getHandler()
-    {
-      return handler;
-    }
-
-    public DimensionIndexer getIndexer()
-    {
-      return indexer;
-    }
-  }
-
-  public static final class MetricDesc
-  {
-    private final int index;
-    private final String name;
-    private final String type;
-    private final ColumnCapabilitiesImpl capabilities;
-
-    public MetricDesc(int index, AggregatorFactory factory)
-    {
-      this.index = index;
-      this.name = factory.getName();
-
-      String typeInfo = factory.getTypeName();
-      this.capabilities = new ColumnCapabilitiesImpl();
-      if ("float".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.FLOAT);
-        this.type = typeInfo;
-      } else if ("long".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.LONG);
-        this.type = typeInfo;
-      } else if ("double".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.DOUBLE);
-        this.type = typeInfo;
-      } else {
-        capabilities.setType(ValueType.COMPLEX);
-        this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
-      }
-    }
-
-    public int getIndex()
-    {
-      return index;
-    }
-
-    public String getName()
-    {
-      return name;
-    }
-
-    public String getType()
-    {
-      return type;
-    }
-
-    public ColumnCapabilitiesImpl getCapabilities()
-    {
-      return capabilities;
-    }
   }
 
   protected ColumnSelectorFactory makeColumnSelectorFactory(
@@ -1173,7 +1083,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           return 1;
         }
 
-        final DimensionIndexer indexer = dimensionDescs.get(index).getIndexer();
+        final DimensionIndexer indexer = dimensionDescs.get(index).makeOrGetIndexer();
         retVal = indexer.compareUnsortedEncodedKeyComponents(lhsIdxs, rhsIdxs);
         ++index;
       }

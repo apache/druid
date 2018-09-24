@@ -37,7 +37,7 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopDruidIndexerJob;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
-import org.apache.druid.indexer.HadoopTuningConfig;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.indexer.Jobby;
 import org.apache.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
@@ -193,30 +193,10 @@ public class HadoopConverterJobTest
                 metadataStorageUpdaterJobSpec,
                 tmpSegmentDir.getAbsolutePath()
             ),
-            new HadoopTuningConfig(
-                scratchFileDir.getAbsolutePath(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null
-            )
+            new Builder()
+                .setWorkingPath(scratchFileDir.getAbsolutePath())
+                .setCleanOnFailure(false)
+                .build()
         )
     );
     metadataStorageTablesConfigSupplier = derbyConnectorRule.metadataTablesConfigSupplier();

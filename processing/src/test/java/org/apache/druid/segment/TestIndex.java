@@ -238,7 +238,7 @@ public class TestIndex
                 mergedFile,
                 indexSpec,
                 null
-            )
+            ).getFile()
         );
 
         return mergedRealtime;

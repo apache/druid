@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -30,12 +31,16 @@ import com.google.inject.ImplementedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.java.util.common.ByteBufferUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -47,14 +52,18 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @ImplementedBy(IndexMergerV9.class)
 public interface IndexMerger
@@ -64,31 +73,216 @@ public interface IndexMerger
   SerializerUtils serializerUtils = new SerializerUtils();
   int INVALID_ROW = -1;
 
-  static List<String> getMergedDimensionsFromQueryableIndexes(List<QueryableIndex> indexes)
-  {
-    return getMergedDimensions(toIndexableAdapters(indexes));
-  }
-
   static List<IndexableAdapter> toIndexableAdapters(List<QueryableIndex> indexes)
   {
-    return indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList());
+    return indexes.stream().map(QueryableIndexAdapter::new).collect(Collectors.toList());
   }
 
-  static List<String> getMergedDimensions(List<IndexableAdapter> indexes)
+  static List<DimensionDesc> mergeDimensions(List<IndexableAdapter> indexes)
   {
     if (indexes.size() == 0) {
-      return ImmutableList.of();
+      return Collections.emptyList();
     }
-    List<String> commonDimOrder = getLongestSharedDimOrder(indexes);
+    final List<String> commonDimOrder = findLongestSharedDimOrder(indexes);
+    final List<String> mergedDimensionNames;
     if (commonDimOrder == null) {
       log.warn("Indexes have incompatible dimension orders, using lexicographic order.");
-      return getLexicographicMergedDimensions(indexes);
+      mergedDimensionNames = getLexicographicMergedDimensions(indexes);
     } else {
-      return commonDimOrder;
+      mergedDimensionNames = commonDimOrder;
+    }
+    final Map<String, ColumnCapabilitiesImpl> mergedCapabilities = mergeDimensionCapabilities(indexes);
+    final Map<String, DimensionHandler> dimensionHandlers = makeDimensionHandlers(
+        mergedDimensionNames,
+        mergedCapabilities
+    );
+    return IntStream.range(0, mergedDimensionNames.size())
+                    .mapToObj(i -> {
+                      final String dimensionName = mergedDimensionNames.get(i);
+                      return new DimensionDesc(
+                          i,
+                          dimensionName,
+                          mergedCapabilities.get(dimensionName),
+                          dimensionHandlers.get(dimensionName)
+                      );
+                    })
+                    .collect(Collectors.toList());
+  }
+
+  static List<MetricDesc> mergeMetrics(List<IndexableAdapter> indexes, @Nullable AggregatorFactory[] aggregators)
+  {
+    final List<String> mergedMetricNames = mergeIndexed(
+        indexes.stream().map(IndexableAdapter::getMetricNames).collect(Collectors.toList())
+    );
+
+    if (aggregators != null) {
+      final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetricNames.size()];
+      for (AggregatorFactory metricAgg : aggregators) {
+        int metricIndex = mergedMetricNames.indexOf(metricAgg.getName());
+
+        // If metricIndex is negative, one of the metricAggs was not present in the union of metrics from the indices
+        // we are merging
+        if (metricIndex > -1) {
+          sortedMetricAggs[metricIndex] = metricAgg;
+        }
+      }
+
+      // If there is nothing at sortedMetricAggs[i], then we did not have a metricAgg whose name matched the name
+      // of the ith element of mergedMetrics. I.e. There was a metric in the indices to merge that we did not ask for.
+      for (int i = 0; i < sortedMetricAggs.length; i++) {
+        if (sortedMetricAggs[i] == null) {
+          throw new IAE("Indices to merge contained metric[%s], but requested metrics did not", mergedMetricNames.get(i));
+        }
+      }
+
+      for (int i = 0; i < mergedMetricNames.size(); i++) {
+        if (!sortedMetricAggs[i].getName().equals(mergedMetricNames.get(i))) {
+          throw new IAE(
+              "Metric mismatch, index[%d] [%s] != [%s]",
+              i,
+              sortedMetricAggs[i].getName(),
+              mergedMetricNames.get(i)
+          );
+        }
+      }
+
+      // MetricDescs in the result list should have the same name with mergedMetricNames in the same order.
+      return IntStream.range(0, mergedMetricNames.size())
+                      .mapToObj(i -> new MetricDescImpl(i, aggregators[i]))
+                      .collect(Collectors.toList());
+    } else {
+      final Map<String, Pair<ColumnCapabilitiesImpl, String>> mergedCapabilities = mergeMetricCapabilities(indexes);
+      return IntStream.range(0, mergedMetricNames.size())
+                      .mapToObj(
+                          i -> {
+                            final String metricName = mergedMetricNames.get(i);
+                            final Pair<ColumnCapabilitiesImpl, String> pair = Preconditions.checkNotNull(
+                                mergedCapabilities.get(metricName),
+                                "merged capabilities for metric[%s]",
+                                metricName
+                            );
+                            return new MetricDescWithOnlyName(
+                                i,
+                                metricName,
+                                pair.rhs,
+                                pair.lhs
+                            );
+                          }
+                      )
+                      .collect(Collectors.toList());
     }
   }
 
-  static List<String> getLongestSharedDimOrder(List<IndexableAdapter> indexes)
+  /**
+   * An implementation of {@link MetricDesc} without {@link AggregatorFactory}.
+   * Used only in {@link IndexMergerV9#convert}.
+   */
+  class MetricDescWithOnlyName implements MetricDesc
+  {
+    private final int index;
+    private final String name;
+    private final String type;
+    private final ColumnCapabilitiesImpl capabilities;
+
+    MetricDescWithOnlyName(int index, String name, String type, ColumnCapabilitiesImpl capabilities)
+    {
+      this.index = index;
+      this.name = name;
+      this.type = type;
+      this.capabilities = capabilities;
+    }
+
+    @Override
+    public int getIndex()
+    {
+      return index;
+    }
+
+    @Override
+    public String getName()
+    {
+      return name;
+    }
+
+    @Nullable
+    @Override
+    public AggregatorFactory getAggregatorFactory()
+    {
+      return null;
+    }
+
+    @Override
+    public String getType()
+    {
+      return type;
+    }
+
+    @Override
+    public ValueType getValueType()
+    {
+      return capabilities.getType();
+    }
+
+    @Override
+    public ColumnCapabilitiesImpl getCapabilities()
+    {
+      return capabilities;
+    }
+  }
+
+  static Map<String, ColumnCapabilitiesImpl> mergeDimensionCapabilities(List<IndexableAdapter> adapters)
+  {
+    final Map<String, ColumnCapabilitiesImpl> capabilitiesMap = new HashMap<>();
+    for (IndexableAdapter adapter : adapters) {
+      for (String dimension : adapter.getDimensionNames()) {
+        ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
+        capabilitiesMap.computeIfAbsent(dimension, d -> new ColumnCapabilitiesImpl()).merge(capabilities);
+      }
+    }
+    return capabilitiesMap;
+  }
+
+  static Map<String, Pair<ColumnCapabilitiesImpl, String>> mergeMetricCapabilities(List<IndexableAdapter> adapters)
+  {
+    final Map<String, Pair<ColumnCapabilitiesImpl, String>> capabilitiesMap = new HashMap<>();
+    for (IndexableAdapter adapter : adapters) {
+      for (String metric : adapter.getMetricNames()) {
+        final ColumnCapabilities capabilities = adapter.getCapabilities(metric);
+        final String metricTypeName = adapter.getMetricType(metric);
+        final Pair<ColumnCapabilitiesImpl, String> pair = capabilitiesMap.get(metric);
+        final ColumnCapabilitiesImpl capabilitiesToMerge;
+        if (pair == null) {
+          capabilitiesToMerge = new ColumnCapabilitiesImpl();
+        } else {
+          capabilitiesToMerge = pair.lhs;
+        }
+        capabilitiesToMerge.merge(capabilities);
+        // is replacing metric type name valid?
+        capabilitiesMap.put(metric, Pair.of(capabilitiesToMerge, metricTypeName));
+      }
+    }
+    return capabilitiesMap;
+  }
+
+  static Map<String, DimensionHandler> makeDimensionHandlers(
+      final List<String> mergedDimensions,
+      final Map<String, ColumnCapabilitiesImpl> dimensionNameToCapabilities
+  )
+  {
+    final Map<String, DimensionHandler> handlers = new HashMap<>();
+    for (String dimensionName : mergedDimensions) {
+      final ColumnCapabilities capabilities = dimensionNameToCapabilities.get(dimensionName);
+      final DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+          dimensionName,
+          capabilities,
+          null
+      );
+      handlers.put(dimensionName, handler);
+    }
+    return handlers;
+  }
+
+  static List<String> findLongestSharedDimOrder(List<IndexableAdapter> indexes)
   {
     int maxSize = 0;
     Iterable<String> orderingCandidate = null;
@@ -189,7 +383,7 @@ public interface IndexMerger
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
-  File mergeQueryableIndex(
+  MergedIndexMetadata mergeQueryableIndex(
       List<QueryableIndex> indexes,
       boolean rollup,
       AggregatorFactory[] metricAggs,
@@ -198,7 +392,7 @@ public interface IndexMerger
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
-  File mergeQueryableIndex(
+  MergedIndexMetadata mergeQueryableIndex(
       List<QueryableIndex> indexes,
       boolean rollup,
       AggregatorFactory[] metricAggs,
@@ -209,7 +403,7 @@ public interface IndexMerger
   ) throws IOException;
 
   @VisibleForTesting
-  File merge(
+  MergedIndexMetadata merge(
       List<IndexableAdapter> indexes,
       boolean rollup,
       AggregatorFactory[] metricAggs,

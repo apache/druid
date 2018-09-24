@@ -166,27 +166,16 @@ public class DruidJsonValidatorTest
                 },
                 null
             ),
-
-            new RealtimeTuningConfig(
-                1,
-                null,
-                new Period("PT10M"),
-                null,
-                null,
-                null,
-                null,
-                1,
-                NoneShardSpec.instance(),
-                new IndexSpec(),
-                null,
-                0,
-                0,
-                true,
-                null,
-                null,
-                null,
-                null
-            )
+            new RealtimeTuningConfig.Builder()
+                .setMaxRowsInMemory(1)
+                .setIntermediatePersistePeriod(new Period("PT10M"))
+                .setMaxPendingPersists(1)
+                .setShardSpec(NoneShardSpec.instance())
+                .setIndexSpec(new IndexSpec())
+                .setPersistThreadPriority(0)
+                .setMergeThreadPriority(0)
+                .setReportParseExceptions(true)
+                .build()
         ),
         null
     );

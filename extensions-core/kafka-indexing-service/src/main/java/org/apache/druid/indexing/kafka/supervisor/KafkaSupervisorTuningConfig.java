@@ -21,9 +21,9 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kafka.KafkaTuningConfig;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.segment.IndexSpec;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -162,5 +162,193 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
   private static Duration defaultDuration(final Period period, final String theDefault)
   {
     return (period == null ? new Period(theDefault) : period).toStandardDuration();
+  }
+
+  public static class Builder
+  {
+    private Integer maxRowsInMemory;
+    private Long maxBytesInMemory;
+    private Integer maxRowsPerSegment;
+    private Long maxTotalRows;
+    private Period intermediatePersistPeriod;
+    private File basePersistDirectory;
+    private int maxPendingPersists;
+    private IndexSpec indexSpec;
+    private Boolean reportParseExceptions;
+    private Long handoffConditionTimeout;
+    private Boolean resetOffsetAutomatically;
+    private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+    private Period intermediateHandoffPeriod;
+    private Boolean logParseExceptions;
+    private Integer maxParseExceptions;
+    private Integer maxSavedParseExceptions;
+    private Integer workerThreads;
+    private Integer chatThreads;
+    private Long chatRetries;
+    private Period httpTimeout;
+    private Period shutdownTimeout;
+    private Period offsetFetchPeriod;
+
+    public Builder setMaxRowsInMemory(int maxRowsInMemory)
+    {
+      this.maxRowsInMemory = maxRowsInMemory;
+      return this;
+    }
+
+    public Builder setMaxBytesInMemory(long maxBytesInMemory)
+    {
+      this.maxBytesInMemory = maxBytesInMemory;
+      return this;
+    }
+
+    public Builder setMaxRowsPerSegment(int maxRowsPerSegment)
+    {
+      this.maxRowsPerSegment = maxRowsPerSegment;
+      return this;
+    }
+
+    public Builder setMaxTotalRows(long maxTotalRows)
+    {
+      this.maxTotalRows = maxTotalRows;
+      return this;
+    }
+
+    public Builder setIntermediatePersistePeriod(Period intermediatePersistePeriod)
+    {
+      this.intermediatePersistPeriod = intermediatePersistePeriod;
+      return this;
+    }
+
+    public Builder setBasePersistDirectory(File basePersistDirectory)
+    {
+      this.basePersistDirectory = basePersistDirectory;
+      return this;
+    }
+
+    @Deprecated
+    public Builder setMaxPendingPersists(int maxPendingPersists)
+    {
+      this.maxPendingPersists = maxPendingPersists;
+      return this;
+    }
+
+    public Builder setIndexSpec(IndexSpec indexSpec)
+    {
+      this.indexSpec = indexSpec;
+      return this;
+    }
+
+    public Builder setReportParseExceptions(boolean reportParseExceptions)
+    {
+      this.reportParseExceptions = reportParseExceptions;
+      return this;
+    }
+
+    public Builder setHandoffConditionTimeout(long handoffConditionTimeout)
+    {
+      this.handoffConditionTimeout = handoffConditionTimeout;
+      return this;
+    }
+
+    public Builder setResetOffsetAutomatically(boolean resetOffsetAutomatically)
+    {
+      this.resetOffsetAutomatically = resetOffsetAutomatically;
+      return this;
+    }
+
+    public Builder setSegmentWriteOutMediumFactory(SegmentWriteOutMediumFactory factory)
+    {
+      this.segmentWriteOutMediumFactory = factory;
+      return this;
+    }
+
+    public Builder setIntermediateHandoffPeriod(Period intermediateHandoffPeriod)
+    {
+      this.intermediateHandoffPeriod = intermediateHandoffPeriod;
+      return this;
+    }
+
+    public Builder setLogParseExceptions(boolean logParseExceptions)
+    {
+      this.logParseExceptions = logParseExceptions;
+      return this;
+    }
+
+    public Builder setMaxParseExceptions(int maxParseExceptions)
+    {
+      this.maxParseExceptions = maxParseExceptions;
+      return this;
+    }
+
+    public Builder setMaxSavedParseExceptions(int maxSavedParseExceptions)
+    {
+      this.maxSavedParseExceptions = maxSavedParseExceptions;
+      return this;
+    }
+
+    public Builder setWorkerThreads(int workerThreads)
+    {
+      this.workerThreads = workerThreads;
+      return this;
+    }
+
+    public Builder setChatThreads(int chatThreads)
+    {
+      this.chatThreads = chatThreads;
+      return this;
+    }
+
+    public Builder setChatRetries(long chatRetries)
+    {
+      this.chatRetries = chatRetries;
+      return this;
+    }
+
+    public Builder setHttpTimeout(Period httpTimeout)
+    {
+      this.httpTimeout = httpTimeout;
+      return this;
+    }
+
+    public Builder setShutdownTimeout(Period shutdownTimeout)
+    {
+      this.shutdownTimeout = shutdownTimeout;
+      return this;
+    }
+
+    public Builder setOffsetFetchPeriod(Period offsetFetchPeriod)
+    {
+      this.offsetFetchPeriod = offsetFetchPeriod;
+      return this;
+    }
+
+    public KafkaSupervisorTuningConfig build()
+    {
+      return new KafkaSupervisorTuningConfig(
+          maxRowsInMemory,
+          maxBytesInMemory,
+          maxRowsPerSegment,
+          maxTotalRows,
+          intermediatePersistPeriod,
+          basePersistDirectory,
+          maxPendingPersists,
+          indexSpec,
+          true,
+          reportParseExceptions,
+          handoffConditionTimeout,
+          resetOffsetAutomatically,
+          segmentWriteOutMediumFactory,
+          workerThreads,
+          chatThreads,
+          chatRetries,
+          httpTimeout,
+          shutdownTimeout,
+          offsetFetchPeriod,
+          intermediateHandoffPeriod,
+          logParseExceptions,
+          maxParseExceptions,
+          maxSavedParseExceptions
+      );
+    }
   }
 }

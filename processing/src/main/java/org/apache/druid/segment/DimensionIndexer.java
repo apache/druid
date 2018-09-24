@@ -208,7 +208,7 @@ public interface DimensionIndexer
   DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
       IncrementalIndexRowHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
+      DimensionDesc desc
   );
 
   /**
@@ -220,7 +220,7 @@ public interface DimensionIndexer
    */
   ColumnValueSelector<?> makeColumnValueSelector(
       IncrementalIndexRowHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
+      DimensionDesc desc
   );
 
   /**

@@ -22,10 +22,12 @@ package org.apache.druid.indexer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -34,7 +36,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
-import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -252,30 +253,11 @@ public class DeterminePartitionsJobTest
                 null,
                 tmpDir.getCanonicalPath()
             ),
-            new HadoopTuningConfig(
-                tmpDir.getCanonicalPath(),
-                null,
-                new SingleDimensionPartitionsSpec(null, targetPartitionSize, null, assumeGrouped),
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null
-            )
+            new Builder()
+                .setWorkingPath(tmpDir.getCanonicalPath())
+                .setPartitionsSpec(new SingleDimensionPartitionsSpec(null, targetPartitionSize, null, assumeGrouped))
+                .setCleanOnFailure(false)
+                .build()
         )
     );
   }

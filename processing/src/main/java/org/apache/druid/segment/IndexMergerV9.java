@@ -24,26 +24,23 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.Column;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -62,7 +59,6 @@ import org.apache.druid.segment.serde.LongGenericColumnPartSerde;
 import org.apache.druid.segment.serde.LongGenericColumnPartSerdeV2;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -75,7 +71,6 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,15 +96,14 @@ public class IndexMergerV9 implements IndexMerger
 
   private File makeIndexFiles(
       final List<IndexableAdapter> adapters,
-      final AggregatorFactory[] metricAggs,
       final File outDir,
       final ProgressIndicator progress,
-      final List<String> mergedDimensions,
-      final List<String> mergedMetrics,
+      final List<DimensionDesc> mergedDimensions,
+      final List<MetricDesc> mergedMetrics,
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
       final boolean fillRowNumConversions,
       final IndexSpec indexSpec,
-      final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
     progress.start();
@@ -118,32 +112,66 @@ public class IndexMergerV9 implements IndexMerger
     List<Metadata> metadataList = Lists.transform(adapters, IndexableAdapter::getMetadata);
 
     final Metadata segmentMetadata;
-    if (metricAggs != null) {
-      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
-      for (int i = 0; i < metricAggs.length; i++) {
-        combiningMetricAggs[i] = metricAggs[i].getCombiningFactory();
-      }
+    if (mergedMetrics.stream().allMatch(metricDesc -> metricDesc.getAggregatorFactory() != null)) {
+      // mergedMetrics is empty or all of them have aggregatorFactory
+      final AggregatorFactory[] combiningMetricAggs = mergedMetrics
+          .stream()
+          .map(metricDesc -> metricDesc.getAggregatorFactory().getCombiningFactory())
+          .toArray(AggregatorFactory[]::new);
       segmentMetadata = Metadata.merge(
           metadataList,
           combiningMetricAggs
       );
     } else {
+      // all mergedMetrics shouln't have aggregatorFactory
+      if (mergedMetrics.stream().anyMatch(metricDesc -> metricDesc.getAggregatorFactory() != null)) {
+        throw new ISE("Some metrics[%s] don't have aggregatorFactory.", mergedMetrics);
+      }
       segmentMetadata = Metadata.merge(
           metadataList,
           null
       );
     }
 
-    Closer closer = Closer.create();
+    progress.progress();
+
+    mergeAndWriteFiles(
+        adapters,
+        outDir,
+        progress,
+        mergedDimensions,
+        mergedMetrics,
+        rowMergerFn,
+        fillRowNumConversions,
+        indexSpec,
+        segmentMetadata,
+        segmentWriteOutMediumFactory
+    );
+
+    progress.stop();
+
+    return outDir;
+  }
+
+  private void mergeAndWriteFiles(
+      List<IndexableAdapter> adapters,
+      File outDir,
+      ProgressIndicator progress,
+      List<DimensionDesc> mergedDimensions,
+      List<MetricDesc> mergedMetrics,
+      Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
+      boolean fillRowNumConversions,
+      IndexSpec indexSpec,
+      @Nullable Metadata segmentMetadata,
+      @Nullable final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException
+  {
+    final Closer closer = Closer.create();
+
     try {
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
       FileUtils.forceMkdir(outDir);
 
-      SegmentWriteOutMediumFactory omf = segmentWriteOutMediumFactory != null ? segmentWriteOutMediumFactory
-                                                                              : defaultSegmentWriteOutMediumFactory;
-      log.info("Using SegmentWriteOutMediumFactory[%s]", omf.getClass().getSimpleName());
-      SegmentWriteOutMedium segmentWriteOutMedium = omf.makeSegmentWriteOutMedium(outDir);
-      closer.register(segmentWriteOutMedium);
       long startTime = System.currentTimeMillis();
       Files.asByteSink(new File(outDir, "version.bin")).write(Ints.toByteArray(IndexIO.V9_VERSION));
       log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
@@ -155,84 +183,70 @@ public class IndexMergerV9 implements IndexMerger
       }
       log.info("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 
-      progress.progress();
-      final Map<String, ValueType> metricsValueTypes = Maps.newTreeMap(Comparators.<String>naturalNullsFirst());
-      final Map<String, String> metricTypeNames = Maps.newTreeMap(Comparators.<String>naturalNullsFirst());
-      final List<ColumnCapabilitiesImpl> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
+      SegmentWriteOutMediumFactory omf = segmentWriteOutMediumFactory != null ? segmentWriteOutMediumFactory
+                                                                              : defaultSegmentWriteOutMediumFactory;
+      log.info("Using SegmentWriteOutMediumFactory[%s]", omf.getClass().getSimpleName());
+      SegmentWriteOutMedium segmentWriteOutMedium = omf.makeSegmentWriteOutMedium(outDir);
+      closer.register(segmentWriteOutMedium);
 
-      final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
-      final List<DimensionMerger> mergers = new ArrayList<>();
-      for (int i = 0; i < mergedDimensions.size(); i++) {
-        DimensionHandler handler = handlers.get(mergedDimensions.get(i));
-        mergers.add(handler.makeMerger(indexSpec, segmentWriteOutMedium, dimCapabilities.get(i), progress));
-      }
+      mergedDimensions.forEach(dimensionDesc -> dimensionDesc.makeMerger(indexSpec, segmentWriteOutMedium, progress));
 
       /************* Setup Dim Conversions **************/
       progress.progress();
       startTime = System.currentTimeMillis();
-      writeDimValuesAndSetupDimConversion(adapters, progress, mergedDimensions, mergers);
+      writeDimValuesAndSetupDimConversion(adapters, progress, mergedDimensions);
       log.info("Completed dim conversions in %,d millis.", System.currentTimeMillis() - startTime);
 
       /************* Walk through data sets, merge them, and write merged columns *************/
       progress.progress();
+
       final TimeAndDimsIterator timeAndDimsIterator = makeMergedTimeAndDimsIterator(
           adapters,
           mergedDimensions,
           mergedMetrics,
-          rowMergerFn,
-          handlers,
-          mergers
+          rowMergerFn
       );
       closer.register(timeAndDimsIterator);
       final GenericColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       final ArrayList<GenericColumnSerializer> metricWriters =
-          setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec);
+          setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, indexSpec);
       List<IntBuffer> rowNumConversions = mergeIndexesAndWriteColumns(
           adapters,
           progress,
           timeAndDimsIterator,
           timeWriter,
           metricWriters,
-          mergers,
+          mergedDimensions,
           fillRowNumConversions
       );
 
       /************ Create Inverted Indexes and Finalize Build Columns *************/
-      final String section = "build inverted index and columns";
-      progress.startSection(section);
       makeTimeColumn(v9Smoosher, progress, timeWriter, indexSpec);
       makeMetricsColumns(
           v9Smoosher,
           progress,
           mergedMetrics,
-          metricsValueTypes,
-          metricTypeNames,
           metricWriters,
           indexSpec
       );
 
-      for (int i = 0; i < mergedDimensions.size(); i++) {
-        DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
+      for (DimensionDesc mergedDimension : mergedDimensions) {
+        DimensionMergerV9 merger = (DimensionMergerV9) mergedDimension.getNonNullMerger();
         merger.writeIndexes(rowNumConversions);
         if (merger.canSkip()) {
           continue;
         }
         ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
-        makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
+        makeColumn(v9Smoosher, mergedDimension.getName(), columnDesc);
       }
 
-      progress.stopSection(section);
 
       /************* Make index.drd & metadata.drd files **************/
       progress.progress();
-      makeIndexBinary(v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, progress, indexSpec, mergers);
+      makeIndexBinary(v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, progress, indexSpec);
       makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
       v9Smoosher.close();
-      progress.stop();
-
-      return outDir;
     }
     catch (Throwable t) {
       throw closer.rethrow(t);
@@ -245,7 +259,7 @@ public class IndexMergerV9 implements IndexMerger
   private void makeMetadataBinary(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
-      final Metadata segmentMetadata
+      @Nullable final Metadata segmentMetadata
   ) throws IOException
   {
     if (segmentMetadata != null) {
@@ -259,11 +273,10 @@ public class IndexMergerV9 implements IndexMerger
       final FileSmoosher v9Smoosher,
       final List<IndexableAdapter> adapters,
       final File outDir,
-      final List<String> mergedDimensions,
-      final List<String> mergedMetrics,
+      final List<DimensionDesc> mergedDimensions,
+      final List<MetricDesc> mergedMetrics,
       final ProgressIndicator progress,
-      final IndexSpec indexSpec,
-      final List<DimensionMerger> mergers
+      final IndexSpec indexSpec
   ) throws IOException
   {
     final String section = "make index.drd";
@@ -272,13 +285,13 @@ public class IndexMergerV9 implements IndexMerger
     long startTime = System.currentTimeMillis();
     final Set<String> finalDimensions = Sets.newLinkedHashSet();
     final Set<String> finalColumns = Sets.newLinkedHashSet();
-    finalColumns.addAll(mergedMetrics);
-    for (int i = 0; i < mergedDimensions.size(); ++i) {
-      if (mergers.get(i).canSkip()) {
+    finalColumns.addAll(mergedMetrics.stream().map(MetricDesc::getName).collect(Collectors.toList()));
+    for (DimensionDesc mergedDimension : mergedDimensions) {
+      if (mergedDimension.getNonNullMerger().canSkip()) {
         continue;
       }
-      finalColumns.add(mergedDimensions.get(i));
-      finalDimensions.add(mergedDimensions.get(i));
+      finalColumns.add(mergedDimension.getName());
+      finalDimensions.add(mergedDimension.getName());
     }
 
     GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.STRING_STRATEGY);
@@ -318,9 +331,7 @@ public class IndexMergerV9 implements IndexMerger
   private void makeMetricsColumns(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
-      final List<String> mergedMetrics,
-      final Map<String, ValueType> metricsValueTypes,
-      final Map<String, String> metricTypeNames,
+      final List<MetricDesc> mergedMetrics,
       final List<GenericColumnSerializer> metWriters,
       final IndexSpec indexSpec
   ) throws IOException
@@ -330,12 +341,12 @@ public class IndexMergerV9 implements IndexMerger
     long startTime = System.currentTimeMillis();
 
     for (int i = 0; i < mergedMetrics.size(); ++i) {
-      String metric = mergedMetrics.get(i);
+      final MetricDesc metricDesc = mergedMetrics.get(i);
       long metricStartTime = System.currentTimeMillis();
       GenericColumnSerializer writer = metWriters.get(i);
 
       final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
-      ValueType type = metricsValueTypes.get(metric);
+      final ValueType type = metricDesc.getValueType();
       switch (type) {
         case LONG:
           builder.setValueType(ValueType.LONG);
@@ -350,7 +361,7 @@ public class IndexMergerV9 implements IndexMerger
           builder.addSerde(createDoubleColumnPartSerde(writer, indexSpec));
           break;
         case COMPLEX:
-          final String typeName = metricTypeNames.get(metric);
+          final String typeName = metricDesc.getType();
           builder.setValueType(ValueType.COMPLEX);
           builder.addSerde(
               ComplexColumnPartSerde
@@ -363,8 +374,12 @@ public class IndexMergerV9 implements IndexMerger
         default:
           throw new ISE("Unknown type[%s]", type);
       }
-      makeColumn(v9Smoosher, metric, builder.build());
-      log.info("Completed metric column[%s] in %,d millis.", metric, System.currentTimeMillis() - metricStartTime);
+      makeColumn(v9Smoosher, metricDesc.getName(), builder.build());
+      log.info(
+          "Completed metric column[%s] in %,d millis.",
+          metricDesc.getName(),
+          System.currentTimeMillis() - metricStartTime
+      );
     }
     log.info("Completed metric columns in %,d millis.", System.currentTimeMillis() - startTime);
     progress.stopSection(section);
@@ -469,7 +484,7 @@ public class IndexMergerV9 implements IndexMerger
       final TimeAndDimsIterator timeAndDimsIterator,
       final GenericColumnSerializer timeWriter,
       final ArrayList<GenericColumnSerializer> metricWriters,
-      final List<DimensionMerger> mergers,
+      final List<DimensionDesc> mergedDimensions,
       final boolean fillRowNumConversions
   ) throws IOException
   {
@@ -499,7 +514,7 @@ public class IndexMergerV9 implements IndexMerger
       }
 
       for (int dimIndex = 0; dimIndex < timeAndDims.getNumDimensions(); dimIndex++) {
-        DimensionMerger merger = mergers.get(dimIndex);
+        final DimensionMerger merger = mergedDimensions.get(dimIndex).getNonNullMerger();
         if (merger.canSkip()) {
           continue;
         }
@@ -573,34 +588,32 @@ public class IndexMergerV9 implements IndexMerger
 
   private ArrayList<GenericColumnSerializer> setupMetricsWriters(
       final SegmentWriteOutMedium segmentWriteOutMedium,
-      final List<String> mergedMetrics,
-      final Map<String, ValueType> metricsValueTypes,
-      final Map<String, String> metricTypeNames,
+      final List<MetricDesc> mergedMetrics,
       final IndexSpec indexSpec
   ) throws IOException
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
 
-    for (String metric : mergedMetrics) {
-      ValueType type = metricsValueTypes.get(metric);
+    for (MetricDesc metricDesc : mergedMetrics) {
+      final ValueType type = metricDesc.getValueType();
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = createLongColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
+          writer = createLongColumnSerializer(segmentWriteOutMedium, metricDesc.getName(), indexSpec);
           break;
         case FLOAT:
-          writer = createFloatColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
+          writer = createFloatColumnSerializer(segmentWriteOutMedium, metricDesc.getName(), indexSpec);
           break;
         case DOUBLE:
-          writer = createDoubleColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
+          writer = createDoubleColumnSerializer(segmentWriteOutMedium, metricDesc.getName(), indexSpec);
           break;
         case COMPLEX:
-          final String typeName = metricTypeNames.get(metric);
+          final String typeName = metricDesc.getType();
           ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
           if (serde == null) {
             throw new ISE("Unknown type[%s]", typeName);
           }
-          writer = serde.getSerializer(segmentWriteOutMedium, metric);
+          writer = serde.getSerializer(segmentWriteOutMedium, metricDesc.getName());
           break;
         default:
           throw new ISE("Unknown type[%s]", type);
@@ -686,43 +699,16 @@ public class IndexMergerV9 implements IndexMerger
   private void writeDimValuesAndSetupDimConversion(
       final List<IndexableAdapter> indexes,
       final ProgressIndicator progress,
-      final List<String> mergedDimensions,
-      final List<DimensionMerger> mergers
+      final List<DimensionDesc> mergedDimensions
   ) throws IOException
   {
     final String section = "setup dimension conversions";
     progress.startSection(section);
 
-    for (int dimIndex = 0; dimIndex < mergedDimensions.size(); ++dimIndex) {
-      mergers.get(dimIndex).writeMergedValueDictionary(indexes);
+    for (DimensionDesc dimensionDesc : mergedDimensions) {
+      dimensionDesc.getNonNullMerger().writeMergedValueDictionary(indexes);
     }
     progress.stopSection(section);
-  }
-
-  private void mergeCapabilities(
-      final List<IndexableAdapter> adapters,
-      final List<String> mergedDimensions,
-      final Map<String, ValueType> metricsValueTypes,
-      final Map<String, String> metricTypeNames,
-      final List<ColumnCapabilitiesImpl> dimCapabilities
-  )
-  {
-    final Map<String, ColumnCapabilitiesImpl> capabilitiesMap = Maps.newHashMap();
-    for (IndexableAdapter adapter : adapters) {
-      for (String dimension : adapter.getDimensionNames()) {
-        ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
-        capabilitiesMap.computeIfAbsent(dimension, d -> new ColumnCapabilitiesImpl()).merge(capabilities);
-      }
-      for (String metric : adapter.getMetricNames()) {
-        ColumnCapabilities capabilities = adapter.getCapabilities(metric);
-        capabilitiesMap.computeIfAbsent(metric, m -> new ColumnCapabilitiesImpl()).merge(capabilities);
-        metricsValueTypes.put(metric, capabilities.getType());
-        metricTypeNames.put(metric, adapter.getMetricType(metric));
-      }
-    }
-    for (String dim : mergedDimensions) {
-      dimCapabilities.add(capabilitiesMap.get(dim));
-    }
   }
 
   @Override
@@ -776,29 +762,28 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.forceMkdir(outDir);
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
+    final IncrementalIndexAdapter adapter = new IncrementalIndexAdapter(
+        dataInterval,
+        index,
+        indexSpec.getBitmapSerdeFactory().getBitmapFactory()
+    );
     return merge(
-        Collections.singletonList(
-            new IncrementalIndexAdapter(
-                dataInterval,
-                index,
-                indexSpec.getBitmapSerdeFactory().getBitmapFactory()
-            )
-        ),
+        Collections.singletonList(adapter),
+        false,
+        index.getMetricAggs(),
         // if index is not rolled up, then it should be not rollup here
         // if index is rolled up, then it is no need to rollup again.
         //                     In this case, true/false won't cause reOrdering in merge stage
         //                     while merging a single iterable
-        false,
-        index.getMetricAggs(),
         outDir,
         indexSpec,
         progress,
         segmentWriteOutMediumFactory
-    );
+    ).getFile();
   }
 
   @Override
-  public File mergeQueryableIndex(
+  public MergedIndexMetadata mergeQueryableIndex(
       List<QueryableIndex> indexes,
       boolean rollup,
       final AggregatorFactory[] metricAggs,
@@ -807,8 +792,8 @@ public class IndexMergerV9 implements IndexMerger
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
-    return mergeQueryableIndex(
-        indexes,
+    return merge(
+        IndexMerger.toIndexableAdapters(indexes),
         rollup,
         metricAggs,
         outDir,
@@ -819,10 +804,10 @@ public class IndexMergerV9 implements IndexMerger
   }
 
   @Override
-  public File mergeQueryableIndex(
+  public MergedIndexMetadata mergeQueryableIndex(
       List<QueryableIndex> indexes,
       boolean rollup,
-      final AggregatorFactory[] metricAggs,
+      AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
@@ -841,7 +826,7 @@ public class IndexMergerV9 implements IndexMerger
   }
 
   @Override
-  public File merge(
+  public MergedIndexMetadata merge(
       List<IndexableAdapter> indexes,
       boolean rollup,
       final AggregatorFactory[] metricAggs,
@@ -852,10 +837,10 @@ public class IndexMergerV9 implements IndexMerger
     return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), null);
   }
 
-  private File merge(
+  private MergedIndexMetadata merge(
       List<IndexableAdapter> indexes,
-      final boolean rollup,
-      final AggregatorFactory[] metricAggs,
+      boolean rollup,
+      AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
@@ -865,63 +850,29 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.deleteDirectory(outDir);
     FileUtils.forceMkdir(outDir);
 
-    final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes);
+    final List<DimensionDesc> mergedDimensions = IndexMerger.mergeDimensions(indexes);
+    final List<MetricDesc> mergedMetrics = IndexMerger.mergeMetrics(indexes, metricAggs);
 
-    final List<String> mergedMetrics = IndexMerger.mergeIndexed(
-        indexes.stream().map(IndexableAdapter::getMetricNames).collect(Collectors.toList())
-    );
-
-    final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
-    for (AggregatorFactory metricAgg : metricAggs) {
-      int metricIndex = mergedMetrics.indexOf(metricAgg.getName());
-      /*
-        If metricIndex is negative, one of the metricAggs was not present in the union of metrics from the indices
-        we are merging
-       */
-      if (metricIndex > -1) {
-        sortedMetricAggs[metricIndex] = metricAgg;
-      }
-    }
-
-    /*
-      If there is nothing at sortedMetricAggs[i], then we did not have a metricAgg whose name matched the name
-      of the ith element of mergedMetrics. I.e. There was a metric in the indices to merge that we did not ask for.
-     */
-    for (int i = 0; i < sortedMetricAggs.length; i++) {
-      if (sortedMetricAggs[i] == null) {
-        throw new IAE("Indices to merge contained metric[%s], but requested metrics did not", mergedMetrics.get(i));
-      }
-    }
-
-    for (int i = 0; i < mergedMetrics.size(); i++) {
-      if (!sortedMetricAggs[i].getName().equals(mergedMetrics.get(i))) {
-        throw new IAE(
-            "Metric mismatch, index[%d] [%s] != [%s]",
-            i,
-            sortedMetricAggs[i].getName(),
-            mergedMetrics.get(i)
-        );
-      }
-    }
-
-    Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn;
+    final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn;
     if (rollup) {
-      rowMergerFn = rowIterators -> new RowCombiningTimeAndDimsIterator(rowIterators, sortedMetricAggs, mergedMetrics);
+      rowMergerFn = rowIterators -> new RowCombiningTimeAndDimsIterator(rowIterators, mergedMetrics);
     } else {
       rowMergerFn = MergingRowIterator::new;
     }
 
-    return makeIndexFiles(
-        indexes,
-        sortedMetricAggs,
-        outDir,
-        progress,
-        mergedDimensions,
-        mergedMetrics,
-        rowMergerFn,
-        true,
-        indexSpec,
-        segmentWriteOutMediumFactory
+    return new MergedIndexMetadata(
+        makeIndexFiles(
+            indexes,
+            outDir,
+            progress,
+            mergedDimensions,
+            mergedMetrics,
+            rowMergerFn,
+            true,
+            indexSpec,
+            segmentWriteOutMediumFactory
+        ),
+        mergedDimensions.stream().map(DimensionDesc::getName).collect(Collectors.toList())
     );
   }
 
@@ -941,14 +892,13 @@ public class IndexMergerV9 implements IndexMerger
   ) throws IOException
   {
     try (QueryableIndex index = indexIO.loadIndex(inDir)) {
-      final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
+      final IndexableAdapter adapter = new QueryableIndexAdapter(index);
       return makeIndexFiles(
           ImmutableList.of(adapter),
-          null,
           outDir,
           progress,
-          Lists.newArrayList(adapter.getDimensionNames()),
-          Lists.newArrayList(adapter.getMetricNames()),
+          IndexMerger.mergeDimensions(Collections.singletonList(adapter)),
+          IndexMerger.mergeMetrics(Collections.singletonList(adapter), null),
           Iterables::getOnlyElement,
           false,
           indexSpec,
@@ -969,15 +919,11 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.deleteDirectory(outDir);
     FileUtils.forceMkdir(outDir);
 
-    final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes);
-
-    final List<String> mergedMetrics = IndexMerger.mergeIndexed(
-        indexes.stream().map(IndexableAdapter::getMetricNames).collect(Collectors.toList())
-    );
+    final List<DimensionDesc> mergedDimensions = IndexMerger.mergeDimensions(indexes);
+    final List<MetricDesc> mergedMetrics = IndexMerger.mergeMetrics(indexes, aggregators);
 
     return makeIndexFiles(
         indexes,
-        aggregators,
         outDir,
         new BaseProgressIndicator(),
         mergedDimensions,
@@ -989,38 +935,34 @@ public class IndexMergerV9 implements IndexMerger
     );
   }
 
-  private Map<String, DimensionHandler> makeDimensionHandlers(
-      final List<String> mergedDimensions,
-      final List<ColumnCapabilitiesImpl> dimCapabilities
-  )
-  {
-    Map<String, DimensionHandler> handlers = new LinkedHashMap<>();
-    for (int i = 0; i < mergedDimensions.size(); i++) {
-      ColumnCapabilities capabilities = dimCapabilities.get(i);
-      String dimName = mergedDimensions.get(i);
-      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimName, capabilities, null);
-      handlers.put(dimName, handler);
-    }
-    return handlers;
-  }
-
   private TimeAndDimsIterator makeMergedTimeAndDimsIterator(
       final List<IndexableAdapter> indexes,
-      final List<String> mergedDimensions,
-      final List<String> mergedMetrics,
-      final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
-      final Map<String, DimensionHandler> handlers,
-      final List<DimensionMerger> mergers
+      final List<DimensionDesc> mergedDimensions,
+      final List<MetricDesc> mergedMetrics,
+      final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn
   )
   {
-    List<TransformableRowIterator> perIndexRowIterators = Lists.newArrayListWithCapacity(indexes.size());
+    final List<TransformableRowIterator> perIndexRowIterators = Lists.newArrayListWithCapacity(indexes.size());
+    final List<String> mergedDimensionNames = mergedDimensions.stream()
+                                                              .map(DimensionDesc::getName)
+                                                              .collect(Collectors.toList());
+    final Map<String, DimensionHandler> handlers = mergedDimensions
+        .stream()
+        .collect(Collectors.toMap(DimensionDesc::getName, DimensionDesc::getHandler));
+    final List<DimensionMerger> mergers = mergedDimensions.stream()
+                                                          .map(DimensionDesc::getNonNullMerger)
+                                                          .collect(Collectors.toList());
+    final List<String> mergedMetricNames = mergedMetrics.stream()
+                                                        .map(MetricDesc::getName)
+                                                        .collect(Collectors.toList());
     for (int i = 0; i < indexes.size(); ++i) {
       final IndexableAdapter adapter = indexes.get(i);
       TransformableRowIterator target = adapter.getRows();
-      if (!mergedDimensions.equals(adapter.getDimensionNames()) || !mergedMetrics.equals(adapter.getMetricNames())) {
+      if (!mergedDimensionNames.equals(adapter.getDimensionNames())
+          || !mergedMetricNames.equals(adapter.getMetricNames())) {
         target = makeRowIteratorWithReorderedColumns(
-            mergedDimensions,
-            mergedMetrics,
+            mergedDimensionNames,
+            mergedMetricNames,
             handlers,
             adapter,
             target

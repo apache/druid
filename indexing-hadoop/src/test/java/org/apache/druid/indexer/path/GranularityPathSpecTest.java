@@ -28,6 +28,7 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.HadoopTuningConfig;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -54,30 +55,7 @@ import java.util.Arrays;
 
 public class GranularityPathSpecTest
 {
-  private static final HadoopTuningConfig DEFAULT_TUNING_CONFIG = new HadoopTuningConfig(
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      false,
-      false,
-      false,
-      false,
-      null,
-      false,
-      false,
-      null,
-      null,
-      null,
-      false,
-      false,
-      null,
-      null,
-      null
-  );
+  private static final HadoopTuningConfig DEFAULT_TUNING_CONFIG = new Builder().setCleanOnFailure(false).build();
 
   private GranularityPathSpec granularityPathSpec;
   private final String TEST_STRING_PATH = "TEST";

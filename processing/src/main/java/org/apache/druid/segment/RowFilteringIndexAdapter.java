@@ -24,6 +24,7 @@ import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -31,10 +32,10 @@ import java.util.function.Predicate;
  */
 public class RowFilteringIndexAdapter implements IndexableAdapter
 {
-  private final QueryableIndexIndexableAdapter baseAdapter;
+  private final QueryableIndexAdapter baseAdapter;
   private final Predicate<RowPointer> filter;
 
-  public RowFilteringIndexAdapter(QueryableIndexIndexableAdapter baseAdapter, Predicate<RowPointer> filter)
+  public RowFilteringIndexAdapter(QueryableIndexAdapter baseAdapter, Predicate<RowPointer> filter)
   {
     this.baseAdapter = baseAdapter;
     this.filter = filter;
@@ -73,7 +74,7 @@ public class RowFilteringIndexAdapter implements IndexableAdapter
   @Override
   public TransformableRowIterator getRows()
   {
-    QueryableIndexIndexableAdapter.RowIteratorImpl baseRowIterator = baseAdapter.getRows();
+    QueryableIndexAdapter.RowIteratorImpl baseRowIterator = baseAdapter.getRows();
     return new ForwardingRowIterator(baseRowIterator)
     {
       /**
@@ -122,5 +123,11 @@ public class RowFilteringIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return baseAdapter.getMetadata();
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    baseAdapter.close();
   }
 }

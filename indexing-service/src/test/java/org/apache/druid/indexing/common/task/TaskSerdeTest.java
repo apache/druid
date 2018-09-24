@@ -33,7 +33,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
-import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.IndexTuningConfig.Builder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -101,9 +101,9 @@ public class TaskSerdeTest
   @Test
   public void testIndexTaskTuningConfigDefaults() throws Exception
   {
-    final IndexTask.IndexTuningConfig tuningConfig = jsonMapper.readValue(
+    final IndexTuningConfig tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\"}",
-        IndexTask.IndexTuningConfig.class
+        IndexTuningConfig.class
     );
 
     Assert.assertEquals(false, tuningConfig.isForceExtendableShardSpecs());
@@ -119,9 +119,9 @@ public class TaskSerdeTest
   @Test
   public void testIndexTaskTuningConfigTargetPartitionSizeOrNumShards() throws Exception
   {
-    IndexTask.IndexTuningConfig tuningConfig = jsonMapper.readValue(
+    IndexTuningConfig tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":10}",
-        IndexTask.IndexTuningConfig.class
+        IndexTuningConfig.class
     );
 
     Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
@@ -129,7 +129,7 @@ public class TaskSerdeTest
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"numShards\":10}",
-        IndexTask.IndexTuningConfig.class
+        IndexTuningConfig.class
     );
 
     Assert.assertEquals(null, tuningConfig.getTargetPartitionSize());
@@ -137,7 +137,7 @@ public class TaskSerdeTest
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":10}",
-        IndexTask.IndexTuningConfig.class
+        IndexTuningConfig.class
     );
 
     Assert.assertEquals(null, tuningConfig.getTargetPartitionSize());
@@ -145,7 +145,7 @@ public class TaskSerdeTest
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":-1}",
-        IndexTask.IndexTuningConfig.class
+        IndexTuningConfig.class
     );
 
     Assert.assertEquals(null, tuningConfig.getNumShards());
@@ -153,12 +153,12 @@ public class TaskSerdeTest
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1}",
-        IndexTask.IndexTuningConfig.class
+        IndexTuningConfig.class
     );
 
     Assert.assertEquals(null, tuningConfig.getNumShards());
     Assert.assertEquals(
-        IndexTask.IndexTuningConfig.DEFAULT_TARGET_PARTITION_SIZE,
+        IndexTuningConfig.DEFAULT_TARGET_PARTITION_SIZE,
         (int) tuningConfig.getTargetPartitionSize()
     );
   }
@@ -170,7 +170,7 @@ public class TaskSerdeTest
 
     jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":10}",
-        IndexTask.IndexTuningConfig.class
+        IndexTuningConfig.class
     );
   }
 
@@ -239,8 +239,8 @@ public class TaskSerdeTest
     Assert.assertTrue(task2IoConfig.getFirehoseFactory() instanceof LocalFirehoseFactory);
     Assert.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
 
-    IndexTask.IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
-    IndexTask.IndexTuningConfig task2TuningConfig = task2.getIngestionSchema().getTuningConfig();
+    IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
+    IndexTuningConfig task2TuningConfig = task2.getIngestionSchema().getTuningConfig();
 
     Assert.assertEquals(taskTuningConfig.getBasePersistDirectory(), task2TuningConfig.getBasePersistDirectory());
     Assert.assertEquals(taskTuningConfig.getIndexSpec(), task2TuningConfig.getIndexSpec());
@@ -279,26 +279,13 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTuningConfig(
-                10000,
-                10,
-                null,
-                null,
-                null,
-                null,
-                indexSpec,
-                3,
-                true,
-                true,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            new Builder()
+                .setTargetPartitionSize(10000)
+                .setMaxRowsInMemory(10)
+                .setIndexSpec(indexSpec)
+                .setMaxPendingPersists(3)
+                .setForceExtendableShardSpecs(true)
+                .build()
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -542,26 +529,16 @@ public class TaskSerdeTest
                 null
             ),
 
-            new RealtimeTuningConfig(
-                1,
-                null,
-                new Period("PT10M"),
-                null,
-                null,
-                null,
-                null,
-                1,
-                NoneShardSpec.instance(),
-                indexSpec,
-                null,
-                0,
-                0,
-                true,
-                null,
-                null,
-                null,
-                null
-            )
+            new RealtimeTuningConfig.Builder()
+                .setMaxRowsInMemory(1)
+                .setIntermediatePersistePeriod(new Period("PT10M"))
+                .setMaxPendingPersists(1)
+                .setShardSpec(NoneShardSpec.instance())
+                .setIndexSpec(indexSpec)
+                .setPersistThreadPriority(0)
+                .setMergeThreadPriority(0)
+                .setReportParseExceptions(true)
+                .build()
         ),
         null
     );

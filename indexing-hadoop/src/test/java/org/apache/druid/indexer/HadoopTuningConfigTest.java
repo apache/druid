@@ -22,6 +22,7 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.joda.time.DateTime;
@@ -39,30 +40,19 @@ public class HadoopTuningConfigTest
   @Test
   public void testSerde() throws Exception
   {
-    HadoopTuningConfig expected = new HadoopTuningConfig(
-        "/tmp/workingpath",
-        "version",
-        null,
-        null,
-        null,
-        100,
-        null,
-        true,
-        true,
-        true,
-        true,
-        null,
-        true,
-        true,
-        null,
-        null,
-        null,
-        true,
-        true,
-        null,
-        null,
-        null
-    );
+    final HadoopTuningConfig expected = new Builder()
+        .setWorkingPath("/tmp/workingpath")
+        .setVersion("version")
+        .setMaxRowsInMemory(100)
+        .setleaveIntermediate(true)
+        .setCleanOnFailure(true)
+        .setOverwriteFiles(true)
+        .setIgnoreInvalidRows(true)
+        .setCombineText(true)
+        .setUseCombiner(true)
+        .setForceExtendableShardSpecs(true)
+        .setUseExplicitVersion(true)
+        .build();
 
     HadoopTuningConfig actual = jsonReadWriteRead(jsonMapper.writeValueAsString(expected), HadoopTuningConfig.class);
 

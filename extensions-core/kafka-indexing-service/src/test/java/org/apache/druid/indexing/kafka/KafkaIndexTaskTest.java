@@ -36,6 +36,7 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.curator.test.TestingCluster;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
@@ -138,7 +139,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.easymock.EasyMock;
@@ -1995,25 +1995,19 @@ public class KafkaIndexTaskTest
       final KafkaIOConfig ioConfig
   )
   {
-    final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
-        1000,
-        null,
-        maxRowsPerSegment,
-        maxTotalRows,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        true,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        resetOffsetAutomatically,
-        null,
-        intermediateHandoffPeriod,
-        logParseExceptions,
-        maxParseExceptions,
-        maxSavedParseExceptions
-    );
+    final KafkaTuningConfig tuningConfig = new KafkaTuningConfig.Builder()
+        .setMaxRowsInMemory(1000)
+        .setMaxRowsPerSegment(maxRowsPerSegment)
+        .setMaxTotalRows(maxTotalRows)
+        .setIntermediatePersistePeriod(new Period("P1Y"))
+        .setReportParseExceptions(reportParseExceptions)
+        .setHandoffConditionTimeout(handoffConditionTimeout)
+        .setResetOffsetAutomatically(resetOffsetAutomatically)
+        .setIntermediateHandoffPeriod(intermediateHandoffPeriod)
+        .setLogParseExceptions(logParseExceptions)
+        .setMaxParseExceptions(maxParseExceptions)
+        .setMaxSavedParseExceptions(maxSavedParseExceptions)
+        .build();
     final Map<String, Object> context = isIncrementalHandoffSupported
                                         ? ImmutableMap.of(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
                                         : null;
@@ -2040,25 +2034,17 @@ public class KafkaIndexTaskTest
       final Map<String, Object> context
   )
   {
-    final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
-        1000,
-        null,
-        maxRowsPerSegment,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        true,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        resetOffsetAutomatically,
-        null,
-        null,
-        logParseExceptions,
-        maxParseExceptions,
-        maxSavedParseExceptions
-    );
+    final KafkaTuningConfig tuningConfig = new KafkaTuningConfig.Builder()
+        .setMaxRowsInMemory(1000)
+        .setMaxRowsPerSegment(maxRowsPerSegment)
+        .setIntermediatePersistePeriod(new Period("P1Y"))
+        .setReportParseExceptions(reportParseExceptions)
+        .setHandoffConditionTimeout(handoffConditionTimeout)
+        .setResetOffsetAutomatically(resetOffsetAutomatically)
+        .setLogParseExceptions(logParseExceptions)
+        .setMaxParseExceptions(maxParseExceptions)
+        .setMaxSavedParseExceptions(maxSavedParseExceptions)
+        .build();
     if (isIncrementalHandoffSupported) {
       context.put(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
     }

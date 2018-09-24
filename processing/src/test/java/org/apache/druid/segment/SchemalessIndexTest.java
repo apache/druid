@@ -221,7 +221,7 @@ public class SchemalessIndexTest
                 mergedFile,
                 indexSpec,
                 null
-            )
+            ).getFile()
         );
 
         return mergedIndex;
@@ -268,7 +268,7 @@ public class SchemalessIndexTest
                 mergedFile,
                 indexSpec,
                 null
-            )
+            ).getFile()
         );
 
         entry.put(index2, index);
@@ -303,7 +303,7 @@ public class SchemalessIndexTest
         }
 
         return indexIO.loadIndex(
-            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, indexSpec, null)
+            indexMerger.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, indexSpec, null).getFile()
         );
       }
       catch (IOException e) {
@@ -506,7 +506,7 @@ public class SchemalessIndexTest
                             {
                               try {
                                 return new RowFilteringIndexAdapter(
-                                    new QueryableIndexIndexableAdapter(indexIO.loadIndex(chunk.getObject())),
+                                    new QueryableIndexAdapter(indexIO.loadIndex(chunk.getObject())),
                                     rowPointer -> timelineObjectHolder.getInterval().contains(rowPointer.getTimestamp())
                                 );
                               }
@@ -565,7 +565,7 @@ public class SchemalessIndexTest
               mergedFile,
               indexSpec,
               null
-          )
+          ).getFile()
       );
     }
     catch (IOException e) {

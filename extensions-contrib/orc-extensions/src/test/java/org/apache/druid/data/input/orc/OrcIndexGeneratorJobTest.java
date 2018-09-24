@@ -43,7 +43,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexIndexableAdapter;
+import org.apache.druid.segment.QueryableIndexAdapter;
 import org.apache.druid.segment.RowIterator;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -214,30 +214,13 @@ public class OrcIndexGeneratorJobTest
                 null,
                 outputRoot.getCanonicalPath()
             ),
-            new HadoopTuningConfig(
-                outputRoot.getCanonicalPath(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                ImmutableMap.of(JobContext.NUM_REDUCES, "0"), //verifies that set num reducers is ignored
-                false,
-                true,
-                null,
-                true,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null
-            )
+            new HadoopTuningConfig.Builder()
+                .setWorkingPath(outputRoot.getCanonicalPath())
+                // verifies that set num reducers is ignored
+                .setJobProperties(ImmutableMap.of(JobContext.NUM_REDUCES, "0"))
+                .setCleanOnFailure(false)
+                .setUseCombiner(true)
+                .build()
         )
     );
     config.setShardSpecs(
@@ -307,7 +290,7 @@ public class OrcIndexGeneratorJobTest
         unzip(indexZip, dir);
 
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
-        QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
+        QueryableIndexAdapter adapter = new QueryableIndexAdapter(index);
 
         try (RowIterator rowIt = adapter.getRows()) {
           while (rowIt.moveToNext()) {

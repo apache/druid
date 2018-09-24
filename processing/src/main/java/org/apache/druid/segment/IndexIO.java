@@ -122,8 +122,8 @@ public class IndexIO
     try (QueryableIndex queryableIndex1 = loadIndex(dir1)) {
       try (QueryableIndex queryableIndex2 = loadIndex(dir2)) {
         validateTwoSegments(
-            new QueryableIndexIndexableAdapter(queryableIndex1),
-            new QueryableIndexIndexableAdapter(queryableIndex2)
+            new QueryableIndexAdapter(queryableIndex1),
+            new QueryableIndexAdapter(queryableIndex2)
         );
       }
     }

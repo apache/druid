@@ -45,10 +45,10 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -64,7 +64,7 @@ import org.apache.druid.indexing.common.task.AbstractFixedIntervalTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
-import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.IndexTuningConfig.Builder;
 import org.apache.druid.indexing.common.task.KillTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
@@ -683,26 +683,13 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTuningConfig(
-                10000,
-                10,
-                null,
-                null,
-                null,
-                null,
-                indexSpec,
-                3,
-                true,
-                true,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            new Builder()
+                .setTargetPartitionSize(10000)
+                .setMaxRowsInMemory(10)
+                .setIndexSpec(indexSpec)
+                .setMaxPendingPersists(3)
+                .setForceExtendableShardSpecs(true)
+                .build()
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -763,26 +750,13 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTuningConfig(
-                10000,
-                10,
-                null,
-                null,
-                null,
-                null,
-                indexSpec,
-                3,
-                true,
-                true,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            new Builder()
+                .setTargetPartitionSize(10000)
+                .setMaxRowsInMemory(10)
+                .setIndexSpec(indexSpec)
+                .setMaxPendingPersists(3)
+                .setForceExtendableShardSpecs(true)
+                .build()
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -1150,26 +1124,11 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTuningConfig(
-                10000,
-                10,
-                null,
-                null,
-                null,
-                null,
-                indexSpec,
-                null,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            new Builder()
+                .setTargetPartitionSize(10000)
+                .setMaxRowsInMemory(10)
+                .setIndexSpec(indexSpec)
+                .build()
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -1279,26 +1238,12 @@ public class TaskLifecycleTest
         // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
         null
     );
-    RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
-        1000,
-        null,
-        new Period("P1Y"),
-        null, //default window period of 10 minutes
-        null, // base persist dir ignored by Realtime Index task
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    // default window period of 10 minutes
+    // base persist dir ignored by Realtime Index task
+    final RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig.Builder()
+        .setMaxRowsInMemory(1000)
+        .setIntermediatePersistePeriod(new Period("P1Y"))
+        .build();
     FireDepartment fireDepartment = new FireDepartment(dataSchema, realtimeIOConfig, realtimeTuningConfig);
     return new RealtimeIndexTask(
         taskId,

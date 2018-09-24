@@ -1404,6 +1404,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         null
     );
+
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
         1000,
         null,

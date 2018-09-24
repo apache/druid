@@ -25,12 +25,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.HadoopTuningConfig.Builder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -46,7 +48,6 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -493,6 +494,20 @@ public class IndexGeneratorJobTest
       FileUtils.writeLines(dataFile, data);
     }
 
+    final HadoopTuningConfig.Builder builder = new Builder()
+        .setWorkingPath(tmpDir.getCanonicalPath())
+        .setJobProperties(ImmutableMap.of(JobContext.NUM_REDUCES, "0"))
+        .setCleanOnFailure(false)
+        .setUseCombiner(useCombiner)
+        .setForceExtendableShardSpecs(forceExtendableShardSpecs);
+
+    if (maxRowsInMemory != null) {
+      builder.setMaxRowsInMemory(maxRowsInMemory);
+    }
+    if (maxBytesInMemory != null) {
+      builder.setMaxBytesInMemory(maxBytesInMemory);
+    }
+
     config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
             new DataSchema(
@@ -513,30 +528,7 @@ public class IndexGeneratorJobTest
                 null,
                 tmpDir.getCanonicalPath()
             ),
-            new HadoopTuningConfig(
-                tmpDir.getCanonicalPath(),
-                null,
-                null,
-                null,
-                null,
-                maxRowsInMemory,
-                maxBytesInMemory,
-                false,
-                false,
-                false,
-                false,
-                ImmutableMap.of(JobContext.NUM_REDUCES, "0"), //verifies that set num reducers is ignored
-                false,
-                useCombiner,
-                null,
-                true,
-                null,
-                forceExtendableShardSpecs,
-                false,
-                null,
-                null,
-                null
-            )
+            builder.build()
         )
     );
 

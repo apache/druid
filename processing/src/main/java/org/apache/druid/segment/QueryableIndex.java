@@ -33,7 +33,7 @@ import java.util.Map;
  * using {@link StorageAdapter}.
  *
  * @see QueryableIndexStorageAdapter for query path adapter
- * @see QueryableIndexIndexableAdapter for indexing path adapter
+ * @see QueryableIndexAdapter for indexing path adapter
  */
 public interface QueryableIndex extends ColumnSelector, Closeable
 {

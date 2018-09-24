@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -58,7 +59,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -215,7 +215,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(3, index.getColumnNames().size());
     assertDimCompression(index, indexSpec.getDimensionCompression());
 
-    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
+    final QueryableIndexAdapter adapter = new QueryableIndexAdapter(index);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
     Assert.assertEquals(2, rowList.size());
@@ -324,7 +324,7 @@ public class IndexMergerTestBase
                 mergedDir,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
@@ -389,7 +389,7 @@ public class IndexMergerTestBase
                 tmpDir3,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
@@ -428,7 +428,7 @@ public class IndexMergerTestBase
     );
 
 
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
+    final IndexableAdapter queryableAdapter = new QueryableIndexAdapter(index1);
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
@@ -446,7 +446,7 @@ public class IndexMergerTestBase
                 mergedDir,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
@@ -479,7 +479,7 @@ public class IndexMergerTestBase
     QueryableIndex index1 = closer.closeLater(
         indexIO.loadIndex(indexMerger.append(ImmutableList.of(incrementalAdapter), null, tempDir1, indexSpec, null))
     );
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
+    final IndexableAdapter queryableAdapter = new QueryableIndexAdapter(index1);
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
@@ -502,7 +502,7 @@ public class IndexMergerTestBase
                 mergedDir,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
@@ -542,7 +542,7 @@ public class IndexMergerTestBase
     );
 
 
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
+    final IndexableAdapter queryableAdapter = new QueryableIndexAdapter(index1);
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
@@ -573,7 +573,7 @@ public class IndexMergerTestBase
                 mergedDir,
                 newSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
@@ -616,7 +616,7 @@ public class IndexMergerTestBase
         indexIO.loadIndex(indexMerger.persist(toPersist1, tempDir1, indexSpec, null))
     );
 
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
+    final IndexableAdapter queryableAdapter = new QueryableIndexAdapter(index1);
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
@@ -674,7 +674,7 @@ public class IndexMergerTestBase
     );
 
 
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
+    final IndexableAdapter queryableAdapter = new QueryableIndexAdapter(index1);
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
@@ -786,11 +786,11 @@ public class IndexMergerTestBase
                 tmpDirMerged,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
-    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final QueryableIndexAdapter adapter = new QueryableIndexAdapter(merged);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
     Assert.assertEquals(Arrays.asList("d3", "d1", "d2"), ImmutableList.copyOf(adapter.getDimensionNames()));
@@ -879,11 +879,11 @@ public class IndexMergerTestBase
                 tmpDirMerged,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
-    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final QueryableIndexAdapter adapter = new QueryableIndexAdapter(merged);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
     Assert.assertEquals(ImmutableList.of("dimA", "dimC"), ImmutableList.copyOf(adapter.getDimensionNames()));
@@ -951,11 +951,11 @@ public class IndexMergerTestBase
                   tmpDirMerged,
                   indexSpec,
                   null
-              )
+              ).getFile()
           )
       );
 
-      final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+      final QueryableIndexAdapter adapter = new QueryableIndexAdapter(merged);
       final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
       Assert.assertEquals(ImmutableList.of("dimA", "dimB"), ImmutableList.copyOf(adapter.getDimensionNames()));
@@ -1080,11 +1080,11 @@ public class IndexMergerTestBase
                   tmpDirMerged,
                   indexSpec,
                   null
-              )
+              ).getFile()
           )
       );
 
-      final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+      final QueryableIndexAdapter adapter = new QueryableIndexAdapter(merged);
       final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
       if (NullHandling.replaceWithDefault()) {
@@ -1253,11 +1253,11 @@ public class IndexMergerTestBase
                 tmpDirMerged,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
-    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final QueryableIndexAdapter adapter = new QueryableIndexAdapter(merged);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
     if (NullHandling.replaceWithDefault()) {
@@ -1383,7 +1383,7 @@ public class IndexMergerTestBase
                 tmpDirMerged,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
@@ -1396,17 +1396,17 @@ public class IndexMergerTestBase
                 tmpDirMerged2,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
-    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final QueryableIndexAdapter adapter = new QueryableIndexAdapter(merged);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
-    final QueryableIndexIndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(merged2);
+    final QueryableIndexAdapter adapter2 = new QueryableIndexAdapter(merged2);
     final List<DebugRow> rowList2 = RowIteratorHelper.toList(adapter2.getRows());
 
-    Assert.assertEquals(ImmutableList.of("dimB", "dimA"), ImmutableList.copyOf(adapter.getDimensionNames()));
+    Assert.assertEquals(ImmutableSet.of("dimB", "dimA"), ImmutableSet.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(5, rowList.size());
 
     Assert.assertEquals(Arrays.asList(null, "1"), rowList.get(0).dimensionValues());
@@ -1575,7 +1575,7 @@ public class IndexMergerTestBase
         new AggregatorFactory[]{new LongSumAggregatorFactory("A", "A"), new LongSumAggregatorFactory("C", "C")},
         tmpDirMerged,
         indexSpec
-    );
+    ).getFile();
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
     Assert.assertEquals(ImmutableSet.of("A", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
@@ -1645,7 +1645,7 @@ public class IndexMergerTestBase
         },
         tmpDirMerged,
         indexSpec
-    );
+    ).getFile();
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
     Assert.assertEquals(ImmutableSet.of("A", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
@@ -1708,7 +1708,7 @@ public class IndexMergerTestBase
         },
         tmpDirMerged,
         indexSpec
-    );
+    ).getFile();
 
     // Since D was not present in any of the indices, it is not present in the output
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
@@ -1752,7 +1752,7 @@ public class IndexMergerTestBase
         },
         tmpDirMerged,
         indexSpec
-    );
+    ).getFile();
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(
         closer.closeLater(indexIO.loadIndex(merged))
     );
@@ -1786,11 +1786,11 @@ public class IndexMergerTestBase
                 tmpDirMerged,
                 indexSpec,
                 null
-            )
+            ).getFile()
         )
     );
 
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final IndexableAdapter adapter = new QueryableIndexAdapter(merged);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
     Assert.assertEquals(ImmutableList.of("dimA", "dimB", "dimC"), ImmutableList.copyOf(adapter.getDimensionNames()));
@@ -2062,13 +2062,13 @@ public class IndexMergerTestBase
 
     List<DimensionSchema> schema;
     QueryableIndex index;
-    QueryableIndexIndexableAdapter adapter;
+    QueryableIndexAdapter adapter;
     List<DebugRow> rowList;
 
     // xaab-axbx + abx-xab --> aabx-abxx + abx-abx --> abx-abx + aabx-abxx
     schema = makeDimensionSchemas(Arrays.asList("dim1", "dim2"), MultiValueHandling.SORTED_ARRAY);
     index = persistAndLoad(schema, rows);
-    adapter = new QueryableIndexIndexableAdapter(index);
+    adapter = new QueryableIndexAdapter(index);
     rowList = RowIteratorHelper.toList(adapter.getRows());
 
     Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
@@ -2107,7 +2107,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
-    adapter = new QueryableIndexIndexableAdapter(index);
+    adapter = new QueryableIndexAdapter(index);
     rowList = RowIteratorHelper.toList(adapter.getRows());
 
     Assert.assertEquals(1, rowList.size());
@@ -2138,7 +2138,7 @@ public class IndexMergerTestBase
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
-    adapter = new QueryableIndexIndexableAdapter(index);
+    adapter = new QueryableIndexAdapter(index);
     rowList = RowIteratorHelper.toList(adapter.getRows());
 
     Assert.assertEquals(2, rowList.size());

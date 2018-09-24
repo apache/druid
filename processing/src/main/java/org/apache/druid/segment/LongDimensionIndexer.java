@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
@@ -88,7 +87,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   public DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
       IncrementalIndexRowHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
+      DimensionDesc desc
   )
   {
     return new LongWrappingDimensionSelector(makeColumnValueSelector(currEntry, desc), spec.getExtractionFn());
@@ -97,7 +96,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
       IncrementalIndexRowHolder currEntry,
-      IncrementalIndex.DimensionDesc desc
+      DimensionDesc desc
   )
   {
     final int dimIndex = desc.getIndex();
