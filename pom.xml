@@ -934,12 +934,17 @@
                     <excludes>
                         <exclude>org/apache/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
                         <exclude>org/apache/druid/java/util/common/DateTimes.class</exclude>
+                        <exclude>org/apache/druid/cli/PullDependencies.class</exclude>
+                        <exclude>org/apache/druid/cli/validate/DruidJsonValidator.class</exclude>
+                        <exclude>org/apache/druid/cli/Main.class</exclude>
+                        <exclude>org/apache/druid/cli/DumpSegment.class</exclude>
+                        <exclude>org/apache/druid/cli/Version.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>validate</id>
-                        <phase>validate</phase>
+                        <id>compile</id>
+                        <phase>compile</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
@@ -952,8 +957,8 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>testValidate</id>
-                        <phase>validate</phase>
+                        <id>testCompile</id>
+                        <phase>test-compile</phase>
                         <goals>
                             <goal>testCheck</goal>
                         </goals>
