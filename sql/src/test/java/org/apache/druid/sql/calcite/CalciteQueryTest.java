@@ -2807,7 +2807,7 @@ public class CalciteQueryTest extends CalciteTestBase
             new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, 0L}
         ) :
         ImmutableList.of(
-            new Object[]{1L, 5L, 1L, 3L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, 0L}
+            new Object[]{1L, 5L, 1L, 3L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, null}
         )
     );
   }
