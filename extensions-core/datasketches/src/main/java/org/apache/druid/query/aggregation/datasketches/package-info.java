@@ -17,18 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.tuple;
+@EverythingIsNonnullByDefault
+package org.apache.druid.query.aggregation.datasketches;
 
-import org.apache.druid.query.aggregation.datasketches.RawInputValueExtractor;
-import org.apache.druid.segment.serde.ComplexMetricExtractor;
-
-public class ArrayOfDoublesSketchBuildComplexMetricSerde extends ArrayOfDoublesSketchMergeComplexMetricSerde
-{
-
-  @Override
-  public ComplexMetricExtractor getExtractor()
-  {
-    return RawInputValueExtractor.getInstance();
-  }
-
-}
+import org.apache.druid.annotations.EverythingIsNonnullByDefault;

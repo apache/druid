@@ -262,8 +262,7 @@ public class HadoopDruidIndexerMapperTest
     @Override
     protected void innerMap(
         final InputRow inputRow,
-        final Context context,
-        final boolean reportParseExceptions
+        final Context context
     )
     {
       rows.add(inputRow);

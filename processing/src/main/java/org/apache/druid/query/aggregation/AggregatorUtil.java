@@ -103,6 +103,13 @@ public class AggregatorUtil
   // Suppressed aggregator
   public static final byte SUPPRESSED_AGG_CACHE_TYPE_ID = 0x2D;
 
+  // HllSketch module in datasketches extension
+  public static final byte HLL_SKETCH_BUILD_CACHE_TYPE_ID = 0x2E;
+  public static final byte HLL_SKETCH_MERGE_CACHE_TYPE_ID = 0x2F;
+  public static final byte HLL_SKETCH_UNION_CACHE_TYPE_ID = 0x30;
+  public static final byte HLL_SKETCH_TO_STRING_CACHE_TYPE_ID = 0x31;
+  public static final byte HLL_SKETCH_TO_ESTIMATE_AND_BOUNDS_CACHE_TYPE_ID = 0x32;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *

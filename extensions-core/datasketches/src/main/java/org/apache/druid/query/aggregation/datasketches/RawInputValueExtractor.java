@@ -17,18 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.tuple;
+package org.apache.druid.query.aggregation.datasketches;
 
-import org.apache.druid.query.aggregation.datasketches.RawInputValueExtractor;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 
-public class ArrayOfDoublesSketchBuildComplexMetricSerde extends ArrayOfDoublesSketchMergeComplexMetricSerde
+public class RawInputValueExtractor implements ComplexMetricExtractor
 {
+  private static final RawInputValueExtractor EXTRACTOR = new RawInputValueExtractor();
 
-  @Override
-  public ComplexMetricExtractor getExtractor()
+  public static RawInputValueExtractor getInstance()
   {
-    return RawInputValueExtractor.getInstance();
+    return EXTRACTOR;
   }
 
+  private RawInputValueExtractor() {}
+
+  @Override
+  public Class<?> extractedClass()
+  {
+    return Object.class;
+  }
+
+  @Override
+  public Object extractValue(final InputRow inputRow, final String metricName)
+  {
+    return inputRow.getRaw(metricName);
+  }
+  
 }
