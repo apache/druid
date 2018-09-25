@@ -220,6 +220,7 @@ public class ClientInfoResource
     return result;
   }
 
+  @Deprecated
   @GET
   @Path("/{dataSourceName}/dimensions")
   @Produces(MediaType.APPLICATION_JSON)
@@ -253,6 +254,7 @@ public class ClientInfoResource
     return dims;
   }
 
+  @Deprecated
   @GET
   @Path("/{dataSourceName}/metrics")
   @Produces(MediaType.APPLICATION_JSON)
