@@ -134,12 +134,6 @@ public class KinesisSupervisorTuningConfig extends KinesisTuningConfig implement
   }
 
   @Override
-  public Duration getOffsetFetchPeriod()
-  {
-    throw new UnsupportedOperationException("kinesis supervisor does not support getOffsetFetchPeriod");
-  }
-
-  @Override
   public String toString()
   {
     return "KinesisSupervisorTuningConfig{" +

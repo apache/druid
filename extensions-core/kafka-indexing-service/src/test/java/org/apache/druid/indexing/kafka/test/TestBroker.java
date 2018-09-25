@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.seekablestream.test;
+package org.apache.druid.indexing.kafka.test;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -81,7 +81,12 @@ public class TestBroker implements Closeable
 
     final KafkaConfig config = new KafkaConfig(props);
 
-    server = new KafkaServer(config, SystemTime.SYSTEM, Some.apply(StringUtils.format("TestingBroker[%d]-", id)), List$.MODULE$.empty());
+    server = new KafkaServer(
+        config,
+        SystemTime.SYSTEM,
+        Some.apply(StringUtils.format("TestingBroker[%d]-", id)),
+        List$.MODULE$.empty()
+    );
     server.startup();
   }
 

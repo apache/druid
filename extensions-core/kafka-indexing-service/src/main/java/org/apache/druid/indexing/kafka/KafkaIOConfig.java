@@ -63,20 +63,11 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
 
-    Preconditions.checkArgument(
-        startPartitions.getTopic().equals(endPartitions.getTopic()),
-        "start topic and end topic must match"
-    );
-
-    Preconditions.checkArgument(
-        startPartitions.getPartitionOffsetMap().keySet().equals(endPartitions.getPartitionOffsetMap().keySet()),
-        "start partition set and end partition set must match"
-    );
-
-    for (int partition : endPartitions.getPartitionOffsetMap().keySet()) {
+    for (int partition : endPartitions.getPartitionSequenceMap().keySet()) {
       Preconditions.checkArgument(
-          endPartitions.getPartitionOffsetMap().get(partition) >= startPartitions.getPartitionOffsetMap()
-                                                                                 .get(partition),
+          endPartitions.getPartitionSequenceMap()
+                       .get(partition)
+                       .compareTo(startPartitions.getPartitionSequenceMap().get(partition)) >= 0,
           "end offset must be >= start offset for partition[%s]",
           partition
       );

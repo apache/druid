@@ -106,7 +106,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
     this.fetchThreads = fetchThreads; // we handle this being null later
 
     Preconditions.checkArgument(
-        !resetOffsetAutomatically || !skipSequenceNumberAvailabilityCheck,
+        !(super.isResetOffsetAutomatically() && super.isSkipSequenceNumberAvailabilityCheck()),
         "resetOffsetAutomatically cannot be used if skipSequenceNumberAvailabilityCheck=true"
     );
   }

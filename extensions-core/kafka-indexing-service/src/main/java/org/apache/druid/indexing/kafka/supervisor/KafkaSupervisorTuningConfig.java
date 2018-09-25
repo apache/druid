@@ -130,7 +130,6 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig implements Se
     return shutdownTimeout;
   }
 
-  @Override
   @JsonProperty
   public Duration getOffsetFetchPeriod()
   {

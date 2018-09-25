@@ -47,9 +47,6 @@ public interface SeekableStreamSupervisorTuningConfig
   @JsonProperty
   Duration getShutdownTimeout();
 
-  @JsonProperty
-  Duration getOffsetFetchPeriod();
-
   @Override
   String toString();
 

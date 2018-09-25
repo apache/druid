@@ -38,5 +38,9 @@
       <artifactId>druid-imply-kinesis-lib</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+    </dependency>
   </dependencies>
 </project>
