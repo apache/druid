@@ -127,7 +127,7 @@ public class CliBroker extends ServerRunnable
 
           binder
               .bind(DiscoverySideEffectsProvider.Child.class)
-              .toProvider(new DiscoverySideEffectsProvider(NodeType.broker, ImmutableList.of(LookupNodeService.class)))
+              .toProvider(new DiscoverySideEffectsProvider(NodeType.BROKER, ImmutableList.of(LookupNodeService.class)))
               .in(LazySingleton.class);
           LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
         },

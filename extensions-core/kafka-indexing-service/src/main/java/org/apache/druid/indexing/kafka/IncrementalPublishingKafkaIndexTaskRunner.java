@@ -310,7 +310,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
                                           new LookupNodeService(lookupTier);
     DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
         toolbox.getDruidNode(),
-        NodeType.peon,
+        NodeType.PEON,
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
             lookupNodeService.getName(), lookupNodeService

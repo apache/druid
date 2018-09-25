@@ -123,7 +123,7 @@ public class CliRouter extends ServerRunnable
 
             binder
                 .bind(DiscoverySideEffectsProvider.Child.class)
-                .toProvider(new DiscoverySideEffectsProvider(NodeType.router, ImmutableList.of()))
+                .toProvider(new DiscoverySideEffectsProvider(NodeType.ROUTER, ImmutableList.of()))
                 .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
@@ -149,7 +149,7 @@ public class CliRouter extends ServerRunnable
             return new DruidLeaderClient(
                 httpClient,
                 druidNodeDiscoveryProvider,
-                NodeType.coordinator,
+                NodeType.COORDINATOR,
                 "/druid/coordinator/v1/leader",
                 serverDiscoverySelector
             );

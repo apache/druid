@@ -75,19 +75,19 @@ public class TieredBrokerHostSelectorTest
 
     node1 = new DiscoveryDruidNode(
         new DruidNode("hotBroker", "hotHost", 8080, null, true, false),
-        NodeType.broker,
+        NodeType.BROKER,
         ImmutableMap.of()
     );
 
     node2 = new DiscoveryDruidNode(
         new DruidNode("coldBroker", "coldHost1", 8080, null, true, false),
-        NodeType.broker,
+        NodeType.BROKER,
         ImmutableMap.of()
     );
 
     node3 = new DiscoveryDruidNode(
         new DruidNode("coldBroker", "coldHost2", 8080, null, true, false),
-        NodeType.broker,
+        NodeType.BROKER,
         ImmutableMap.of()
     );
 
@@ -106,7 +106,7 @@ public class TieredBrokerHostSelectorTest
       }
     };
 
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.broker))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.BROKER))
             .andReturn(druidNodeDiscovery);
 
     EasyMock.replay(druidNodeDiscoveryProvider);

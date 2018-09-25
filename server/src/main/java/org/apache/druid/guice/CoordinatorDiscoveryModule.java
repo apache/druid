@@ -65,7 +65,7 @@ public class CoordinatorDiscoveryModule implements Module
     return new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        NodeType.coordinator,
+        NodeType.COORDINATOR,
         "/druid/coordinator/v1/leader",
         serverDiscoverySelector
     );

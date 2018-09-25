@@ -447,7 +447,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private void startWorkersHandling() throws InterruptedException
   {
     final CountDownLatch workerViewInitialized = new CountDownLatch(1);
-    DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.middleManager);
+    DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER);
     druidNodeDiscovery.registerListener(
         new DruidNodeDiscovery.Listener()
         {

@@ -132,7 +132,7 @@ public class CliMiddleManager extends ServerRunnable
             binder
                 .bind(DiscoverySideEffectsProvider.Child.class)
                 .toProvider(
-                    new DiscoverySideEffectsProvider(NodeType.middleManager, ImmutableList.of(WorkerNodeService.class))
+                    new DiscoverySideEffectsProvider(NodeType.MIDDLE_MANAGER, ImmutableList.of(WorkerNodeService.class))
                 )
                 .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));

@@ -126,7 +126,7 @@ public class TieredBrokerHostSelector<T>
         servers.put(entry.getValue(), new NodesHolder());
       }
 
-      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.broker);
+      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.BROKER);
       druidNodeDiscovery.registerListener(
           new DruidNodeDiscovery.Listener()
           {

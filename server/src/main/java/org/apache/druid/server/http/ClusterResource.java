@@ -64,19 +64,19 @@ public class ClusterResource
   {
     ImmutableMap.Builder<NodeType, Object> entityBuilder = new ImmutableMap.Builder<>();
 
-    entityBuilder.put(NodeType.coordinator, getNodes(NodeType.coordinator, full));
-    entityBuilder.put(NodeType.overlord, getNodes(NodeType.overlord, full));
-    entityBuilder.put(NodeType.broker, getNodes(NodeType.broker, full));
-    entityBuilder.put(NodeType.historical, getNodes(NodeType.historical, full));
+    entityBuilder.put(NodeType.COORDINATOR, getNodes(NodeType.COORDINATOR, full));
+    entityBuilder.put(NodeType.OVERLORD, getNodes(NodeType.OVERLORD, full));
+    entityBuilder.put(NodeType.BROKER, getNodes(NodeType.BROKER, full));
+    entityBuilder.put(NodeType.HISTORICAL, getNodes(NodeType.HISTORICAL, full));
 
-    Collection<Object> mmNodes = getNodes(NodeType.middleManager, full);
+    Collection<Object> mmNodes = getNodes(NodeType.MIDDLE_MANAGER, full);
     if (!mmNodes.isEmpty()) {
-      entityBuilder.put(NodeType.middleManager, mmNodes);
+      entityBuilder.put(NodeType.MIDDLE_MANAGER, mmNodes);
     }
 
-    Collection<Object> routerNodes = getNodes(NodeType.router, full);
+    Collection<Object> routerNodes = getNodes(NodeType.ROUTER, full);
     if (!routerNodes.isEmpty()) {
-      entityBuilder.put(NodeType.router, routerNodes);
+      entityBuilder.put(NodeType.ROUTER, routerNodes);
     }
 
     return Response.status(Response.Status.OK).entity(entityBuilder.build()).build();

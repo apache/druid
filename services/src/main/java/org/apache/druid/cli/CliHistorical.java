@@ -107,7 +107,7 @@ public class CliHistorical extends ServerRunnable
               .bind(DiscoverySideEffectsProvider.Child.class)
               .toProvider(
                   new DiscoverySideEffectsProvider(
-                      NodeType.historical,
+                      NodeType.HISTORICAL,
                       ImmutableList.of(DataNodeService.class, LookupNodeService.class)
                   )
               )

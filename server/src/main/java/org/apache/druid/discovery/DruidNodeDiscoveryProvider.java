@@ -40,9 +40,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class DruidNodeDiscoveryProvider
 {
   private static final Map<String, Set<NodeType>> SERVICE_TO_NODE_TYPES = ImmutableMap.of(
-      LookupNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.broker, NodeType.historical, NodeType.peon),
-      DataNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.historical, NodeType.peon),
-      WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.peon)
+      LookupNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.BROKER, NodeType.HISTORICAL, NodeType.PEON),
+      DataNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.HISTORICAL, NodeType.PEON),
+      WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.PEON)
   );
 
   private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap =

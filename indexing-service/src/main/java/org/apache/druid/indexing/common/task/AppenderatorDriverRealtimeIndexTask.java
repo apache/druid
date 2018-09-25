@@ -672,7 +672,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                                           new LookupNodeService(getContextValue(CTX_KEY_LOOKUP_TIER));
     return new DiscoveryDruidNode(
         toolbox.getDruidNode(),
-        NodeType.peon,
+        NodeType.PEON,
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
             lookupNodeService.getName(), lookupNodeService

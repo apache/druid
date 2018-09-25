@@ -225,7 +225,7 @@ public class CliCoordinator extends ServerRunnable
             binder
                 .bind(DiscoverySideEffectsProvider.Child.class)
                 .annotatedWith(Coordinator.class)
-                .toProvider(new DiscoverySideEffectsProvider(NodeType.coordinator, ImmutableList.of()))
+                .toProvider(new DiscoverySideEffectsProvider(NodeType.COORDINATOR, ImmutableList.of()))
                 .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, Coordinator.class));
           }

@@ -19,16 +19,34 @@
 
 package org.apache.druid.discovery;
 
-/**
- * Constant names are lowercase for backward compatibility, as a part of the {@link DiscoveryDruidNode}'s JSON format.
- */
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum NodeType
 {
-  coordinator,
-  historical,
-  broker,
-  overlord,
-  peon,
-  router,
-  middleManager
+  COORDINATOR("coordinator"),
+  HISTORICAL("historical"),
+  BROKER("broker"),
+  OVERLORD("overlord"),
+  PEON("peon"),
+  ROUTER("router"),
+  MIDDLE_MANAGER("middleManager");
+
+  private final String jsonName;
+
+  NodeType(String jsonName)
+  {
+    this.jsonName = jsonName;
+  }
+
+  /**
+   * Lowercase for backward compatibility, as a part of the {@link DiscoveryDruidNode}'s JSON format.
+   *
+   * Don't need to define {@link com.fasterxml.jackson.annotation.JsonCreator} because for enum types {@link JsonValue}
+   * serves for both serialization and deserialization, see the Javadoc comment of {@link JsonValue}.
+   */
+  @JsonValue
+  public String getJsonName()
+  {
+    return jsonName;
+  }
 }

@@ -65,7 +65,7 @@ public class IndexingServiceDiscoveryModule implements Module
     return new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        NodeType.overlord,
+        NodeType.OVERLORD,
         "/druid/indexer/v1/leader",
         serverDiscoverySelector
     );

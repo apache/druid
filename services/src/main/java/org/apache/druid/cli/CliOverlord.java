@@ -235,7 +235,7 @@ public class CliOverlord extends ServerRunnable
             binder
                 .bind(DiscoverySideEffectsProvider.Child.class)
                 .annotatedWith(IndexingService.class)
-                .toProvider(new DiscoverySideEffectsProvider(NodeType.overlord, ImmutableList.of()))
+                .toProvider(new DiscoverySideEffectsProvider(NodeType.OVERLORD, ImmutableList.of()))
                 .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, IndexingService.class));
           }

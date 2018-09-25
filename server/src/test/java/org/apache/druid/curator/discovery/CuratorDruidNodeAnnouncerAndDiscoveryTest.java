@@ -81,25 +81,25 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 
     DiscoveryDruidNode node1 = new DiscoveryDruidNode(
         new DruidNode("s1", "h1", 8080, null, true, false),
-        NodeType.coordinator,
+        NodeType.COORDINATOR,
         ImmutableMap.of()
     );
 
     DiscoveryDruidNode node2 = new DiscoveryDruidNode(
         new DruidNode("s2", "h2", 8080, null, true, false),
-        NodeType.coordinator,
+        NodeType.COORDINATOR,
         ImmutableMap.of()
     );
 
     DiscoveryDruidNode node3 = new DiscoveryDruidNode(
         new DruidNode("s3", "h3", 8080, null, true, false),
-        NodeType.overlord,
+        NodeType.OVERLORD,
         ImmutableMap.of()
     );
 
     DiscoveryDruidNode node4 = new DiscoveryDruidNode(
         new DruidNode("s4", "h4", 8080, null, true, false),
-        NodeType.overlord,
+        NodeType.OVERLORD,
         ImmutableMap.of()
     );
 
@@ -113,8 +113,8 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     );
     druidNodeDiscoveryProvider.start();
 
-    DruidNodeDiscovery coordDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.coordinator);
-    DruidNodeDiscovery overlordDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.overlord);
+    DruidNodeDiscovery coordDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.COORDINATOR);
+    DruidNodeDiscovery overlordDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.OVERLORD);
 
     while (!checkNodes(ImmutableSet.of(node1), coordDiscovery.getAllNodes())) {
       Thread.sleep(100);
