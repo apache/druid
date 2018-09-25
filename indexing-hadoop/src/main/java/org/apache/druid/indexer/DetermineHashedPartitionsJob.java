@@ -284,8 +284,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Context context,
-        boolean reportParseExceptions
+        Context context
     ) throws IOException
     {
 
