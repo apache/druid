@@ -42,10 +42,12 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -77,7 +79,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
@@ -94,7 +95,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
+import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -122,7 +123,6 @@ import java.util.stream.Stream;
 public class KafkaSupervisor implements Supervisor
 {
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
-  private static final Random RANDOM = new Random();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000; // prevent us from running too often in response to events
   private static final long NOT_SET = -1;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
@@ -309,14 +309,8 @@ public class KafkaSupervisor implements Supervisor
         Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
         if (taskRunner.isPresent()) {
           Optional<? extends TaskRunnerWorkItem> item = Iterables.tryFind(
-              taskRunner.get().getRunningTasks(), new Predicate<TaskRunnerWorkItem>()
-              {
-                @Override
-                public boolean apply(TaskRunnerWorkItem taskRunnerWorkItem)
-                {
-                  return id.equals(taskRunnerWorkItem.getTaskId());
-                }
-              }
+              taskRunner.get().getRunningTasks(),
+              (Predicate<TaskRunnerWorkItem>) taskRunnerWorkItem -> id.equals(taskRunnerWorkItem.getTaskId())
           );
 
           if (item.isPresent()) {
@@ -372,28 +366,23 @@ public class KafkaSupervisor implements Supervisor
         consumer = getKafkaConsumer();
 
         exec.submit(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                try {
-                  while (!Thread.currentThread().isInterrupted()) {
-                    final Notice notice = notices.take();
+            () -> {
+              try {
+                while (!Thread.currentThread().isInterrupted()) {
+                  final Notice notice = notices.take();
 
-                    try {
-                      notice.handle();
-                    }
-                    catch (Throwable e) {
-                      log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
-                         .addData("noticeClass", notice.getClass().getSimpleName())
-                         .emit();
-                    }
+                  try {
+                    notice.handle();
+                  }
+                  catch (Throwable e) {
+                    log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
+                       .addData("noticeClass", notice.getClass().getSimpleName())
+                       .emit();
                   }
                 }
-                catch (InterruptedException e) {
-                  log.info("KafkaSupervisor[%s] interrupted, exiting", dataSource);
-                }
+              }
+              catch (InterruptedException e) {
+                log.info("KafkaSupervisor[%s] interrupted, exiting", dataSource);
               }
             }
         );
@@ -898,7 +887,16 @@ public class KafkaSupervisor implements Supervisor
     checkTaskDuration();
     checkPendingCompletionTasks();
     checkCurrentTaskState();
-    createNewTasks();
+
+    // if supervisor is not suspended, ensure required tasks are running
+    // if suspended, ensure tasks have been requested to gracefully stop
+    if (!spec.isSuspended()) {
+      log.info("[%s] supervisor is running.", dataSource);
+      createNewTasks();
+    } else {
+      log.info("[%s] supervisor is suspended.", dataSource);
+      gracefulShutdownInternal();
+    }
 
     if (log.isDebugEnabled()) {
       log.debug(generateReport(true).toString());
@@ -942,21 +940,11 @@ public class KafkaSupervisor implements Supervisor
     return Joiner.on("_").join("index_kafka", dataSource, hashCode);
   }
 
-  private static String getRandomId()
-  {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((RANDOM.nextInt() >>> (i * 4)) & 0x0F)));
-    }
-    return suffix.toString();
-  }
-
   private KafkaConsumer<byte[], byte[]> getKafkaConsumer() throws IOException
   {
     final Map<String, Object> configs = new HashMap<>();
-
     configs.put("metadata.max.age.ms", "10000");
-    configs.put("group.id", StringUtils.format("kafka-supervisor-%s", getRandomId()));
+    configs.put("group.id", StringUtils.format("kafka-supervisor-%s", RealtimeIndexTask.makeRandomId()));
 
     // Extract passwords before SSL connection to Kafka
     for (Map.Entry<String, Object> entry : ioConfig.getConsumerProperties().entrySet()) {
@@ -973,7 +961,6 @@ public class KafkaSupervisor implements Supervisor
         configs.put(propertyKey, entry.getValue());
       }
     }
-
     configs.put("enable.auto.commit", "false");
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
@@ -1882,7 +1869,7 @@ public class KafkaSupervisor implements Supervisor
                                             .putAll(spec.getContext())
                                             .build();
     for (int i = 0; i < replicas; i++) {
-      String taskId = Joiner.on("_").join(group.baseSequenceName, getRandomId());
+      String taskId = Joiner.on("_").join(group.baseSequenceName, RealtimeIndexTask.makeRandomId());
       KafkaIndexTask indexTask = new KafkaIndexTask(
           taskId,
           new TaskResource(group.baseSequenceName, 1),
@@ -2111,7 +2098,8 @@ public class KafkaSupervisor implements Supervisor
         includeOffsets ? latestOffsetsFromKafka : null,
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
-        includeOffsets ? offsetsLastUpdated : null
+        includeOffsets ? offsetsLastUpdated : null,
+        spec.isSuspended()
     );
     SupervisorReport<KafkaSupervisorReportPayload> report = new SupervisorReport<>(
         dataSource,

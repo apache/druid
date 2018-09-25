@@ -26,13 +26,11 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -47,10 +45,7 @@ import java.util.Properties;
  */
 public class ChatHandlerServerModule implements Module
 {
-  private static final Logger log = new Logger(ChatHandlerServerModule.class);
   private static final String MAX_CHAT_REQUESTS_PROPERTY = "druid.indexer.server.maxChatRequests";
-  private static final String CHAT_PORT_PROPERTY = "druid.indexer.task.chathandler.port";
-
   private final Properties properties;
 
   public ChatHandlerServerModule(Properties properties)
@@ -72,32 +67,12 @@ public class ChatHandlerServerModule implements Module
     Multibinder.newSetBinder(binder, ServletFilterHolder.class).addBinding().to(TaskIdResponseHeaderFilterHolder.class);
 
     /**
-     * If "druid.indexer.task.chathandler.port" property is set then we assume that a separate Jetty Server with its
-     * own {@link ServerConfig} is required for ingestion apart from the query server otherwise we bind
-     * {@link DruidNode} annotated with {@link RemoteChatHandler} to {@literal @}{@link Self} {@link DruidNode}
+     * We bind {@link DruidNode} annotated with {@link RemoteChatHandler} to {@literal @}{@link Self} {@link DruidNode}
      * so that same Jetty Server is used for querying as well as ingestion.
      */
-    if (properties.containsKey(CHAT_PORT_PROPERTY)) {
-      log.info("Spawning separate ingestion server at port [%s]", properties.getProperty(CHAT_PORT_PROPERTY));
-      JsonConfigProvider.bind(binder, "druid.indexer.task.chathandler", DruidNode.class, RemoteChatHandler.class);
-      JsonConfigProvider.bind(
-          binder,
-          "druid.indexer.server.chathandler.http",
-          ServerConfig.class,
-          RemoteChatHandler.class
-      );
-      JsonConfigProvider.bind(
-          binder,
-          "druid.indexer.server.chathandler.https",
-          TLSServerConfig.class,
-          RemoteChatHandler.class
-      );
-      LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
-    } else {
-      binder.bind(DruidNode.class).annotatedWith(RemoteChatHandler.class).to(Key.get(DruidNode.class, Self.class));
-      binder.bind(ServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(ServerConfig.class));
-      binder.bind(TLSServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(TLSServerConfig.class));
-    }
+    binder.bind(DruidNode.class).annotatedWith(RemoteChatHandler.class).to(Key.get(DruidNode.class, Self.class));
+    binder.bind(ServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(ServerConfig.class));
+    binder.bind(TLSServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(TLSServerConfig.class));
   }
 
   @Provides

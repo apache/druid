@@ -207,6 +207,15 @@ public class LikeFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testEscapeEscapingItself()
+  {
+    assertFilterMatches(
+        new LikeDimFilter("dim1", "foooo", "o", null),
+        ImmutableList.of("1")
+    );
+  }
+
+  @Test
   public void testSuffixMatchWithExtractionFn()
   {
     assertFilterMatches(

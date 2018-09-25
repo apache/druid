@@ -50,7 +50,7 @@ public class SequenceInputStreamResponseHandlerTest
   {
     final ByteBuffer buffer = ByteBuffer.wrap(allBytes);
     while (buffer.hasRemaining()) {
-      final byte[] bytes = new byte[Math.min(Math.abs(RANDOM.nextInt()) % 128, buffer.remaining())];
+      final byte[] bytes = new byte[Math.min(RANDOM.nextInt(128), buffer.remaining())];
       RANDOM.nextBytes(bytes);
       buffer.put(bytes);
       BYTE_LIST.add(bytes);
@@ -84,8 +84,9 @@ public class SequenceInputStreamResponseHandlerTest
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     response.setChunked(true);
-    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response);
-    final int failAt = Math.abs(RANDOM.nextInt()) % allBytes.length;
+    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
+    final int failAt = RANDOM.nextInt(allBytes.length);
+    long chunkNum = 0;
     while (it.hasNext()) {
       final DefaultHttpChunk chunk = new DefaultHttpChunk(
           new BigEndianHeapChannelBuffer(it.next())
@@ -100,7 +101,7 @@ public class SequenceInputStreamResponseHandlerTest
             }
           }
       );
-      clientResponse = responseHandler.handleChunk(clientResponse, chunk);
+      clientResponse = responseHandler.handleChunk(clientResponse, chunk, ++chunkNum);
     }
     clientResponse = responseHandler.done(clientResponse);
 
@@ -132,7 +133,7 @@ public class SequenceInputStreamResponseHandlerTest
           }
         }
     );
-    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response);
+    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
     clientResponse = responseHandler.done(clientResponse);
 
     final InputStream stream = clientResponse.getObj();
@@ -148,10 +149,11 @@ public class SequenceInputStreamResponseHandlerTest
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     response.setChunked(true);
-    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response);
+    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
+    long chunkNum = 0;
     while (it.hasNext()) {
       final DefaultHttpChunk chunk = new DefaultHttpChunk(new BigEndianHeapChannelBuffer(it.next()));
-      clientResponse = responseHandler.handleChunk(clientResponse, chunk);
+      clientResponse = responseHandler.handleChunk(clientResponse, chunk, ++chunkNum);
     }
     clientResponse = responseHandler.done(clientResponse);
 
@@ -159,7 +161,7 @@ public class SequenceInputStreamResponseHandlerTest
     final InputStream expectedStream = new ByteArrayInputStream(allBytes);
     int read = 0;
     while (read < allBytes.length) {
-      final byte[] expectedBytes = new byte[Math.min(Math.abs(RANDOM.nextInt()) % 128, allBytes.length - read)];
+      final byte[] expectedBytes = new byte[Math.min(RANDOM.nextInt(128), allBytes.length - read)];
       final byte[] actualBytes = new byte[expectedBytes.length];
       fillBuff(stream, actualBytes);
       fillBuff(expectedStream, expectedBytes);
@@ -178,10 +180,11 @@ public class SequenceInputStreamResponseHandlerTest
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     response.setChunked(true);
-    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response);
+    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
+    long chunkNum = 0;
     while (it.hasNext()) {
       final DefaultHttpChunk chunk = new DefaultHttpChunk(new BigEndianHeapChannelBuffer(it.next()));
-      clientResponse = responseHandler.handleChunk(clientResponse, chunk);
+      clientResponse = responseHandler.handleChunk(clientResponse, chunk, ++chunkNum);
     }
     clientResponse = responseHandler.done(clientResponse);
 
@@ -206,14 +209,14 @@ public class SequenceInputStreamResponseHandlerTest
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     response.setChunked(false);
     response.setContent(new BigEndianHeapChannelBuffer(allBytes));
-    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response);
+    ClientResponse<InputStream> clientResponse = responseHandler.handleResponse(response, null);
     clientResponse = responseHandler.done(clientResponse);
 
     final InputStream stream = clientResponse.getObj();
     final InputStream expectedStream = new ByteArrayInputStream(allBytes);
     int read = 0;
     while (read < allBytes.length) {
-      final byte[] expectedBytes = new byte[Math.min(Math.abs(RANDOM.nextInt()) % 128, allBytes.length - read)];
+      final byte[] expectedBytes = new byte[Math.min(RANDOM.nextInt(128), allBytes.length - read)];
       final byte[] actualBytes = new byte[expectedBytes.length];
       fillBuff(stream, actualBytes);
       fillBuff(expectedStream, expectedBytes);

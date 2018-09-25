@@ -20,9 +20,6 @@
 package org.apache.druid.sql.calcite.rel;
 
 import com.google.common.base.Throwables;
-import org.apache.druid.java.util.common.guava.Accumulator;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.interpreter.Node;
@@ -32,6 +29,9 @@ import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
+import org.apache.druid.java.util.common.guava.Accumulator;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -46,6 +46,11 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
     this.queryMaker = queryMaker;
   }
 
+  /**
+   * Returns the PartialDruidQuery associated with this DruidRel, and which can be built on top of. Returns null
+   * if this rel cannot be built on top of.
+   */
+  @Nullable
   public abstract PartialDruidQuery getPartialDruidQuery();
 
   /**

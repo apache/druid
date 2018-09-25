@@ -20,15 +20,6 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
-import org.apache.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
-import org.apache.druid.sql.calcite.rule.DruidRelToBindableRule;
-import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
-import org.apache.druid.sql.calcite.rule.DruidRules;
-import org.apache.druid.sql.calcite.rule.DruidSemiJoinRule;
-import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
-import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
-import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.RelOptLattice;
 import org.apache.calcite.plan.RelOptMaterialization;
@@ -78,6 +69,15 @@ import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.druid.sql.calcite.rel.QueryMaker;
+import org.apache.druid.sql.calcite.rule.CaseFilteredAggregatorRule;
+import org.apache.druid.sql.calcite.rule.DruidRelToBindableRule;
+import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
+import org.apache.druid.sql.calcite.rule.DruidRules;
+import org.apache.druid.sql.calcite.rule.DruidSemiJoinRule;
+import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
+import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
+import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 
 import java.util.List;
 

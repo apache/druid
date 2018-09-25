@@ -19,12 +19,12 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -127,7 +127,7 @@ public class MapCache implements Cache
     }
     synchronized (clearLock) {
       Iterator<ByteBuffer> iter = baseMap.keySet().iterator();
-      List<ByteBuffer> toRemove = Lists.newLinkedList();
+      List<ByteBuffer> toRemove = new ArrayList<>();
       while (iter.hasNext()) {
         ByteBuffer next = iter.next();
 

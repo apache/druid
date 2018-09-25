@@ -44,6 +44,7 @@ FROM table
 [ HAVING expr ]
 [ ORDER BY expr [ ASC | DESC ], expr [ ASC | DESC ], ... ]
 [ LIMIT limit ]
+[ UNION ALL <another query> ]
 ```
 
 The FROM clause refers to either a Druid datasource, like `druid.foo`, an [INFORMATION_SCHEMA table](#retrieving-metadata), a
@@ -73,6 +74,9 @@ to data nodes for queries that run with the native TopN query type, but not the 
 versions of Druid will support pushing down limits using the native GroupBy query type as well. If you notice that
 adding a limit doesn't change performance very much, then it's likely that Druid didn't push down the limit for your
 query.
+
+The "UNION ALL" operator can be used to fuse multiple queries together. Their results will be concatenated, and each
+query will run separately, back to back (not in parallel). Druid does not currently support "UNION" without "ALL".
 
 Add "EXPLAIN PLAN FOR" to the beginning of any query to see how it would be run as a native Druid query. In this case,
 the query will not actually be executed.
@@ -390,7 +394,7 @@ The supported result formats are:
 |`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/csv|
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
-same format as [native Druid query errors](../querying#query-errors). If an error occurs while the response body is
+same format as [native Druid query errors](../querying/querying.html#query-errors). If an error occurs while the response body is
 being sent, at that point it is too late to change the HTTP status code or report a JSON error, so the response will
 simply end midstream and an error will be logged by the Druid server that was handling your request.
 
