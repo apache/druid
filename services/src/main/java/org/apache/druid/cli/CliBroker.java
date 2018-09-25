@@ -44,6 +44,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
@@ -53,6 +54,7 @@ import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.coordination.broker.DruidBroker;
 import org.apache.druid.server.http.BrokerResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -125,11 +127,16 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
 
+          binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.BROKER);
+          
           binder
               .bind(DiscoverySideEffectsProvider.Child.class)
               .toProvider(new DiscoverySideEffectsProvider(NodeType.BROKER, ImmutableList.of(LookupNodeService.class)))
               .in(LazySingleton.class);
           LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+
+          Jerseys.addResource(binder, SelfDiscoveryResource.class);
+          LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
         },
         new LookupModule(),
         new SqlModule()

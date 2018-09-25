@@ -39,6 +39,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.NodeTypeConfig;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
@@ -49,6 +50,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -103,6 +105,8 @@ public class CliHistorical extends ServerRunnable
           binder.install(new CacheModule());
           MetricsModule.register(binder, CacheMonitor.class);
 
+          binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.HISTORICAL);
+
           binder
               .bind(DiscoverySideEffectsProvider.Child.class)
               .toProvider(
@@ -113,6 +117,9 @@ public class CliHistorical extends ServerRunnable
               )
               .in(LazySingleton.class);
           LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+
+          Jerseys.addResource(binder, SelfDiscoveryResource.class);
+          LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
         },
         new LookupModule()
     );

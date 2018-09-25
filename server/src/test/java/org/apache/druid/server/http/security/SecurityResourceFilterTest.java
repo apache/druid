@@ -35,6 +35,7 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.IntervalsResource;
 import org.apache.druid.server.http.MetadataResource;
 import org.apache.druid.server.http.RulesResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.http.ServersResource;
 import org.apache.druid.server.http.TiersResource;
 import org.apache.druid.server.security.ForbiddenException;
@@ -46,13 +47,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
-import java.util.regex.Pattern;
 
 @RunWith(Parameterized.class)
 public class SecurityResourceFilterTest extends ResourceFilterTestHelper
 {
-  private static final Pattern WORD = Pattern.compile("\\w+");
-
   @Parameterized.Parameters
   public static Collection<Object[]> data()
   {
@@ -71,6 +69,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
             getRequestPathsWithAuthorizer(CoordinatorDynamicConfigsResource.class),
             getRequestPathsWithAuthorizer(QueryResource.class),
             getRequestPathsWithAuthorizer(StatusResource.class),
+            getRequestPathsWithAuthorizer(SelfDiscoveryResource.class),
             getRequestPathsWithAuthorizer(BrokerQueryResource.class)
         )
     );

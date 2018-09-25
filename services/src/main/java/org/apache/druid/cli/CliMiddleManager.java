@@ -58,6 +58,7 @@ import org.apache.druid.indexing.worker.http.WorkerResource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
@@ -130,6 +131,8 @@ public class CliMiddleManager extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
 
+            binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.MIDDLE_MANAGER);
+
             binder
                 .bind(DiscoverySideEffectsProvider.Child.class)
                 .toProvider(
@@ -137,6 +140,9 @@ public class CliMiddleManager extends ServerRunnable
                 )
                 .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+
+            Jerseys.addResource(binder, SelfDiscoveryResource.class);
+            LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
           }
 
           @Provides

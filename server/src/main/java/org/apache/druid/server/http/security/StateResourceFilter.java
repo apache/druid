@@ -47,9 +47,7 @@ import org.apache.druid.server.security.ResourceType;
 public class StateResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public StateResourceFilter(
-      AuthorizerMapper authorizerMapper
-  )
+  public StateResourceFilter(AuthorizerMapper authorizerMapper)
   {
     super(authorizerMapper);
   }

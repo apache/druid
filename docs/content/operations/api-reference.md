@@ -54,6 +54,13 @@ An endpoint that always returns a boolean "true" value with a 200 OK response, u
 
 Returns the current configuration properties of the node.
 
+* `/selfDiscovered`
+
+Returns a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has recieved a confirmation
+from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
+cluster. It is recommended to not consider a Druid node "healthy" or "ready" in automated deployment/container
+management systems until it returns `{"selfDiscovered": true}` from this endpoint.
+
 ## Coordinator
 
 ### Leadership

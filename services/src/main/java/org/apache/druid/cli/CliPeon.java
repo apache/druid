@@ -39,6 +39,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
@@ -54,6 +55,7 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -118,7 +120,8 @@ import java.util.Set;
 @Command(
     name = "peon",
     description = "Runs a Peon, this is an individual forked \"task\" used as part of the indexing service. "
-                  + "This should rarely, if ever, be used directly. See http://druid.io/docs/latest/design/peons.html for a description"
+                  + "This should rarely, if ever, be used directly. See http://druid.io/docs/latest/design/peons.html"
+                  + " for a description"
 )
 public class CliPeon extends GuiceRunnable
 {
@@ -293,6 +296,8 @@ public class CliPeon extends GuiceRunnable
                 .addBinding("remote")
                 .to(RemoteTaskActionClientFactory.class)
                 .in(LazySingleton.class);
+
+            binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.PEON);
           }
 
           @Provides
@@ -330,12 +335,7 @@ public class CliPeon extends GuiceRunnable
               @Nullable BatchDataSegmentAnnouncer announcer
           )
           {
-            return new SegmentListerResource(
-                jsonMapper,
-                smileMapper,
-                announcer,
-                null
-            );
+            return new SegmentListerResource(jsonMapper, smileMapper, announcer, null);
           }
         },
         new QueryablePeonModule(),

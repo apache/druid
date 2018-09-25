@@ -49,6 +49,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.AsyncQueryForwardingServlet;
 import org.apache.druid.server.http.RouterResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.AvaticaConnectionBalancer;
@@ -121,11 +122,16 @@ public class CliRouter extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
 
+            binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.ROUTER);
+
             binder
                 .bind(DiscoverySideEffectsProvider.Child.class)
                 .toProvider(new DiscoverySideEffectsProvider(NodeType.ROUTER, ImmutableList.of()))
                 .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+
+            Jerseys.addResource(binder, SelfDiscoveryResource.class);
+            LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
           }
 
           @Provides
