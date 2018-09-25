@@ -21,6 +21,7 @@ package org.apache.druid.security.basic;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -57,14 +58,7 @@ public class CommonCacheNotifier
 {
   private static final EmittingLogger LOG = new EmittingLogger(CommonCacheNotifier.class);
 
-  private static final List<String> NODE_TYPES = Arrays.asList(
-      DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
-      DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
-      DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
-      DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
-      DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER,
-      DruidNodeDiscoveryProvider.NODE_TYPE_MM
-  );
+  private static final List<NodeType> NODE_TYPES = Arrays.asList(NodeType.values());
 
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final HttpClient httpClient;
@@ -154,7 +148,7 @@ public class CommonCacheNotifier
   private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthorizerPrefix, byte[] serializedUserMap)
   {
     List<ListenableFuture<StatusResponseHolder>> futures = new ArrayList<>();
-    for (String nodeType : NODE_TYPES) {
+    for (NodeType nodeType : NODE_TYPES) {
       DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeType(nodeType);
       Collection<DiscoveryDruidNode> nodes = nodeDiscovery.getAllNodes();
       for (DiscoveryDruidNode node : nodes) {

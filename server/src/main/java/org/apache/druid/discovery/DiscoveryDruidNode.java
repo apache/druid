@@ -36,7 +36,7 @@ import java.util.Objects;
 public class DiscoveryDruidNode
 {
   private final DruidNode druidNode;
-  private final String nodeType;
+  private final NodeType nodeType;
 
   // Other metadata associated with the node e.g.
   // if its a historical node then lookup information, segment loading capacity etc.
@@ -45,7 +45,7 @@ public class DiscoveryDruidNode
   @JsonCreator
   public DiscoveryDruidNode(
       @JsonProperty("druidNode") DruidNode druidNode,
-      @JsonProperty("nodeType") String nodeType,
+      @JsonProperty("nodeType") NodeType nodeType,
       @JsonProperty("services") Map<String, DruidService> services
   )
   {
@@ -64,7 +64,7 @@ public class DiscoveryDruidNode
   }
 
   @JsonProperty
-  public String getNodeType()
+  public NodeType getNodeType()
   {
     return nodeType;
   }

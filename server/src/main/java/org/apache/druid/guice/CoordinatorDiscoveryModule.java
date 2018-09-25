@@ -22,6 +22,7 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorSelectorConfig;
@@ -64,7 +65,7 @@ public class CoordinatorDiscoveryModule implements Module
     return new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+        NodeType.coordinator,
         "/druid/coordinator/v1/leader",
         serverDiscoverySelector
     );

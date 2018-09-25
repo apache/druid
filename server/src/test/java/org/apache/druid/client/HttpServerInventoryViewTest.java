@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -168,7 +169,7 @@ public class HttpServerInventoryViewTest
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
         new DruidNode("service", "host", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
+        NodeType.historical,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
         )

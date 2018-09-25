@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.client.selector.Server;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -125,7 +126,7 @@ public class TieredBrokerHostSelector<T>
         servers.put(entry.getValue(), new NodesHolder());
       }
 
-      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER);
+      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.broker);
       druidNodeDiscovery.registerListener(
           new DruidNodeDiscovery.Listener()
           {
