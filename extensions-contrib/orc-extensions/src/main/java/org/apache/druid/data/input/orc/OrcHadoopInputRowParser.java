@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.io.orc.OrcSerde;
 import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
 import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
@@ -228,7 +229,13 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     builder.append(parseSpec.getTimestampSpec().getTimestampColumn()).append(":string");
     if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0) {
       builder.append(",");
-      builder.append(String.join(":string,", parseSpec.getDimensionsSpec().getDimensionNames()));
+      builder.append(String.join(
+          ":string,",
+          parseSpec.getDimensionsSpec()
+                   .getDimensionNames()
+                   .stream()
+                   .filter(s -> !s.equals(parseSpec.getTimestampSpec().getTimestampColumn()))
+                   .collect(Collectors.toSet())));
       builder.append(":string");
     }
     builder.append(">");
@@ -241,6 +248,8 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     if (object instanceof HiveDecimalWritable) {
       // inspector on HiveDecimal rounds off to integer for some reason.
       return ((HiveDecimalWritable) object).getHiveDecimal().doubleValue();
+    } else if (object instanceof DateWritable) {
+      return object.toString();
     } else {
       return inspector.getPrimitiveJavaObject(object);
     }
