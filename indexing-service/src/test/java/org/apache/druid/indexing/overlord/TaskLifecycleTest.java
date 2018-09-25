@@ -540,7 +540,7 @@ public class TaskLifecycleTest
             EasyMock.createMock(SupervisorManager.class),
             new Counters()
         ),
-        new TaskAuditLogConfig(false)
+        new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
