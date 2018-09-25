@@ -30,6 +30,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
 
 public class SketchBufferAggregator implements BufferAggregator
@@ -155,7 +156,7 @@ public class SketchBufferAggregator implements BufferAggregator
   {
     WritableMemory mem = memCache.get(buffer);
     if (mem == null) {
-      mem = WritableMemory.wrap(buffer);
+      mem = WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
       memCache.put(buffer, mem);
     }
     return mem;
