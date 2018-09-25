@@ -247,6 +247,7 @@ public class KafkaSupervisor implements Supervisor
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   private final ExecutorService exec;
+  private final ScheduledExecutorService initializationExec;
   private final ScheduledExecutorService scheduledExec;
   private final ScheduledExecutorService reportingExec;
   private final ListeningExecutorService workerExec;
@@ -260,6 +261,8 @@ public class KafkaSupervisor implements Supervisor
 
   private volatile DateTime firstRunTime;
   private volatile KafkaConsumer consumer;
+
+  private volatile boolean lifecycleStarted = false;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
   private volatile Map<Integer, Long> latestOffsetsFromKafka;
@@ -290,6 +293,7 @@ public class KafkaSupervisor implements Supervisor
     this.taskTuningConfig = KafkaTuningConfig.copyOf(this.tuningConfig);
     this.supervisorId = StringUtils.format("KafkaSupervisor-%s", dataSource);
     this.exec = Execs.singleThreaded(supervisorId);
+    this.initializationExec = Execs.scheduledSingleThreaded(supervisorId + "-Initialization-%d");
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
 
@@ -358,77 +362,22 @@ public class KafkaSupervisor implements Supervisor
   public void start()
   {
     synchronized (stateChangeLock) {
-      Preconditions.checkState(!started, "already started");
+      Preconditions.checkState(!lifecycleStarted, "already started");
       Preconditions.checkState(!exec.isShutdown(), "already stopped");
 
-      try {
-        consumer = getKafkaConsumer();
-
-        exec.submit(
-            () -> {
-              try {
-                long pollTimeout = Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS);
-                while (!Thread.currentThread().isInterrupted() && !stopped) {
-                  final Notice notice = notices.poll(pollTimeout, TimeUnit.MILLISECONDS);
-                  if (notice == null) {
-                    continue;
-                  }
-
-                  try {
-                    notice.handle();
-                  }
-                  catch (Throwable e) {
-                    log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
-                       .addData("noticeClass", notice.getClass().getSimpleName())
-                       .emit();
-                  }
-                }
-              }
-              catch (InterruptedException e) {
-                log.info("KafkaSupervisor[%s] interrupted, exiting", dataSource);
-              }
-            }
-        );
-        firstRunTime = DateTimes.nowUtc().plus(ioConfig.getStartDelay());
-        scheduledExec.scheduleAtFixedRate(
-            buildRunTask(),
+      // Try normal initialization first, if that fails then schedule periodic initialization retries
+      tryInit();
+      if (!started) {
+        initializationExec.scheduleAtFixedRate(
+            this::tryInit,
             ioConfig.getStartDelay().getMillis(),
             Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
             TimeUnit.MILLISECONDS
         );
-
-        reportingExec.scheduleAtFixedRate(
-            updateCurrentAndLatestOffsets(),
-            ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
-            Math.max(
-                tuningConfig.getOffsetFetchPeriod().getMillis(), MINIMUM_GET_OFFSET_PERIOD_MILLIS
-            ),
-            TimeUnit.MILLISECONDS
-        );
-
-        reportingExec.scheduleAtFixedRate(
-            emitLag(),
-            ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
-            monitorSchedulerConfig.getEmitterPeriod().getMillis(),
-            TimeUnit.MILLISECONDS
-        );
-
-        started = true;
-        log.info(
-            "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
-            dataSource,
-            ioConfig.getStartDelay(),
-            spec.toString()
-        );
+        log.warn("First initialization attempt failed for KafkaSupervisor[%s], starting retries...", dataSource);
       }
-      catch (Exception e) {
-        if (consumer != null) {
-          consumer.close();
-        }
-        log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
-           .emit();
-        throw Throwables.propagate(e);
-      }
+
+      lifecycleStarted = true;
     }
   }
 
@@ -436,7 +385,7 @@ public class KafkaSupervisor implements Supervisor
   public void stop(boolean stopGracefully)
   {
     synchronized (stateChangeLock) {
-      Preconditions.checkState(started, "not started");
+      Preconditions.checkState(lifecycleStarted, "lifecycle not started");
 
       log.info("Beginning shutdown of KafkaSupervisor[%s]", dataSource);
 
@@ -444,37 +393,39 @@ public class KafkaSupervisor implements Supervisor
         scheduledExec.shutdownNow(); // stop recurring executions
         reportingExec.shutdownNow();
 
-        Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
-        if (taskRunner.isPresent()) {
-          taskRunner.get().unregisterListener(supervisorId);
-        }
-
-        // Stopping gracefully will synchronize the end offsets of the tasks and signal them to publish, and will block
-        // until the tasks have acknowledged or timed out. We want this behavior when we're explicitly shut down through
-        // the API, but if we shut down for other reasons (e.g. we lose leadership) we want to just stop and leave the
-        // tasks as they are.
-        synchronized (stopLock) {
-          if (stopGracefully) {
-            log.info("Posting GracefulShutdownNotice, signalling managed tasks to complete and publish");
-            notices.add(new GracefulShutdownNotice());
-          } else {
-            log.info("Posting ShutdownNotice");
-            notices.add(new ShutdownNotice());
+        if (started) {
+          Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
+          if (taskRunner.isPresent()) {
+            taskRunner.get().unregisterListener(supervisorId);
           }
 
-          long shutdownTimeoutMillis = tuningConfig.getShutdownTimeout().getMillis();
-          long endTime = System.currentTimeMillis() + shutdownTimeoutMillis;
-          while (!stopped) {
-            long sleepTime = endTime - System.currentTimeMillis();
-            if (sleepTime <= 0) {
-              log.info("Timed out while waiting for shutdown (timeout [%,dms])", shutdownTimeoutMillis);
-              stopped = true;
-              break;
+          // Stopping gracefully will synchronize the end offsets of the tasks and signal them to publish, and will block
+          // until the tasks have acknowledged or timed out. We want this behavior when we're explicitly shut down through
+          // the API, but if we shut down for other reasons (e.g. we lose leadership) we want to just stop and leave the
+          // tasks as they are.
+          synchronized (stopLock) {
+            if (stopGracefully) {
+              log.info("Posting GracefulShutdownNotice, signalling managed tasks to complete and publish");
+              notices.add(new GracefulShutdownNotice());
+            } else {
+              log.info("Posting ShutdownNotice");
+              notices.add(new ShutdownNotice());
             }
-            stopLock.wait(sleepTime);
+
+            long shutdownTimeoutMillis = tuningConfig.getShutdownTimeout().getMillis();
+            long endTime = System.currentTimeMillis() + shutdownTimeoutMillis;
+            while (!stopped) {
+              long sleepTime = endTime - System.currentTimeMillis();
+              if (sleepTime <= 0) {
+                log.info("Timed out while waiting for shutdown (timeout [%,dms])", shutdownTimeoutMillis);
+                stopped = true;
+                break;
+              }
+              stopLock.wait(sleepTime);
+            }
           }
+          log.info("Shutdown notice handled");
         }
-        log.info("Shutdown notice handled");
 
         taskClient.close();
         workerExec.shutdownNow();
@@ -945,6 +896,88 @@ public class KafkaSupervisor implements Supervisor
     return Joiner.on("_").join("index_kafka", dataSource, hashCode);
   }
 
+  @VisibleForTesting
+  protected void tryInit()
+  {
+    synchronized (stateChangeLock) {
+      Preconditions.checkState(!started, "already started");
+
+      if (stopped) {
+        return;
+      }
+
+      try {
+        consumer = getKafkaConsumer();
+
+        exec.submit(
+            () -> {
+              try {
+                long pollTimeout = Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS);
+                while (!Thread.currentThread().isInterrupted() && !stopped) {
+                  final Notice notice = notices.poll(pollTimeout, TimeUnit.MILLISECONDS);
+                  if (notice == null) {
+                    continue;
+                  }
+
+                  try {
+                    notice.handle();
+                  }
+                  catch (Throwable e) {
+                    log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
+                       .addData("noticeClass", notice.getClass().getSimpleName())
+                       .emit();
+                  }
+                }
+              }
+              catch (InterruptedException e) {
+                log.info("KafkaSupervisor[%s] interrupted, exiting", dataSource);
+              }
+            }
+        );
+        firstRunTime = DateTimes.nowUtc().plus(ioConfig.getStartDelay());
+        scheduledExec.scheduleAtFixedRate(
+            buildRunTask(),
+            ioConfig.getStartDelay().getMillis(),
+            Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
+            TimeUnit.MILLISECONDS
+        );
+
+        reportingExec.scheduleAtFixedRate(
+            updateCurrentAndLatestOffsets(),
+            ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
+            Math.max(
+                tuningConfig.getOffsetFetchPeriod().getMillis(), MINIMUM_GET_OFFSET_PERIOD_MILLIS
+            ),
+            TimeUnit.MILLISECONDS
+        );
+
+        reportingExec.scheduleAtFixedRate(
+            emitLag(),
+            ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
+            monitorSchedulerConfig.getEmitterPeriod().getMillis(),
+            TimeUnit.MILLISECONDS
+        );
+
+        started = true;
+        log.info(
+            "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
+            dataSource,
+            ioConfig.getStartDelay(),
+            spec.toString()
+        );
+
+        initializationExec.shutdownNow();
+      }
+      catch (Exception e) {
+        if (consumer != null) {
+          consumer.close();
+        }
+        log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
+           .emit();
+      }
+    }
+  }
+
   private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
   {
     final Properties props = new Properties();
@@ -1035,7 +1068,7 @@ public class KafkaSupervisor implements Supervisor
       taskCount++;
       final KafkaIndexTask kafkaTask = (KafkaIndexTask) task;
       final String taskId = task.getId();
-
+      
       // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
       // later determine that this task is actively reading, we will make sure that it matches our current partition
       // allocation (getTaskGroupIdForPartition(partition) should return the same value for every partition being read
@@ -2440,4 +2473,24 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
+  // exposed for testing for visibility into initialization state
+  @VisibleForTesting
+  public boolean isStarted()
+  {
+    return started;
+  }
+
+  // exposed for testing for visibility into initialization state
+  @VisibleForTesting
+  public boolean isLifecycleStarted()
+  {
+    return lifecycleStarted;
+  }
+
+  // exposed for testing to allow "bootstrap.servers" to be changed after supervisor is created
+  @VisibleForTesting
+  public KafkaSupervisorIOConfig getIoConfig()
+  {
+    return ioConfig;
+  }
 }
