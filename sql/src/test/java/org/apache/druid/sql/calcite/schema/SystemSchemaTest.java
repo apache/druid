@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -37,17 +36,11 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.indexer.RunnerTaskState;
-import org.apache.druid.indexer.TaskLocation;
-import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
@@ -79,7 +72,6 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -87,7 +79,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -194,31 +185,11 @@ public class SystemSchemaTest extends CalciteTestBase
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(Intervals.of("2000/P1Y"))
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .build(),
-        index1
-    ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(Intervals.of("2001/P1Y"))
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .build(),
-        index2
-    ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE2)
-                   .interval(index2.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .build(),
-        index2
-    );
+    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
+        .add(segment1, index1)
+        .add(segment2, index2)
+        .add(segment2, index2)
+        .add(segment3, index2);
 
     druidSchema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
@@ -241,7 +212,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final DataSegment segment1 = new DataSegment(
       "test1",
-      Intervals.of("2017/2018"),
+      Intervals.of("2010/2011"),
       "version1",
       null,
       ImmutableList.of("dim1", "dim2"),
@@ -253,7 +224,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
   private final DataSegment segment2 = new DataSegment(
       "test2",
-      Intervals.of("2017/2018"),
+      Intervals.of("2011/2012"),
       "version2",
       null,
       ImmutableList.of("dim1", "dim2"),
@@ -265,7 +236,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
   private final DataSegment segment3 = new DataSegment(
       "test3",
-      Intervals.of("2017/2018"),
+      Intervals.of("2012/2013"),
       "version3",
       null,
       ImmutableList.of("dim1", "dim2"),
@@ -298,21 +269,6 @@ public class SystemSchemaTest extends CalciteTestBase
       1,
       100L,
       DataSegment.PruneLoadSpecHolder.DEFAULT
-  );
-  private final ImmutableDruidDataSource dataSource1 = new ImmutableDruidDataSource(
-      "ds1",
-      ImmutableMap.of("prop1", "val1", "prop2", "val2"),
-      ImmutableSortedMap.of(segment1.getIdentifier(), segment1)
-  );
-  private final ImmutableDruidDataSource dataSource2 = new ImmutableDruidDataSource(
-      "ds2",
-      ImmutableMap.of("prop1", "val1", "prop2", "val2"),
-      ImmutableSortedMap.of(segment2.getIdentifier(), segment2)
-  );
-  private final ImmutableDruidDataSource dataSource3 = new ImmutableDruidDataSource(
-      "ds3",
-      ImmutableMap.of("prop1", "val1", "prop2", "val2"),
-      ImmutableSortedMap.of(segment2.getIdentifier(), segment3)
   );
 
   private final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
@@ -352,45 +308,6 @@ public class SystemSchemaTest extends CalciteTestBase
       queryableDruidServer2
   );
 
-  private final TaskStatusPlus task1 = new TaskStatusPlus(
-      "task1",
-      "index",
-      DateTimes.nowUtc(),
-      DateTimes.nowUtc(),
-      TaskState.RUNNING,
-      RunnerTaskState.RUNNING,
-      -1L,
-      TaskLocation.create("testHost", 1010, -1),
-      "ds_test",
-      null
-  );
-
-  private final TaskStatusPlus task2 = new TaskStatusPlus(
-      "task2",
-      "index",
-      DateTimes.nowUtc(),
-      DateTimes.nowUtc(),
-      TaskState.SUCCESS,
-      RunnerTaskState.NONE,
-      1000L,
-      TaskLocation.unknown(),
-      "ds_test",
-      null
-  );
-
-  private final TaskStatusPlus task3 = new TaskStatusPlus(
-      "task3",
-      "index",
-      DateTimes.nowUtc(),
-      DateTimes.nowUtc(),
-      TaskState.FAILED,
-      RunnerTaskState.NONE,
-      1000L,
-      TaskLocation.unknown(),
-      "ds_test",
-      null
-  );
-
   @Test
   public void testGetTableMap()
   {
@@ -407,19 +324,18 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> sysFields = sysRowType.getFieldList();
-    Assert.assertEquals(10, sysFields.size());
+    Assert.assertEquals(13, sysFields.size());
 
     Assert.assertEquals("task_id", sysFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, sysFields.get(0).getType().getSqlTypeName());
   }
 
   @Test
-  @Ignore
   public void testSegmentsTable() throws Exception
   {
-    // total segments = 5
-    // segments 1,2,3 are published
-    // segments 1,2,4,5 are served
+    // total segments = 6
+    // segments 1,2,3 are published and available
+    // segments 4,5,6  are published but unavailable
     // segment 3 is published but not served
     // segment 2 is served by 2 servers, so num_replicas=2
 
@@ -436,6 +352,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/coordinator/v1/metadata/segments")).anyTimes();
 
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    //published but unavailable segments
     final String json = "[{\n"
                         + "\t\"dataSource\": \"wikipedia-kafka\",\n"
                         + "\t\"interval\": \"2018-08-07T23:00:00.000Z/2018-08-08T00:00:00.000Z\",\n"
@@ -447,7 +364,7 @@ public class SystemSchemaTest extends CalciteTestBase
                         + "\t\"dimensions\": \"isRobot,channel,flags,isUnpatrolled,page,diffUrl,comment,isNew,isMinor,user,namespace,commentLength,deltaBucket,cityName,countryIsoCode,countryName,isAnonymous,regionIsoCode,regionName,added,deleted,delta\",\n"
                         + "\t\"metrics\": \"count,user_unique\",\n"
                         + "\t\"shardSpec\": {\n"
-                        + "\t\t\"type\": \"numbered\",\n"
+                        + "\t\t\"type\": \"none\",\n"
                         + "\t\t\"partitionNum\": 51,\n"
                         + "\t\t\"partitions\": 0\n"
                         + "\t},\n"
@@ -465,7 +382,7 @@ public class SystemSchemaTest extends CalciteTestBase
                         + "\t\"dimensions\": \"isRobot,channel,flags,isUnpatrolled,page,diffUrl,comment,isNew,isMinor,user,namespace,commentLength,deltaBucket,cityName,countryIsoCode,countryName,isAnonymous,metroCode,regionIsoCode,regionName,added,deleted,delta\",\n"
                         + "\t\"metrics\": \"count,user_unique\",\n"
                         + "\t\"shardSpec\": {\n"
-                        + "\t\t\"type\": \"numbered\",\n"
+                        + "\t\t\"type\": \"none\",\n"
                         + "\t\t\"partitionNum\": 9,\n"
                         + "\t\t\"partitions\": 0\n"
                         + "\t},\n"
@@ -483,7 +400,7 @@ public class SystemSchemaTest extends CalciteTestBase
                         + "\t\"dimensions\": \"isRobot,channel,flags,isUnpatrolled,page,diffUrl,comment,isNew,isMinor,user,namespace,commentLength,deltaBucket,cityName,countryIsoCode,countryName,isAnonymous,metroCode,regionIsoCode,regionName,added,deleted,delta\",\n"
                         + "\t\"metrics\": \"count,user_unique\",\n"
                         + "\t\"shardSpec\": {\n"
-                        + "\t\t\"type\": \"numbered\",\n"
+                        + "\t\t\"type\": \"none\",\n"
                         + "\t\t\"partitionNum\": 50,\n"
                         + "\t\t\"partitions\": 0\n"
                         + "\t},\n"
@@ -495,12 +412,7 @@ public class SystemSchemaTest extends CalciteTestBase
     in.add(bytesToWrite);
     in.done();
     future.set(in);
-    //String jsonValue = mapper.writeValueAsString(ImmutableList.of(dataSource1, dataSource2, dataSource3));
-    //EasyMock.expect(responseHolder.getContent()).andReturn(jsonValue).once();
 
-    /*EasyMock.expect(serverView.getClients())
-            .andReturn(serverViewClients)
-            .once();*/
     EasyMock.replay(client, request, responseHolder, responseHandler);
     DataContext dataContext = new DataContext()
     {
@@ -529,31 +441,23 @@ public class SystemSchemaTest extends CalciteTestBase
       }
     };
     Enumerable<Object[]> rows = segmentsTable.scan(dataContext);
-    Enumerator enumerator = rows.enumerator();
-    while (enumerator.moveNext()) {
-      System.out.println(enumerator.current());
-    }
+    Enumerator<Object[]> enumerator = rows.enumerator();
 
-    Assert.assertEquals(5, rows.count());
-    Enumerable<Object[]> distinctRows = rows.distinct();
-    Assert.assertEquals(rows.count(), distinctRows.count());
-    for (Object[] row : rows) {
-      String ds = (String) row[1];
-      int replicas = (int) row[7];
-      long isAvailable = (long) row[9];
-      if ("test3".equals(ds)) {
-        //segment3 is published but not served
-        Assert.assertEquals(0, isAvailable);
-        Assert.assertEquals(0, replicas);
-      } else if ("test2".equals(ds)) {
-        Assert.assertEquals(1, isAvailable);
-        Assert.assertEquals(2, replicas);
-      } else {
-        // all other segments are available with 1 replica
-        Assert.assertEquals(1, isAvailable);
-        Assert.assertEquals(1, replicas);
-      }
-    }
+    Assert.assertEquals(true, enumerator.moveNext());
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row2 = enumerator.current();
+    //segment 2 is published and has 2 replicas
+    Assert.assertEquals(1l, row2[9]);
+    Assert.assertEquals(2l, row2[7]);
+    Assert.assertEquals(true, enumerator.moveNext());
+    Assert.assertEquals(true, enumerator.moveNext());
+    Assert.assertEquals(true, enumerator.moveNext());
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row6 = enumerator.current();
+    //segment 6 is published and unavailable, num_replicas is 0
+    Assert.assertEquals(1l, row6[9]);
+    Assert.assertEquals(0l, row6[7]);
+    Assert.assertEquals(false, enumerator.moveNext());
 
   }
 

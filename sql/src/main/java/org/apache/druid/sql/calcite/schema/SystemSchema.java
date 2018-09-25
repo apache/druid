@@ -132,6 +132,9 @@ public class SystemSchema extends AbstractSchema
       .add("runner_status", ValueType.STRING)
       .add("duration", ValueType.LONG)
       .add("location", ValueType.STRING)
+      .add("host", ValueType.STRING)
+      .add("plaintext_port", ValueType.STRING)
+      .add("tls_port", ValueType.STRING)
       .add("error_msg", ValueType.STRING)
       .build();
 
@@ -264,11 +267,11 @@ public class SystemSchema extends AbstractSchema
                   val.getSize(),
                   val.getVersion(),
                   val.getShardSpec().getPartitionNum(),
-                  0,
-                  -1,
-                  1,
-                  0,
-                  0,
+                  0l,
+                  -1l,
+                  1l,
+                  0l,
+                  0l,
                   jsonMapper.writeValueAsString(val)
               };
             }
@@ -486,6 +489,9 @@ public class SystemSchema extends AbstractSchema
                                                                                 .getPort()
                                                                           : task.getLocation().getTlsPort())
                                   : null,
+                                  task.getLocation().getHost(),
+                                  task.getLocation().getPort(),
+                                  task.getLocation().getTlsPort(),
                                   task.getErrorMsg()};
             }
 

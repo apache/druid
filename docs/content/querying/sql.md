@@ -608,6 +608,9 @@ check out [ingestion tasks](#../ingestion/tasks.html)
 |runner_status|Runner status of a completed task would be NONE, for in-progress tasks this can be RUNNING, WAITING, PENDING|
 |duration|Time it took to finish the task in milliseconds, this value is present only for completed tasks|
 |location|Server name where this task is running in the format host:port, this information is present only for RUNNING tasks|
+|host|Hostname of the server where task is running|
+|plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|tls_port|TLS port of the server, or -1 if TLS is disabled|
 |error_msg|Detailed error message in case of FAILED tasks|
 
 For example, to retrieve tasks information filtered by status, use the query
