@@ -27,6 +27,7 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.netty.util.SuppressForbidden;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.guice.RepositorySystemSessionProvider;
@@ -414,6 +415,7 @@ public class PullDependencies implements Runnable
     log.info("Finish downloading extension [%s]", versionedArtifact);
   }
 
+  @SuppressForbidden(reason = "System#out")
   private DefaultTeslaAether getAetherClient()
   {
     /*

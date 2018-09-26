@@ -54,7 +54,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -697,13 +696,15 @@ public class DruidCoordinator
           ImmutableList.of(
               new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this),
               params -> {
-                // Display info about all historical servers
-                Iterable<ImmutableDruidServer> servers = FunctionalIterable
-                    .create(serverInventoryView.getInventory())
+                List<ImmutableDruidServer> servers = serverInventoryView
+                    .getInventory()
+                    .stream()
                     .filter(DruidServer::segmentReplicatable)
-                    .transform(DruidServer::toImmutableDruidServer);
+                    .map(DruidServer::toImmutableDruidServer)
+                    .collect(Collectors.toList());
 
                 if (log.isDebugEnabled()) {
+                  // Display info about all historical servers
                   log.debug("Servers");
                   for (ImmutableDruidServer druidServer : servers) {
                     log.debug("  %s", druidServer);
