@@ -21,14 +21,13 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.StringUtils;
 
 /**
  * This enum represents types of druid services that hold segments.
  * <p>
  * These types are externally visible (e.g., from the output of {@link
- * org.apache.druid.server.http.ServersResource#makeSimpleServer(DruidServer)}).
+ * org.apache.druid.server.http.ServersResource#makeSimpleServer}).
  * <p>
  * For backwards compatibility, when presenting these types externally, the toString() representation
  * of the enum should be used.
