@@ -38,9 +38,9 @@ import org.apache.druid.java.util.common.StringUtils;
  * https://github.com/apache/incubator-druid/pull/4148
  *
  * This is a historical occasion that this enum is different from {@link org.apache.druid.discovery.NodeType} because
- * they are essentially the same abstraction, but merging them should be done with great care, because they name the
- * same types differently ("indexer-executor" - "peon" and "realtime" - "middleManager") but both expose them via JSON
- * APIs.
+ * they are essentially the same abstraction, but merging them could only increase the complexity and drop the code
+ * safety, because they name the same types differently ("indexer-executor" - "peon" and "realtime" - "middleManager")
+ * and both expose them via JSON APIs.
  */
 public enum ServerType
 {
