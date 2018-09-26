@@ -219,12 +219,20 @@ public class Expressions
       final RexNode expression
   )
   {
-    if (expression.getKind() == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
+    final SqlKind kind = expression.getKind();
+
+    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+      return toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()));
+    } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
+      return new NotDimFilter(
+          toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()))
+      );
+    } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
       // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
       return toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()));
-    } else if (expression.getKind() == SqlKind.AND
-               || expression.getKind() == SqlKind.OR
-               || expression.getKind() == SqlKind.NOT) {
+    } else if (kind == SqlKind.AND
+               || kind == SqlKind.OR
+               || kind == SqlKind.NOT) {
       final List<DimFilter> filters = Lists.newArrayList();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
         final DimFilter nextFilter = toFilter(
@@ -238,12 +246,12 @@ public class Expressions
         filters.add(nextFilter);
       }
 
-      if (expression.getKind() == SqlKind.AND) {
+      if (kind == SqlKind.AND) {
         return new AndDimFilter(filters);
-      } else if (expression.getKind() == SqlKind.OR) {
+      } else if (kind == SqlKind.OR) {
         return new OrDimFilter(filters);
       } else {
-        assert expression.getKind() == SqlKind.NOT;
+        assert kind == SqlKind.NOT;
         return new NotDimFilter(Iterables.getOnlyElement(filters));
       }
     } else {

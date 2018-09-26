@@ -16,6 +16,12 @@ cache:
 
 matrix:
   include:
+      # license checks
+    - env:
+       - NAME="license checks"
+      install: true
+      script: MAVEN_OPTS='-Xmx3000m' mvn clean verify -Prat -DskipTests -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+
       # strict compilation
     - env:
         - NAME="strict compilation"
