@@ -58,6 +58,10 @@ public class CommonCacheNotifier
 {
   private static final EmittingLogger LOG = new EmittingLogger(CommonCacheNotifier.class);
 
+  /**
+   * {@link NodeType#COORDINATOR} is intentionally omitted because it gets its information about the auth state directly
+   * from metadata storage.
+   */
   private static final List<NodeType> NODE_TYPES = Arrays.asList(
       NodeType.BROKER,
       NodeType.OVERLORD,
