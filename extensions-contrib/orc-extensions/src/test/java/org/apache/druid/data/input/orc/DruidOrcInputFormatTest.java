@@ -212,7 +212,7 @@ public class DruidOrcInputFormatTest
     );
     VectorizedRowBatch batch = schema.createRowBatch();
     batch.size = 1;
-    DateTime ts = new DateTime(timestamp);
+    DateTime ts = DateTimes.of(timestamp);
 
     // date is stored as long column vector with number of days since epoch
     ((LongColumnVector) batch.cols[0]).vector[0] =
