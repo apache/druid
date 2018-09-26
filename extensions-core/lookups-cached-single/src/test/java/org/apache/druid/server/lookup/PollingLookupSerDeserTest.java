@@ -67,7 +67,7 @@ public class PollingLookupSerDeserTest
     PollingLookupFactory pollingLookupFactory = new PollingLookupFactory(Period.ZERO, dataFetcher, cacheFactory);
     mapper.registerSubtypes(MockDataFetcher.class);
     mapper.registerSubtypes(PollingLookupFactory.class);
-    Assert.assertEquals(pollingLookupFactory, mapper.reader(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(pollingLookupFactory)));
+    Assert.assertEquals(pollingLookupFactory, mapper.readerFor(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(pollingLookupFactory)));
   }
 
   @JsonTypeName("mock")

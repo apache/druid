@@ -60,7 +60,7 @@ public class AmbariMetricsEmitterConfigTest
         500L,
         400L
     );
-    AmbariMetricsEmitterConfig serde = mapper.reader(AmbariMetricsEmitterConfig.class).readValue(
+    AmbariMetricsEmitterConfig serde = mapper.readerFor(AmbariMetricsEmitterConfig.class).readValue(
         mapper.writeValueAsBytes(config)
     );
     Assert.assertEquals(config, serde);
@@ -70,7 +70,7 @@ public class AmbariMetricsEmitterConfigTest
   public void testSerDeDruidToTimelineEventConverter() throws IOException
   {
     SendAllTimelineEventConverter sendAllConverter = new SendAllTimelineEventConverter("prefix", "druid");
-    DruidToTimelineMetricConverter serde = mapper.reader(DruidToTimelineMetricConverter.class)
+    DruidToTimelineMetricConverter serde = mapper.readerFor(DruidToTimelineMetricConverter.class)
                                                                         .readValue(mapper.writeValueAsBytes(sendAllConverter));
     Assert.assertEquals(sendAllConverter, serde);
 
@@ -80,7 +80,7 @@ public class AmbariMetricsEmitterConfigTest
         "",
         new DefaultObjectMapper()
     );
-    serde = mapper.reader(DruidToTimelineMetricConverter.class)
+    serde = mapper.readerFor(DruidToTimelineMetricConverter.class)
                                           .readValue(mapper.writeValueAsBytes(
                                               whiteListBasedDruidToTimelineEventConverter));
     Assert.assertEquals(whiteListBasedDruidToTimelineEventConverter, serde);
