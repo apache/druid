@@ -21,6 +21,13 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
+/**
+ *
+ * This is a historical occasion that this enum is different from {@link
+ * org.apache.druid.server.coordination.ServerType} because they are essentially the same abstraction, but merging them
+ * should be done with great care, because they name the same types differently ("peon" - "indexer-executor" and
+ * "middleManager" - "realtime") but both expose them via JSON APIs.
+ */
 public enum NodeType
 {
   COORDINATOR("coordinator"),

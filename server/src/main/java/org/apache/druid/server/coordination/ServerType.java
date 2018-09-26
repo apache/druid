@@ -21,12 +21,14 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.StringUtils;
 
 /**
  * This enum represents types of druid services that hold segments.
  * <p>
- * These types are externally visible (e.g., from the output of /druid/coordinator/v1/servers).
+ * These types are externally visible (e.g., from the output of {@link
+ * org.apache.druid.server.http.ServersResource#makeSimpleServer(DruidServer)}).
  * <p>
  * For backwards compatibility, when presenting these types externally, the toString() representation
  * of the enum should be used.
@@ -34,6 +36,11 @@ import org.apache.druid.java.util.common.StringUtils;
  * The toString() method converts the enum name() to lowercase and replaces underscores with hyphens,
  * which is the format expected for the server type string prior to the patch that introduced ServerType:
  * https://github.com/apache/incubator-druid/pull/4148
+ *
+ * This is a historical occasion that this enum is different from {@link org.apache.druid.discovery.NodeType} because
+ * they are essentially the same abstraction, but merging them should be done with great care, because they name the
+ * same types differently ("indexer-executor" - "peon" and "realtime" - "middleManager") but both expose them via JSON
+ * APIs.
  */
 public enum ServerType
 {

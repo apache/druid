@@ -58,7 +58,14 @@ public class CommonCacheNotifier
 {
   private static final EmittingLogger LOG = new EmittingLogger(CommonCacheNotifier.class);
 
-  private static final List<NodeType> NODE_TYPES = Arrays.asList(NodeType.values());
+  private static final List<NodeType> NODE_TYPES = Arrays.asList(
+      NodeType.BROKER,
+      NodeType.OVERLORD,
+      NodeType.HISTORICAL,
+      NodeType.PEON,
+      NodeType.ROUTER,
+      NodeType.MIDDLE_MANAGER
+  );
 
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final HttpClient httpClient;
