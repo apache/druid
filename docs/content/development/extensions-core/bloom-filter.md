@@ -32,7 +32,7 @@ Internally, this implementation of bloom filter uses Murmur3 fast non-cryptograp
 |-------------------------|------------------------------|----------------------------------|
 |`type`                   |Filter Type. Should always be `bloom`|yes|
 |`dimension`              |The dimension to filter over. | yes |
-|`bloomKFilter`           |Binary representation of `org.apache.hive.common.util.BloomKFilter`| yes |
+|`bloomKFilter`           |Base64 encoded Binary representation of `org.apache.hive.common.util.BloomKFilter`| yes |
 |`extractionFn`|[Extraction function](./../dimensionspecs.html#extraction-functions) to apply to the dimension values |no|
 
 
