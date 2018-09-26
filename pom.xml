@@ -931,15 +931,12 @@
                         <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                         <signaturesFile>${session.executionRootDirectory}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
-                    <excludes>
-                        <exclude>org/apache/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
-                        <exclude>org/apache/druid/java/util/common/DateTimes.class</exclude>
-                    </excludes>
+                    <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>validate</id>
-                        <phase>validate</phase>
+                        <id>compile</id>
+                        <phase>compile</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
@@ -952,8 +949,8 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>testValidate</id>
-                        <phase>validate</phase>
+                        <id>testCompile</id>
+                        <phase>test-compile</phase>
                         <goals>
                             <goal>testCheck</goal>
                         </goals>

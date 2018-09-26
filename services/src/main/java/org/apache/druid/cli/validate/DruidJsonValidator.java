@@ -32,6 +32,7 @@ import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.cli.GuiceRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -69,6 +70,7 @@ import java.util.List;
     name = "validator",
     description = "Validates that a given Druid JSON object is correctly formatted"
 )
+@SuppressForbidden(reason = "System#out")
 public class DruidJsonValidator extends GuiceRunnable
 {
   private static final Logger LOG = new Logger(DruidJsonValidator.class);
