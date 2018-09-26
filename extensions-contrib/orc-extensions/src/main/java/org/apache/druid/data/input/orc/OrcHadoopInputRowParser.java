@@ -82,7 +82,10 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   {
     this.parseSpec = parseSpec;
     this.typeString = typeString == null ? typeStringFromParseSpec(parseSpec) : typeString;
-    this.mapFieldNameFormat = mapFieldNameFormat == null || mapFieldNameFormat.indexOf(MAP_PARENT_TAG) < 0 || mapFieldNameFormat.indexOf(MAP_CHILD_TAG) < 0 ? DEFAULT_MAP_FIELD_NAME_FORMAT : mapFieldNameFormat;
+    this.mapFieldNameFormat =
+        mapFieldNameFormat == null ||
+        mapFieldNameFormat.indexOf(MAP_PARENT_TAG) < 0 ||
+        mapFieldNameFormat.indexOf(MAP_CHILD_TAG) < 0 ? DEFAULT_MAP_FIELD_NAME_FORMAT : mapFieldNameFormat;
     this.mapParentFieldNameFormat = this.mapFieldNameFormat.replace(MAP_PARENT_TAG, "%s");
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.oip = makeObjectInspector(this.typeString);
@@ -227,6 +230,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   {
     StringBuilder builder = new StringBuilder("struct<");
     builder.append(parseSpec.getTimestampSpec().getTimestampColumn()).append(":string");
+    // the typeString seems positionally dependent, so repeated timestamp column causes incorrect mapping
     if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0) {
       builder.append(",");
       builder.append(String.join(
@@ -235,7 +239,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
                    .getDimensionNames()
                    .stream()
                    .filter(s -> !s.equals(parseSpec.getTimestampSpec().getTimestampColumn()))
-                   .collect(Collectors.toSet())));
+                   .collect(Collectors.toList())));
       builder.append(":string");
     }
     builder.append(">");
