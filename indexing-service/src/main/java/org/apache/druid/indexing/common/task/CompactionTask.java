@@ -323,11 +323,12 @@ public class CompactionTask extends AbstractTask
       // If keepSegmentGranularity = true, create indexIngestionSpec per segment interval, so that we can run an index
       // task per segment interval.
 
-      //noinspection SSBasedInspection,unchecked
+      //noinspection unchecked,ConstantConditions
       final Map<Interval, List<Pair<QueryableIndex, DataSegment>>> intervalToSegments = queryableIndexAndSegments
           .stream()
           .collect(
               Collectors.toMap(
+                  // rhs can't be null here so we skip null checking and supress the warning with the above comment
                   p -> p.rhs.getInterval(),
                   Lists::newArrayList,
                   (l1, l2) -> {
