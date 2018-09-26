@@ -368,9 +368,13 @@ Retrieve the status of a task.
 
 Retrieve information about the segments of a task.
 
+<div class="note caution">
+This API is deprecated and will be removed in future releases.
+</div>
+
 * `/druid/indexer/v1/task/{taskId}/reports`
 
-Retrieve a [task completion report](../ingestion/reports.html) for a task. Only works for completed tasks. 
+Retrieve a [task completion report](../ingestion/reports.html) for a task. Only works for completed tasks.
 
 #### POST
 
