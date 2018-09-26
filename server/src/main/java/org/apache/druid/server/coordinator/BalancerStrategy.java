@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
@@ -39,6 +40,7 @@ public interface BalancerStrategy
    * @param serverHolders servers to consider as move destinations
    * @return The server to move to, or null if no move should be made or no server is suitable
    */
+  @Nullable
   ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
   /**
@@ -47,6 +49,7 @@ public interface BalancerStrategy
    * @param serverHolders servers to consider as replica holders
    * @return The server to replicate to, or null if no suitable server is found
    */
+  @Nullable
   ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
   /**

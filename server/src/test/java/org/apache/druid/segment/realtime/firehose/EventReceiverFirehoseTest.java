@@ -57,6 +57,7 @@ public class EventReceiverFirehoseTest
 {
   private static final int CAPACITY = 300;
   private static final int NUM_EVENTS = 100;
+  private static final long MAX_IDLE_TIME = Long.MAX_VALUE;
   private static final String SERVICE_NAME = "test_firehose";
 
   private final String inputRow = "[{\n"
@@ -76,6 +77,7 @@ public class EventReceiverFirehoseTest
     eventReceiverFirehoseFactory = new EventReceiverFirehoseFactory(
         SERVICE_NAME,
         CAPACITY,
+        MAX_IDLE_TIME,
         null,
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),
@@ -217,6 +219,7 @@ public class EventReceiverFirehoseTest
     EventReceiverFirehoseFactory eventReceiverFirehoseFactory2 = new EventReceiverFirehoseFactory(
         SERVICE_NAME,
         CAPACITY,
+        MAX_IDLE_TIME,
         null,
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),

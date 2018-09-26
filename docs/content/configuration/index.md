@@ -454,6 +454,8 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.connector.password`|The [Password Provider](../operations/password-provider.html) or String password used to connect with.|none|
 |`druid.metadata.storage.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
 |`druid.metadata.storage.tables.base`|The base name for tables.|druid|
+|`druid.metadata.storage.tables.dataSource`|The table to use to look for dataSources which created by [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html).|druid_dataSource|
+|`druid.metadata.storage.tables.pendingSegments`|The table to use to look for pending segments.|druid_pendingSegments|
 |`druid.metadata.storage.tables.segments`|The table to use to look for segments.|druid_segments|
 |`druid.metadata.storage.tables.rules`|The table to use to look for segment load/drop rules.|druid_rules|
 |`druid.metadata.storage.tables.config`|The table to use to look for configs.|druid_config|
@@ -1241,6 +1243,7 @@ The Druid SQL server is configured through the following properties on the broke
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.html) will be used instead.|true|
 |`druid.sql.planner.useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|false|
+|`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries wihout filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 
 ### Broker Caching
