@@ -2729,7 +2729,8 @@ public class CalciteQueryTest extends CalciteTestBase
         + "SUM(case when dim1 <> '1' then cnt end) filter(WHERE dim2 = 'a'), "
         + "SUM(CASE WHEN dim1 <> '1' THEN cnt ELSE 0 END), "
         + "MAX(CASE WHEN dim1 <> '1' THEN cnt END), "
-        + "COUNT(DISTINCT CASE WHEN dim1 <> '1' THEN m1 END) "
+        + "COUNT(DISTINCT CASE WHEN dim1 <> '1' THEN m1 END), "
+        + "SUM(cnt) filter(WHERE dim2 = 'a' AND dim1 = 'b') "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -2792,6 +2793,10 @@ public class CalciteQueryTest extends CalciteTestBase
                               true
                           ),
                           NOT(SELECTOR("dim1", "1", null))
+                      ),
+                      new FilteredAggregatorFactory(
+                          new LongSumAggregatorFactory("a11", "cnt"),
+                          AND(SELECTOR("dim2", "a", null), SELECTOR("dim1", "b", null))
                       )
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2799,10 +2804,10 @@ public class CalciteQueryTest extends CalciteTestBase
         ),
         NullHandling.replaceWithDefault() ?
         ImmutableList.of(
-            new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L, 5L}
+            new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, 0L}
         ) :
         ImmutableList.of(
-            new Object[]{1L, 5L, 1L, 3L, 5L, 5L, 2L, 1L, 5L, 1L, 5L}
+            new Object[]{1L, 5L, 1L, 3L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, null}
         )
     );
   }
