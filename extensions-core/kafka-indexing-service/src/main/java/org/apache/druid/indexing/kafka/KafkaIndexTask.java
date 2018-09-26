@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -65,7 +66,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   static final long POLL_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(100);
   static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
 
-  private final KafkaIndexTaskRunner runner;
+  private final SeekableStreamIndexTaskRunner<Integer, Long> runner;
 
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
@@ -292,7 +293,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   }
 
   @VisibleForTesting
-  KafkaIndexTaskRunner getRunner()
+  SeekableStreamIndexTaskRunner<Integer, Long> getRunner()
   {
     return runner;
   }

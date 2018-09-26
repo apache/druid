@@ -35,7 +35,6 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask.Status;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -47,6 +46,8 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask.Status;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -109,7 +110,7 @@ import java.util.stream.Collectors;
  * This class will be removed in a future release.
  */
 @Deprecated
-public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
+public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner<Integer, Long>
 {
   private static final EmittingLogger log = new EmittingLogger(LegacyKafkaIndexTaskRunner.class);
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";

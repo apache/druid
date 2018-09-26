@@ -35,6 +35,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.KafkaPartitions;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
+import org.apache.druid.indexing.kafka.KafkaSequenceNumber;
 import org.apache.druid.indexing.kafka.KafkaTuningConfig;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -44,6 +45,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
@@ -327,6 +329,14 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
       endPartitions.put(partition, KafkaPartitions.NO_END_SEQUENCE_NUMBER);
     }
     return endPartitions;
+  }
+
+  @Override
+  protected SequenceNumber<Long> makeSequenceNumber(
+      Long seq, boolean useExclusive, boolean isExclusive
+  )
+  {
+    return KafkaSequenceNumber.of(seq);
   }
 
   private Runnable emitLag()

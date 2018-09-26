@@ -47,7 +47,7 @@ import java.util.Map;
 import java.util.Random;
 
 //TODO: need more refactoring for run()
-public abstract class SeekableStreamIndexTask<T1 extends Comparable<T1>, T2 extends Comparable<T2>> extends AbstractTask
+public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask
     implements ChatHandler
 {
   private static final Random RANDOM = new Random();

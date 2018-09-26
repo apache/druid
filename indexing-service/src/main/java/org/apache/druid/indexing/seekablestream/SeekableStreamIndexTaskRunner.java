@@ -55,11 +55,11 @@ public interface SeekableStreamIndexTaskRunner<T1, T2> extends ChatHandler
   Response setEndOffsets(
       Map<T1, T2> offsets,
       boolean finish // this field is only for internal purposes, shouldn't be usually set by users
-  );
+  ) throws InterruptedException;
 
   @VisibleForTesting
-  Response pause();
+  Response pause() throws InterruptedException;
 
   @VisibleForTesting
-  void resume();
+  void resume() throws InterruptedException;
 }

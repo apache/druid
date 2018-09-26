@@ -29,7 +29,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-public abstract class SeekableStreamIOConfig<T1 extends Comparable<T1>, T2 extends Comparable<T2>> implements IOConfig
+public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
 

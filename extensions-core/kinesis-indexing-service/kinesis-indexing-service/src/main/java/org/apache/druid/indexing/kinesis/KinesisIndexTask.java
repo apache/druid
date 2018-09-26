@@ -991,6 +991,18 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   }
 
   @VisibleForTesting
+  RowIngestionMeters getRowIngestionMeters()
+  {
+    return rowIngestionMeters;
+  }
+
+  @VisibleForTesting
+  Appenderator getAppenderator()
+  {
+    return appenderator;
+  }
+
+  @VisibleForTesting
   FireDepartmentMetrics getFireDepartmentMetrics()
   {
     return fireDepartmentMetrics;
@@ -1091,7 +1103,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     final Set<String> assignment = Sets.newHashSet();
     for (Map.Entry<String, String> entry : lastOffsets.entrySet()) {
       final String endOffset = endOffsets.get(entry.getKey());
-      if (KinesisPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset) || entry.getValue().compareTo(endOffset) < 0) {
+      if (KinesisPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset)
+          || KinesisSequenceNumber.of(entry.getValue()).compareTo(KinesisSequenceNumber.of(endOffset)) < 0) {
         assignment.add(entry.getKey());
       } else if (entry.getValue().equals(endOffset)) {
         log.info("Finished reading partition[%s].", entry.getKey());
@@ -1124,7 +1137,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       if (!tuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
         try {
           String earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
-          if (earliestSequenceNumber == null || earliestSequenceNumber.compareTo(offset) > 0) {
+          if (earliestSequenceNumber == null
+              || KinesisSequenceNumber.of(earliestSequenceNumber).compareTo(KinesisSequenceNumber.of(offset)) > 0) {
             if (tuningConfig.isResetOffsetAutomatically()) {
               log.info("Attempting to reset offsets automatically for all partitions");
               try {

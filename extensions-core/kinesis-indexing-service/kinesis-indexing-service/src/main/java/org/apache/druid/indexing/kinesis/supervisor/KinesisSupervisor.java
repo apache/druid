@@ -31,6 +31,7 @@ import org.apache.druid.indexing.kinesis.KinesisIndexTask;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
 import org.apache.druid.indexing.kinesis.KinesisPartitions;
 import org.apache.druid.indexing.kinesis.KinesisRecordSupplier;
+import org.apache.druid.indexing.kinesis.KinesisSequenceNumber;
 import org.apache.druid.indexing.kinesis.KinesisTuningConfig;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -41,6 +42,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
@@ -272,6 +274,14 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       endPartitions.put(partition, KinesisPartitions.NO_END_SEQUENCE_NUMBER);
     }
     return endPartitions;
+  }
+
+  @Override
+  protected SequenceNumber<String> makeSequenceNumber(
+      String seq, boolean useExclusive, boolean isExclusive
+  )
+  {
+    return KinesisSequenceNumber.of(seq, useExclusive, isExclusive);
   }
 
 

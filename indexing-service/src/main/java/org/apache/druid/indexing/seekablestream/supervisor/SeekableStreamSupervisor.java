@@ -65,7 +65,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.Record;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.SequenceNumberPlus;
+import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -106,7 +106,7 @@ import java.util.stream.Stream;
 
 //TODO: documentation
 //TODO: compare with kinesis supervisor for subsequently discovered partitions
-public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 extends Comparable<T2>>
+public abstract class SeekableStreamSupervisor<T1, T2>
     implements Supervisor
 {
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
@@ -878,7 +878,8 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
                             do {
                               succeeded = true;
                               T2 previousOffset = partitionOffsets.putIfAbsent(partition, offset);
-                              if (previousOffset != null && (previousOffset.compareTo(offset)) < 0) {
+                              if (previousOffset != null
+                                  && (makeSequenceNumber(previousOffset).compareTo(makeSequenceNumber(offset))) < 0) {
                                 succeeded = partitionOffsets.replace(partition, previousOffset, offset);
                               }
                             } while (!succeeded);
@@ -1081,23 +1082,29 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
         // store
         if (taskCheckpoints.entrySet().stream().anyMatch(
             sequenceCheckpoint -> sequenceCheckpoint.getValue().entrySet().stream().allMatch(
-                partitionOffset -> partitionOffset.getValue().compareTo(latestOffsetsFromDb == null ?
-                                                                        partitionOffset.getValue() :
-                                                                        latestOffsetsFromDb.getOrDefault(
-                                                                            partitionOffset
-                                                                                .getKey(),
-                                                                            partitionOffset
-                                                                                .getValue()
-                                                                        )) == 0)
-                                  && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
+                partitionOffset -> {
+                  SequenceNumber<T2> offset = makeSequenceNumber(partitionOffset.getValue());
+                  SequenceNumber<T2> latestOffset = makeSequenceNumber(
+                      latestOffsetsFromDb == null ? partitionOffset.getValue() :
+                      latestOffsetsFromDb.getOrDefault(
+                          partitionOffset
+                              .getKey(),
+                          partitionOffset
+                              .getValue()
+                      )
+                  );
+
+                  return offset.equals(latestOffset);
+                }
+            ) && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
                 pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() > 0
                 && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))) {
           final SortedMap<Integer, Map<T1, T2>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
           );
           log.info("Setting taskGroup sequences to [%s] for group [%d]", latestCheckpoints, groupId);
-          taskGroup.currentSequences.clear();
-          taskGroup.currentSequences.putAll(latestCheckpoints);
+          taskGroup.checkpointSequences.clear();
+          taskGroup.checkpointSequences.putAll(latestCheckpoints);
         } else {
           log.debug(
               "Adding task [%s] to kill list, checkpoints[%s], latestoffsets from DB [%s]",
@@ -1109,16 +1116,16 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
         }
       } else {
         // check consistency with taskGroup sequences
-        if (taskCheckpoints.get(taskGroup.currentSequences.firstKey()) == null
-            || !(taskCheckpoints.get(taskGroup.currentSequences.firstKey())
-                                .equals(taskGroup.currentSequences.firstEntry().getValue()))
-            || taskCheckpoints.tailMap(taskGroup.currentSequences.firstKey()).size()
-               != taskGroup.currentSequences.size()) {
+        if (taskCheckpoints.get(taskGroup.checkpointSequences.firstKey()) == null
+            || !(taskCheckpoints.get(taskGroup.checkpointSequences.firstKey())
+                                .equals(taskGroup.checkpointSequences.firstEntry().getValue()))
+            || taskCheckpoints.tailMap(taskGroup.checkpointSequences.firstKey()).size()
+               != taskGroup.checkpointSequences.size()) {
           log.debug(
               "Adding task [%s] to kill list, checkpoints[%s], taskgroup checkpoints [%s]",
               taskId,
               taskCheckpoints,
-              taskGroup.currentSequences
+              taskGroup.checkpointSequences
           );
           tasksToKill.add(taskId);
         }
@@ -1142,7 +1149,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
               + "persisted offsets in metadata store [%s]",
               sequenceCheckpoint.lhs,
               sequenceCheckpoint.rhs,
-              taskGroup.currentSequences,
+              taskGroup.checkpointSequences,
               latestOffsetsFromDb
           );
           killTask(sequenceCheckpoint.lhs);
@@ -1529,7 +1536,8 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
               } else { // otherwise build a map of the highest offsets seen
                 for (Map.Entry<T1, T2> offset : result.entrySet()) {
                   if (!endOffsets.containsKey(offset.getKey())
-                      || endOffsets.get(offset.getKey()).compareTo(offset.getValue()) < 0) {
+                      || makeSequenceNumber(endOffsets.get(offset.getKey())).compareTo(
+                      makeSequenceNumber(offset.getValue())) < 0) {
                     endOffsets.put(offset.getKey(), offset.getValue());
                   }
                 }
@@ -1548,11 +1556,11 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
 
             try {
 
-              if (endOffsets.equals(taskGroup.currentSequences.lastEntry().getValue())) {
+              if (endOffsets.equals(taskGroup.checkpointSequences.lastEntry().getValue())) {
                 log.warn(
                     "Checkpoint [%s] is same as the start offsets [%s] of latest sequence for the task group [%d]",
                     endOffsets,
-                    taskGroup.currentSequences.lastEntry().getValue(),
+                    taskGroup.checkpointSequences.lastEntry().getValue(),
                     taskGroup.groupId
                 );
               }
@@ -1778,7 +1786,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
 
         try {
 
-          Map<T1, SequenceNumberPlus<T2>> startingOffsets = generateStartingSequencesForPartitionGroup(groupId);
+          Map<T1, SequenceNumber<T2>> startingOffsets = generateStartingSequencesForPartitionGroup(groupId);
 
           ImmutableMap<T1, T2> simpleStartingOffsets = startingOffsets
               .entrySet()
@@ -1872,23 +1880,23 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
     return notices.size();
   }
 
-  private ImmutableMap<T1, SequenceNumberPlus<T2>> generateStartingSequencesForPartitionGroup(int groupId)
+  private ImmutableMap<T1, SequenceNumber<T2>> generateStartingSequencesForPartitionGroup(int groupId)
       throws TimeoutException
   {
-    ImmutableMap.Builder<T1, SequenceNumberPlus<T2>> builder = ImmutableMap.builder();
+    ImmutableMap.Builder<T1, SequenceNumber<T2>> builder = ImmutableMap.builder();
     for (Map.Entry<T1, T2> entry : partitionGroups.get(groupId).entrySet()) {
       T1 partition = entry.getKey();
       T2 offset = entry.getValue();
 
-      if (NOT_SET.equals(offset)) {
+      if (!NOT_SET.equals(offset)) {
         // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
         if (!Record.END_OF_SHARD_MARKER.equals(offset)) {
-          builder.put(partition, SequenceNumberPlus.of(offset, useExclusiveStartingSequence, true));
+          builder.put(partition, makeSequenceNumber(offset, useExclusiveStartingSequence, true));
         }
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the offsets) then
         // get the offset from metadata storage (if available) or Kafka/Kinesis (otherwise)
-        SequenceNumberPlus<T2> offsetFromStorage = getOffsetFromStorageForPartition(partition);
+        SequenceNumber<T2> offsetFromStorage = getOffsetFromStorageForPartition(partition);
 
         if (!Record.END_OF_SHARD_MARKER.equals(offset)) {
           builder.put(partition, offsetFromStorage);
@@ -1902,7 +1910,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
    * Queries the dataSource metadata table to see if there is a previous ending offset for this partition. If it doesn't
    * find any data, it will retrieve the latest or earliest Kafka/Kinesis offset depending on the useEarliestOffset config.
    */
-  private SequenceNumberPlus<T2> getOffsetFromStorageForPartition(T1 partition) throws TimeoutException
+  private SequenceNumber<T2> getOffsetFromStorageForPartition(T1 partition) throws TimeoutException
   {
     final Map<T1, T2> metadataOffsets = getOffsetsFromMetadataStorage();
     T2 offset = metadataOffsets.get(partition);
@@ -1912,7 +1920,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
         try {
           T2 latestSequence = getOffsetFromStreamForPartition(partition, false);
 
-          if (latestSequence == null || offset.compareTo(latestSequence) > 0) {
+          if (latestSequence == null || makeSequenceNumber(offset).compareTo(makeSequenceNumber(latestSequence)) > 0) {
             if (taskTuningConfig.isResetOffsetAutomatically()) {
               resetInternal(
                   createDataSourceMetaData(ioConfig.getId(), ImmutableMap.of(partition, offset))
@@ -1938,7 +1946,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
           throw new ISE(e, "Timeout while fetching earliest sequence number for partition [%s]", partition);
         }
       }
-      return SequenceNumberPlus.of(offset, useExclusiveStartingSequence, true);
+      return makeSequenceNumber(offset, useExclusiveStartingSequence, true);
     } else {
       boolean useEarliestSequenceNumber = ioConfig.isUseEarliestSequenceNumber();
       if (subsequentlyDiscoveredPartitions.contains(partition)) {
@@ -1951,7 +1959,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
 
       offset = getOffsetFromStreamForPartition(partition, useEarliestSequenceNumber);
       log.info("Getting sequence number [%s] for partition [%s]", offset, partition);
-      return SequenceNumberPlus.of(offset, useExclusiveStartingSequence, false);
+      return makeSequenceNumber(offset, useExclusiveStartingSequence, false);
     }
   }
 
@@ -2019,7 +2027,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
         replicas,
         group.baseSequenceName,
         sortingMapper,
-        group.currentSequences,
+        group.checkpointSequences,
         newIoConfig,
         taskTuningConfig,
         rowIngestionMetersFactory
@@ -2120,7 +2128,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
         .collect(Collectors.toMap(
             Map.Entry::getKey,
             Map.Entry::getValue,
-            (v1, v2) -> v1.compareTo(v2) > 0 ? v1 : v2
+            (v1, v2) -> makeSequenceNumber(v1).compareTo(makeSequenceNumber(v2)) > 0 ? v1 : v2
         ));
   }
 
@@ -2208,7 +2216,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
     final Optional<DateTime> minimumMessageTime;
     final Optional<DateTime> maximumMessageTime;
     final Set<T1> exclusiveStartSequenceNumberPartitions; //TODO: exclusiveSequence
-    final TreeMap<Integer, Map<T1, T2>> currentSequences = new TreeMap<>();
+    final TreeMap<Integer, Map<T1, T2>> checkpointSequences = new TreeMap<>();
     final String baseSequenceName;
     DateTime completionTimeout;
 
@@ -2224,6 +2232,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
       this.startingSequences = startingSequences;
       this.minimumMessageTime = minimumMessageTime;
       this.maximumMessageTime = maximumMessageTime;
+      this.checkpointSequences.put(0, startingSequences);
       this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions != null
                                                     ? exclusiveStartSequenceNumberPartitions
                                                     : new HashSet<>();
@@ -2232,8 +2241,8 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
 
     int addNewCheckpoint(Map<T1, T2> checkpoint)
     {
-      currentSequences.put(currentSequences.lastKey() + 1, checkpoint);
-      return currentSequences.lastKey();
+      checkpointSequences.put(checkpointSequences.lastKey() + 1, checkpoint);
+      return checkpointSequences.lastKey();
     }
 
     public Set<String> taskIds()
@@ -2255,7 +2264,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
       return "TaskData{" +
              "status=" + status +
              ", startTime=" + startTime +
-             ", currentSequences=" + currentSequences +
+             ", checkpointSequences=" + currentSequences +
              '}';
     }
   }
@@ -2378,7 +2387,7 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
       final TaskGroup taskGroup = taskGroups.get(taskGroupId);
 
       if (isValidTaskGroup(taskGroupId, taskGroup)) {
-        final TreeMap<Integer, Map<T1, T2>> checkpoints = taskGroup.currentSequences;
+        final TreeMap<Integer, Map<T1, T2>> checkpoints = taskGroup.checkpointSequences;
 
         // check validity of previousCheckpoint
         int index = checkpoints.size();
@@ -2429,5 +2438,12 @@ public abstract class SeekableStreamSupervisor<T1 extends Comparable<T1>, T2 ext
       return true;
     }
   }
+
+  private SequenceNumber<T2> makeSequenceNumber(T2 seq)
+  {
+    return makeSequenceNumber(seq, false, false);
+  }
+
+  protected abstract SequenceNumber<T2> makeSequenceNumber(T2 seq, boolean useExclusive, boolean isExclusive);
 
 }

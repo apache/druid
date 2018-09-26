@@ -17,34 +17,39 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.seekablestream.common;
+package org.apache.druid.indexing.kafka;
 
+import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
 
-public class SequenceNumberPlus<T>
+import javax.validation.constraints.NotNull;
+
+public class KafkaSequenceNumber extends SequenceNumber<Long>
 {
-  private final T sequenceNumber;
-  private final boolean exclusive;
-  private final boolean useExclusive;
-
-  private SequenceNumberPlus(T sequenceNumber, boolean useExclusive, boolean exclusive)
+  private KafkaSequenceNumber(Long sequenceNumber, boolean useExclusive, boolean isExclusive)
   {
-    this.sequenceNumber = sequenceNumber;
-    this.exclusive = exclusive;
-    this.useExclusive = useExclusive;
+    super(sequenceNumber, useExclusive, isExclusive);
   }
 
-  public static <T> SequenceNumberPlus<T> of(T sequenceNumber, boolean useExclusive, boolean exclusive)
+  public static KafkaSequenceNumber of(Long sequenceNumber)
   {
-    return new SequenceNumberPlus<>(sequenceNumber, useExclusive, exclusive);
+    return new KafkaSequenceNumber(sequenceNumber, false, false);
   }
 
-  public T get()
+  @Override
+  public int compareTo(
+      @NotNull SequenceNumber<Long> o
+  )
   {
-    return sequenceNumber;
+    return this.get().compareTo(o.get());
   }
 
-  public boolean isExclusive()
+  @Override
+  public boolean equals(Object o)
   {
-    return useExclusive && exclusive;
+    if (!(o instanceof KafkaSequenceNumber)) {
+      return false;
+    }
+    return this.compareTo((KafkaSequenceNumber) o) == 0;
   }
+
 }
