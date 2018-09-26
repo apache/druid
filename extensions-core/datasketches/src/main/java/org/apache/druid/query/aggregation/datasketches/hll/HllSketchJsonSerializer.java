@@ -17,18 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.tuple;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
-import org.apache.druid.query.aggregation.datasketches.RawInputValueExtractor;
-import org.apache.druid.segment.serde.ComplexMetricExtractor;
+import java.io.IOException;
 
-public class ArrayOfDoublesSketchBuildComplexMetricSerde extends ArrayOfDoublesSketchMergeComplexMetricSerde
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.yahoo.sketches.hll.HllSketch;
+
+public class HllSketchJsonSerializer extends JsonSerializer<HllSketch>
 {
 
   @Override
-  public ComplexMetricExtractor getExtractor()
+  public void serialize(final HllSketch sketch, final JsonGenerator jgen, final SerializerProvider provider)
+      throws IOException
   {
-    return RawInputValueExtractor.getInstance();
+    jgen.writeBinary(sketch.toCompactByteArray());
   }
 
 }
