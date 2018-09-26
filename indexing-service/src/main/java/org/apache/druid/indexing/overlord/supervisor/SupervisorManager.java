@@ -94,13 +94,31 @@ public class SupervisorManager
   public boolean suspendOrResumeSupervisor(String id, boolean suspend)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
-    Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
-    Preconditions.checkNotNull(pair.rhs, "spec");
+    Preconditions.checkNotNull(id, "id");
+
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      SupervisorSpec nextState = suspend ? pair.rhs.createSuspendedSpec() : pair.rhs.createRunningSpec();
-      possiblyStopAndRemoveSupervisorInternal(nextState.getId(), false);
-      return createAndStartSupervisorInternal(nextState, true);
+      return possiblySuspendOrResumeSupervisorInternal(id, suspend);
+    }
+  }
+
+  public void stopAndRemoveAllSupervisors()
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+
+    synchronized (lock) {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      supervisors.keySet().forEach(id -> possiblyStopAndRemoveSupervisorInternal(id, true));
+    }
+  }
+
+  public void suspendOrResumeAllSupervisors(boolean suspend)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+
+    synchronized (lock) {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      supervisors.keySet().forEach(id -> possiblySuspendOrResumeSupervisorInternal(id, suspend));
     }
   }
 
@@ -206,7 +224,7 @@ public class SupervisorManager
    * Stops a supervisor with a given id and then removes it from the list.
    * <p/>
    * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
-   * starting and stopping supervisors.
+   * starting, stopping, suspending and resuming supervisors.
    *
    * @return true if a supervisor was stopped, false if there was no supervisor with this id
    */
@@ -227,10 +245,31 @@ public class SupervisorManager
   }
 
   /**
+   * Suspend or resume a supervisor with a given id.
+   * <p/>
+   * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
+   * starting, stopping, suspending and resuming supervisors.
+   *
+   * @return true if a supervisor was suspended or resumed, false if there was no supervisor with this id
+   * or suspend a suspended supervisor or resume a running supervisor
+   */
+  private boolean possiblySuspendOrResumeSupervisorInternal(String id, boolean suspend)
+  {
+    Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
+    if (pair == null || pair.rhs.isSuspended() == suspend) {
+      return false;
+    }
+
+    SupervisorSpec nextState = suspend ? pair.rhs.createSuspendedSpec() : pair.rhs.createRunningSpec();
+    possiblyStopAndRemoveSupervisorInternal(nextState.getId(), false);
+    return createAndStartSupervisorInternal(nextState, true);
+  }
+
+  /**
    * Creates a supervisor from the provided spec and starts it if there is not already a supervisor with that id.
    * <p/>
    * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
-   * starting and stopping supervisors.
+   * starting, stopping, suspending and resuming supervisors.
    *
    * @return true if a new supervisor was created, false if there was already an existing supervisor with this id
    */

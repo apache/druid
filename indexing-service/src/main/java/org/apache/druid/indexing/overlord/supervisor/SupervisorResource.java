@@ -263,17 +263,17 @@ public class SupervisorResource
   @POST
   @Path("/suspendAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response specSuspendAll()
+  public Response suspendAll()
   {
-    return specSuspendAllOrResumeAll(true);
+    return suspendOrResumeAll(true);
   }
 
   @POST
   @Path("/resumeAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response specResumeAll()
+  public Response resumeAll()
   {
-    return specSuspendAllOrResumeAll(false);
+    return suspendOrResumeAll(false);
   }
 
   @POST
@@ -283,12 +283,8 @@ public class SupervisorResource
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          Set<String> supervisorIds = manager.getSupervisorIds();
-          supervisorIds.forEach(manager::stopAndRemoveSupervisor);
-          return Response.ok(ImmutableMap.of(
-              "ids",
-              String.join(",", supervisorIds)
-          )).build();
+          manager.stopAndRemoveAllSupervisors();
+          return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
   }
@@ -411,50 +407,31 @@ public class SupervisorResource
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
-          if (!spec.isPresent()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
-                           .build();
-          }
-
-          if (spec.get().isSuspended() == suspend) {
-            final String errMsg =
-                StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running");
-            return Response.status(Response.Status.BAD_REQUEST)
+          if (manager.suspendOrResumeSupervisor(id, suspend)) {
+            Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
+            return Response.ok(spec.get()).build();
+          } else {
+            Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
+            final Response.Status status = spec.isPresent() ? Response.Status.BAD_REQUEST : Response.Status.NOT_FOUND;
+            final String errMsg = spec.isPresent() ? StringUtils.format(
+                "[%s] is already %s",
+                id,
+                suspend ? "suspended" : "running"
+            ) : StringUtils.format("[%s] does not exist", id);
+            return Response.status(status)
                            .entity(ImmutableMap.of("error", errMsg))
                            .build();
           }
-          manager.suspendOrResumeSupervisor(id, suspend);
-          spec = manager.getSupervisorSpec(id);
-          return Response.ok(spec.get()).build();
         }
     );
   }
 
-  private Response specSuspendAllOrResumeAll(boolean suspend)
+  private Response suspendOrResumeAll(boolean suspend)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          Set<String> supervisorIds = manager.getSupervisorIds();
-          List<String> successes = new ArrayList<>();
-          List<String> errors = new ArrayList<>();
-
-          supervisorIds.forEach(id -> {
-            Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
-            if (spec.get().isSuspended() == suspend) {
-              errors.add(id);
-            } else {
-              manager.suspendOrResumeSupervisor(id, suspend);
-              successes.add(id);
-            }
-          });
-          return Response.ok(ImmutableMap.of(
-              "success",
-              String.join(",", successes),
-              "error",
-              StringUtils.format("[%s] are already %s", String.join(",", errors), suspend ? "suspended" : "running")
-          )).build();
+          manager.suspendOrResumeAllSupervisors(suspend);
+          return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
   }
