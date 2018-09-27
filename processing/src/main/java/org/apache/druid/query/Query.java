@@ -39,6 +39,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -113,6 +114,8 @@ public interface Query<T>
     return this;
   }
 
+  @Nullable
+  @SuppressWarnings("unused") // for custom QueryMetrics impl to add sqlQueryId to metrics
   default String getSqlQueryId()
   {
     return null;
