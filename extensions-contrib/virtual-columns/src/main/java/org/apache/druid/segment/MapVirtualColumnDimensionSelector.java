@@ -16,51 +16,60 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.druid.segment;
 
-package org.apache.druid.segment.data;
-
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-/**
- * Reusable IndexedInts that represents a sequence of a solo value [X].
- */
-public final class SingleIndexedInt implements IndexedInts
+abstract class MapVirtualColumnDimensionSelector implements DimensionSelector
 {
-  private int value;
+  private final DimensionSelector keySelector;
+  private final DimensionSelector valueSelector;
 
-  public SingleIndexedInt()
+  MapVirtualColumnDimensionSelector(
+      DimensionSelector keySelector,
+      DimensionSelector valueSelector
+  )
   {
+    this.keySelector = keySelector;
+    this.valueSelector = valueSelector;
   }
 
-  public SingleIndexedInt(int value)
+  protected DimensionSelector getKeySelector()
   {
-    this.value = value;
+    return keySelector;
   }
 
-  public void setValue(int value)
+  protected DimensionSelector getValueSelector()
   {
-    this.value = value;
+    return valueSelector;
   }
 
   @Override
-  public int size()
+  public double getDouble()
   {
-    return 1;
+    assert NullHandling.replaceWithDefault();
+    return 0.0;
   }
 
   @Override
-  public int get(int i)
+  public float getFloat()
   {
-    if (i != 0) {
-      throw new IAE("%d != 0", i);
-    }
-    return value;
+    assert NullHandling.replaceWithDefault();
+    return 0.0f;
+  }
+
+  @Override
+  public long getLong()
+  {
+    assert NullHandling.replaceWithDefault();
+    return 0L;
   }
 
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    // nothing to inspect
+    inspector.visit("keySelector", keySelector);
+    inspector.visit("valueSelector", valueSelector);
   }
 }
