@@ -17,35 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.examples.wikipedia;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.inject.Binder;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.segment.realtime.firehose.IrcInputRowParser;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.data.input.InputRow;
+import org.joda.time.DateTime;
 
-import java.util.Collections;
-import java.util.List;
-
-/**
- */
-public class ParsersModule implements DruidModule
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(name = "wikipedia", value = WikipediaIrcDecoder.class)
+})
+public interface IrcDecoder
 {
-  @Override
-  public void configure(Binder binder)
-  {
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.<Module>singletonList(
-        new SimpleModule("ParsersModule")
-            .registerSubtypes(
-                new NamedType(IrcInputRowParser.class, "irc")
-            )
-    );
-  }
+  InputRow decodeMessage(DateTime timestamp, String channel, String msg);
 }
