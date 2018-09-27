@@ -161,7 +161,7 @@ public class LoadingCacheTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     Assert.assertEquals(loadingCache, mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)));
-    Assert.assertTrue(loadingCache.hashCode() == mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)).hashCode());
+    Assert.assertEquals(loadingCache.hashCode(), mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)).hashCode());
   }
 
 }
