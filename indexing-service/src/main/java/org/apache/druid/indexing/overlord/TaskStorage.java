@@ -106,6 +106,7 @@ public interface TaskStorage
    *
    * @param <T> task action return type
    */
+  @Deprecated
   <T> void addAuditLog(Task task, TaskAction<T> taskAction);
 
   /**
@@ -114,6 +115,7 @@ public interface TaskStorage
    * @param taskid task ID
    * @return list of task actions
    */
+  @Deprecated
   List<TaskAction> getAuditLogs(String taskid);
 
   /**

@@ -47,6 +47,7 @@ import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -222,7 +223,8 @@ public class IngestSegmentFirehoseFactoryTest
             newMockEmitter(),
             EasyMock.createMock(SupervisorManager.class),
             new Counters()
-        )
+        ),
+        new TaskAuditLogConfig(false)
     );
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);

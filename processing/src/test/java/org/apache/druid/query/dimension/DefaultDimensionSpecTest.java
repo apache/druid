@@ -55,4 +55,12 @@ public class DefaultDimensionSpecTest
     Assert.assertEquals(spec, other);
     Assert.assertEquals(spec.hashCode(), other.hashCode());
   }
+
+  @Test
+  public void testCacheKey()
+  {
+    final DimensionSpec spec = new DefaultDimensionSpec("foo", "foo", ValueType.FLOAT);
+    final byte[] expected = new byte[] {0, 7, 102, 111, 111, 7, 70, 76, 79, 65, 84};
+    Assert.assertArrayEquals(expected, spec.getCacheKey());
+  }
 }
