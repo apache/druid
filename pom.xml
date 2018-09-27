@@ -929,8 +929,8 @@
                         <bundledSignature>jdk-unsafe</bundledSignature>
                     </bundledSignatures>
                     <signaturesFiles>
-                        <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
-                        <signaturesFile>${session.executionRootDirectory}/codestyle/druid-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
                 </configuration>
