@@ -88,6 +88,12 @@ public class DefaultSelectQueryMetrics implements SelectQueryMetrics
   }
 
   @Override
+  public void sqlQueryId(SelectQuery query)
+  {
+    throw new ISE("Unsupported method in default query metrics implementation.");
+  }
+
+  @Override
   public void granularity(SelectQuery query)
   {
     // Don't emit by default

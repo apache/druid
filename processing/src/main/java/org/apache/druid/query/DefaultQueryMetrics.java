@@ -123,6 +123,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void sqlQueryId(QueryType query)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
   public void context(QueryType query)
   {
     try {
