@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -33,7 +34,6 @@ import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.IndexBuilder;
@@ -43,8 +43,8 @@ import org.apache.druid.segment.QueryableIndexIndexableAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
 
 import java.io.Closeable;
 import java.io.File;
@@ -145,7 +145,7 @@ public class SegmentGenerator implements Closeable
       return Iterables.getOnlyElement(indexes);
     } else {
       try {
-        final QueryableIndex merged = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()).loadIndex(
+        final QueryableIndex merged = TestHelper.getTestIndexIO().loadIndex(
             TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance()).merge(
                 indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList()),
                 false,

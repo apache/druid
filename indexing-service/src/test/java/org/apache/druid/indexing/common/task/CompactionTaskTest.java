@@ -762,7 +762,7 @@ public class CompactionTaskTest
         Map<DataSegment, File> segmentFileMap
     )
     {
-      super(mapper, OffHeapMemorySegmentWriteOutMediumFactory.instance(), () -> 0);
+      super(mapper, () -> 0);
 
       queryableIndexMap = new HashMap<>(segmentFileMap.size());
       for (Entry<DataSegment, File> entry : segmentFileMap.entrySet()) {

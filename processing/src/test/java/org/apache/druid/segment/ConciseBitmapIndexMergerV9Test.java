@@ -40,8 +40,7 @@ public class ConciseBitmapIndexMergerV9Test extends IndexMergerTestBase
         new ConciseBitmapSerdeFactory(),
         compressionStrategy,
         dimCompressionStrategy,
-        longEncodingStrategy,
-        segmentWriteOutMediumFactory
+        longEncodingStrategy
     );
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   }
