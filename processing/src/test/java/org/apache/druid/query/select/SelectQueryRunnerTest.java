@@ -76,7 +76,7 @@ import java.util.Set;
 /**
  */
 @RunWith(Parameterized.class)
-  public class SelectQueryRunnerTest
+public class SelectQueryRunnerTest
 {
   // copied from druid.sample.numeric.tsv
   public static final String[] V_0112 = {
