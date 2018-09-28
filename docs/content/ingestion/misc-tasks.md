@@ -4,33 +4,6 @@ layout: doc_page
 
 # Miscellaneous Tasks
 
-#### IndexSpec
-
-The indexSpec defines segment storage format options to be used at indexing time, such as bitmap type and column
-compression formats. The indexSpec is optional and default parameters will be used if not specified.
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
-|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
-|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
-|longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
-
-##### Bitmap types
-
-For Concise bitmaps:
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|type|String|Must be `concise`.|yes|
-
-For Roaring bitmaps:
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|type|String|Must be `roaring`.|yes|
-|compressRunOnSerialization|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
-
 ## Noop Task
 
 These tasks start, sleep for a time and are used only for testing. The available grammar is:
