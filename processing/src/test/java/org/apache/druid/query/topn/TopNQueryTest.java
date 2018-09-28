@@ -42,7 +42,7 @@ import static org.apache.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
 import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
 import static org.apache.druid.query.QueryRunnerTestHelper.commonDoubleAggregators;
 import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
-import static org.apache.druid.query.QueryRunnerTestHelper.fullOnInterval;
+import static org.apache.druid.query.QueryRunnerTestHelper.fullOnIntervalSpec;
 import static org.apache.druid.query.QueryRunnerTestHelper.indexMetric;
 import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
 import static org.apache.druid.query.QueryRunnerTestHelper.rowsCount;
@@ -60,7 +60,7 @@ public class TopNQueryTest
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(4)
-        .intervals(fullOnInterval)
+        .intervals(fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -97,7 +97,7 @@ public class TopNQueryTest
         )
         .metric(new NumericTopNMetricSpec(indexMetric))
         .threshold(2)
-        .intervals(fullOnInterval.getIntervals())
+        .intervals(fullOnIntervalSpec.getIntervals())
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -123,7 +123,7 @@ public class TopNQueryTest
         .dimension(new LegacyDimensionSpec(marketDimension))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
-        .intervals(fullOnInterval.getIntervals())
+        .intervals(fullOnIntervalSpec.getIntervals())
         .aggregators(Collections.singletonList(rowsCount))
         .build();
     String jsonQuery = "{\n"

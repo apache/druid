@@ -114,7 +114,7 @@ public class SegmentMetadataUnionQueryTest
     );
     SegmentMetadataQuery query = new Druids.SegmentMetadataQueryBuilder()
         .dataSource(QueryRunnerTestHelper.unionDataSource)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
         .analysisTypes(
             SegmentMetadataQuery.AnalysisType.CARDINALITY,

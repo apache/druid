@@ -48,7 +48,7 @@ public class DefaultSelectQueryMetricsTest
         .newSelectQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.dayGran)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .descending(true)
         .pagingSpec(PagingSpec.newSpec(1))
         .build();
@@ -66,7 +66,7 @@ public class DefaultSelectQueryMetricsTest
     Assert.assertEquals("", actualEvent.get("service"));
     Assert.assertEquals(QueryRunnerTestHelper.dataSource, actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnInterval.getIntervals();
+    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
@@ -88,7 +88,7 @@ public class DefaultSelectQueryMetricsTest
         .newSelectQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.dayGran)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .descending(true)
         .pagingSpec(PagingSpec.newSpec(1))
         .build();

@@ -261,7 +261,7 @@ public class MultiValuedDimensionTest
             null
         ))
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null)).build();

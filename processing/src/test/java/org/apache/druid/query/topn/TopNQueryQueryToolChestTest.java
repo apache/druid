@@ -158,7 +158,7 @@ public class TopNQueryQueryToolChestTest
           .granularity(QueryRunnerTestHelper.allGran)
           .dimension(QueryRunnerTestHelper.placementishDimension)
           .metric(QueryRunnerTestHelper.indexMetric)
-          .intervals(QueryRunnerTestHelper.fullOnInterval)
+          .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
           .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
 
       TopNQuery query1 = builder.threshold(10).context(null).build();

@@ -75,6 +75,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  */
@@ -83,10 +85,11 @@ public class QueryRunnerTestHelper
 
   public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
 
-  public static final SegmentId segmentId = SegmentId.dummy("testSegment");
   public static final String dataSource = "testing";
+  public static final Interval fullOnInterval = Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z");
+  public static final SegmentId segmentId = SegmentId.of(dataSource, fullOnInterval, "dummy_version", 0);
   public static final UnionDataSource unionDataSource = new UnionDataSource(
-      Lists.transform(Lists.newArrayList(dataSource, dataSource, dataSource, dataSource), TableDataSource::new)
+      Stream.of(dataSource, dataSource, dataSource, dataSource).map(TableDataSource::new).collect(Collectors.toList())
   );
 
   public static final Granularity dayGran = Granularities.DAY;
@@ -228,7 +231,7 @@ public class QueryRunnerTestHelper
   public static final String[] expectedFullOnIndexValuesDesc;
 
   static {
-    List<String> list = new ArrayList(Arrays.asList(expectedFullOnIndexValues));
+    List<String> list = new ArrayList<>(Arrays.asList(expectedFullOnIndexValues));
     Collections.reverse(list);
     expectedFullOnIndexValuesDesc = list.toArray(new String[0]);
   }
@@ -244,8 +247,9 @@ public class QueryRunnerTestHelper
   public static final QuerySegmentSpec secondOnly = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2011-04-02T00:00:00.000Z/P1D"))
   );
-  public static final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Collections.singletonList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+
+  public static final QuerySegmentSpec fullOnIntervalSpec = new MultipleIntervalSegmentSpec(
+      Collections.singletonList(fullOnInterval)
   );
   public static final QuerySegmentSpec emptyInterval = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2020-04-02T00:00:00.000Z/P1D"))
@@ -349,9 +353,7 @@ public class QueryRunnerTestHelper
   }
 
   @SuppressWarnings("unchecked")
-  public static Collection<?> makeUnionQueryRunners(
-      QueryRunnerFactory factory
-  )
+  public static Collection<?> makeUnionQueryRunners(QueryRunnerFactory factory)
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();

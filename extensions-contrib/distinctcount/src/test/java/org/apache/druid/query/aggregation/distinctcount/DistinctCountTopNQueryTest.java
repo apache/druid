@@ -117,7 +117,7 @@ public class DistinctCountTopNQueryTest
 
     TopNQuery query = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.dataSource)
                           .granularity(QueryRunnerTestHelper.allGran)
-                          .intervals(QueryRunnerTestHelper.fullOnInterval)
+                          .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                           .dimension(client_type)
                           .metric("UV")
                           .threshold(10)

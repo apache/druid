@@ -127,7 +127,7 @@ public class ApproximateHistogramTopNQueryTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(

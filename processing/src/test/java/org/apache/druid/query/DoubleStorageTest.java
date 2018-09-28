@@ -102,7 +102,7 @@ public class DoubleStorageTest
     return ScanQuery.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                     .columns(Collections.emptyList())
-                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                     .limit(Integer.MAX_VALUE)
                     .legacy(false);
   }

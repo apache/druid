@@ -138,7 +138,7 @@ public class MapVirtualColumnTest
     return Druids.newSelectQueryBuilder()
                  .dataSource(QueryRunnerTestHelper.dataSource)
                  .granularity(QueryRunnerTestHelper.allGran)
-                 .intervals(QueryRunnerTestHelper.fullOnInterval)
+                 .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                  .pagingSpec(new PagingSpec(null, 3));
   }
 

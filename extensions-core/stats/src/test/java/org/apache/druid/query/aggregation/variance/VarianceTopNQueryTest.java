@@ -73,7 +73,7 @@ public class VarianceTopNQueryTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(

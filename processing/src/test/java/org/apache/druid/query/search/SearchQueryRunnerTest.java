@@ -132,7 +132,7 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .query("a")
                                     .build();
 
@@ -155,7 +155,7 @@ public class SearchQueryRunnerTest
     final SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                           .dataSource(QueryRunnerTestHelper.dataSource)
                                           .granularity(QueryRunnerTestHelper.allGran)
-                                          .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                          .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                           .query("a")
                                           .build();
 
@@ -198,7 +198,7 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .dimensions(
                                         Arrays.asList(
                                             QueryRunnerTestHelper.placementDimension,
@@ -222,7 +222,7 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .dimensions(
                                         Arrays.asList(
                                             QueryRunnerTestHelper.placementDimension,
@@ -247,7 +247,7 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .query(new FragmentSearchQuerySpec(Arrays.asList("auto", "ve")))
                                     .build();
 
@@ -272,7 +272,7 @@ public class SearchQueryRunnerTest
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
               .dimensions("quality")
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .query("a")
               .build(),
         expectedHits
@@ -290,7 +290,7 @@ public class SearchQueryRunnerTest
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
               .dimensions("market")
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .query("a")
               .build(),
         expectedHits
@@ -318,7 +318,7 @@ public class SearchQueryRunnerTest
                       QueryRunnerTestHelper.marketDimension
                   )
               )
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .query("a")
               .build(),
         expectedHits
@@ -341,7 +341,7 @@ public class SearchQueryRunnerTest
                       QueryRunnerTestHelper.marketDimension
                   )
               )
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .query("mark")
               .build(),
         expectedHits
@@ -375,7 +375,7 @@ public class SearchQueryRunnerTest
                                       null
                                   )
                               )
-                              .intervals(QueryRunnerTestHelper.fullOnInterval)
+                              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                               .dimensions(
                                   new ExtractionDimensionSpec(
                                       QueryRunnerTestHelper.qualityDimension,
@@ -405,7 +405,7 @@ public class SearchQueryRunnerTest
                           new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
                           new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null)
                       )))
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .dimensions(QueryRunnerTestHelper.qualityDimension)
               .query("a")
               .build(),
@@ -424,7 +424,7 @@ public class SearchQueryRunnerTest
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
               .filters(QueryRunnerTestHelper.marketDimension, "total_market")
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .dimensions(QueryRunnerTestHelper.marketDimension)
               .query("a")
               .build(),
@@ -449,7 +449,7 @@ public class SearchQueryRunnerTest
               .granularity(QueryRunnerTestHelper.allGran)
               .filters(filter)
               .dimensions(QueryRunnerTestHelper.qualityDimension)
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .query("a")
               .build(),
         expectedHits
@@ -473,7 +473,7 @@ public class SearchQueryRunnerTest
               .granularity(QueryRunnerTestHelper.allGran)
               .dimensions(QueryRunnerTestHelper.qualityDimension)
               .filters(filter)
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .query("a")
               .build(),
         expectedHits
@@ -489,7 +489,7 @@ public class SearchQueryRunnerTest
         Druids.newSearchQueryBuilder()
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .query("abcd123")
               .build(),
         expectedHits
@@ -511,7 +511,7 @@ public class SearchQueryRunnerTest
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
               .filters(filter)
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .query("a")
               .build(),
         expectedHits
@@ -528,7 +528,7 @@ public class SearchQueryRunnerTest
         Druids.newSearchQueryBuilder()
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .dimensions("does_not_exist")
               .query("a")
               .build(),
@@ -548,7 +548,7 @@ public class SearchQueryRunnerTest
         Druids.newSearchQueryBuilder()
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .dimensions(QueryRunnerTestHelper.marketDimension)
               .query("")
               .build(),
@@ -558,7 +558,7 @@ public class SearchQueryRunnerTest
         Druids.newSearchQueryBuilder()
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
               .dimensions(QueryRunnerTestHelper.marketDimension)
               .build(),
         expectedHits
@@ -571,7 +571,7 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .query("a")
                                     .sortSpec(new SearchSortSpec(StringComparators.NUMERIC))
                                     .build();
@@ -595,7 +595,7 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .query("Friday")
                                     .dimensions(new ExtractionDimensionSpec(
                                         Column.TIME_COLUMN_NAME,
@@ -628,7 +628,7 @@ public class SearchQueryRunnerTest
                                     )
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .query("1297123200000")
                                     .build();
 
@@ -652,7 +652,7 @@ public class SearchQueryRunnerTest
                                     )
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .query("1297123200000")
                                     .build();
 
@@ -673,7 +673,7 @@ public class SearchQueryRunnerTest
                                     )
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .query("100.7")
                                     .build();
 
@@ -698,7 +698,7 @@ public class SearchQueryRunnerTest
                                     )
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .query("100.7")
                                     .build();
 
@@ -741,7 +741,7 @@ public class SearchQueryRunnerTest
                                     )
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     // simulate when cardinality is big enough to fallback to cursorOnly strategy
                                     .context(ImmutableMap.of("searchStrategy", "cursorOnly"))
                                     .build();
@@ -769,7 +769,7 @@ public class SearchQueryRunnerTest
                                     )
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(QueryRunnerTestHelper.allGran)
-                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                     .build();
 
     List<SearchHit> noHit = new ArrayList<>();

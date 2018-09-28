@@ -41,7 +41,7 @@ public class SearchQueryTest
     Query query = Druids.newSearchQueryBuilder()
                         .dataSource(QueryRunnerTestHelper.dataSource)
                         .granularity(QueryRunnerTestHelper.allGran)
-                        .intervals(QueryRunnerTestHelper.fullOnInterval)
+                        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                         .query("a")
                         .build();
 
@@ -57,7 +57,7 @@ public class SearchQueryTest
     Query query1 = Druids.newSearchQueryBuilder()
                          .dataSource(QueryRunnerTestHelper.dataSource)
                          .granularity(QueryRunnerTestHelper.allGran)
-                         .intervals(QueryRunnerTestHelper.fullOnInterval)
+                         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                          .dimensions(
                              new DefaultDimensionSpec(
                                  QueryRunnerTestHelper.qualityDimension,
@@ -69,7 +69,7 @@ public class SearchQueryTest
     Query query2 = Druids.newSearchQueryBuilder()
                          .dataSource(QueryRunnerTestHelper.dataSource)
                          .granularity(QueryRunnerTestHelper.allGran)
-                         .intervals(QueryRunnerTestHelper.fullOnInterval)
+                         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                          .dimensions(
                              new DefaultDimensionSpec(
                                  QueryRunnerTestHelper.qualityDimension,
@@ -88,7 +88,7 @@ public class SearchQueryTest
     Query query = Druids.newSearchQueryBuilder()
                         .dataSource(QueryRunnerTestHelper.dataSource)
                         .granularity(QueryRunnerTestHelper.allGran)
-                        .intervals(QueryRunnerTestHelper.fullOnInterval)
+                        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                         .dimensions(new LegacyDimensionSpec(QueryRunnerTestHelper.qualityDimension))
                         .query("a")
                         .build();

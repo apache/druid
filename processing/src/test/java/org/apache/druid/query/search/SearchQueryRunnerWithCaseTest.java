@@ -52,7 +52,7 @@ import static org.apache.druid.query.QueryRunnerTestHelper.NOOP_QUERYWATCHER;
 import static org.apache.druid.query.QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator;
 import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
 import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
-import static org.apache.druid.query.QueryRunnerTestHelper.fullOnInterval;
+import static org.apache.druid.query.QueryRunnerTestHelper.fullOnIntervalSpec;
 import static org.apache.druid.query.QueryRunnerTestHelper.makeQueryRunner;
 import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
 import static org.apache.druid.query.QueryRunnerTestHelper.placementDimension;
@@ -148,7 +148,7 @@ public class SearchQueryRunnerWithCaseTest
     return Druids.newSearchQueryBuilder()
                  .dataSource(dataSource)
                  .granularity(allGran)
-                 .intervals(fullOnInterval);
+                 .intervals(fullOnIntervalSpec);
   }
 
   @Test

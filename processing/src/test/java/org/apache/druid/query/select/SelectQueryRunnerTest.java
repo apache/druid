@@ -76,7 +76,7 @@ import java.util.Set;
 /**
  */
 @RunWith(Parameterized.class)
-public class SelectQueryRunnerTest
+  public class SelectQueryRunnerTest
 {
   // copied from druid.sample.numeric.tsv
   public static final String[] V_0112 = {
@@ -110,12 +110,11 @@ public class SelectQueryRunnerTest
       "2011-01-13T00:00:00.000Z\tupfront\tpremium\t1600\t16000.0\t160000\tpreferred\tppreferred\t1564.617729\tvalue"
   };
 
-  private static final String segmentIdString = QueryRunnerTestHelper.segmentId.toString();
-
-
   private static final Interval I_0112_0114 = Intervals.of("2011-01-12/2011-01-14");
   public static final QuerySegmentSpec I_0112_0114_SPEC = new LegacySegmentSpec(I_0112_0114);
   private static final SegmentId SEGMENT_ID_I_0112_0114 = QueryRunnerTestHelper.segmentId.withInterval(I_0112_0114);
+
+  private static final String segmentIdString = SEGMENT_ID_I_0112_0114.toString();
 
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
@@ -161,7 +160,7 @@ public class SelectQueryRunnerTest
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                  .dimensionSpecs(DefaultDimensionSpec.toSpec(Collections.emptyList()))
                  .metrics(Collections.emptyList())
-                 .intervals(QueryRunnerTestHelper.fullOnInterval)
+                 .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                  .granularity(QueryRunnerTestHelper.allGran)
                  .pagingSpec(PagingSpec.newSpec(3))
                  .descending(descending);
@@ -179,6 +178,7 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
+        segmentIdString,
         toFullEvents(V_0112_0114),
         Lists.newArrayList(
             "market",
@@ -274,18 +274,20 @@ public class SelectQueryRunnerTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
+    String segmentIdInThisQuery = QueryRunnerTestHelper.segmentId.toString();
+
     List<Result<SelectResultValue>> expectedResultsAsc = Collections.singletonList(
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
-                ImmutableMap.of(segmentIdString, 2),
+                ImmutableMap.of(segmentIdInThisQuery, 2),
                 Sets.newHashSet("mar", "qual", "place"),
                 Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat",
                     "indexFloat", "indexMaxFloat"
                 ),
                 Arrays.asList(
                     new EventHolder(
-                        segmentIdString,
+                        segmentIdInThisQuery,
                         0,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
@@ -296,7 +298,7 @@ public class SelectQueryRunnerTest
                             .build()
                     ),
                     new EventHolder(
-                        segmentIdString,
+                        segmentIdInThisQuery,
                         1,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
@@ -307,7 +309,7 @@ public class SelectQueryRunnerTest
                             .build()
                     ),
                     new EventHolder(
-                        segmentIdString,
+                        segmentIdInThisQuery,
                         2,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, DateTimes.of("2011-01-12T00:00:00.000Z"))
@@ -326,14 +328,14 @@ public class SelectQueryRunnerTest
         new Result<SelectResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
-                ImmutableMap.of(segmentIdString, -3),
+                ImmutableMap.of(segmentIdInThisQuery, -3),
                 Sets.newHashSet("mar", "qual", "place"),
                 Sets.newHashSet("index", "quality_uniques", "indexMin", "indexMaxPlusTen", "indexMinFloat",
                     "indexFloat", "indexMaxFloat"
                 ),
                 Arrays.asList(
                     new EventHolder(
-                        segmentIdString,
+                        segmentIdInThisQuery,
                         -1,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, DateTimes.of("2011-04-15T00:00:00.000Z"))
@@ -344,7 +346,7 @@ public class SelectQueryRunnerTest
                             .build()
                     ),
                     new EventHolder(
-                        segmentIdString,
+                        segmentIdInThisQuery,
                         -2,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, DateTimes.of("2011-04-15T00:00:00.000Z"))
@@ -355,7 +357,7 @@ public class SelectQueryRunnerTest
                             .build()
                     ),
                     new EventHolder(
-                        segmentIdString,
+                        segmentIdInThisQuery,
                         -3,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, DateTimes.of("2011-04-15T00:00:00.000Z"))
@@ -387,6 +389,7 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
+        segmentIdString,
         toEvents(
             new String[]{
                 EventHolder.timestampKey + ":TIME",
@@ -423,6 +426,7 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
+        segmentIdString,
         toEvents(
             new String[]{
                 EventHolder.timestampKey + ":TIME",
@@ -492,6 +496,7 @@ public class SelectQueryRunnerTest
 
       PagingOffset offset = query.getPagingOffset(segmentIdString);
       List<Result<SelectResultValue>> expectedResults = toExpected(
+          segmentIdString,
           events,
           Collections.singletonList("quality"),
           Collections.singletonList("index"),
@@ -505,8 +510,9 @@ public class SelectQueryRunnerTest
   @Test
   public void testFullOnSelectWithFilterOnVirtualColumn()
   {
+    Interval interval = Intervals.of("2011-01-13/2011-01-14");
     SelectQuery query = newTestQuery()
-        .intervals("2011-01-13/2011-01-14")
+        .intervals(new LegacySegmentSpec(interval))
         .filters(
             new AndDimFilter(
                 Arrays.asList(
@@ -524,7 +530,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -543,8 +549,10 @@ public class SelectQueryRunnerTest
         }
     );
 
-    PagingOffset offset = query.getPagingOffset(segmentIdString);
+    String segmentIdInThisQuery = QueryRunnerTestHelper.segmentId.withInterval(interval).toString();
+    PagingOffset offset = query.getPagingOffset(segmentIdInThisQuery);
     List<Result<SelectResultValue>> expectedResults = toExpected(
+        segmentIdInThisQuery,
         events,
         Collections.singletonList("quality"),
         Collections.singletonList("index"),
@@ -598,6 +606,7 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
+        segmentIdString,
         events,
         Collections.singletonList(QueryRunnerTestHelper.qualityDimension),
         Collections.singletonList(QueryRunnerTestHelper.indexMetric),
@@ -682,6 +691,7 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(segmentIdString);
     List<Result<SelectResultValue>> expectedResults = toExpected(
+        segmentIdString,
         events,
         Collections.singletonList("foo"),
         Collections.singletonList("foo2"),
@@ -980,6 +990,7 @@ public class SelectQueryRunnerTest
   }
 
   private List<Result<SelectResultValue>> toExpected(
+      String segmentId,
       List<List<Map<String, Object>>> targets,
       List<String> dimensions,
       List<String> metrics,
@@ -998,12 +1009,12 @@ public class SelectQueryRunnerTest
         int start = group.size() + offset;
         int end = Math.max(-1, start - threshold);
         for (int i = start; i > end; i--) {
-          holders.add(new EventHolder(segmentIdString, newOffset--, group.get(i)));
+          holders.add(new EventHolder(segmentId, newOffset--, group.get(i)));
         }
       } else {
         int end = Math.min(group.size(), offset + threshold);
         for (int i = offset; i < end; i++) {
-          holders.add(new EventHolder(segmentIdString, newOffset++, group.get(i)));
+          holders.add(new EventHolder(segmentId, newOffset++, group.get(i)));
         }
       }
       int lastOffset = holders.isEmpty() ? offset : holders.get(holders.size() - 1).getOffset();
@@ -1011,7 +1022,7 @@ public class SelectQueryRunnerTest
           new Result(
               new DateTime(group.get(0).get(EventHolder.timestampKey), ISOChronology.getInstanceUTC()),
               new SelectResultValue(
-                  ImmutableMap.of(segmentIdString, lastOffset),
+                  ImmutableMap.of(segmentId, lastOffset),
                   Sets.newHashSet(dimensions),
                   Sets.newHashSet(metrics),
                   holders)

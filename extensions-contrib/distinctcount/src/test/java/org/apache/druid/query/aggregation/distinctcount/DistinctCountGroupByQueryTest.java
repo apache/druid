@@ -119,7 +119,7 @@ public class DistinctCountGroupByQueryTest
             client_type,
             client_type
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec(client_type, OrderByColumnSpec.Direction.DESCENDING)),

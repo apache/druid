@@ -22,12 +22,11 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class UnionDataSource implements DataSource
 {
@@ -44,17 +43,7 @@ public class UnionDataSource implements DataSource
   @Override
   public List<String> getNames()
   {
-    return Lists.transform(
-        dataSources,
-        new Function<TableDataSource, String>()
-        {
-          @Override
-          public String apply(TableDataSource input)
-          {
-            return Iterables.getOnlyElement(input.getNames());
-          }
-        }
-    );
+    return dataSources.stream().map(input -> Iterables.getOnlyElement(input.getNames())).collect(Collectors.toList());
   }
 
   @JsonProperty

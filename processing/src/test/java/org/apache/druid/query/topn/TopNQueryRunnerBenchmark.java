@@ -67,7 +67,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
       .dimension(marketDimension)
       .metric(QueryRunnerTestHelper.indexMetric)
       .threshold(4)
-      .intervals(QueryRunnerTestHelper.fullOnInterval)
+      .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
       .aggregators(
           Lists.newArrayList(
               Iterables.concat(

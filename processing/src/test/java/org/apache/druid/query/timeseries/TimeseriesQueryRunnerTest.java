@@ -169,7 +169,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(gran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       QueryRunnerTestHelper.rowsCount,
                                       QueryRunnerTestHelper.indexDoubleSum,
@@ -275,7 +275,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(gran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .descending(descending)
                                   .build();
 
@@ -305,7 +305,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(Granularities.ALL)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       Arrays.asList(
                                           new DoubleMaxAggregatorFactory("maxIndex", "index"),
@@ -341,7 +341,7 @@ public class TimeseriesQueryRunnerTest
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(QueryRunnerTestHelper.marketDimension, "upfront")
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
@@ -1803,7 +1803,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.monthGran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       ImmutableList.of(
                                           new DoubleFirstAggregatorFactory("first", "index"),
@@ -2442,7 +2442,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,

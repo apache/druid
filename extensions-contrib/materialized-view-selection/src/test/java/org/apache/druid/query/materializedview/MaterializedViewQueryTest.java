@@ -30,7 +30,7 @@ import static org.apache.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
 import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
 import static org.apache.druid.query.QueryRunnerTestHelper.commonDoubleAggregators;
 import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
-import static org.apache.druid.query.QueryRunnerTestHelper.fullOnInterval;
+import static org.apache.druid.query.QueryRunnerTestHelper.fullOnIntervalSpec;
 import static org.apache.druid.query.QueryRunnerTestHelper.indexMetric;
 import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
 import org.apache.druid.query.TableDataSource;
@@ -74,7 +74,7 @@ public class MaterializedViewQueryTest
         .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(4)
-        .intervals(fullOnInterval)
+        .intervals(fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -94,6 +94,6 @@ public class MaterializedViewQueryTest
     Assert.assertEquals(query, serdeQuery);
     Assert.assertEquals(new TableDataSource(dataSource), query.getDataSource());
     Assert.assertEquals(allGran, query.getGranularity());
-    Assert.assertEquals(fullOnInterval.getIntervals(), query.getIntervals());
+    Assert.assertEquals(fullOnIntervalSpec.getIntervals(), query.getIntervals());
   }
 }

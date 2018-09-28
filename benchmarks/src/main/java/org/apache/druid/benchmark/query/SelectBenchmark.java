@@ -272,8 +272,10 @@ public class SelectBenchmark
     return queryResult.toList();
   }
 
-  // don't run this benchmark with a query that doesn't use QueryGranularities.ALL,
-  // this pagination function probably doesn't work correctly in that case.
+  /**
+   * Don't run this benchmark with a query that doesn't use {@link Granularities#ALL},
+   * this pagination function probably doesn't work correctly in that case.
+   */
   private SelectQuery incrementQueryPagination(SelectQuery query, SelectResultValue prevResult)
   {
     Map<String, Integer> pagingIdentifiers = prevResult.getPagingIdentifiers();
