@@ -28,10 +28,12 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -98,6 +100,14 @@ public class QueryMaker
   {
     final Query query = druidQuery.getQuery();
 
+    final Query innerMostQuery = findInnerMostQuery(query);
+    if (plannerContext.getPlannerConfig().isRequireTimeCondition() &&
+        innerMostQuery.getIntervals().equals(Intervals.ONLY_ETERNITY)) {
+      throw new CannotBuildQueryException(
+          "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
+      );
+    }
+
     if (query instanceof TimeseriesQuery) {
       return executeTimeseries(druidQuery, (TimeseriesQuery) query);
     } else if (query instanceof TopNQuery) {
@@ -111,6 +121,15 @@ public class QueryMaker
     } else {
       throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
     }
+  }
+
+  private Query findInnerMostQuery(Query outerQuery)
+  {
+    Query query = outerQuery;
+    while (query.getDataSource() instanceof QueryDataSource) {
+      query = ((QueryDataSource) query.getDataSource()).getQuery();
+    }
+    return query;
   }
 
   private Sequence<Object[]> executeScan(

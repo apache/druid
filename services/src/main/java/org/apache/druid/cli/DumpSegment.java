@@ -36,6 +36,7 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -418,6 +419,7 @@ public class DumpSegment extends GuiceRunnable
     return ImmutableList.copyOf(columnNames);
   }
 
+  @SuppressForbidden(reason = "System#out")
   private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
   {
     if (outputFileName == null) {

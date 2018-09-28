@@ -17,7 +17,9 @@
  * under the License.
  */
 
+//CHECKSTYLE.OFF: PackageName
 package org.apache.parquet.avro;
+//CHECKSTYLE.ON: PackageName
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -37,6 +39,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * This class must in package org.apache.parquet.avro to access the AvroRecordMaterializer constructor
+ */
 public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
 {
 

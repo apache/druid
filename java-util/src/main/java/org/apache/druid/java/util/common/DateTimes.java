@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import io.netty.util.SuppressForbidden;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -51,6 +52,7 @@ public final class DateTimes
       "[0-9]{4}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]\\.[0-9]{3}(Z|[+\\-][0-9]{2}(:[0-9]{2}))"
   );
 
+  @SuppressForbidden(reason = "DateTimeZone#forID")
   public static DateTimeZone inferTzFromString(String tzId)
   {
     try {
@@ -76,6 +78,7 @@ public final class DateTimes
       this.innerFormatter = innerFormatter.withChronology(ISOChronology.getInstanceUTC());
     }
 
+    @SuppressForbidden(reason = "DateTimeFormatter#parseDateTime")
     public DateTime parse(final String instant)
     {
       return innerFormatter.parseDateTime(instant);

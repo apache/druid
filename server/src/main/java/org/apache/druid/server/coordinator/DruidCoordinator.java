@@ -684,8 +684,7 @@ public class DruidCoordinator
           ImmutableList.of(
               new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this),
               params -> {
-                // Display info about all historical servers
-                Iterable<ImmutableDruidServer> servers = serverInventoryView
+                List<ImmutableDruidServer> servers = serverInventoryView
                     .getInventory()
                     .stream()
                     .filter(DruidServer::segmentReplicatable)
@@ -693,6 +692,7 @@ public class DruidCoordinator
                     .collect(Collectors.toList());
 
                 if (log.isDebugEnabled()) {
+                  // Display info about all historical servers
                   log.debug("Servers");
                   for (ImmutableDruidServer druidServer : servers) {
                     log.debug("  %s", druidServer);

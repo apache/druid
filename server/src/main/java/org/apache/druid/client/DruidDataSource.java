@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -76,6 +77,12 @@ public class DruidDataSource
   public Collection<DataSegment> getSegments()
   {
     return Collections.unmodifiableCollection(idToSegmentMap.values());
+  }
+
+  @Nullable
+  public DataSegment getSegment(String segmentId)
+  {
+    return idToSegmentMap.get(segmentId);
   }
 
   public DruidDataSource addSegment(DataSegment dataSegment)

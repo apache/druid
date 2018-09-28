@@ -7,23 +7,39 @@ layout: doc_page
 You can build Druid directly from source. Please note that these instructions are for building the latest stable of Druid. 
 For building the latest code in master, follow the instructions [here](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md).
 
-Building Druid requires the following:
+
+#### Prerequisites
+
+##### Installing Java and Maven:
 - [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
-To do so, run these commands:
+##### Downloading the source:
 
-```
+```bash
 git clone git@github.com:apache/incubator-druid.git
 cd druid
-mvn clean package
 ```
 
-This will compile the project and create the Druid binary distribution tar under
-`distribution/target/druid-VERSION-bin.tar.gz`.
 
-This will also create a tarball that contains `mysql-metadata-storage` extension under 
-`distribution/target/mysql-metadata-storage-bin.tar.gz`. If you want Druid to load `mysql-metadata-storage`, you can 
+#### Building the source
+
+##### Building the Druid binary distribution tarball:
+
+```bash
+mvn clean install -Pdist -Dtar -DskipTests
+```
+
+Once it succeeds, you can find the Druid binary (`druid-VERSION-bin.tar.gz`)
+and `mysql-metadata-storage` extension under `${DRUID_ROOT}/distribution/target/`.
+
+If you want Druid to load `mysql-metadata-storage`, you can 
 first untar `druid-VERSION-bin.tar.gz`, then go to ```druid-<version>/extensions```, untar `mysql-metadata-storage-bin.tar.gz` 
 there. Now just specifiy `mysql-metadata-storage` in `druid.extensions.loadList` so that Druid will pick it up. 
 See [Including Extensions](../operations/including-extensions.html) for more information.
+
+##### Building the source code only:
+
+```bash
+mvn clean install -DskipTests
+```

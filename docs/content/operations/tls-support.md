@@ -31,7 +31,19 @@ values for the below mentioned configs among others provided by Java implementat
 |`druid.server.https.certAlias`|Alias of TLS/SSL certificate for the connector.|none|yes|
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Store.|none|yes|
 
-Following table contains non-mandatory advanced configuration options, use caution.
+The following table contains configuration options related to client certificate authentication.
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|`druid.server.https.requireClientCertificate`|If set to true, clients must identify themselves by providing a TLS certificate.  If `requireClientCertificate` is false, the rest of the options in this table are ignored.|false|no|
+|`druid.server.https.trustStoreType`|The type of the trust store containing certificates used to validate client certificates. Not needed if `requireClientCertificate` is false.|`java.security.KeyStore.getDefaultType()`|no|
+|`druid.server.https.trustStorePath`|The file path or URL of the trust store containing certificates used to validate client certificates. Not needed if `requireClientCertificate` is false.|none|yes, only if `requireClientCertificate` is true|
+|`druid.server.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate client certificate chains. Not needed if `requireClientCertificate` is false.|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
+|`druid.server.https.trustStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the Trust Store.  Not needed if `requireClientCertificate` is false.|none|no|
+|`druid.server.https.validateHostnames`|If set to true, check that the client's hostname matches the CN/subjectAltNames in the client certificate.  Not used if `requireClientCertificate` is false.|true|no|
+|`druid.server.https.crlPath`|Specifies a path to a file containing static [Certificate Revocation Lists](https://en.wikipedia.org/wiki/Certificate_revocation_list), used to check if a client certificate has been revoked. Not used if `requireClientCertificate` is false.|null|no|
+
+The following table contains non-mandatory advanced configuration options, use caution.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
