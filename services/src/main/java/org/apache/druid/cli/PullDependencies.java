@@ -27,6 +27,7 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.ISE;
@@ -414,6 +415,7 @@ public class PullDependencies implements Runnable
     log.info("Finish downloading extension [%s]", versionedArtifact);
   }
 
+  @SuppressForbidden(reason = "System#out")
   private DefaultTeslaAether getAetherClient()
   {
     /*

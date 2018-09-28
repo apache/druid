@@ -17,35 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.inject.Binder;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.segment.realtime.firehose.IrcInputRowParser;
+import java.io.IOException;
 
-import java.util.Collections;
-import java.util.List;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.yahoo.sketches.hll.HllSketch;
 
-/**
- */
-public class ParsersModule implements DruidModule
+public class HllSketchJsonSerializer extends JsonSerializer<HllSketch>
 {
-  @Override
-  public void configure(Binder binder)
-  {
-  }
 
   @Override
-  public List<? extends Module> getJacksonModules()
+  public void serialize(final HllSketch sketch, final JsonGenerator jgen, final SerializerProvider provider)
+      throws IOException
   {
-    return Collections.<Module>singletonList(
-        new SimpleModule("ParsersModule")
-            .registerSubtypes(
-                new NamedType(IrcInputRowParser.class, "irc")
-            )
-    );
+    jgen.writeBinary(sketch.toCompactByteArray());
   }
+
 }

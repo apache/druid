@@ -71,8 +71,9 @@ public class TimestampParser
         return DateTimes.of(ParserUtils.stripQuotes(input));
       };
     } else if ("posix".equalsIgnoreCase(format)
-        || "millis".equalsIgnoreCase(format)
-        || "nano".equalsIgnoreCase(format)) {
+               || "millis".equalsIgnoreCase(format)
+               || "micro".equalsIgnoreCase(format)
+               || "nano".equalsIgnoreCase(format)) {
       final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
       return input -> {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
@@ -104,6 +105,8 @@ public class TimestampParser
   {
     if ("posix".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(TimeUnit.SECONDS.toMillis(input.longValue()));
+    } else if ("micro".equalsIgnoreCase(format)) {
+      return input -> DateTimes.utc(TimeUnit.MICROSECONDS.toMillis(input.longValue()));
     } else if ("nano".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(input.longValue()));
     } else if ("ruby".equalsIgnoreCase(format)) {

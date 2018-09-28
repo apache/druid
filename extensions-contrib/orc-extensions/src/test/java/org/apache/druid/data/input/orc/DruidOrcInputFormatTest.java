@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.DoubleColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.ListColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.io.orc.OrcNewInputFormat;
 import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
@@ -43,6 +44,7 @@ import org.apache.orc.CompressionKind;
 import org.apache.orc.OrcFile;
 import org.apache.orc.TypeDescription;
 import org.apache.orc.Writer;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,6 +54,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 public class DruidOrcInputFormatTest
 {
@@ -110,6 +113,36 @@ public class DruidOrcInputFormatTest
     reader.close();
   }
 
+  @Test
+  public void testReadDateColumn() throws IOException, InterruptedException
+  {
+    File testFile2 = makeOrcFileWithDate();
+    Path path = new Path(testFile2.getAbsoluteFile().toURI());
+    FileSplit split = new FileSplit(path, 0, testFile2.length(), null);
+
+    InputFormat inputFormat = ReflectionUtils.newInstance(OrcNewInputFormat.class, job.getConfiguration());
+
+    TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
+    RecordReader reader = inputFormat.createRecordReader(split, context);
+    InputRowParser<OrcStruct> parser = (InputRowParser<OrcStruct>) config.getParser();
+
+    reader.initialize(split, context);
+
+    reader.nextKeyValue();
+
+    OrcStruct data = (OrcStruct) reader.getCurrentValue();
+
+    MapBasedInputRow row = (MapBasedInputRow) parser.parseBatch(data).get(0);
+
+    Assert.assertTrue(row.getEvent().keySet().size() == 4);
+    Assert.assertEquals(DateTimes.of(timestamp), row.getTimestamp());
+    Assert.assertEquals(parser.getParseSpec().getDimensionsSpec().getDimensionNames(), row.getDimensions());
+    Assert.assertEquals(col1, row.getEvent().get("col1"));
+    Assert.assertEquals(Arrays.asList(col2), row.getDimension("col2"));
+
+    reader.close();
+  }
+
   private File makeOrcFile() throws IOException
   {
     final File dir = temporaryFolder.newFolder();
@@ -137,6 +170,54 @@ public class DruidOrcInputFormatTest
         0,
         timestamp.length()
     );
+    ((BytesColumnVector) batch.cols[1]).setRef(0, StringUtils.toUtf8(col1), 0, col1.length());
+
+    ListColumnVector listColumnVector = (ListColumnVector) batch.cols[2];
+    listColumnVector.childCount = col2.length;
+    listColumnVector.lengths[0] = 3;
+    for (int idx = 0; idx < col2.length; idx++) {
+      ((BytesColumnVector) listColumnVector.child).setRef(
+          idx,
+          StringUtils.toUtf8(col2[idx]),
+          0,
+          col2[idx].length()
+      );
+    }
+
+    ((DoubleColumnVector) batch.cols[3]).vector[0] = val1;
+    writer.addRowBatch(batch);
+    writer.close();
+
+    return testOrc;
+  }
+
+  private File makeOrcFileWithDate() throws IOException
+  {
+    final File dir = temporaryFolder.newFolder();
+    final File testOrc = new File(dir, "test-2.orc");
+    TypeDescription schema = TypeDescription.createStruct()
+                                            .addField("timestamp", TypeDescription.createDate())
+                                            .addField("col1", TypeDescription.createString())
+                                            .addField("col2", TypeDescription.createList(TypeDescription.createString()))
+                                            .addField("val1", TypeDescription.createFloat());
+    Configuration conf = new Configuration();
+    Writer writer = OrcFile.createWriter(
+        new Path(testOrc.getPath()),
+        OrcFile.writerOptions(conf)
+               .setSchema(schema)
+               .stripeSize(100000)
+               .bufferSize(10000)
+               .compress(CompressionKind.ZLIB)
+               .version(OrcFile.Version.CURRENT)
+    );
+    VectorizedRowBatch batch = schema.createRowBatch();
+    batch.size = 1;
+    DateTime ts = DateTimes.of(timestamp);
+
+    // date is stored as long column vector with number of days since epoch
+    ((LongColumnVector) batch.cols[0]).vector[0] =
+        TimeUnit.MILLISECONDS.toDays(ts.minus(DateTimes.EPOCH.getMillis()).getMillis());
+
     ((BytesColumnVector) batch.cols[1]).setRef(0, StringUtils.toUtf8(col1), 0, col1.length());
 
     ListColumnVector listColumnVector = (ListColumnVector) batch.cols[2];

@@ -46,6 +46,7 @@ layout: toc
   * [Updating Existing Data](/docs/VERSION/ingestion/update-existing-data.html)
   * [Deleting Data](/docs/VERSION/ingestion/delete-data.html)
   * [Task Locking & Priority](/docs/VERSION/ingestion/locking-and-priority.html)
+  * [Task Reports](/docs/VERSION/ingestion/reports.html)
   * [FAQ](/docs/VERSION/ingestion/faq.html)
   * [Misc. Tasks](/docs/VERSION/ingestion/misc-tasks.html)
 

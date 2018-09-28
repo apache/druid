@@ -16,19 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.druid.indexing.common.actions;
 
-package org.apache.druid.segment.realtime.firehose;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.data.input.InputRow;
-import org.joda.time.DateTime;
-
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes({
-    @JsonSubTypes.Type(name = "wikipedia", value = WikipediaIrcDecoder.class)
-})
-public interface IrcDecoder
+/**
+ * The configuration for task audit logging.
+ * This class will be removed in future releases. See https://github.com/apache/incubator-druid/issues/5859.
+ */
+@Deprecated
+public class TaskAuditLogConfig
 {
-  InputRow decodeMessage(DateTime timestamp, String channel, String msg);
+  @JsonProperty
+  private final boolean enabled;
+
+  @JsonCreator
+  public TaskAuditLogConfig(@JsonProperty("enabled") boolean enabled)
+  {
+    this.enabled = enabled;
+  }
+
+  @JsonProperty("enabled")
+  public boolean isEnabled()
+  {
+    return enabled;
+  }
 }

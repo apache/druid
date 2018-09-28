@@ -29,17 +29,19 @@ public class LocalTaskActionClientFactory implements TaskActionClientFactory
 {
   private final TaskStorage storage;
   private final TaskActionToolbox toolbox;
+  private final TaskAuditLogConfig auditLogConfig;
 
   @Inject
-  public LocalTaskActionClientFactory(TaskStorage storage, TaskActionToolbox toolbox)
+  public LocalTaskActionClientFactory(TaskStorage storage, TaskActionToolbox toolbox, TaskAuditLogConfig auditLogConfig)
   {
     this.storage = storage;
     this.toolbox = toolbox;
+    this.auditLogConfig = auditLogConfig;
   }
 
   @Override
   public TaskActionClient create(Task task)
   {
-    return new LocalTaskActionClient(task, storage, toolbox);
+    return new LocalTaskActionClient(task, storage, toolbox, auditLogConfig);
   }
 }

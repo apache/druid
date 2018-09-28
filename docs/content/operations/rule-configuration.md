@@ -17,7 +17,7 @@ When a rule is updated, the change may not be reflected until the next time the 
 Load Rules
 ----------
 
-Load rules indicate how many replicas of a segment should exist in a server tier.
+Load rules indicate how many replicas of a segment should exist in a server tier. **Please note**: If a Load rule is used to retain only data from a certain interval or period, it must be accompanied by a Drop rule. If a Drop rule is not included, data not within the specified interval or period will be retained by the default rule (loadForever).
 
 ### Forever Load Rule
 
