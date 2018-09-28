@@ -33,11 +33,6 @@ public final class SingleIndexedInt implements IndexedInts
   {
   }
 
-  public SingleIndexedInt(int value)
-  {
-    this.value = value;
-  }
-
   public void setValue(int value)
   {
     this.value = value;

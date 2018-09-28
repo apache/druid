@@ -37,6 +37,7 @@ import java.util.stream.IntStream;
 final class StringTypeMapVirtualColumnDimensionSelector extends MapVirtualColumnDimensionSelector
 {
   private final String subColumnName;
+  private final SingleIndexedInt indexedInt = new SingleIndexedInt();
 
   StringTypeMapVirtualColumnDimensionSelector(
       DimensionSelector keySelector,
@@ -51,22 +52,12 @@ final class StringTypeMapVirtualColumnDimensionSelector extends MapVirtualColumn
   @Override
   public IndexedInts getRow()
   {
-    final DimensionSelector keySelector = getKeySelector();
-    final DimensionSelector valueSelector = getValueSelector();
-
-    final IndexedInts keyIndices = keySelector.getRow();
-    final IndexedInts valueIndices = valueSelector.getRow();
-
-    final int limit = Math.min(keyIndices.size(), valueIndices.size());
-    final int valueIndex = IntStream
-        .range(0, limit)
-        .filter(i -> subColumnName.equals(keySelector.lookupName(keyIndices.get(i)))) // subColumnName is never null
-        .findAny()
-        .orElse(-1);
+    final int valueIndex = findValueIndicesIndexForSubColumn();
     if (valueIndex < 0) {
       return ZeroIndexedInts.instance();
     } else {
-      return new SingleIndexedInt(valueIndex);
+      indexedInt.setValue(valueIndex);
+      return indexedInt;
     }
   }
 
@@ -124,21 +115,10 @@ final class StringTypeMapVirtualColumnDimensionSelector extends MapVirtualColumn
   @Override
   public String lookupName(int id)
   {
-    final DimensionSelector keySelector = getKeySelector();
-    final DimensionSelector valueSelector = getValueSelector();
-
-    final IndexedInts keyIndices = keySelector.getRow();
-    final IndexedInts valueIndices = valueSelector.getRow();
-
-    final int limit = Math.min(keyIndices.size(), valueIndices.size());
-    final int valueIndex = IntStream
-        .range(0, limit)
-        .filter(i -> subColumnName.equals(keySelector.lookupName(keyIndices.get(i)))) // subColumnName is never null
-        .findAny()
-        .orElse(-1);
+    final int valueIndex = findValueIndicesIndexForSubColumn();
 
     if (valueIndex == id) {
-      return valueSelector.lookupName(id);
+      return getValueSelector().lookupName(id);
     } else {
       return null;
     }
@@ -154,22 +134,11 @@ final class StringTypeMapVirtualColumnDimensionSelector extends MapVirtualColumn
   @Override
   public IdLookup idLookup()
   {
-    final DimensionSelector keySelector = getKeySelector();
     final DimensionSelector valueSelector = getValueSelector();
-
     final IdLookup valueLookup = valueSelector.idLookup();
 
     if (valueLookup != null) {
-      final IndexedInts keyIndices = keySelector.getRow();
-      final IndexedInts valueIndices = valueSelector.getRow();
-
-      final int limit = Math.min(keyIndices.size(), valueIndices.size());
-      final int valueIndex = IntStream
-          .range(0, limit)
-          .filter(i -> subColumnName.equals(keySelector.lookupName(keyIndices.get(i)))) // subColumnName is never null
-          .findAny()
-          .orElse(-1);
-
+      final int valueIndex = findValueIndicesIndexForSubColumn();
       return name -> {
         final int candidate = valueLookup.lookupId(name);
         if (candidate == valueIndex) {
@@ -186,6 +155,25 @@ final class StringTypeMapVirtualColumnDimensionSelector extends MapVirtualColumn
   @Override
   public Object getObject()
   {
+    final int valueIndex = findValueIndicesIndexForSubColumn();
+
+    if (valueIndex < 0) {
+      return null;
+    } else {
+      final DimensionSelector valueSelector = getValueSelector();
+      final IndexedInts valueIndices = valueSelector.getRow();
+      return valueSelector.lookupName(valueIndices.get(valueIndex));
+    }
+  }
+
+  /**
+   * Find the index of valueIndices which is {@link IndexedInts} returned from {@link #getValueSelector()#getRow()}
+   * corresponding to the {@link #subColumnName}.
+   *
+   * @return index for valueIndices if found. -1 otherwise.
+   */
+  private int findValueIndicesIndexForSubColumn()
+  {
     final DimensionSelector keySelector = getKeySelector();
     final DimensionSelector valueSelector = getValueSelector();
 
@@ -197,9 +185,8 @@ final class StringTypeMapVirtualColumnDimensionSelector extends MapVirtualColumn
     return IntStream
         .range(0, limit)
         .filter(i -> subColumnName.equals(keySelector.lookupName(keyIndices.get(i)))) // subColumnName is never null
-        .mapToObj(i -> valueSelector.lookupName(valueIndices.get(i)))
         .findAny()
-        .orElse(null);
+        .orElse(-1);
   }
 
   @Override

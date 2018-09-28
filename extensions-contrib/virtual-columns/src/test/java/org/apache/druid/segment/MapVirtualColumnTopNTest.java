@@ -102,7 +102,7 @@ public class MapVirtualColumnTopNTest
     );
 
     expectedException.expect(UnsupportedOperationException.class);
-    expectedException.expectMessage("Map column doesn't support aggregation yet");
+    expectedException.expectMessage("Map column doesn't support getRow()");
     runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
   }
 

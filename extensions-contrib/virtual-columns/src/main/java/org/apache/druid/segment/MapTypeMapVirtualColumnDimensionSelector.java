@@ -45,7 +45,7 @@ final class MapTypeMapVirtualColumnDimensionSelector extends MapVirtualColumnDim
   @Override
   public IndexedInts getRow()
   {
-    throw new UnsupportedOperationException("Map column doesn't support aggregation yet");
+    throw new UnsupportedOperationException("Map column doesn't support getRow()");
   }
 
   @Override
@@ -97,7 +97,7 @@ final class MapTypeMapVirtualColumnDimensionSelector extends MapVirtualColumnDim
   @Override
   public String lookupName(int id)
   {
-    return null;
+    throw new UnsupportedOperationException("Map column doesn't support lookupName()");
   }
 
   @Override
@@ -110,7 +110,7 @@ final class MapTypeMapVirtualColumnDimensionSelector extends MapVirtualColumnDim
   @Override
   public IdLookup idLookup()
   {
-    return null;
+    throw new UnsupportedOperationException("Map column doesn't support idLookup()");
   }
 
   @Override
