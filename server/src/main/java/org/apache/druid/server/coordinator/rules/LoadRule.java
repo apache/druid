@@ -152,9 +152,8 @@ public abstract class LoadRule implements Rule
       log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
       return Collections.emptyList();
     }
-    predicate = predicate.and(s -> !s.isMaintenance());
-
-    return queue.stream().filter(predicate).collect(Collectors.toList());
+    Predicate<ServerHolder> general = s -> !s.isInMaintenance();
+    return queue.stream().filter(general.and(predicate)).collect(Collectors.toList());
   }
 
   /**

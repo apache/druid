@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.primitives.Doubles;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer;
@@ -30,7 +29,7 @@ import java.util.Comparator;
 public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
 {
   public static final Comparator<ServerHolder> percentUsedComparator = (ServerHolder a, ServerHolder b) -> {
-    int c = Doubles.compare(a.getPercentUsed(), b.getPercentUsed());
+    int c = Double.compare(a.getPercentUsed(), b.getPercentUsed());
     if (c == 0) {
       return a.getServer().getName().compareTo(b.getServer().getName());
     }

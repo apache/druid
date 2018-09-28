@@ -105,14 +105,17 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     }
 
     Map<Boolean, List<ServerHolder>> partitions = servers.stream()
-                                                      .collect(Collectors.partitioningBy(ServerHolder::isMaintenance));
+                                                      .collect(Collectors.partitioningBy(ServerHolder::isInMaintenance));
     final List<ServerHolder> maintenance = partitions.get(true);
     final List<ServerHolder> general = partitions.get(false);
     log.info("Found %d servers in maintenance, %d general servers", maintenance.size(), general.size());
 
-    if (general.size() == 0) {
-      log.info("[%s]: 0 general servers found.  Cannot balance.", tier);
-      return;
+    if (maintenance.isEmpty()) {
+      if (general.size() <= 1) {
+        log.info("[%s]: %d general servers found.  Cannot balance.", tier, general.size());
+      }
+    } else if (general.isEmpty()) {
+      log.info("[%s]: no general servers found during maintenance.  Cannot balance.", tier);
     }
 
     int numSegments = 0;
@@ -126,20 +129,16 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     }
 
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
-    int priority = params.getCoordinatorDynamicConfig().getMaintenanceModeSegmentsPriority();
+    int priority = params.getCoordinatorDynamicConfig().getNodesInMaintenancePriority();
     int maintenanceSegmentsToMove = (int) Math.ceil(maxSegmentsToMove * priority / 10.0);
-    log.info("Balancing %d segments for servers in maintenance mode", maintenanceSegmentsToMove);
+    log.info("Processing %d segments from servers in maintenance mode", maintenanceSegmentsToMove);
     Pair<Integer, Integer> maintenanceResult = balanceServers(params, maintenance, general, maintenanceSegmentsToMove);
     int generalSegmentsToMove = maxSegmentsToMove - maintenanceResult.lhs;
-    log.info("Balancing %d segments for servers in general mode", generalSegmentsToMove);
+    log.info("Processing %d segments from servers in general mode", generalSegmentsToMove);
     Pair<Integer, Integer> generalResult = balanceServers(params, general, general, generalSegmentsToMove);
-    Pair<Integer, Integer> result = new Pair(
-        generalResult.lhs + maintenanceResult.lhs,
-        generalResult.rhs + maintenanceResult.rhs
-    );
 
-    int moved = result.lhs;
-    int unmoved = result.rhs;
+    int moved = generalResult.lhs + maintenanceResult.lhs;
+    int unmoved = generalResult.rhs + maintenanceResult.rhs;
     if (unmoved == maxSegmentsToMove) {
       // Cluster should be alive and constantly adjusting
       log.info("No good moves found in tier [%s]", tier);
@@ -151,12 +150,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       final BalancerStrategy strategy = params.getBalancerStrategy();
       strategy.emitStats(tier, stats, Lists.newArrayList(servers));
     }
-    log.info(
-        "[%s]: Segments Moved: [%d] Segments Let Alone: [%d]",
-        tier,
-        moved,
-        unmoved
-    );
+    log.info("[%s]: Segments Moved: [%d] Segments Let Alone: [%d]", tier, moved, unmoved);
   }
 
   private Pair<Integer, Integer> balanceServers(
@@ -193,6 +187,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
           if (destinationHolder != null && !destinationHolder.getServer().equals(fromServer)) {
             if (moveSegment(segmentToMoveHolder, destinationHolder.getServer(), params)) {
               moved++;
+            } else {
+              unmoved++;
             }
           } else {
             log.info("Segment [%s] is 'optimally' placed.", segmentToMove.getIdentifier());

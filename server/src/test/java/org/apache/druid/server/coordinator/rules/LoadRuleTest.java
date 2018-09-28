@@ -65,6 +65,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -181,7 +182,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -252,7 +253,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -302,7 +303,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -392,7 +393,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -481,7 +482,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -540,7 +541,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -613,7 +614,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -670,7 +671,7 @@ public class LoadRuleTest
             .withReplicationManager(throttler)
             .withBalancerStrategy(mockBalancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withAvailableSegments(Arrays.asList(dataSegment1, dataSegment2, dataSegment3))
+            .withAvailableSegments(dataSegment1, dataSegment2, dataSegment3)
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
             .build();
 
@@ -713,13 +714,9 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "tier1",
-            Stream.of(
-                createServerHolder("tier1", mockPeon1, true)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>())),
+            Collections.singleton(createServerHolder("tier1", mockPeon1, true)),
             "tier2",
-            Stream.of(
-                createServerHolder("tier2", mockPeon2, false)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>()))
+            Collections.singleton(createServerHolder("tier2", mockPeon2, false))
         )
     );
 
@@ -731,7 +728,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -754,10 +751,7 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon3 = createOneCallPeonMock();
     final LoadQueuePeon mockPeon4 = createOneCallPeonMock();
 
-    LoadRule rule = createLoadRule(ImmutableMap.of(
-        "tier1", 2,
-        "tier2", 2
-    ));
+    LoadRule rule = createLoadRule(ImmutableMap.of("tier1", 2, "tier2", 2));
 
     final DataSegment segment = createDataSegment("foo");
 
@@ -781,18 +775,7 @@ public class LoadRuleTest
 
     DruidCluster druidCluster = new DruidCluster(
         null,
-        ImmutableMap.of(
-            "tier1",
-            Stream.of(
-                holder1,
-                holder2
-            ).collect(Collectors.toCollection(() -> new TreeSet<>())),
-            "tier2",
-            Stream.of(
-                holder3,
-                holder4
-            ).collect(Collectors.toCollection(() -> new TreeSet<>()))
-        )
+        ImmutableMap.of("tier1", Arrays.asList(holder1, holder2), "tier2", Arrays.asList(holder3, holder4))
     );
 
     CoordinatorStats stats = rule.run(
@@ -803,7 +786,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Collections.singletonList(segment)).build(),
+                                     .withAvailableSegments(segment).build(),
         segment
     );
 
@@ -829,9 +812,7 @@ public class LoadRuleTest
             .times(2);
     EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
 
-    LoadRule rule = createLoadRule(ImmutableMap.of(
-        "tier1", 0
-    ));
+    LoadRule rule = createLoadRule(ImmutableMap.of("tier1", 0));
 
     final DataSegment segment1 = createDataSegment("foo1");
     final DataSegment segment2 = createDataSegment("foo2");
@@ -845,33 +826,22 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "tier1",
-            Stream.of(
-                new ServerHolder(
-                    server1.toImmutableDruidServer(),
-                    mockPeon,
-                    true
-                ),
-                new ServerHolder(
-                    server2.toImmutableDruidServer(),
-                    mockPeon,
-                    false
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            Arrays.asList(
+                new ServerHolder(server1.toImmutableDruidServer(), mockPeon, true),
+                new ServerHolder(server2.toImmutableDruidServer(), mockPeon, false)
+            )
         )
     );
 
-    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams.newBuilder()
-                                                                       .withDruidCluster(druidCluster)
-                                                                       .withSegmentReplicantLookup(
-                                                                           SegmentReplicantLookup.make(druidCluster))
-                                                                       .withReplicationManager(throttler)
-                                                                       .withBalancerStrategy(mockBalancerStrategy)
-                                                                       .withBalancerReferenceTimestamp(DateTimes.of(
-                                                                           "2013-01-01"))
-                                                                       .withAvailableSegments(Arrays.asList(
-                                                                           segment1,
-                                                                           segment2
-                                                                       )).build();
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withReplicationManager(throttler)
+        .withBalancerStrategy(mockBalancerStrategy)
+        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
+        .withAvailableSegments(segment1, segment2)
+        .build();
     CoordinatorStats stats = rule.run(
         null,
         params,
@@ -965,10 +935,10 @@ public class LoadRuleTest
     return mockPeon;
   }
 
-  private static int serverId = 0;
+  private static AtomicInteger serverId = new AtomicInteger();
   private static DruidServer createServer(String tier)
   {
-    int serverId = ++LoadRuleTest.serverId;
+    int serverId = LoadRuleTest.serverId.incrementAndGet();
     return new DruidServer(
         "server" + serverId,
         "127.0.0.1:800" + serverId,

@@ -75,6 +75,42 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
+  public void testMaintenanceParametersBackwardCompatibility() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"millisToWaitBeforeDeleting\": 1,\n"
+                     + "  \"mergeBytesLimit\": 1,\n"
+                     + "  \"mergeSegmentsLimit\" : 1,\n"
+                     + "  \"maxSegmentsToMove\": 1,\n"
+                     + "  \"replicantLifetime\": 1,\n"
+                     + "  \"replicationThrottleLimit\": 1,\n"
+                     + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"emitBalancingStats\": true,\n"
+                     + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
+                     + "}\n";
+
+    CoordinatorDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                CoordinatorDynamicConfig.class
+            )
+        ),
+        CoordinatorDynamicConfig.class
+    );
+    ImmutableSet<String> maintenance = ImmutableSet.of();
+    ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, maintenance, 0);
+
+    actual = CoordinatorDynamicConfig.builder().withMaintenanceList(ImmutableSet.of("host1")).build(actual);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0);
+
+    actual = CoordinatorDynamicConfig.builder().withMaintenanceModeSegmentsPriority(5).build(actual);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
+  }
+
+  @Test
   public void testSerdeWithStringinKillDataSourceWhitelist() throws Exception
   {
     String jsonStr = "{\n"
@@ -179,10 +215,9 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testBuilderDefaults()
   {
-
     CoordinatorDynamicConfig defaultConfig = CoordinatorDynamicConfig.builder().build();
-    assertConfig(defaultConfig, 900000, 524288000, 100, 5, 15, 10, 1, false, ImmutableSet.of(), false, 0, ImmutableSet.of(),
-                 7);
+    ImmutableSet<String> emptyList = ImmutableSet.of();
+    assertConfig(defaultConfig, 900000, 524288000, 100, 5, 15, 10, 1, false, emptyList, false, 0, emptyList, 7);
   }
 
   @Test
@@ -237,7 +272,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedKillDataSourceWhitelist, config.getKillDataSourceWhitelist());
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
-    Assert.assertEquals(maintenanceList, config.getMaintenanceList());
-    Assert.assertEquals(maintenancePriority, config.getMaintenanceModeSegmentsPriority());
+    Assert.assertEquals(maintenanceList, config.getHistoricalNodesInMaintenance());
+    Assert.assertEquals(maintenancePriority, config.getNodesInMaintenancePriority());
   }
 }

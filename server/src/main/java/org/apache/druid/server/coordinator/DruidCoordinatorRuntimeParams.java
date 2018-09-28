@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -29,6 +30,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -343,6 +345,13 @@ public class DruidCoordinatorRuntimeParams
             );
           }
       );
+      return this;
+    }
+
+    @VisibleForTesting
+    public Builder withAvailableSegments(DataSegment... availableSegmentsCollection)
+    {
+      availableSegments.addAll(Arrays.asList(availableSegmentsCollection));
       return this;
     }
 

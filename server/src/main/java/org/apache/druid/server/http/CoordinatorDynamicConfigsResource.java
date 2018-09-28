@@ -84,22 +84,29 @@ public class CoordinatorDynamicConfigsResource
                                     @Context HttpServletRequest req
   )
   {
-    CoordinatorDynamicConfig current = manager.watch(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        CoordinatorDynamicConfig.class
-    ).get();
+    try {
+      CoordinatorDynamicConfig current = manager.watch(
+          CoordinatorDynamicConfig.CONFIG_KEY,
+          CoordinatorDynamicConfig.class
+      ).get();
 
-    final SetResult setResult = manager.set(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        current == null ? dynamicConfigBuilder.build() : dynamicConfigBuilder.build(current),
-        new AuditInfo(author, comment, req.getRemoteAddr())
-    );
+      final SetResult setResult = manager.set(
+          CoordinatorDynamicConfig.CONFIG_KEY,
+          current == null ? dynamicConfigBuilder.build() : dynamicConfigBuilder.build(current),
+          new AuditInfo(author, comment, req.getRemoteAddr())
+      );
 
-    if (setResult.isOk()) {
-      return Response.ok().build();
-    } else {
+      if (setResult.isOk()) {
+        return Response.ok().build();
+      } else {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ImmutableMap.of("error", setResult.getException()))
+                       .build();
+      }
+    }
+    catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", setResult.getException()))
+                     .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
                      .build();
     }
   }

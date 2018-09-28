@@ -39,20 +39,21 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.replay;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 
 /**
  */
@@ -212,8 +213,8 @@ public class DruidCoordinatorBalancerTest
   @Test
   public void testMoveMaintenancePriority()
   {
-    mockDruidServer(druidServer1, "1", "normal", 30L, 100L, ImmutableMap.of(segment1.getIdentifier(), segment1, segment2.getIdentifier(), segment2));
-    mockDruidServer(druidServer2, "2", "normal", 30L, 100L, ImmutableMap.of(segment3.getIdentifier(), segment3, segment4.getIdentifier(), segment4));
+    mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segmentsToMap(segment1, segment2));
+    mockDruidServer(druidServer2, "2", "normal", 30L, 100L, segmentsToMap(segment3, segment4));
     mockDruidServer(druidServer3, "3", "normal", 0L, 100L, Collections.emptyMap());
 
     EasyMock.replay(druidServer4);
@@ -228,7 +229,9 @@ public class DruidCoordinatorBalancerTest
             .andReturn(new BalancerSegmentHolder(druidServer1, segment1))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment2));
 
-    EasyMock.expect(strategy.findNewSegmentHomeBalancer(anyObject(), anyObject())).andReturn(new ServerHolder(druidServer3, peon3)).anyTimes();
+    EasyMock.expect(strategy.findNewSegmentHomeBalancer(anyObject(), anyObject()))
+            .andReturn(new ServerHolder(druidServer3, peon3))
+            .anyTimes();
     replay(strategy);
 
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(
@@ -238,9 +241,9 @@ public class DruidCoordinatorBalancerTest
     )
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
-                                    .withMaxSegmentsToMove(
-                                        3
-                                    ).withMaintenanceModeSegmentsPriority(6).build()// ceil(3 * 0.6) = 2 segments from servers in maintenance
+                                    .withMaxSegmentsToMove(3)
+                                    .withMaintenanceModeSegmentsPriority(6)
+                                    .build() // ceil(3 * 0.6) = 2 segments from servers in maintenance
         )
         .withBalancerStrategy(strategy)
         .build();
@@ -274,8 +277,8 @@ public class DruidCoordinatorBalancerTest
   @Test
   public void testMoveMaintenancePriorityWithNoMaintenance()
   {
-    mockDruidServer(druidServer1, "1", "normal", 30L, 100L, ImmutableMap.of(segment1.getIdentifier(), segment1, segment2.getIdentifier(), segment2));
-    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, ImmutableMap.of(segment3.getIdentifier(), segment3, segment4.getIdentifier(), segment4));
+    mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segmentsToMap(segment1, segment2));
+    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, segmentsToMap(segment3, segment4));
     mockDruidServer(druidServer3, "3", "normal", 0L, 100L, Collections.emptyMap());
 
     EasyMock.replay(druidServer4);
@@ -289,7 +292,9 @@ public class DruidCoordinatorBalancerTest
         .andReturn(new BalancerSegmentHolder(druidServer2, segment3))
         .andReturn(new BalancerSegmentHolder(druidServer2, segment4));
 
-    EasyMock.expect(strategy.findNewSegmentHomeBalancer(anyObject(), anyObject())).andReturn(new ServerHolder(druidServer3, peon3)).anyTimes();
+    EasyMock.expect(strategy.findNewSegmentHomeBalancer(anyObject(), anyObject()))
+            .andReturn(new ServerHolder(druidServer3, peon3))
+            .anyTimes();
     replay(strategy);
 
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(
@@ -298,10 +303,7 @@ public class DruidCoordinatorBalancerTest
         ImmutableList.of(false, false, false)
     )
         .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder()
-                                    .withMaxSegmentsToMove(
-                                        3
-                                    ).withMaintenanceModeSegmentsPriority(9).build()
+            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(3).withMaintenanceModeSegmentsPriority(9).build()
         )
         .withBalancerStrategy(strategy)
         .build();
@@ -326,7 +328,9 @@ public class DruidCoordinatorBalancerTest
     mockCoordinator(coordinator);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentToMove(anyObject())).andReturn(new BalancerSegmentHolder(druidServer1, segment1)).anyTimes();
+    EasyMock.expect(strategy.pickSegmentToMove(anyObject()))
+            .andReturn(new BalancerSegmentHolder(druidServer1, segment1))
+            .anyTimes();
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(anyObject(), anyObject())).andAnswer(() -> {
       List<ServerHolder> holders = (List<ServerHolder>) EasyMock.getCurrentArguments()[1];
       return holders.get(0);
@@ -358,7 +362,9 @@ public class DruidCoordinatorBalancerTest
 
     ServerHolder holder2 = new ServerHolder(druidServer2, peon2, false);
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentToMove(anyObject())).andReturn(new BalancerSegmentHolder(druidServer1, segment1)).once();
+    EasyMock.expect(strategy.pickSegmentToMove(anyObject()))
+            .andReturn(new BalancerSegmentHolder(druidServer1, segment1))
+            .once();
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(anyObject(), anyObject())).andReturn(holder2).once();
     replay(strategy);
 
@@ -367,11 +373,7 @@ public class DruidCoordinatorBalancerTest
         ImmutableList.of(peon1, peon2),
         ImmutableList.of(true, false)
     )
-        .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
-                1
-            ).build()
-        )
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(1).build())
         .withBalancerStrategy(strategy)
         .build();
 
@@ -503,7 +505,11 @@ public class DruidCoordinatorBalancerTest
       List<LoadQueuePeon> peons
   )
   {
-    return defaultRuntimeParamsBuilder(druidServers, peons, druidServers.stream().map(s -> false).collect(Collectors.toList()));
+    return defaultRuntimeParamsBuilder(
+        druidServers,
+        peons,
+        druidServers.stream().map(s -> false).collect(Collectors.toList())
+    );
   }
 
   private DruidCoordinatorRuntimeParams.Builder defaultRuntimeParamsBuilder(
@@ -522,11 +528,7 @@ public class DruidCoordinatorBalancerTest
                     IntStream
                         .range(0, druidServers.size())
                         .mapToObj(i -> new ServerHolder(druidServers.get(i), peons.get(i), maintenance.get(i)))
-                        .collect(
-                            Collectors.toCollection(
-                                () -> new TreeSet<>(DruidCoordinatorBalancerTester.percentUsedComparator)
-                            )
-                        )
+                        .collect(Collectors.toSet())
                 )
             )
         )
@@ -631,8 +633,8 @@ public class DruidCoordinatorBalancerTest
 
   private DruidCoordinatorRuntimeParams setupParamsForMaintenancePriority(int priority)
   {
-    mockDruidServer(druidServer1, "1", "normal", 30L, 100L, ImmutableMap.of(segment1.getIdentifier(), segment1, segment3.getIdentifier(), segment3));
-    mockDruidServer(druidServer2, "2", "normal", 30L, 100L, ImmutableMap.of(segment2.getIdentifier(), segment2, segment3.getIdentifier(), segment3));
+    mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segmentsToMap(segment1, segment3));
+    mockDruidServer(druidServer2, "2", "normal", 30L, 100L, segmentsToMap(segment2, segment3));
     mockDruidServer(druidServer3, "3", "normal", 0L, 100L, Collections.emptyMap());
 
     EasyMock.replay(druidServer4);
@@ -645,8 +647,9 @@ public class DruidCoordinatorBalancerTest
             .andReturn(new BalancerSegmentHolder(druidServer2, segment2));
     EasyMock.expect(strategy.pickSegmentToMove(anyObject()))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment1));
-
-    EasyMock.expect(strategy.findNewSegmentHomeBalancer(anyObject(), anyObject())).andReturn(new ServerHolder(druidServer3, peon3)).anyTimes();
+    EasyMock.expect(strategy.findNewSegmentHomeBalancer(anyObject(), anyObject()))
+            .andReturn(new ServerHolder(druidServer3, peon3))
+            .anyTimes();
     replay(strategy);
 
     return defaultRuntimeParamsBuilder(
@@ -656,11 +659,19 @@ public class DruidCoordinatorBalancerTest
     )
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
-                                    .withMaxSegmentsToMove(
-                                        1
-                                    ).withMaintenanceModeSegmentsPriority(priority).build()
+                                    .withMaxSegmentsToMove(1)
+                                    .withMaintenanceModeSegmentsPriority(priority)
+                                    .build()
         )
         .withBalancerStrategy(strategy)
         .build();
+  }
+
+  private static ImmutableMap<String, DataSegment> segmentsToMap(DataSegment... segments)
+  {
+    return ImmutableMap.copyOf(
+        Arrays.stream(segments)
+              .collect(Collectors.toMap(DataSegment::getIdentifier, Function.identity()))
+    );
   }
 }

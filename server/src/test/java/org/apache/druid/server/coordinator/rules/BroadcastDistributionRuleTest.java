@@ -286,14 +286,14 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Lists.newArrayList(
+                                     .withAvailableSegments(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),
                                          largeSegments.get(2),
                                          largeSegments2.get(0),
                                          largeSegments2.get(1)
-                                     )).build(),
+                                     ).build(),
         smallSegment
     );
 
@@ -337,11 +337,11 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(secondCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(secondCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Lists.newArrayList(
+                                     .withAvailableSegments(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1)
-                                     )).build(),
+                                     ).build(),
         smallSegment
     );
 
@@ -366,14 +366,14 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Lists.newArrayList(
+                                     .withAvailableSegments(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),
                                          largeSegments.get(2),
                                          largeSegments2.get(0),
                                          largeSegments2.get(1)
-                                     )).build(),
+                                     ).build(),
         smallSegment
     );
 
@@ -404,14 +404,14 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Lists.newArrayList(
+                                     .withAvailableSegments(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),
                                          largeSegments.get(2),
                                          largeSegments2.get(0),
                                          largeSegments2.get(1)
-                                     )).build(),
+                                     ).build(),
         smallSegment
     );
 
