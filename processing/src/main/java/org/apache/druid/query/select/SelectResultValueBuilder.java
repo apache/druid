@@ -159,7 +159,7 @@ public class SelectResultValueBuilder
         // Specifically creating a heap queue in the opposite order from what is required, to be able to remove the
         // least elements above the threshold.
         Comparator<EventHolder> order = descending ? comparator : comparator.reversed();
-        pQueue = new PriorityQueue<>(threshold + 1, order);
+        pQueue = new PriorityQueue<>(order);
       } else {
         eventHolders = new ArrayList<>();
       }
@@ -175,6 +175,7 @@ public class SelectResultValueBuilder
           eventHolders.add(pQueue.remove());
         }
         Collections.reverse(eventHolders);
+        pQueue = null;
       } else {
         Comparator<EventHolder> order = descending ? comparator.reversed() : comparator;
         eventHolders.sort(order);
