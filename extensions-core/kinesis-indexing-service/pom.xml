@@ -42,11 +42,6 @@
     <aws.version>1.10.61</aws.version>
   </properties>
 
-  <modules>
-    <module>imply-kinesis-lib</module>
-    <module>kinesis-indexing-service</module>
-  </modules>
-
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -123,6 +118,10 @@
 
     <!-- Tests -->
     <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.12</version>
@@ -137,10 +136,22 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
+      <artifactId>druid-processing</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-indexing-service</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>cloud.localstack</groupId>
+      <artifactId>localstack-utils</artifactId>
+      <version>0.1.14</version>
     </dependency>
   </dependencies>
 

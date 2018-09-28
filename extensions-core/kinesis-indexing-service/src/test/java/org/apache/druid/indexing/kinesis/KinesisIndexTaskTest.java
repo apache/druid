@@ -1,430 +1,474 @@
-///*
-// * Licensed to the Apache Software Foundation (ASF) under one
-// * or more contributor license agreements.  See the NOTICE file
-// * distributed with this work for additional information
-// * regarding copyright ownership.  The ASF licenses this file
-// * to you under the Apache License, Version 2.0 (the
-// * "License"); you may not use this file except in compliance
-// * with the License.  You may obtain a copy of the License at
-// *
-// *   http://www.apache.org/licenses/LICENSE-2.0
-// *
-// * Unless required by applicable law or agreed to in writing,
-// * software distributed under the License is distributed on an
-// * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// * KIND, either express or implied.  See the License for the
-// * specific language governing permissions and limitations
-// * under the License.
-// */
-//
-//package org.apache.druid.indexing.kinesis;
-//
-//import com.fasterxml.jackson.core.type.TypeReference;
-//import com.fasterxml.jackson.databind.Module;
-//import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.google.common.base.Predicate;
-//import com.google.common.base.Predicates;
-//import com.google.common.base.Throwables;
-//import com.google.common.collect.FluentIterable;
-//import com.google.common.collect.ImmutableList;
-//import com.google.common.collect.ImmutableMap;
-//import com.google.common.collect.ImmutableSet;
-//import com.google.common.collect.Iterables;
-//import com.google.common.collect.Lists;
-//import com.google.common.collect.Sets;
-//import com.google.common.io.Files;
-//import com.google.common.util.concurrent.ListenableFuture;
-//import com.google.common.util.concurrent.ListeningExecutorService;
-//import com.google.common.util.concurrent.MoreExecutors;
-//import org.apache.curator.test.TestingCluster;
-//import org.apache.druid.client.cache.CacheConfig;
-//import org.apache.druid.client.cache.CachePopulatorStats;
-//import org.apache.druid.client.cache.MapCache;
-//import org.apache.druid.data.input.impl.DimensionsSpec;
-//import org.apache.druid.data.input.impl.FloatDimensionSchema;
-//import org.apache.druid.data.input.impl.JSONParseSpec;
-//import org.apache.druid.data.input.impl.LongDimensionSchema;
-//import org.apache.druid.data.input.impl.StringDimensionSchema;
-//import org.apache.druid.data.input.impl.StringInputRowParser;
-//import org.apache.druid.data.input.impl.TimestampSpec;
-//import org.apache.druid.discovery.DataNodeService;
-//import org.apache.druid.discovery.DruidNodeAnnouncer;
-//import org.apache.druid.discovery.LookupNodeService;
-//import org.apache.druid.indexer.TaskState;
-//import org.apache.druid.indexer.TaskStatus;
-//import org.apache.druid.indexing.common.Counters;
-//import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
-//import org.apache.druid.indexing.common.SegmentLoaderFactory;
-//import org.apache.druid.indexing.common.TaskLock;
-//import org.apache.druid.indexing.common.TaskReport;
-//import org.apache.druid.indexing.common.TaskReportFileWriter;
-//import org.apache.druid.indexing.common.TaskToolbox;
-//import org.apache.druid.indexing.common.TaskToolboxFactory;
-//import org.apache.druid.indexing.common.TestUtils;
-//import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
-//import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
-//import org.apache.druid.indexing.common.actions.TaskActionToolbox;
-//import org.apache.druid.indexing.common.config.TaskConfig;
-//import org.apache.druid.indexing.common.config.TaskStorageConfig;
-//import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-//import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
-//import org.apache.druid.indexing.common.task.IndexTaskTest;
-//import org.apache.druid.indexing.common.task.Task;
-//import org.apache.druid.indexing.overlord.DataSourceMetadata;
-//import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-//import org.apache.druid.indexing.overlord.MetadataTaskStorage;
-//import org.apache.druid.indexing.overlord.TaskLockbox;
-//import org.apache.druid.indexing.overlord.TaskStorage;
-//import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-//import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
-//import org.apache.druid.indexing.seekablestream.test.TestBroker;
-//import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
-//import org.apache.druid.indexing.test.TestDataSegmentKiller;
-//import org.apache.druid.java.util.common.CompressionUtils;
-//import org.apache.druid.java.util.common.DateTimes;
-//import org.apache.druid.java.util.common.ISE;
-//import org.apache.druid.java.util.common.Intervals;
-//import org.apache.druid.java.util.common.StringUtils;
-//import org.apache.druid.java.util.common.concurrent.Execs;
-//import org.apache.druid.java.util.common.granularity.Granularities;
-//import org.apache.druid.java.util.common.logger.Logger;
-//import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-//import org.apache.druid.java.util.emitter.EmittingLogger;
-//import org.apache.druid.java.util.emitter.core.NoopEmitter;
-//import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-//import org.apache.druid.java.util.metrics.MonitorScheduler;
-//import org.apache.druid.math.expr.ExprMacroTable;
-//import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
-//import org.apache.druid.metadata.EntryExistsException;
-//import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-//import org.apache.druid.metadata.TestDerbyConnector;
-//import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
-//import org.apache.druid.query.Druids;
-//import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
-//import org.apache.druid.query.Query;
-//import org.apache.druid.query.QueryRunner;
-//import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-//import org.apache.druid.query.QueryToolChest;
-//import org.apache.druid.query.Result;
-//import org.apache.druid.query.SegmentDescriptor;
-//import org.apache.druid.query.aggregation.AggregatorFactory;
-//import org.apache.druid.query.aggregation.CountAggregatorFactory;
-//import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
-//import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-//import org.apache.druid.query.filter.SelectorDimFilter;
-//import org.apache.druid.query.timeseries.TimeseriesQuery;
-//import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
-//import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
-//import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
-//import org.apache.druid.query.timeseries.TimeseriesResultValue;
-//import org.apache.druid.segment.DimensionHandlerUtils;
-//import org.apache.druid.segment.IndexIO;
-//import org.apache.druid.segment.QueryableIndex;
-//import org.apache.druid.segment.TestHelper;
-//import org.apache.druid.segment.column.DictionaryEncodedColumn;
-//import org.apache.druid.segment.indexing.DataSchema;
-//import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-//import org.apache.druid.segment.loading.DataSegmentPusher;
-//import org.apache.druid.segment.loading.LocalDataSegmentPusher;
-//import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
-//import org.apache.druid.segment.loading.SegmentLoaderConfig;
-//import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
-//import org.apache.druid.segment.loading.StorageLocationConfig;
-//import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
-//import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-//import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
-//import org.apache.druid.segment.transform.ExpressionTransform;
-//import org.apache.druid.segment.transform.TransformSpec;
-//import org.apache.druid.server.DruidNode;
-//import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
-//import org.apache.druid.server.coordination.ServerType;
-//import org.apache.druid.timeline.DataSegment;
-//import org.apache.kafka.clients.producer.KafkaProducer;
-//import org.apache.kafka.clients.producer.ProducerRecord;
-//import org.easymock.EasyMock;
-//import org.joda.time.Interval;
-//import org.joda.time.Period;
-//import org.junit.After;
-//import org.junit.AfterClass;
-//import org.junit.Assert;
-//import org.junit.Before;
-//import org.junit.BeforeClass;
-//import org.junit.Rule;
-//import org.junit.Test;
-//import org.junit.rules.TemporaryFolder;
-//import org.junit.runner.RunWith;
-//import org.junit.runners.Parameterized;
-//
-//import javax.annotation.Nullable;
-//import java.io.File;
-//import java.io.IOException;
-//import java.lang.reflect.InvocationTargetException;
-//import java.lang.reflect.Method;
-//import java.nio.charset.StandardCharsets;
-//import java.util.Arrays;
-//import java.util.HashMap;
-//import java.util.List;
-//import java.util.Map;
-//import java.util.Objects;
-//import java.util.Set;
-//import java.util.TreeMap;
-//import java.util.concurrent.Executor;
-//import java.util.concurrent.Executors;
-//import java.util.concurrent.TimeUnit;
-//import java.util.concurrent.TimeoutException;
-//
-//import static org.apache.druid.query.QueryPlus.wrap;
-//
-//@RunWith(Parameterized.class)
-//public class KinesisIndexTaskTest
-//{
-//  private static final Logger log = new Logger(KinesisIndexTask.class);
-//  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-//  private static final long POLL_RETRY_MS = 100;
-//
-//  private static TestingCluster zkServer;
-//  private static TestBroker kafkaServer;
-//  private static ServiceEmitter emitter;
-//  private static ListeningExecutorService taskExec;
-//  private static int topicPostfix;
-//
-//  private final List<Task> runningTasks = Lists.newArrayList();
-//
-//  private long handoffConditionTimeout = 0;
-//  private boolean reportParseExceptions = false;
-//  private boolean logParseExceptions = true;
-//  private Integer maxParseExceptions = null;
-//  private Integer maxSavedParseExceptions = null;
-//  private boolean resetOffsetAutomatically = false;
-//  private boolean doHandoff = true;
-//  private Integer maxRowsPerSegment = null;
-//  private Long maxTotalRows = null;
-//  private Period intermediateHandoffPeriod = null;
-//
-//  private TaskToolboxFactory toolboxFactory;
-//  private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-//  private TaskStorage taskStorage;
-//  private TaskLockbox taskLockbox;
-//  private File directory;
-//  private String topic;
-//  private List<ProducerRecord<byte[], byte[]>> records;
-//  private final boolean isIncrementalHandoffSupported;
-//  private final Set<Integer> checkpointRequestsHash = Sets.newHashSet();
-//  private File reportsFile;
-//  private RowIngestionMetersFactory rowIngestionMetersFactory;
-//
-//  private int handoffCount = 0;
-//
-//  // This should be removed in versions greater that 0.12.x
-//  // isIncrementalHandoffSupported should always be set to true in those later versions
-//  @Parameterized.Parameters(name = "isIncrementalHandoffSupported = {0}")
-//  public static Iterable<Object[]> constructorFeeder()
-//  {
-//    return ImmutableList.of(new Object[]{true}, new Object[]{false});
-//  }
-//
-//  public KafkaIndexTaskTest(boolean isIncrementalHandoffSupported)
-//  {
-//    this.isIncrementalHandoffSupported = isIncrementalHandoffSupported;
-//  }
-//
-//  private static final DataSchema DATA_SCHEMA = new DataSchema(
-//      "test_ds",
-//      objectMapper.convertValue(
-//          new StringInputRowParser(
-//              new JSONParseSpec(
-//                  new TimestampSpec("timestamp", "iso", null),
-//                  new DimensionsSpec(
-//                      Arrays.asList(
-//                          new StringDimensionSchema("dim1"),
-//                          new StringDimensionSchema("dim1t"),
-//                          new StringDimensionSchema("dim2"),
-//                          new LongDimensionSchema("dimLong"),
-//                          new FloatDimensionSchema("dimFloat")
-//                      ),
-//                      null,
-//                      null
-//                  ),
-//                  new JSONPathSpec(true, ImmutableList.of()),
-//                  ImmutableMap.of()
-//              ),
-//              StandardCharsets.UTF_8.name()
-//          ),
-//          Map.class
-//      ),
-//      new AggregatorFactory[]{
-//          new DoubleSumAggregatorFactory("met1sum", "met1"),
-//          new CountAggregatorFactory("rows")
-//      },
-//      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-//      null,
-//      objectMapper
-//  );
-//
-//  private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)
-//  {
-//    return ImmutableList.of(
-//        new ProducerRecord<>(topic, 0, null, JB("2008", "a", "y", "10", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, JB("2009", "b", "y", "10", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, JB("2010", "c", "y", "10", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, JB("2011", "d", "y", "10", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, JB("2011", "e", "y", "10", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("unparseable")),
-//        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("unparseable2")),
-//        new ProducerRecord<>(topic, 0, null, null),
-//        new ProducerRecord<>(topic, 0, null, JB("2013", "f", "y", "10", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, JB("2049", "f", "y", "notanumber", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, JB("2049", "f", "y", "10", "notanumber", "1.0")),
-//        new ProducerRecord<>(topic, 0, null, JB("2049", "f", "y", "10", "20.0", "notanumber")),
-//        new ProducerRecord<>(topic, 1, null, JB("2012", "g", "y", "10", "20.0", "1.0")),
-//        new ProducerRecord<>(topic, 1, null, JB("2011", "h", "y", "10", "20.0", "1.0"))
-//    );
-//  }
-//
-//  private static String getTopicName()
-//  {
-//    return "topic" + topicPostfix++;
-//  }
-//
-//  @Rule
-//  public final TemporaryFolder tempFolder = new TemporaryFolder();
-//
-//  @Rule
-//  public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
-//
-//  @BeforeClass
-//  public static void setupClass() throws Exception
-//  {
-//    emitter = new ServiceEmitter(
-//        "service",
-//        "host",
-//        new NoopEmitter()
-//    );
-//    emitter.start();
-//    EmittingLogger.registerEmitter(emitter);
-//
-//    zkServer = new TestingCluster(1);
-//    zkServer.start();
-//
-//    kafkaServer = new TestBroker(
-//        zkServer.getConnectString(),
-//        null,
-//        1,
-//        ImmutableMap.of("num.partitions", "2")
-//    );
-//    kafkaServer.start();
-//
-//    taskExec = MoreExecutors.listeningDecorator(
-//        Executors.newCachedThreadPool(
-//            Execs.makeThreadFactory("kafka-task-test-%d")
-//        )
-//    );
-//  }
-//
-//  @Before
-//  public void setupTest() throws IOException
-//  {
-//    handoffConditionTimeout = 0;
-//    reportParseExceptions = false;
-//    logParseExceptions = true;
-//    maxParseExceptions = null;
-//    maxSavedParseExceptions = null;
-//    doHandoff = true;
-//    topic = getTopicName();
-//    records = generateRecords(topic);
-//    reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
-//    makeToolboxFactory();
-//  }
-//
-//  @After
-//  public void tearDownTest()
-//  {
-//    synchronized (runningTasks) {
-//      for (Task task : runningTasks) {
-//        task.stopGracefully();
-//      }
-//
-//      runningTasks.clear();
-//    }
-//    reportsFile.delete();
-//    destroyToolboxFactory();
-//  }
-//
-//  @AfterClass
-//  public static void tearDownClass() throws Exception
-//  {
-//    taskExec.shutdown();
-//    taskExec.awaitTermination(9999, TimeUnit.DAYS);
-//
-//    kafkaServer.close();
-//    kafkaServer = null;
-//
-//    zkServer.stop();
-//    zkServer = null;
-//
-//    emitter.close();
-//  }
-//
-//  @Test(timeout = 60_000L)
-//  public void testRunAfterDataInserted() throws Exception
-//  {
-//    // Insert data
-//    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-//      for (ProducerRecord<byte[], byte[]> record : records) {
-//        kafkaProducer.send(record).get();
-//      }
-//    }
-//
-//    final KafkaIndexTask task = createTask(
-//        null,
-//        new KafkaIOConfig(
-//            0,
-//            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
-//            kafkaServer.consumerProperties(),
-//            true,
-//            null,
-//            null,
-//            false
-//        )
-//    );
-//
-//    final ListenableFuture<TaskStatus> future = runTask(task);
-//
-//    // Wait for task to exit
-//    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-//
-//    // Check metrics
-//    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-//    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-//    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
-//
-//    // Check published metadata
-//    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-//    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-//    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
-//    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
-//        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
-//    );
-//
-//    // Check segments in deep storage
-//    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
-//    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
-//  }
-//
-//  @Test(timeout = 60_000L)
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.indexing.kinesis;
+
+import cloud.localstack.Localstack;
+import cloud.localstack.TestUtils;
+import cloud.localstack.docker.LocalstackDockerTestRunner;
+import cloud.localstack.docker.annotation.LocalstackDockerProperties;
+import com.amazonaws.http.SdkHttpMetadata;
+import com.amazonaws.services.kinesis.AmazonKinesis;
+import com.amazonaws.services.kinesis.model.GetRecordsRequest;
+import com.amazonaws.services.kinesis.model.GetRecordsResult;
+import com.amazonaws.services.kinesis.model.PutRecordsRequest;
+import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
+import com.amazonaws.services.kinesis.model.Record;
+import com.amazonaws.services.kinesis.model.ShardIteratorType;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Throwables;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.google.common.io.Files;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.DataNodeService;
+import org.apache.druid.discovery.DruidNodeAnnouncer;
+import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.Counters;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.TaskToolboxFactory;
+import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
+import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskStorageConfig;
+import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.MetadataTaskStorage;
+import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
+import org.apache.druid.indexing.test.TestDataSegmentKiller;
+import org.apache.druid.java.util.common.CompressionUtils;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
+import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LocalDataSegmentPusher;
+import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
+import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
+import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
+import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.timeline.DataSegment;
+import org.easymock.EasyMock;
+import org.joda.time.Interval;
+import org.joda.time.Period;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+
+import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+@RunWith(LocalstackDockerTestRunner.class)
+@LocalstackDockerProperties(services = {"kinesis"})
+public class KinesisIndexTaskTest
+{
+  static {
+    /*
+     * Need to disable CBOR protocol, see:
+     * https://github.com/mhart/kinesalite/blob/master/README.md#cbor-protocol-issues-with-the-java-sdk
+     */
+    TestUtils.setEnv("AWS_CBOR_DISABLE", "1");
+    /* Disable SSL certificate checks for local testing */
+    if (Localstack.useSSL()) {
+      TestUtils.disableSslCertChecking();
+    }
+  }
+
+  private static final Logger log = new Logger(KinesisIndexTaskTest.class);
+  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  // private static final long POLL_RETRY_MS = 100;
+  private static int streamPosFix = 0;
+
+  private static ServiceEmitter emitter;
+  private static ListeningExecutorService taskExec;
+
+  private static final AmazonKinesis kinesis = TestUtils.getClientKinesis();
+  private final List<Task> runningTasks = Lists.newArrayList();
+
+  private long handoffConditionTimeout = 0;
+  private boolean reportParseExceptions = false;
+  private boolean logParseExceptions = true;
+  private Integer maxParseExceptions = null;
+  private Integer maxSavedParseExceptions = null;
+  private boolean resetOffsetAutomatically = false;
+  private boolean doHandoff = true;
+  private Integer maxRowsPerSegment = null;
+  private Long maxTotalRows = null;
+  private Period intermediateHandoffPeriod = null;
+
+  private TaskToolboxFactory toolboxFactory;
+  private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
+  private TaskStorage taskStorage;
+  private TaskLockbox taskLockbox;
+  private File directory;
+  private String stream;
+  private PutRecordsRequest recordRequests;
+  private final boolean isIncrementalHandoffSupported = false;
+  private final Set<Integer> checkpointRequestsHash = Sets.newHashSet();
+  private File reportsFile;
+  private RowIngestionMetersFactory rowIngestionMetersFactory;
+
+  private int handoffCount = 0;
+
+  private static final DataSchema DATA_SCHEMA = new DataSchema(
+      "test_ds",
+      objectMapper.convertValue(
+          new StringInputRowParser(
+              new JSONParseSpec(
+                  new TimestampSpec("timestamp", "iso", null),
+                  new DimensionsSpec(
+                      Arrays.asList(
+                          new StringDimensionSchema("dim1"),
+                          new StringDimensionSchema("dim1t"),
+                          new StringDimensionSchema("dim2"),
+                          new LongDimensionSchema("dimLong"),
+                          new FloatDimensionSchema("dimFloat")
+                      ),
+                      null,
+                      null
+                  ),
+                  new JSONPathSpec(true, ImmutableList.of()),
+                  ImmutableMap.of()
+              ),
+              StandardCharsets.UTF_8.name()
+          ),
+          Map.class
+      ),
+      new AggregatorFactory[]{
+          new DoubleSumAggregatorFactory("met1sum", "met1"),
+          new CountAggregatorFactory("rows")
+      },
+      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+      null,
+      objectMapper
+  );
+
+  private static PutRecordsRequestEntry generateRequestEntry(String partition, String explicitHash, byte[] data)
+  {
+    return new PutRecordsRequestEntry().withPartitionKey(partition)
+                                       .withExplicitHashKey(explicitHash)
+                                       .withData(ByteBuffer.wrap(data));
+  }
+
+  private static PutRecordsRequest generateRecordsRequests(String stream)
+  {
+    return new PutRecordsRequest()
+        .withStreamName(stream)
+        .withRecords(
+            ImmutableList.of(
+                generateRequestEntry("0", "0", JB("2008", "a", "y", "10", "20.0", "1.0")),
+                generateRequestEntry("0", "0", JB("2009", "b", "y", "10", "20.0", "1.0")),
+                generateRequestEntry("0", "0", JB("2010", "c", "y", "10", "20.0", "1.0")),
+                generateRequestEntry("0", "0", JB("2011", "d", "y", "10", "20.0", "1.0")),
+                generateRequestEntry("0", "0", JB("2011", "e", "y", "10", "20.0", "1.0")),
+                generateRequestEntry("0", "0", JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")),
+                generateRequestEntry("0", "0", StringUtils.toUtf8("unparseable")),
+                generateRequestEntry("0", "0", StringUtils.toUtf8("unparseable2")),
+                generateRequestEntry("0", "0", "{}".getBytes()),
+                generateRequestEntry("0", "0", JB("2013", "f", "y", "10", "20.0", "1.0")),
+                generateRequestEntry("0", "0", JB("2049", "f", "y", "notanumber", "20.0", "1.0")),
+                generateRequestEntry("0", "0", JB("2049", "f", "y", "10", "notanumber", "1.0")),
+                generateRequestEntry("0", "0", JB("2049", "f", "y", "10", "20.0", "notanumber")),
+                generateRequestEntry("1", "1", JB("2012", "g", "y", "10", "20.0", "1.0")),
+                generateRequestEntry("1", "1", JB("2011", "h", "y", "10", "20.0", "1.0"))
+            )
+        );
+  }
+
+  private static String getStreamName()
+  {
+    return "stream-" + streamPosFix++;
+  }
+
+  @Rule
+  public final TemporaryFolder tempFolder = new TemporaryFolder();
+
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
+
+  @BeforeClass
+  public static void setupClass()
+  {
+    emitter = new ServiceEmitter(
+        "service",
+        "host",
+        new NoopEmitter()
+    );
+    emitter.start();
+    EmittingLogger.registerEmitter(emitter);
+    taskExec = MoreExecutors.listeningDecorator(
+        Executors.newCachedThreadPool(
+            Execs.makeThreadFactory("kafka-task-test-%d")
+        )
+    );
+  }
+
+  @Before
+  public void setupTest() throws IOException, InterruptedException
+  {
+    handoffConditionTimeout = 0;
+    reportParseExceptions = false;
+    logParseExceptions = true;
+    maxParseExceptions = null;
+    maxSavedParseExceptions = null;
+    doHandoff = true;
+    stream = getStreamName();
+    recordRequests = generateRecordsRequests(stream);
+    reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
+
+    // sleep required because of kinesalite
+    Thread.sleep(500);
+    makeToolboxFactory();
+  }
+
+  @After
+  public void tearDownTest()
+  {
+    synchronized (runningTasks) {
+      for (Task task : runningTasks) {
+        task.stopGracefully();
+      }
+
+      runningTasks.clear();
+    }
+    reportsFile.delete();
+    destroyToolboxFactory();
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws Exception
+  {
+    taskExec.shutdown();
+    taskExec.awaitTermination(9999, TimeUnit.DAYS);
+    emitter.close();
+  }
+
+  private String getSequenceNumber(AmazonKinesis kinesis, String shardId, ShardIteratorType itType, long recordsOffset)
+      throws Exception
+  {
+    String iterator = kinesis.getShardIterator(stream, shardId, itType.toString()).getShardIterator();
+    Record record = null;
+
+    while (iterator != null && recordsOffset >= 0) {
+      GetRecordsResult res = kinesis.getRecords(new GetRecordsRequest().withLimit(1).withShardIterator(iterator));
+      List<Record> records = res.getRecords();
+      if (!records.isEmpty()) {
+        record = records.get(0);
+        iterator = res.getNextShardIterator();
+      } else {
+        throw new Exception("failed to get record for specified offset???");
+      }
+      --recordsOffset;
+    }
+
+    if (record == null) {
+      throw new Exception("record is null???");
+    }
+
+    return record.getSequenceNumber();
+  }
+
+  private static boolean isResponseOk(SdkHttpMetadata sdkHttpMetadata)
+  {
+    return sdkHttpMetadata.getHttpStatusCode() == 200;
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRunAfterDataInserted() throws Exception
+  {
+    // Insert data
+    SdkHttpMetadata createRes = kinesis.createStream(stream, 2).getSdkHttpMetadata();
+    // sleep required because of kinesalite
+    Thread.sleep(500);
+    Assert.assertTrue(isResponseOk(createRes));
+
+    kinesis.putRecords(recordRequests);
+
+    final KinesisIndexTask task = createTask(
+        null,
+        new KinesisIOConfig(
+            "sequence0",
+            new KinesisPartitions(stream, ImmutableMap.of(
+                "0",
+                getSequenceNumber(kinesis, "0", ShardIteratorType.TRIM_HORIZON, 2)
+            )),
+            new KinesisPartitions(stream, ImmutableMap.of(
+                "0",
+                getSequenceNumber(kinesis, "0", ShardIteratorType.TRIM_HORIZON, 4)
+            )),
+            true,
+            null,
+            null,
+            null,
+            Localstack.getEndpointKinesis(),
+            null,
+            null,
+            TestUtils.TEST_ACCESS_KEY,
+            TestUtils.TEST_SECRET_KEY,
+            null,
+            null,
+            null,
+            false
+        )
+
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(3, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new KinesisPartitions(
+            stream,
+            ImmutableMap.of(
+                "0",
+                getSequenceNumber(
+                    kinesis,
+                    "0",
+                    ShardIteratorType.TRIM_HORIZON,
+                    4
+                )
+            )
+        )),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
+
+    SdkHttpMetadata delRes = kinesis.deleteStream(stream).getSdkHttpMetadata();
+    Thread.sleep(500);
+    Assert.assertTrue(isResponseOk(delRes));
+  }
+
+  //  @Test(timeout = 60_000L)
 //  public void testRunBeforeDataInserted() throws Exception
 //  {
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -460,7 +504,7 @@
 //    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -488,13 +532,13 @@
 //    Map<String, String> consumerProps = kafkaServer.consumerProperties();
 //    consumerProps.put("max.poll.records", "1");
 //
-//    final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
+//    final KinesisPartitions startPartitions = new KinesisPartitions(stream, ImmutableMap.of(0, 0L, 1, 0L));
 //    // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
 //    // of events fetched across two partitions from Kafka
-//    final KafkaPartitions checkpoint1 = new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 0L));
-//    final KafkaPartitions checkpoint2 = new KafkaPartitions(topic, ImmutableMap.of(0, 4L, 1, 2L));
-//    final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 2L));
-//    final KafkaIndexTask task = createTask(
+//    final KinesisPartitions checkpoint1 = new KinesisPartitions(stream, ImmutableMap.of(0, 5L, 1, 0L));
+//    final KinesisPartitions checkpoint2 = new KinesisPartitions(stream, ImmutableMap.of(0, 4L, 1, 2L));
+//    final KinesisPartitions endPartitions = new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 2L));
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
@@ -524,8 +568,8 @@
 //            Objects.hash(
 //                DATA_SCHEMA.getDataSource(),
 //                0,
-//                new KafkaDataSourceMetadata(startPartitions),
-//                new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets))
+//                new KinesisDataSourceMetadata(startPartitions),
+//                new KinesisDataSourceMetadata(new KinesisPartitions(stream, currentOffsets))
 //            )
 //        )
 //    );
@@ -545,7 +589,7 @@
 //    SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 2L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 2L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -583,12 +627,12 @@
 //      Map<String, String> consumerProps = kafkaServer.consumerProperties();
 //      consumerProps.put("max.poll.records", "1");
 //
-//      final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
-//      final KafkaPartitions checkpoint1 = new KafkaPartitions(topic, ImmutableMap.of(0, 3L, 1, 0L));
-//      final KafkaPartitions checkpoint2 = new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 0L));
+//      final KinesisPartitions startPartitions = new KinesisPartitions(stream, ImmutableMap.of(0, 0L, 1, 0L));
+//      final KinesisPartitions checkpoint1 = new KinesisPartitions(stream, ImmutableMap.of(0, 3L, 1, 0L));
+//      final KinesisPartitions checkpoint2 = new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 0L));
 //
-//      final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 2L));
-//      final KafkaIndexTask task = createTask(
+//      final KinesisPartitions endPartitions = new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 2L));
+//      final KinesisIndexTask task = createTask(
 //          null,
 //          new KafkaIOConfig(
 //              0,
@@ -632,8 +676,8 @@
 //              Objects.hash(
 //                  DATA_SCHEMA.getDataSource(),
 //                  0,
-//                  new KafkaDataSourceMetadata(startPartitions),
-//                  new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets))
+//                  new KinesisDataSourceMetadata(startPartitions),
+//                  new KinesisDataSourceMetadata(new KinesisPartitions(stream, currentOffsets))
 //              )
 //          )
 //      );
@@ -642,8 +686,8 @@
 //              Objects.hash(
 //                  DATA_SCHEMA.getDataSource(),
 //                  0,
-//                  new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets)),
-//                  new KafkaDataSourceMetadata(new KafkaPartitions(topic, nextOffsets))
+//                  new KinesisDataSourceMetadata(new KinesisPartitions(stream, currentOffsets)),
+//                  new KinesisDataSourceMetadata(new KinesisPartitions(stream, nextOffsets))
 //              )
 //          )
 //      );
@@ -663,7 +707,7 @@
 //      SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
 //      Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
 //      Assert.assertEquals(
-//          new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 2L))),
+//          new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 2L))),
 //          metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //      );
 //
@@ -700,11 +744,11 @@
 //    Map<String, String> consumerProps = kafkaServer.consumerProperties();
 //    consumerProps.put("max.poll.records", "1");
 //
-//    final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
+//    final KinesisPartitions startPartitions = new KinesisPartitions(stream, ImmutableMap.of(0, 0L, 1, 0L));
 //    // Checkpointing will happen at checkpoint
-//    final KafkaPartitions checkpoint = new KafkaPartitions(topic, ImmutableMap.of(0, 1L, 1, 0L));
-//    final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L));
-//    final KafkaIndexTask task = createTask(
+//    final KinesisPartitions checkpoint = new KinesisPartitions(stream, ImmutableMap.of(0, 1L, 1, 0L));
+//    final KinesisPartitions endPartitions = new KinesisPartitions(stream, ImmutableMap.of(0, 2L, 1, 0L));
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
@@ -735,8 +779,8 @@
 //            Objects.hash(
 //                DATA_SCHEMA.getDataSource(),
 //                0,
-//                new KafkaDataSourceMetadata(startPartitions),
-//                new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoint.getPartitionOffsetMap()))
+//                new KinesisDataSourceMetadata(startPartitions),
+//                new KinesisDataSourceMetadata(new KinesisPartitions(stream, checkpoint.getPartitionOffsetMap()))
 //            )
 //        )
 //    );
@@ -751,7 +795,7 @@
 //    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 2L, 1, 0L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -763,13 +807,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunWithMinimumMessageTime() throws Exception
 //  {
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            DateTimes.of("2010"),
@@ -805,7 +849,7 @@
 //    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -817,13 +861,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunWithMaximumMessageTime() throws Exception
 //  {
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -860,7 +904,7 @@
 //    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -873,7 +917,7 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunWithTransformSpec() throws Exception
 //  {
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        DATA_SCHEMA.withTransformSpec(
 //            new TransformSpec(
@@ -886,8 +930,8 @@
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -922,7 +966,7 @@
 //    SegmentDescriptor desc1 = SD(task, "2009/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -941,13 +985,13 @@
 //      }
 //    }
 //
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -982,13 +1026,13 @@
 //      }
 //    }
 //
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1012,7 +1056,7 @@
 //    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1034,13 +1078,13 @@
 //      }
 //    }
 //
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1064,7 +1108,7 @@
 //    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1089,13 +1133,13 @@
 //      }
 //    }
 //
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 7L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 7L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1133,13 +1177,13 @@
 //      }
 //    }
 //
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 13L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 13L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1169,7 +1213,7 @@
 //    SegmentDescriptor desc4 = SD(task, "2049/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 13L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 13L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1215,13 +1259,13 @@
 //      }
 //    }
 //
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 10L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1275,13 +1319,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunReplicas() throws Exception
 //  {
-//    final KafkaIndexTask task1 = createTask(
+//    final KinesisIndexTask task1 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1289,13 +1333,13 @@
 //            false
 //        )
 //    );
-//    final KafkaIndexTask task2 = createTask(
+//    final KinesisIndexTask task2 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1331,7 +1375,7 @@
 //    SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1343,13 +1387,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunConflicting() throws Exception
 //  {
-//    final KafkaIndexTask task1 = createTask(
+//    final KinesisIndexTask task1 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1357,13 +1401,13 @@
 //            false
 //        )
 //    );
-//    final KafkaIndexTask task2 = createTask(
+//    final KinesisIndexTask task2 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            1,
 //            "sequence1",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 3L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 10L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1400,7 +1444,7 @@
 //    SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1412,13 +1456,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunConflictingWithoutTransactions() throws Exception
 //  {
-//    final KafkaIndexTask task1 = createTask(
+//    final KinesisIndexTask task1 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            false,
 //            null,
@@ -1426,13 +1470,13 @@
 //            false
 //        )
 //    );
-//    final KafkaIndexTask task2 = createTask(
+//    final KinesisIndexTask task2 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            1,
 //            "sequence1",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 3L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 10L)),
 //            kafkaServer.consumerProperties(),
 //            false,
 //            null,
@@ -1486,13 +1530,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunOneTaskTwoPartitions() throws Exception
 //  {
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L, 1, 0L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L, 1, 2L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1522,14 +1566,14 @@
 //    // Check published segments & metadata
 //    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
 //    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-//    // desc3 will not be created in KafkaIndexTask (0.12.x) as it does not create per Kafka partition Druid segments
+//    // desc3 will not be created in KinesisIndexTask (0.12.x) as it does not create per Kafka partition Druid segments
 //    SegmentDescriptor desc3 = SD(task, "2011/P1D", 1);
 //    SegmentDescriptor desc4 = SD(task, "2012/P1D", 0);
 //    Assert.assertEquals(isIncrementalHandoffSupported
 //                        ? ImmutableSet.of(desc1, desc2, desc4)
 //                        : ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 2L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L, 1, 2L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1551,13 +1595,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunTwoTasksTwoPartitions() throws Exception
 //  {
-//    final KafkaIndexTask task1 = createTask(
+//    final KinesisIndexTask task1 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1565,13 +1609,13 @@
 //            false
 //        )
 //    );
-//    final KafkaIndexTask task2 = createTask(
+//    final KinesisIndexTask task2 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            1,
 //            "sequence1",
-//            new KafkaPartitions(topic, ImmutableMap.of(1, 0L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(1, 1L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(1, 0L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(1, 1L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1608,7 +1652,7 @@
 //    SegmentDescriptor desc3 = SD(task2, "2012/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 1L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L, 1, 1L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1621,13 +1665,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRestore() throws Exception
 //  {
-//    final KafkaIndexTask task1 = createTask(
+//    final KinesisIndexTask task1 = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1658,13 +1702,13 @@
 //    Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 //
 //    // Start a new task
-//    final KafkaIndexTask task2 = createTask(
+//    final KinesisIndexTask task2 = createTask(
 //        task1.getId(),
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1698,7 +1742,7 @@
 //    SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1710,13 +1754,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunWithPauseAndResume() throws Exception
 //  {
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1782,7 +1826,7 @@
 //    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1794,13 +1838,13 @@
 //  @Test(timeout = 60_000L)
 //  public void testRunWithOffsetOutOfRangeExceptionAndPause() throws Exception
 //  {
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 2L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1833,13 +1877,13 @@
 //      }
 //    }
 //
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 200L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 500L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 200L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 500L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1886,14 +1930,14 @@
 //    {
 //    }).writeValueAsString(sequences));
 //
-//    final KafkaIndexTask task = createTask(
+//    final KinesisIndexTask task = createTask(
 //        null,
 //        new KafkaIOConfig(
 //            0,
 //            "sequence0",
 //            // task should ignore these and use sequence info sent in the context
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
-//            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
+//            new KinesisPartitions(stream, ImmutableMap.of(0, 5L)),
 //            kafkaServer.consumerProperties(),
 //            true,
 //            null,
@@ -1918,7 +1962,7 @@
 //    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
 //    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
 //    Assert.assertEquals(
-//        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(0, 5L))),
 //        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
 //    );
 //
@@ -1926,420 +1970,428 @@
 //    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
 //    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
 //  }
-//
-//  private ListenableFuture<TaskStatus> runTask(final Task task)
-//  {
-//    try {
-//      taskStorage.insert(task, TaskStatus.running(task.getId()));
-//    }
-//    catch (EntryExistsException e) {
-//      // suppress
-//    }
-//    taskLockbox.syncFromStorage();
-//    final TaskToolbox toolbox = toolboxFactory.build(task);
-//    synchronized (runningTasks) {
-//      runningTasks.add(task);
-//    }
-//    return taskExec.submit(
-//        () -> {
-//          try {
-//            if (task.isReady(toolbox.getTaskActionClient())) {
-//              return task.run(toolbox);
-//            } else {
-//              throw new ISE("Task is not ready");
-//            }
-//          }
-//          catch (Exception e) {
-//            log.warn(e, "Task failed");
-//            return TaskStatus.failure(task.getId());
-//          }
-//        }
-//    );
-//  }
-//
-//  private TaskLock getLock(final Task task, final Interval interval)
-//  {
-//    return Iterables.find(
-//        taskLockbox.findLocksForTask(task),
-//        new Predicate<TaskLock>()
-//        {
-//          @Override
-//          public boolean apply(TaskLock lock)
-//          {
-//            return lock.getInterval().contains(interval);
-//          }
-//        }
-//    );
-//  }
-//
-//  private KafkaIndexTask createTask(
-//      final String taskId,
-//      final KafkaIOConfig ioConfig
-//  )
-//  {
-//    return createTask(taskId, DATA_SCHEMA, ioConfig);
-//  }
-//
-//  private KafkaIndexTask createTask(
-//      final String taskId,
-//      final KafkaIOConfig ioConfig,
-//      final Map<String, Object> context
-//  )
-//  {
-//    return createTask(taskId, DATA_SCHEMA, ioConfig, context);
-//  }
-//
-//  private KafkaIndexTask createTask(
-//      final String taskId,
-//      final DataSchema dataSchema,
-//      final KafkaIOConfig ioConfig
-//  )
-//  {
-//    final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
-//        1000,
-//        null,
-//        maxRowsPerSegment,
-//        maxTotalRows,
-//        new Period("P1Y"),
-//        null,
-//        null,
-//        null,
-//        true,
-//        reportParseExceptions,
-//        handoffConditionTimeout,
-//        resetOffsetAutomatically,
-//        null,
-//        intermediateHandoffPeriod,
-//        logParseExceptions,
-//        maxParseExceptions,
-//        maxSavedParseExceptions
-//    );
-//    final Map<String, Object> context = isIncrementalHandoffSupported
-//                                        ? ImmutableMap.of(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
-//                                        : null;
-//    final KafkaIndexTask task = new KafkaIndexTask(
-//        taskId,
-//        null,
-//        cloneDataSchema(dataSchema),
-//        tuningConfig,
-//        ioConfig,
-//        context,
-//        null,
-//        null,
-//        rowIngestionMetersFactory
-//    );
-//    task.setPollRetryMs(POLL_RETRY_MS);
-//    return task;
-//  }
-//
-//
-//  private KafkaIndexTask createTask(
-//      final String taskId,
-//      final DataSchema dataSchema,
-//      final KafkaIOConfig ioConfig,
-//      final Map<String, Object> context
-//  )
-//  {
-//    final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
-//        1000,
-//        null,
-//        maxRowsPerSegment,
-//        null,
-//        new Period("P1Y"),
-//        null,
-//        null,
-//        null,
-//        true,
-//        reportParseExceptions,
-//        handoffConditionTimeout,
-//        resetOffsetAutomatically,
-//        null,
-//        null,
-//        logParseExceptions,
-//        maxParseExceptions,
-//        maxSavedParseExceptions
-//    );
-//    if (isIncrementalHandoffSupported) {
-//      context.put(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
-//    }
-//
-//    final KafkaIndexTask task = new KafkaIndexTask(
-//        taskId,
-//        null,
-//        cloneDataSchema(dataSchema),
-//        tuningConfig,
-//        ioConfig,
-//        context,
-//        null,
-//        null,
-//        rowIngestionMetersFactory
-//    );
-//    task.setPollRetryMs(POLL_RETRY_MS);
-//    return task;
-//  }
-//
-//  private static DataSchema cloneDataSchema(final DataSchema dataSchema)
-//  {
-//    return new DataSchema(
-//        dataSchema.getDataSource(),
-//        dataSchema.getParserMap(),
-//        dataSchema.getAggregators(),
-//        dataSchema.getGranularitySpec(),
-//        dataSchema.getTransformSpec(),
-//        objectMapper
-//    );
-//  }
-//
-//  private QueryRunnerFactoryConglomerate makeTimeseriesOnlyConglomerate()
-//  {
-//    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
-//        null,
-//        null,
-//        null
-//    )
-//    {
-//      @Override
-//      public <T> QueryRunner<T> decorate(
-//          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
-//      )
-//      {
-//        return delegate;
-//      }
-//    };
-//    return new DefaultQueryRunnerFactoryConglomerate(
-//        ImmutableMap.of(
-//            TimeseriesQuery.class,
-//            new TimeseriesQueryRunnerFactory(
-//                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
-//                new TimeseriesQueryEngine(),
-//                (query, future) -> {
-//                  // do nothing
-//                }
-//            )
-//        )
-//    );
-//  }
-//
-//  private void makeToolboxFactory() throws IOException
-//  {
-//    directory = tempFolder.newFolder();
-//    final TestUtils testUtils = new TestUtils();
-//    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
-//    final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
-//    for (Module module : new KafkaIndexTaskModule().getJacksonModules()) {
-//      objectMapper.registerModule(module);
-//    }
-//    final TaskConfig taskConfig = new TaskConfig(
-//        new File(directory, "taskBaseDir").getPath(),
-//        null,
-//        null,
-//        50000,
-//        null,
-//        false,
-//        null,
-//        null
-//    );
-//    final TestDerbyConnector derbyConnector = derby.getConnector();
-//    derbyConnector.createDataSourceTable();
-//    derbyConnector.createPendingSegmentsTable();
-//    derbyConnector.createSegmentTable();
-//    derbyConnector.createRulesTable();
-//    derbyConnector.createConfigTable();
-//    derbyConnector.createTaskTables();
-//    derbyConnector.createAuditTable();
-//    taskStorage = new MetadataTaskStorage(
-//        derbyConnector,
-//        new TaskStorageConfig(null),
-//        new DerbyMetadataStorageActionHandlerFactory(
-//            derbyConnector,
-//            derby.metadataTablesConfigSupplier().get(),
-//            objectMapper
-//        )
-//    );
-//    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
-//        testUtils.getTestObjectMapper(),
-//        derby.metadataTablesConfigSupplier().get(),
-//        derbyConnector
-//    );
-//    taskLockbox = new TaskLockbox(taskStorage);
-//    final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
-//        taskLockbox,
-//        taskStorage,
-//        metadataStorageCoordinator,
-//        emitter,
-//        new SupervisorManager(null)
-//        {
-//          @Override
-//          public boolean checkPointDataSourceMetadata(
-//              String supervisorId,
-//              @Nullable Integer taskGroupId,
-//              String baseSequenceName,
-//              @Nullable DataSourceMetadata previousDataSourceMetadata,
-//              @Nullable DataSourceMetadata currentDataSourceMetadata
-//          )
-//          {
-//            log.info("Adding checkpoint hash to the set");
-//            checkpointRequestsHash.add(
-//                Objects.hash(
-//                    supervisorId,
-//                    taskGroupId,
-//                    previousDataSourceMetadata,
-//                    currentDataSourceMetadata
-//                )
-//            );
-//            return true;
-//          }
-//        },
-//        new Counters()
-//    );
-//    final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
-//        taskStorage,
-//        taskActionToolbox
-//    );
-//    final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
-//    {
-//      @Override
-//      public boolean registerSegmentHandoffCallback(
-//          SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
-//      )
-//      {
-//        if (doHandoff) {
-//          // Simulate immediate handoff
-//          exec.execute(handOffRunnable);
-//        }
-//        return true;
-//      }
-//
-//      @Override
-//      public void start()
-//      {
-//        //Noop
-//      }
-//
-//      @Override
-//      public void close()
-//      {
-//        //Noop
-//      }
-//    };
-//    final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
-//    dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
-//    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig, objectMapper);
-//    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
-//    {
-//      @Override
-//      public List<StorageLocationConfig> getLocations()
-//      {
-//        return Lists.newArrayList();
-//      }
-//    };
-//    toolboxFactory = new TaskToolboxFactory(
-//        taskConfig,
-//        taskActionClientFactory,
-//        emitter,
-//        dataSegmentPusher,
-//        new TestDataSegmentKiller(),
-//        null, // DataSegmentMover
-//        null, // DataSegmentArchiver
-//        new TestDataSegmentAnnouncer(),
-//        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-//        handoffNotifierFactory,
-//        this::makeTimeseriesOnlyConglomerate,
-//        MoreExecutors.sameThreadExecutor(), // queryExecutorService
-//        EasyMock.createMock(MonitorScheduler.class),
-//        new SegmentLoaderFactory(
-//            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
-//        ),
-//        testUtils.getTestObjectMapper(),
-//        testUtils.getTestIndexIO(),
-//        MapCache.create(1024),
-//        new CacheConfig(),
-//        new CachePopulatorStats(),
-//        testUtils.getTestIndexMergerV9(),
-//        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
-//        EasyMock.createNiceMock(DruidNode.class),
-//        new LookupNodeService("tier"),
-//        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-//        new TaskReportFileWriter(reportsFile)
-//    );
-//  }
-//
-//  private void destroyToolboxFactory()
-//  {
-//    toolboxFactory = null;
-//    taskStorage = null;
-//    taskLockbox = null;
-//    metadataStorageCoordinator = null;
-//  }
-//
-//  private Set<SegmentDescriptor> publishedDescriptors()
-//  {
-//    return FluentIterable.from(
-//        metadataStorageCoordinator.getUsedSegmentsForInterval(
-//            DATA_SCHEMA.getDataSource(),
-//            Intervals.of("0000/3000")
-//        )
-//    ).transform(DataSegment::toDescriptor).toSet();
-//  }
-//
-//  private void unlockAppenderatorBasePersistDirForTask(KafkaIndexTask task)
-//      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
-//  {
-//    Method unlockBasePersistDir = ((AppenderatorImpl) task.getAppenderator()).getClass()
-//                                                                             .getDeclaredMethod(
-//                                                                                 "unlockBasePersistDirectory");
-//    unlockBasePersistDir.setAccessible(true);
-//    unlockBasePersistDir.invoke(task.getAppenderator());
-//  }
-//
-//  private File getSegmentDirectory()
-//  {
-//    return new File(directory, "segments");
-//  }
-//
-//  private List<String> readSegmentColumn(final String column, final SegmentDescriptor descriptor) throws IOException
-//  {
-//    File indexBasePath = new File(
-//        StringUtils.format(
-//            "%s/%s/%s_%s/%s/%d",
-//            getSegmentDirectory(),
-//            DATA_SCHEMA.getDataSource(),
-//            descriptor.getInterval().getStart(),
-//            descriptor.getInterval().getEnd(),
-//            descriptor.getVersion(),
-//            descriptor.getPartitionNumber()
-//        )
-//    );
-//
-//    File outputLocation = new File(
-//        directory,
-//        StringUtils.format(
-//            "%s_%s_%s_%s",
-//            descriptor.getInterval().getStart(),
-//            descriptor.getInterval().getEnd(),
-//            descriptor.getVersion(),
-//            descriptor.getPartitionNumber()
-//        )
-//    );
-//    outputLocation.mkdir();
-//    CompressionUtils.unzip(
-//        Files.asByteSource(new File(indexBasePath.listFiles()[0], "index.zip")),
-//        outputLocation,
-//        Predicates.alwaysFalse(),
-//        false
-//    );
-//    IndexIO indexIO = new TestUtils().getTestIndexIO();
-//    QueryableIndex index = indexIO.loadIndex(outputLocation);
-//    DictionaryEncodedColumn<String> theColumn = index.getColumn(column).getDictionaryEncoding();
-//    List<String> values = Lists.newArrayList();
-//    for (int i = 0; i < theColumn.length(); i++) {
-//      int id = theColumn.getSingleValueRow(i);
-//      String value = theColumn.lookupName(id);
-//      values.add(value);
-//    }
-//    return values;
-//  }
-//
+
+  private ListenableFuture<TaskStatus> runTask(final Task task)
+  {
+    try {
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
+    }
+    catch (EntryExistsException e) {
+      // suppress
+    }
+    taskLockbox.syncFromStorage();
+    final TaskToolbox toolbox = toolboxFactory.build(task);
+    synchronized (runningTasks) {
+      runningTasks.add(task);
+    }
+    return taskExec.submit(
+        () -> {
+          try {
+            if (task.isReady(toolbox.getTaskActionClient())) {
+              return task.run(toolbox);
+            } else {
+              throw new ISE("Task is not ready");
+            }
+          }
+          catch (Exception e) {
+            log.warn(e, "Task failed");
+            return TaskStatus.failure(task.getId());
+          }
+        }
+    );
+  }
+
+
+  private TaskLock getLock(final Task task, final Interval interval)
+  {
+    return Iterables.find(
+        taskLockbox.findLocksForTask(task),
+        new Predicate<TaskLock>()
+        {
+          @Override
+          public boolean apply(TaskLock lock)
+          {
+            return lock.getInterval().contains(interval);
+          }
+        }
+    );
+  }
+
+  private KinesisIndexTask createTask(
+      final String taskId,
+      final KinesisIOConfig ioConfig
+  )
+  {
+    return createTask(taskId, DATA_SCHEMA, ioConfig);
+  }
+
+  private KinesisIndexTask createTask(
+      final String taskId,
+      final KinesisIOConfig ioConfig,
+      final Map<String, Object> context
+  )
+  {
+    return createTask(taskId, DATA_SCHEMA, ioConfig, context);
+  }
+
+  private KinesisIndexTask createTask(
+      final String taskId,
+      final DataSchema dataSchema,
+      final KinesisIOConfig ioConfig
+  )
+  {
+    final KinesisTuningConfig tuningConfig = new KinesisTuningConfig(
+        1000,
+        null,
+        null,
+        new Period("P1Y"),
+        null,
+        null,
+        null,
+        true,
+        reportParseExceptions,
+        handoffConditionTimeout,
+        resetOffsetAutomatically,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions
+    );
+    final Map<String, Object> context = null;
+    final KinesisIndexTask task = new KinesisIndexTask(
+        taskId,
+        null,
+        cloneDataSchema(dataSchema),
+        tuningConfig,
+        ioConfig,
+        context,
+        null,
+        null,
+        rowIngestionMetersFactory
+    );
+    return task;
+  }
+
+
+  private KinesisIndexTask createTask(
+      final String taskId,
+      final DataSchema dataSchema,
+      final KinesisIOConfig ioConfig,
+      final Map<String, Object> context
+  )
+  {
+    final KinesisTuningConfig tuningConfig = new KinesisTuningConfig(
+        1000,
+        null,
+        null,
+        new Period("P1Y"),
+        null,
+        null,
+        null,
+        true,
+        reportParseExceptions,
+        handoffConditionTimeout,
+        resetOffsetAutomatically,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions
+    );
+    if (isIncrementalHandoffSupported) {
+      context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
+    }
+
+    final KinesisIndexTask task = new KinesisIndexTask(
+        taskId,
+        null,
+        cloneDataSchema(dataSchema),
+        tuningConfig,
+        ioConfig,
+        context,
+        null,
+        null,
+        rowIngestionMetersFactory
+    );
+    return task;
+  }
+
+  private static DataSchema cloneDataSchema(final DataSchema dataSchema)
+  {
+    return new DataSchema(
+        dataSchema.getDataSource(),
+        dataSchema.getParserMap(),
+        dataSchema.getAggregators(),
+        dataSchema.getGranularitySpec(),
+        dataSchema.getTransformSpec(),
+        objectMapper
+    );
+  }
+
+  private QueryRunnerFactoryConglomerate makeTimeseriesOnlyConglomerate()
+  {
+    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
+        null,
+        null,
+        null
+    )
+    {
+      @Override
+      public <T> QueryRunner<T> decorate(
+          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
+      )
+      {
+        return delegate;
+      }
+    };
+    return new DefaultQueryRunnerFactoryConglomerate(
+        ImmutableMap.of(
+            TimeseriesQuery.class,
+            new TimeseriesQueryRunnerFactory(
+                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
+                new TimeseriesQueryEngine(),
+                (query, future) -> {
+                  // do nothing
+                }
+            )
+        )
+    );
+  }
+
+  private void makeToolboxFactory() throws IOException
+  {
+    directory = tempFolder.newFolder();
+    final org.apache.druid.indexing.common.TestUtils testUtils = new org.apache.druid.indexing.common.TestUtils();
+    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
+    final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
+    for (Module module : new KinesisIndexingServiceModule().getJacksonModules()) {
+      objectMapper.registerModule(module);
+    }
+    final TaskConfig taskConfig = new TaskConfig(
+        new File(directory, "taskBaseDir").getPath(),
+        null,
+        null,
+        50000,
+        null,
+        false,
+        null,
+        null
+    );
+    final TestDerbyConnector derbyConnector = derby.getConnector();
+    derbyConnector.createDataSourceTable();
+    derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createSegmentTable();
+    derbyConnector.createRulesTable();
+    derbyConnector.createConfigTable();
+    derbyConnector.createTaskTables();
+    derbyConnector.createAuditTable();
+    taskStorage = new MetadataTaskStorage(
+        derbyConnector,
+        new TaskStorageConfig(null),
+        new DerbyMetadataStorageActionHandlerFactory(
+            derbyConnector,
+            derby.metadataTablesConfigSupplier().get(),
+            objectMapper
+        )
+    );
+    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        testUtils.getTestObjectMapper(),
+        derby.metadataTablesConfigSupplier().get(),
+        derbyConnector
+    );
+    taskLockbox = new TaskLockbox(taskStorage);
+    final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
+        taskLockbox,
+        taskStorage,
+        metadataStorageCoordinator,
+        emitter,
+        new SupervisorManager(null)
+        {
+          @Override
+          public boolean checkPointDataSourceMetadata(
+              String supervisorId,
+              @Nullable Integer taskGroupId,
+              String baseSequenceName,
+              @Nullable DataSourceMetadata previousDataSourceMetadata,
+              @Nullable DataSourceMetadata currentDataSourceMetadata
+          )
+          {
+            log.info("Adding checkpoint hash to the set");
+            checkpointRequestsHash.add(
+                Objects.hash(
+                    supervisorId,
+                    taskGroupId,
+                    previousDataSourceMetadata,
+                    currentDataSourceMetadata
+                )
+            );
+            return true;
+          }
+        },
+        new Counters()
+    );
+    final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
+        taskStorage,
+        taskActionToolbox
+    );
+    final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
+    {
+      @Override
+      public boolean registerSegmentHandoffCallback(
+          SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+      )
+      {
+        if (doHandoff) {
+          // Simulate immediate handoff
+          exec.execute(handOffRunnable);
+        }
+        return true;
+      }
+
+      @Override
+      public void start()
+      {
+        //Noop
+      }
+
+      @Override
+      public void close()
+      {
+        //Noop
+      }
+    };
+    final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
+    dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
+    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig, objectMapper);
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Lists.newArrayList();
+      }
+    };
+    toolboxFactory = new TaskToolboxFactory(
+        taskConfig,
+        taskActionClientFactory,
+        emitter,
+        dataSegmentPusher,
+        new TestDataSegmentKiller(),
+        null, // DataSegmentMover
+        null, // DataSegmentArchiver
+        new TestDataSegmentAnnouncer(),
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
+        handoffNotifierFactory,
+        this::makeTimeseriesOnlyConglomerate,
+        MoreExecutors.sameThreadExecutor(), // queryExecutorService
+        EasyMock.createMock(MonitorScheduler.class),
+        new SegmentLoaderFactory(
+            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
+        ),
+        testUtils.getTestObjectMapper(),
+        testUtils.getTestIndexIO(),
+        MapCache.create(1024),
+        new CacheConfig(),
+        new CachePopulatorStats(),
+        testUtils.getTestIndexMergerV9(),
+        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
+        EasyMock.createNiceMock(DruidNode.class),
+        new LookupNodeService("tier"),
+        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
+        new TaskReportFileWriter(reportsFile)
+    );
+  }
+
+  private void destroyToolboxFactory()
+  {
+    toolboxFactory = null;
+    taskStorage = null;
+    taskLockbox = null;
+    metadataStorageCoordinator = null;
+  }
+
+
+  private Set<SegmentDescriptor> publishedDescriptors()
+  {
+    return FluentIterable.from(
+        metadataStorageCoordinator.getUsedSegmentsForInterval(
+            DATA_SCHEMA.getDataSource(),
+            Intervals.of("0000/3000")
+        )
+    ).transform(DataSegment::toDescriptor).toSet();
+  }
+
+  private void unlockAppenderatorBasePersistDirForTask(KinesisIndexTask task)
+      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
+  {
+    Method unlockBasePersistDir = ((AppenderatorImpl) task.getAppenderator()).getClass()
+                                                                             .getDeclaredMethod(
+                                                                                 "unlockBasePersistDirectory");
+    unlockBasePersistDir.setAccessible(true);
+    unlockBasePersistDir.invoke(task.getAppenderator());
+  }
+
+  private File getSegmentDirectory()
+  {
+    return new File(directory, "segments");
+  }
+
+
+  private List<String> readSegmentColumn(final String column, final SegmentDescriptor descriptor) throws IOException
+  {
+    File indexBasePath = new File(
+        StringUtils.format(
+            "%s/%s/%s_%s/%s/%d",
+            getSegmentDirectory(),
+            DATA_SCHEMA.getDataSource(),
+            descriptor.getInterval().getStart(),
+            descriptor.getInterval().getEnd(),
+            descriptor.getVersion(),
+            descriptor.getPartitionNumber()
+        )
+    );
+
+    File outputLocation = new File(
+        directory,
+        StringUtils.format(
+            "%s_%s_%s_%s",
+            descriptor.getInterval().getStart(),
+            descriptor.getInterval().getEnd(),
+            descriptor.getVersion(),
+            descriptor.getPartitionNumber()
+        )
+    );
+    outputLocation.mkdir();
+    CompressionUtils.unzip(
+        Files.asByteSource(new File(indexBasePath.listFiles()[0], "index.zip")),
+        outputLocation,
+        Predicates.alwaysFalse(),
+        false
+    );
+    IndexIO indexIO = new org.apache.druid.indexing.common.TestUtils().getTestIndexIO();
+    QueryableIndex index = indexIO.loadIndex(outputLocation);
+    DictionaryEncodedColumn<String> theColumn = index.getColumn(column).getDictionaryEncoding();
+    List<String> values = Lists.newArrayList();
+    for (int i = 0; i < theColumn.length(); i++) {
+      int id = theColumn.getSingleValueRow(i);
+      String value = theColumn.lookupName(id);
+      values.add(value);
+    }
+    return values;
+  }
+
+  //
 //  public long countEvents(final Task task)
 //  {
 //    // Do a query.
@@ -2359,41 +2411,41 @@
 //    return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
 //  }
 //
-//  private static byte[] JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
-//  {
-//    try {
-//      return new ObjectMapper().writeValueAsBytes(
-//          ImmutableMap.builder()
-//                      .put("timestamp", timestamp)
-//                      .put("dim1", dim1)
-//                      .put("dim2", dim2)
-//                      .put("dimLong", dimLong)
-//                      .put("dimFloat", dimFloat)
-//                      .put("met1", met1)
-//                      .build()
-//      );
-//    }
-//    catch (Exception e) {
-//      throw Throwables.propagate(e);
-//    }
-//  }
-//
-//  private SegmentDescriptor SD(final Task task, final String intervalString, final int partitionNum)
-//  {
-//    final Interval interval = Intervals.of(intervalString);
-//    return new SegmentDescriptor(interval, getLock(task, interval).getVersion(), partitionNum);
-//  }
-//
-//  private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
-//  {
-//    Map<String, TaskReport> taskReports = objectMapper.readValue(
-//        reportsFile,
-//        new TypeReference<Map<String, TaskReport>>()
-//        {
-//        }
-//    );
-//    return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-//        taskReports
-//    );
-//  }
-//}
+  private static byte[] JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
+  {
+    try {
+      return new ObjectMapper().writeValueAsBytes(
+          ImmutableMap.builder()
+                      .put("timestamp", timestamp)
+                      .put("dim1", dim1)
+                      .put("dim2", dim2)
+                      .put("dimLong", dimLong)
+                      .put("dimFloat", dimFloat)
+                      .put("met1", met1)
+                      .build()
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  private SegmentDescriptor SD(final Task task, final String intervalString, final int partitionNum)
+  {
+    final Interval interval = Intervals.of(intervalString);
+    return new SegmentDescriptor(interval, getLock(task, interval).getVersion(), partitionNum);
+  }
+
+  private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
+  {
+    Map<String, TaskReport> taskReports = objectMapper.readValue(
+        reportsFile,
+        new TypeReference<Map<String, TaskReport>>()
+        {
+        }
+    );
+    return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        taskReports
+    );
+  }
+}

@@ -19,7 +19,9 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -51,13 +53,16 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Supervisor responsible for managing the KafkaIndexTasks for a single dataSource. At a high level, the class accepts a
@@ -282,6 +287,59 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   )
   {
     return KinesisSequenceNumber.of(seq, useExclusive, isExclusive);
+  }
+
+  // the following are for unit testing purposes only
+  @Override
+  @VisibleForTesting
+  protected void runInternal()
+      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+  {
+    super.runInternal();
+  }
+
+  @Override
+  @VisibleForTesting
+  protected Runnable updateCurrentAndLatestOffsets()
+  {
+    return super.updateCurrentAndLatestOffsets();
+  }
+
+  @Override
+  @VisibleForTesting
+  protected void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
+  {
+    super.gracefulShutdownInternal();
+  }
+
+  @Override
+  @VisibleForTesting
+  protected void resetInternal(DataSourceMetadata dataSourceMetadata)
+  {
+    super.resetInternal(dataSourceMetadata);
+  }
+
+  @Override
+  @VisibleForTesting
+  protected void moveTaskGroupToPendingCompletion(int taskGroupId)
+  {
+    super.moveTaskGroupToPendingCompletion(taskGroupId);
+  }
+
+  @Override
+  @VisibleForTesting
+  protected int getNoticesQueueSize()
+  {
+    return super.getNoticesQueueSize();
+  }
+
+  @Override
+  protected boolean checkSequenceAvailability(String partition, @NotNull String sequenceFromMetadata)
+      throws TimeoutException
+  {
+    String earliestSequence = super.getOffsetFromStreamForPartition(partition, true);
+    return earliestSequence != null
+           && KinesisSequenceNumber.of(earliestSequence).compareTo(KinesisSequenceNumber.of(sequenceFromMetadata)) <= 0;
   }
 
 

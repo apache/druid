@@ -119,6 +119,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+// TODO: kinesis task read from startPartitions to endPartitions inclusive, whereas kafka is exclusive, should change behavior to that of kafka's
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 {
   public static final long PAUSE_FOREVER = -1L;
@@ -134,6 +135,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
   private final Map<String, String> endOffsets = new ConcurrentHashMap<>();
   private final Map<String, String> lastOffsets = new ConcurrentHashMap<>();
+  private final Map<String, String> nextOffsets = new ConcurrentHashMap<>(); // should use this instead of lastOffsets
   private final KinesisIOConfig ioConfig;
   private final KinesisTuningConfig tuningConfig;
   private ObjectMapper mapper;
@@ -492,15 +494,16 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
             }
 
             lastOffsets.put(record.getPartitionId(), record.getSequenceNumber());
-          }
 
+
+          }
           if ((lastOffsets.get(record.getPartitionId()).equals(endOffsets.get(record.getPartitionId()))
                || Record.END_OF_SHARD_MARKER.equals(lastOffsets.get(record.getPartitionId())))
               && assignment.remove(record.getPartitionId())) {
 
             log.info("Finished reading stream[%s], partition[%s].", record.getStreamName(), record.getPartitionId());
             assignPartitions(recordSupplier, topic, assignment);
-            stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+            stillReading = !assignment.isEmpty();
           }
         }
       }

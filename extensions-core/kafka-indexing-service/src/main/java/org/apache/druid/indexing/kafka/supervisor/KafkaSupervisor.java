@@ -58,6 +58,7 @@ import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -417,6 +418,16 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   protected int getNoticesQueueSize()
   {
     return super.getNoticesQueueSize();
+  }
+
+  @Override
+  protected boolean checkSequenceAvailability(
+      @NotNull Integer partition, @NotNull Long sequenceFromMetadata
+  ) throws TimeoutException
+  {
+    Long latestOffset = getOffsetFromStreamForPartition(partition, false);
+    return latestOffset != null
+           && KafkaSequenceNumber.of(latestOffset).compareTo(KafkaSequenceNumber.of(sequenceFromMetadata)) >= 0;
   }
 
 

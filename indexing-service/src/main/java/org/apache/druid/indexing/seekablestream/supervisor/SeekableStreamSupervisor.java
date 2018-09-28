@@ -78,6 +78,7 @@ import org.apache.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1906,6 +1907,9 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     return builder.build();
   }
 
+  protected abstract boolean checkSequenceAvailability(@NotNull T1 partition, @NotNull T2 sequenceFromMetadata)
+      throws TimeoutException;
+
   /**
    * Queries the dataSource metadata table to see if there is a previous ending offset for this partition. If it doesn't
    * find any data, it will retrieve the latest or earliest Kafka/Kinesis offset depending on the useEarliestOffset config.
@@ -1918,26 +1922,22 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       log.debug("Getting offset [%s] from metadata storage for partition [%s]", offset, partition);
       if (!taskTuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
         try {
-          T2 latestSequence = getOffsetFromStreamForPartition(partition, false);
-
-          if (latestSequence == null || makeSequenceNumber(offset).compareTo(makeSequenceNumber(latestSequence)) > 0) {
+          if (!checkSequenceAvailability(partition, offset)) {
             if (taskTuningConfig.isResetOffsetAutomatically()) {
               resetInternal(
                   createDataSourceMetaData(ioConfig.getId(), ImmutableMap.of(partition, offset))
               );
               throw new ISE(
-                  "Previous sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) - automatically resetting offset",
+                  "Previous sequenceNumber [%s] is no longer available for partition [%s] - automatically resetting offset",
                   offset,
-                  partition,
-                  latestSequence
+                  partition
               );
 
             } else {
               throw new ISE(
-                  "Previous sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]). You can clear the previous sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
+                  "Previous sequenceNumber [%s] is no longer available for partition [%s]. You can clear the previous sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
                   offset,
-                  partition,
-                  latestSequence
+                  partition
               );
             }
           }
@@ -1987,7 +1987,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     return Collections.emptyMap();
   }
 
-  private T2 getOffsetFromStreamForPartition(T1 partition, boolean useEarliestOffset) throws TimeoutException
+  protected T2 getOffsetFromStreamForPartition(T1 partition, boolean useEarliestOffset) throws TimeoutException
   {
     synchronized (recordSupplierLock) {
       StreamPartition<T1> topicPartition = new StreamPartition<>(ioConfig.getId(), partition);
