@@ -541,7 +541,7 @@ The Druid SQL server is configured through the following properties on the broke
 |`druid.sql.planner.maxSemiJoinRowsInMemory`|Maximum number of rows to keep in memory for executing two-stage semi-join queries like `SELECT * FROM Employee WHERE DeptName IN (SELECT DeptName FROM Dept)`.|100000|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.html). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.html) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
-|`druid.sql.planner.selectPageSize`|Page size threshold for [Select queries](../querying/select-query.html). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
+|`druid.sql.planner.selectThreshold`|Page size threshold for [Select queries](../querying/select-query.html). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.html) will be used instead.|true|
 |`druid.sql.planner.useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|false|
@@ -550,19 +550,19 @@ The Druid SQL server is configured through the following properties on the broke
 
 ## SQL Request Logging
 
-Brokers can be configured to log the sql request (both from HTTP and JDBC) they see.
+Brokers can be configured to log the SQL request (both from HTTP and JDBC) they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.sql.request.logging.type`|Choices: noop, file, filtered, composing. How to log every sql request.|noop|
+|`druid.sql.request.logging.type`|Choices: noop, file, filtered, composing. How to log every SQL request.|noop|
 
 ### File SQL Request Logging
 
-Daily sql request logs are stored on disk.
+Daily SQL request logs are stored on disk.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.sql.request.logging.dir`|the directory to store the sql request logs in|none|
+|`druid.sql.request.logging.dir`|the directory to store the SQL request logs in|none|
 
 ### Filtered SQL Request Logging
 Filtered SQL Request Logger filters requests based on a configurable sqlQuery/time threshold. Only request logs where sqlQuery/time is above the threshold are emitted.
@@ -570,14 +570,14 @@ Filtered SQL Request Logger filters requests based on a configurable sqlQuery/ti
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.sql.request.logging.sqlTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
-|`druid.sql.request.logging.delegate.type`|Type of delegate sql request logger to log requests.|none|
+|`druid.sql.request.logging.delegate.type`|Type of delegate SQL request logger to log requests.|none|
 
 ### Composite SQL Request Logging
-Composite SQL Request Logger emits sql request logs to multiple sql request loggers.
+Composite SQL Request Logger emits SQL request logs to multiple SQL request loggers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.sql.request.logging.loggerProviders`|List of sql request loggers for emitting sql request logs.|none|
+|`druid.sql.request.logging.loggerProviders`|List of SQL request loggers for emitting SQL request logs.|none|
 
 ## SQL Metrics
 
@@ -585,6 +585,6 @@ Broker will emit the following metrics for SQL.
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`sqlQuery/time`|Milliseconds taken to complete a sql.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
-|`sqlQuery/bytes`|number of bytes returned in sql response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
+|`sqlQuery/time`|Milliseconds taken to complete a SQL.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
+|`sqlQuery/bytes`|number of bytes returned in SQL response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 

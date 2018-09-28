@@ -107,8 +107,8 @@ If SQL is enabled, broker will emit the following metrics for SQL.
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`sqlQuery/time`|Milliseconds taken to complete a sql.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
-|`sqlQuery/bytes`|number of bytes returned in sql response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
+|`sqlQuery/time`|Milliseconds taken to complete a SQL.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
+|`sqlQuery/bytes`|number of bytes returned in SQL response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
 ## Ingestion Metrics
 
