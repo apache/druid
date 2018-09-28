@@ -672,25 +672,34 @@ public class CompactionTask extends AbstractTask
     IndexTuningConfig computeTuningConfig(List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments)
     {
       if (!hasPartitionConfig(tuningConfig)) {
+        final long nonNullTargetCompactionSizeBytes = Preconditions.checkNotNull(
+            targetCompactionSizeBytes,
+            "targetCompactionSizeBytes"
+        );
         // Find IndexTuningConfig.targetPartitionSize which is the number of rows per segment.
         // Assume that the segment size is proportional to the number of rows. We can improve this later.
-        final double avgRowsPerByte = queryableIndexAndSegments
+        final long totalNumRows = queryableIndexAndSegments
             .stream()
-            .mapToDouble(queryableIndexAndDataSegment -> {
-              final long numRows = queryableIndexAndDataSegment.lhs.getNumRows();
-              final long size = queryableIndexAndDataSegment.rhs.getSize();
-              return numRows / (double) size;
-            })
-            .average()
-            .orElseThrow(() -> new ISE("Cannot find targetPartitionSize because the input segment is empty"));
-        final int targetPartitionSize = (int) Math.round(avgRowsPerByte * targetCompactionSizeBytes);
+            .mapToLong(queryableIndexAndDataSegment -> queryableIndexAndDataSegment.lhs.getNumRows())
+            .sum();
+        final long totalSizeBytes = queryableIndexAndSegments
+            .stream()
+            .mapToLong(queryableIndexAndDataSegment -> queryableIndexAndDataSegment.rhs.getSize())
+            .sum();
+
+        if (totalSizeBytes == 0L) {
+          throw new ISE("Total input segment size is 0 byte");
+        }
+
+        final double avgRowsPerByte = totalNumRows / (double) totalSizeBytes;
+        final int targetPartitionSize = Math.toIntExact(Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes));
         Preconditions.checkState(targetPartitionSize > 0, "Negative targetPartitionSize[%s]", targetPartitionSize);
 
         log.info(
             "Estimated targetPartitionSize[%d] = avgRowsPerByte[%f] * targetCompactionSizeBytes[%d]",
             targetPartitionSize,
             avgRowsPerByte,
-            targetCompactionSizeBytes
+            nonNullTargetCompactionSizeBytes
         );
         return (tuningConfig == null ? IndexTuningConfig.createDefault() : tuningConfig)
             .withTargetPartitionSize(targetPartitionSize);
