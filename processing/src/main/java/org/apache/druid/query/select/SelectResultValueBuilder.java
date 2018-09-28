@@ -19,19 +19,17 @@
 
 package org.apache.druid.query.select;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Queues;
-import com.google.common.collect.Sets;
-import com.google.common.primitives.Longs;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.Result;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 
@@ -44,7 +42,7 @@ public class SelectResultValueBuilder
     @Override
     public int compare(EventHolder o1, EventHolder o2)
     {
-      int retVal = Longs.compare(o1.getTimestamp().getMillis(), o2.getTimestamp().getMillis());
+      int retVal = Long.compare(o1.getTimestamp().getMillis(), o2.getTimestamp().getMillis());
 
       if (retVal == 0) {
         retVal = o1.getSegmentId().compareTo(o2.getSegmentId());
@@ -64,7 +62,7 @@ public class SelectResultValueBuilder
   protected Set<String> dimensions;
   protected Set<String> metrics;
 
-  protected final Queue<EventHolder> pQueue;
+  protected List<EventHolder> eventHolders;
   protected final Map<String, Integer> pagingIdentifiers;
 
   public SelectResultValueBuilder(DateTime timestamp, PagingSpec pagingSpec, boolean descending)
@@ -72,15 +70,15 @@ public class SelectResultValueBuilder
     this.timestamp = timestamp;
     this.pagingSpec = pagingSpec;
     this.descending = descending;
-    this.dimensions = Sets.newHashSet();
-    this.metrics = Sets.newHashSet();
-    this.pagingIdentifiers = Maps.newLinkedHashMap();
-    this.pQueue = instantiatePQueue();
+    this.dimensions = new HashSet<>();
+    this.metrics = new HashSet<>();
+    this.pagingIdentifiers = new LinkedHashMap<>();
+    instantiateEventHolders();
   }
 
   public void addEntry(EventHolder event)
   {
-    pQueue.add(event);
+    eventHolders.add(event);
   }
 
   public void finished(String segmentId, int lastOffset)
@@ -110,48 +108,80 @@ public class SelectResultValueBuilder
 
   public Result<SelectResultValue> build()
   {
-    return new Result<SelectResultValue>(
+    prepareEventHolders();
+    Result<SelectResultValue> result = new Result<>(
         timestamp,
-        new SelectResultValue(pagingIdentifiers, dimensions, metrics, getEventHolders())
+        new SelectResultValue(pagingIdentifiers, dimensions, metrics, eventHolders)
     );
+    // Prohibit use-after-build, because eventHolders is returned directly, without making a defensive copy.
+    eventHolders = null;
+    return result;
   }
 
-  protected List<EventHolder> getEventHolders()
+  protected void prepareEventHolders()
   {
-    return Lists.newArrayList(pQueue);
+    // do nothing
   }
 
-  protected Queue<EventHolder> instantiatePQueue()
+  protected void instantiateEventHolders()
   {
-    return Queues.newArrayDeque();
+    eventHolders = new ArrayList<>();
   }
 
   public static class MergeBuilder extends SelectResultValueBuilder
   {
+    private Queue<EventHolder> pQueue;
+
     public MergeBuilder(DateTime timestamp, PagingSpec pagingSpec, boolean descending)
     {
       super(timestamp, pagingSpec, descending);
     }
 
     @Override
-    protected Queue<EventHolder> instantiatePQueue()
+    public void addEntry(EventHolder event)
     {
       int threshold = pagingSpec.getThreshold();
-      return MinMaxPriorityQueue.orderedBy(descending ? Comparators.inverse(comparator) : comparator)
-                                .maximumSize(threshold > 0 ? threshold : Integer.MAX_VALUE)
-                                .create();
+      if (threshold > 0) {
+        pQueue.add(event);
+        if (pQueue.size() > threshold) {
+          pQueue.remove();
+        }
+      } else {
+        eventHolders.add(event);
+      }
     }
 
     @Override
-    protected List<EventHolder> getEventHolders()
+    protected void instantiateEventHolders()
     {
-      final List<EventHolder> values = Lists.newArrayListWithCapacity(pQueue.size());
-      while (!pQueue.isEmpty()) {
-        EventHolder event = pQueue.remove();
-        pagingIdentifiers.put(event.getSegmentId(), event.getOffset());
-        values.add(event);
+      int threshold = pagingSpec.getThreshold();
+      if (threshold > 0) {
+        // Specifically creating a heap queue in the opposite order from what is required, to be able to remove the
+        // least elements above the threshold.
+        Comparator<EventHolder> order = descending ? comparator : comparator.reversed();
+        pQueue = new PriorityQueue<>(threshold + 1, order);
+      } else {
+        eventHolders = new ArrayList<>();
       }
-      return values;
+    }
+
+    @Override
+    protected void prepareEventHolders()
+    {
+      if (pagingSpec.getThreshold() > 0) {
+        eventHolders = new ArrayList<>(pQueue.size());
+        // Draining a heap queue into an list and then reversing it to get the right order
+        while (!pQueue.isEmpty()) {
+          eventHolders.add(pQueue.remove());
+        }
+        Collections.reverse(eventHolders);
+      } else {
+        Comparator<EventHolder> order = descending ? comparator.reversed() : comparator;
+        eventHolders.sort(order);
+      }
+      for (EventHolder event : eventHolders) {
+        pagingIdentifiers.put(event.getSegmentId(), event.getOffset());
+      }
     }
   }
 }

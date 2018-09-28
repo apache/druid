@@ -270,13 +270,8 @@ public class SelectQueryEngine
                   metSelectors
               );
 
-              builder.addEntry(
-                  new EventHolder(
-                      segmentId,
-                      lastOffset = offset.current(),
-                      theEvent
-                  )
-              );
+              lastOffset = offset.current();
+              builder.addEntry(new EventHolder(segmentId, lastOffset, theEvent));
             }
 
             builder.finished(segmentId, lastOffset);
