@@ -33,6 +33,7 @@ Available Metrics
 |`query/node/time`|Milliseconds taken to query individual historical/realtime nodes.|id, status, server.|< 1s|
 |`query/node/bytes`|number of bytes returned from querying individual historical/realtime nodes.|id, status, server.| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until broker starts receiving the response from individual historical/realtime nodes.|id, status, server.|< 1s|
+|`query/node/backpressure`|Milliseconds channel has spent in an unreadable state.|id, status, server.| |
 |`query/intervalChunk/time`|Only emitted if interval chunking is enabled. Milliseconds required to query an interval chunk.|id, status, chunkInterval (if interval chunking is enabled).|< 1s|
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
