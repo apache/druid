@@ -35,7 +35,7 @@ import java.util.function.ObjLongConsumer;
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
   private final ServiceEmitter emitter;
-  private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
+  private final QueryToolChest<T, Query<T>> queryToolChest;
   private final QueryRunner<T> queryRunner;
   private final long creationTimeNs;
   private final ObjLongConsumer<? super QueryMetrics<?>> reportMetric;
@@ -44,7 +44,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
   private MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
-      QueryToolChest<T, ? extends Query<T>> queryToolChest,
+      QueryToolChest<T, Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
       long creationTimeNs,
       ObjLongConsumer<? super QueryMetrics<?>> reportMetric,
@@ -61,7 +61,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
   public MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
-      QueryToolChest<T, ? extends Query<T>> queryToolChest,
+      QueryToolChest<T, Query<T>> queryToolChest,
       QueryRunner<T> queryRunner,
       ObjLongConsumer<? super QueryMetrics<?>> reportMetric,
       Consumer<QueryMetrics<?>> applyCustomDimensions

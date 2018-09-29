@@ -122,11 +122,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
-    final QueryPlus<Row> queryPlusForRunners = queryPlus
-        .withQuery(
-            query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
-        )
-        .withoutThreadUnsafeState();
+    final QueryPlus<Row> queryPlusForRunners = queryPlus.withQuery(
+        query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
+    );
 
     if (QueryContexts.isBySegment(query) || forceChainedExecution) {
       ChainedExecutionQueryRunner<Row> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
@@ -239,11 +237,12 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                           @SuppressWarnings("unused")
                                           Releaser grouperReleaser = grouperHolder.increment()
                                       ) {
-                                        final AggregateResult retVal = input.run(queryPlusForRunners, responseContext)
-                                                                            .accumulate(
-                                                                                AggregateResult.ok(),
-                                                                                accumulator
-                                                                            );
+                                        final AggregateResult retVal = input
+                                            .run(queryPlusForRunners.withQueryMetricsCopied(), responseContext)
+                                            .accumulate(
+                                                AggregateResult.ok(),
+                                                accumulator
+                                            );
 
                                         // Return true if OK, false if resources were exhausted.
                                         return retVal;

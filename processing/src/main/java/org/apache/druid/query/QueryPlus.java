@@ -68,11 +68,23 @@ public final class QueryPlus<T>
 
   /**
    * Returns the same QueryPlus object with the identity replaced. This new identity will affect future calls to
-   * {@link #withoutQueryMetrics()} but will not affect any currently-existing queryMetrics.
+   * {@link #withQueryMetrics(QueryToolChest)} ()} but will not affect any currently-existing queryMetrics.
    */
   public QueryPlus<T> withIdentity(String identity)
   {
     return new QueryPlus<>(query, queryMetrics, identity);
+  }
+
+  /**
+   * TODO doc
+   * @return
+   */
+  public QueryPlus<T> withQueryMetricsCopied()
+  {
+    if (queryMetrics == null) {
+      return this;
+    }
+    return new QueryPlus<>(query, queryMetrics.makeCopy(), identity);
   }
 
   /**
@@ -85,43 +97,18 @@ public final class QueryPlus<T>
    * called (i. e. it already had non-null QueryMetrics), or if it is a new QueryPlus object. See {@link
    * MetricsEmittingQueryRunner} for example.
    */
-  public QueryPlus<T> withQueryMetrics(QueryToolChest<T, ? extends Query<T>> queryToolChest)
+  public QueryPlus<T> withQueryMetrics(QueryToolChest<T, Query<T>> queryToolChest)
   {
     if (queryMetrics != null) {
       return this;
     } else {
-      final QueryMetrics metrics = ((QueryToolChest) queryToolChest).makeMetrics(query);
+      final QueryMetrics metrics = queryToolChest.makeMetrics(query);
 
       if (identity != null) {
         metrics.identity(identity);
       }
 
       return new QueryPlus<>(query, metrics, identity);
-    }
-  }
-
-  /**
-   * Returns a QueryPlus object without the components which are unsafe for concurrent use from multiple threads,
-   * therefore couldn't be passed down in concurrent or async {@link QueryRunner}s.
-   *
-   * Currently the only unsafe component is {@link QueryMetrics}, i. e. {@code withoutThreadUnsafeState()} call is
-   * equivalent to {@link #withoutQueryMetrics()}.
-   */
-  public QueryPlus<T> withoutThreadUnsafeState()
-  {
-    return withoutQueryMetrics();
-  }
-
-  /**
-   * Returns the same QueryPlus object, if it doesn't have {@link QueryMetrics} ({@link #getQueryMetrics()} returns
-   * null), or returns a new QueryPlus object with {@link Query} from this QueryPlus and null as QueryMetrics.
-   */
-  private QueryPlus<T> withoutQueryMetrics()
-  {
-    if (queryMetrics == null) {
-      return this;
-    } else {
-      return new QueryPlus<>(query, null, identity);
     }
   }
 

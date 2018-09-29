@@ -51,6 +51,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -138,7 +139,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                              .rows(CalciteTests.ROWS1)
                                              .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate, new NoopServiceEmitter()).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())

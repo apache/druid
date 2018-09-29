@@ -242,4 +242,10 @@ public class DefaultSelectQueryMetrics implements SelectQueryMetrics
   {
     delegateQueryMetrics.emit(emitter);
   }
+
+  @Override
+  public QueryMetrics<SelectQuery> makeCopy()
+  {
+    return new DefaultSelectQueryMetrics(delegateQueryMetrics.makeCopy());
+  }
 }

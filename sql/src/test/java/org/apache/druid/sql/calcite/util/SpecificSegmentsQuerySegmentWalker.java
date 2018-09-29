@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.CPUTimeMetricQueryRunner;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -57,17 +59,23 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, Closeable
 {
   private final QueryRunnerFactoryConglomerate conglomerate;
+  private final ServiceEmitter emitter;
   private final Map<String, VersionedIntervalTimeline<String, Segment>> timelines = Maps.newHashMap();
   private final List<Closeable> closeables = Lists.newArrayList();
   private final List<DataSegment> segments = Lists.newArrayList();
 
-  public SpecificSegmentsQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate)
+  public SpecificSegmentsQuerySegmentWalker(
+      QueryRunnerFactoryConglomerate conglomerate,
+      ServiceEmitter emitter
+  )
   {
     this.conglomerate = conglomerate;
+    this.emitter = emitter;
   }
 
   public SpecificSegmentsQuerySegmentWalker add(
@@ -105,7 +113,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    return new FinalizeResultsQueryRunner<>(
+    final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
                 toolChest.preMergeQueryDecoration(
@@ -165,6 +173,13 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         ),
         toolChest
     );
+    return CPUTimeMetricQueryRunner.safeBuild(
+        baseRunner,
+        toolChest,
+        emitter,
+        new AtomicLong(0),
+        true
+    );
   }
 
   @Override
@@ -180,7 +195,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    return new FinalizeResultsQueryRunner<>(
+    final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
                 toolChest.preMergeQueryDecoration(
@@ -189,6 +204,13 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
             )
         ),
         toolChest
+    );
+    return CPUTimeMetricQueryRunner.safeBuild(
+        baseRunner,
+        toolChest,
+        emitter,
+        new AtomicLong(0),
+        true
     );
   }
 

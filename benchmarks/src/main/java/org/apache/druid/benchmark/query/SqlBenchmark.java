@@ -31,6 +31,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -112,7 +114,10 @@ public class SqlBenchmark
     final QueryRunnerFactoryConglomerate conglomerate = conglomerateCloserPair.lhs;
     final PlannerConfig plannerConfig = new PlannerConfig();
 
-    this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
+    this.walker = new SpecificSegmentsQuerySegmentWalker(
+        conglomerate,
+        new ServiceEmitter("", "", new NoopEmitter())
+    ).add(dataSegment, index);
     plannerFactory = new PlannerFactory(
         CalciteTests.createMockSchema(conglomerate, walker, plannerConfig),
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),

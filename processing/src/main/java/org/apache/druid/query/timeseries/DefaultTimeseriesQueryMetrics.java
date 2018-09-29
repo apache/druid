@@ -22,6 +22,7 @@ package org.apache.druid.query.timeseries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.QueryMetrics;
 
 public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<TimeseriesQuery>
     implements TimeseriesQueryMetrics
@@ -29,6 +30,11 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
   public DefaultTimeseriesQueryMetrics(ObjectMapper jsonMapper)
   {
     super(jsonMapper);
+  }
+
+  public DefaultTimeseriesQueryMetrics(DefaultTimeseriesQueryMetrics that)
+  {
+    super(that);
   }
 
   @Override
@@ -64,5 +70,13 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
   public void granularity(TimeseriesQuery query)
   {
     // Don't emit by default
+  }
+
+  @Override
+  public QueryMetrics<TimeseriesQuery> makeCopy()
+  {
+    synchronized (lock) {
+      return new DefaultTimeseriesQueryMetrics(this);
+    }
   }
 }

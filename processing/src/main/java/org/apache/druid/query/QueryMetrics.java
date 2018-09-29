@@ -92,7 +92,7 @@ import java.util.List;
  * 100% guarantee of compatibility, because methods could not only be added to QueryMetrics, existing methods could also
  * be changed or removed.
  *
- * <p>QueryMetrics is designed for use from a single thread, implementations shouldn't care about thread-safety.
+ * <p><b>All implementations of QueryMetrics should be thread-safety.</b>
  *
  *
  * Adding new methods to QueryMetrics
@@ -309,4 +309,9 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
    */
   void emit(ServiceEmitter emitter);
+
+  /**
+   * Make a deep copy of this instance.
+   */
+  QueryMetrics<QueryType> makeCopy();
 }

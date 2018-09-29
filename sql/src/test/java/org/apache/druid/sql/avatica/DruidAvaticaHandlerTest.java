@@ -750,7 +750,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    final PlannerConfig plannerConfig = new PlannerConfig();
+    final PlannerConfig plannerConfig = new PlannerConfig() {
+      @Override
+      public int getSelectThreshold()
+      {
+        return 3;
+      }
+    };
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
@@ -800,7 +806,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     Connection smallFrameClient = DriverManager.getConnection(smallFrameUrl, "regularUser", "druid");
 
     final ResultSet resultSet = smallFrameClient.createStatement().executeQuery(
-        "SELECT dim1 FROM druid.foo"
+        "SELECT dim1 FROM druid.foo order by __time"
     );
     List<Map<String, Object>> rows = getRows(resultSet);
     Assert.assertEquals(2, frames.size());

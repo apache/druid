@@ -23,8 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -44,7 +42,6 @@ import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Statement handle for {@link DruidMeta}. Thread-safe.
@@ -67,23 +64,6 @@ public class DruidStatement implements Closeable
   private final Runnable onClose;
   private final Object lock = new Object();
 
-  /**
-   * Query metrics can only be used within a single thread. Because results can be paginated into multiple
-   * JDBC frames (each frame being processed by a potentially different thread), the thread that closes the yielder
-   * (resulting in a QueryMetrics emit() call) may not be the same thread that created the yielder (which initializes
-   * DefaultQueryMetrics with the current thread as the owner). Create and close the yielder with this
-   * single-thread executor to prevent this from happening.
-   *
-   * The thread owner check in DefaultQueryMetrics is more aggressive than needed for this specific JDBC case, since
-   * the JDBC frames are processed sequentially. If the thread owner check is changed/loosened to permit this use case,
-   * we would not need to use this executor.
-   *
-   * See discussion at:
-   * https://github.com/apache/incubator-druid/pull/4288
-   * https://github.com/apache/incubator-druid/pull/4415
-   */
-  private final ExecutorService yielderOpenCloseExecutor;
-
   private State state = State.NEW;
   private String query;
   private long maxRowCount;
@@ -103,9 +83,6 @@ public class DruidStatement implements Closeable
     this.statementId = statementId;
     this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
-    this.yielderOpenCloseExecutor = Execs.singleThreaded(
-        StringUtils.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
-    );
   }
 
   public static List<ColumnMetaData> createColumnMetaData(final RelDataType rowType)
@@ -194,9 +171,7 @@ public class DruidStatement implements Closeable
       ensure(State.PREPARED);
 
       try {
-        final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(
-            () -> plannerResult.run()
-        ).get();
+        final Sequence<Object[]> baseSequence = plannerResult.run();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
         final Sequence<Object[]> retSequence =
@@ -316,15 +291,7 @@ public class DruidStatement implements Closeable
           this.yielder = null;
 
           // Put the close last, so any exceptions it throws are after we did the other cleanup above.
-          yielderOpenCloseExecutor.submit(
-              () -> {
-                theYielder.close();
-                // makes this a Callable instead of Runnable so we don't need to catch exceptions inside the lambda
-                return null;
-              }
-          ).get();
-
-          yielderOpenCloseExecutor.shutdownNow();
+          theYielder.close();
         }
       }
       catch (Throwable t) {
