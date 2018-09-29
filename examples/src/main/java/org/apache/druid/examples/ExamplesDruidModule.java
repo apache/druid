@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.examples.twitter.TwitterSpritzerFirehoseFactory;
+import org.apache.druid.examples.wikipedia.IrcFirehoseFactory;
+import org.apache.druid.examples.wikipedia.IrcInputRowParser;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.Collections;
@@ -39,7 +41,9 @@ public class ExamplesDruidModule implements DruidModule
     return Collections.<Module>singletonList(
         new SimpleModule("ExamplesModule")
             .registerSubtypes(
-                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer")
+                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
+                new NamedType(IrcFirehoseFactory.class, "irc"),
+                new NamedType(IrcInputRowParser.class, "irc")
             )
     );
   }

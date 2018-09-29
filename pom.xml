@@ -116,6 +116,7 @@
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
+        <module>extensions-core/druid-bloom-filter</module>
         <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
@@ -928,8 +929,8 @@
                         <bundledSignature>jdk-unsafe</bundledSignature>
                     </bundledSignatures>
                     <signaturesFiles>
-                        <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
-                        <signaturesFile>${session.executionRootDirectory}/codestyle/druid-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
                 </configuration>

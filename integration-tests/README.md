@@ -43,7 +43,10 @@ Set the docker environment:
 ```
 eval "$(docker-machine env integration)"
 export DOCKER_IP=$(docker-machine ip integration)
+export DOCKER_MACHINE_IP=$(docker-machine inspect integration | jq -r .Driver[\"HostOnlyCIDR\"])
 ```
+
+The final command uses the `jq` tool to read the Driver->HostOnlyCIDR field from the `docker-machine inspect` output. If you don't wish to install `jq`, you will need to set DOCKER_MACHINE_IP manually.
 
 ## Running tests
 

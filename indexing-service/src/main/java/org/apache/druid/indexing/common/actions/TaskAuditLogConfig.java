@@ -16,36 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.druid.indexing.common.actions;
 
-package org.apache.druid.guice;
-
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.inject.Binder;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.segment.realtime.firehose.IrcInputRowParser;
-
-import java.util.Collections;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
+ * The configuration for task audit logging.
+ * This class will be removed in future releases. See https://github.com/apache/incubator-druid/issues/5859.
  */
-public class ParsersModule implements DruidModule
+@Deprecated
+public class TaskAuditLogConfig
 {
-  @Override
-  public void configure(Binder binder)
+  @JsonProperty
+  private final boolean enabled;
+
+  @JsonCreator
+  public TaskAuditLogConfig(@JsonProperty("enabled") boolean enabled)
   {
+    this.enabled = enabled;
   }
 
-  @Override
-  public List<? extends Module> getJacksonModules()
+  @JsonProperty("enabled")
+  public boolean isEnabled()
   {
-    return Collections.<Module>singletonList(
-        new SimpleModule("ParsersModule")
-            .registerSubtypes(
-                new NamedType(IrcInputRowParser.class, "irc")
-            )
-    );
+    return enabled;
   }
 }

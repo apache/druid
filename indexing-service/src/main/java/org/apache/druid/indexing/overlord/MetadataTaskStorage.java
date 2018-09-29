@@ -291,6 +291,7 @@ public class MetadataTaskStorage implements TaskStorage
     );
   }
 
+  @Deprecated
   @Override
   public <T> void addAuditLog(final Task task, final TaskAction<T> taskAction)
   {
@@ -301,6 +302,7 @@ public class MetadataTaskStorage implements TaskStorage
     handler.addLog(task.getId(), taskAction);
   }
 
+  @Deprecated
   @Override
   public List<TaskAction> getAuditLogs(final String taskId)
   {

@@ -22,12 +22,10 @@ package org.apache.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
-
-import java.nio.ByteBuffer;
 
 /**
  */
@@ -114,14 +112,11 @@ public class ExtractionDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    byte[] dimExtractionFnBytes = extractionFn.getCacheKey();
-
-    return ByteBuffer.allocate(1 + dimensionBytes.length + dimExtractionFnBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(dimensionBytes)
-                     .put(dimExtractionFnBytes)
-                     .array();
+    return new CacheKeyBuilder(CACHE_TYPE_ID)
+        .appendString(dimension)
+        .appendCacheable(extractionFn)
+        .appendString(outputType.toString())
+        .build();
   }
 
   @Override

@@ -48,7 +48,6 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.ModulesConfig;
-import org.apache.druid.guice.ParsersModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
@@ -394,7 +393,6 @@ public class Initialization
         new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new FirehoseModule(),
-        new ParsersModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),
         new AuthenticatorMapperModule(),

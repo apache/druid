@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.TaskLockbox;
@@ -54,7 +55,7 @@ public abstract class IngestionTestBase
 
   public TaskActionClient createActionClient(Task task)
   {
-    return new LocalTaskActionClient(task, taskStorage, createTaskActionToolbox());
+    return new LocalTaskActionClient(task, taskStorage, createTaskActionToolbox(), new TaskAuditLogConfig(false));
   }
 
   public void prepareTaskForLocking(Task task) throws EntryExistsException
