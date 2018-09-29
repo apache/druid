@@ -37,8 +37,6 @@ public class TaskStatusPlus
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
   private final TaskState statusCode;
-  @Deprecated
-  private final TaskState status;
   private final RunnerTaskState runnerTaskState;
   private final Long duration;
   private final TaskLocation location;
@@ -101,17 +99,14 @@ public class TaskStatusPlus
     //checks for deserialization safety
     if (statusCode != null && status == null) {
       this.statusCode = statusCode;
-      this.status = statusCode;
     } else if (statusCode == null && status != null) {
       this.statusCode = status;
-      this.status = status;
     } else {
       if (statusCode != null && status != null && statusCode != status) {
         log.error("statusCode[%s] and status[%s] must be same", statusCode, status);
         throw new RuntimeException("statusCode and status must match");
       }
       this.statusCode = statusCode;
-      this.status = status;
     }
     this.runnerTaskState = runnerTaskState;
     this.duration = duration;
@@ -157,7 +152,7 @@ public class TaskStatusPlus
   @JsonProperty("status")
   public TaskState getStatus()
   {
-    return status;
+    return statusCode;
   }
 
   @Nullable
