@@ -108,6 +108,7 @@ public class TaskStatusPlus
     } else {
       if (statusCode != null && status != null && statusCode != status) {
         log.error("statusCode[%s] and status[%s] must be same", statusCode, status);
+        throw new RuntimeException("statusCode and status must match");
       }
       this.statusCode = statusCode;
       this.status = status;
