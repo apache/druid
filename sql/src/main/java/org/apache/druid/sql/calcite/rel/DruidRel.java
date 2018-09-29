@@ -133,31 +133,19 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
   @Override
   public Node implement(InterpreterImplementor implementor)
   {
-    final Sink sink = implementor.interpreter.sink(this);
-    return new Node()
-    {
-      @Override
-      public void run()
-      {
-        runQuery().accumulate(
-            sink,
-            new Accumulator<Sink, Object[]>()
-            {
-              @Override
-              public Sink accumulate(final Sink theSink, final Object[] in)
-              {
-                try {
-                  theSink.send(Row.of(in));
-                }
-                catch (InterruptedException e) {
-                  throw Throwables.propagate(e);
-                }
-                return theSink;
-              }
-            }
-        );
-      }
-    };
+    final Sink sink = implementor.compiler.sink(this);
+    return () -> runQuery().accumulate(
+        sink,
+        (Sink theSink, Object[] in) -> {
+          try {
+            theSink.send(Row.of(in));
+          }
+          catch (InterruptedException e) {
+            throw Throwables.propagate(e);
+          }
+          return theSink;
+        }
+    );
   }
 
   @Override

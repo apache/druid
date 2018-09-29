@@ -20,18 +20,18 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.calcite.runtime.Hook;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
-import org.apache.calcite.runtime.Hook;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * JUnit Rule that adds a Calcite hook to log and remember Druid queries.
@@ -78,22 +78,16 @@ public class QueryLogHook implements TestRule
       {
         clearRecordedQueries();
 
-        final Function<Object, Object> function = new Function<Object, Object>()
-        {
-          @Override
-          public Object apply(final Object query)
-          {
-            try {
-              recordedQueries.add((Query) query);
-              log.info(
-                  "Issued query: %s",
-                  objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query)
-              );
-            }
-            catch (Exception e) {
-              log.warn(e, "Failed to serialize query: %s", query);
-            }
-            return null;
+        final Consumer<Object> function = query -> {
+          try {
+            recordedQueries.add((Query) query);
+            log.info(
+                "Issued query: %s",
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query)
+            );
+          }
+          catch (Exception e) {
+            log.warn(e, "Failed to serialize query: %s", query);
           }
         };
 
