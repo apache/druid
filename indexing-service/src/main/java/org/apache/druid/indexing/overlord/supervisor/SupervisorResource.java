@@ -412,12 +412,15 @@ public class SupervisorResource
             return Response.ok(spec.get()).build();
           } else {
             Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
-            final Response.Status status = spec.isPresent() ? Response.Status.BAD_REQUEST : Response.Status.NOT_FOUND;
-            final String errMsg = spec.isPresent() ? StringUtils.format(
-                "[%s] is already %s",
-                id,
-                suspend ? "suspended" : "running"
-            ) : StringUtils.format("[%s] does not exist", id);
+            Response.Status status;
+            String errMsg;
+            if (spec.isPresent()) {
+              status = Response.Status.BAD_REQUEST;
+              errMsg = StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running");
+            } else {
+              status = Response.Status.NOT_FOUND;
+              errMsg = StringUtils.format("[%s] does not exist", id);
+            }
             return Response.status(status)
                            .entity(ImmutableMap.of("error", errMsg))
                            .build();
