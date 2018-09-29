@@ -108,7 +108,7 @@ public class TaskRunnerUtils
     );
 
     try {
-      return new URI(worker.getScheme(), worker.getHost(), path, null, null).toURL();
+      return new URI(StringUtils.format("%s://%s%s", worker.getScheme(), worker.getHost(), path)).toURL();
     }
     catch (URISyntaxException | MalformedURLException e) {
       throw Throwables.propagate(e);

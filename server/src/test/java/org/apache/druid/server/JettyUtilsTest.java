@@ -17,30 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.tests.indexer;
+package org.apache.druid.server;
 
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.Closeable;
-
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITParallelIndexTest extends AbstractITBatchIndexTest
+public class JettyUtilsTest
 {
-  private static String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
-  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
-  private static String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
-
   @Test
-  public void testIndexData() throws Exception
+  public void testConcatenateForRewrite()
   {
-    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
-      doIndexTestTest(
-          INDEX_DATASOURCE,
-          INDEX_TASK,
-          INDEX_QUERIES_RESOURCE
-      );
-    }
+    Assert.assertEquals(
+        "http://example.com/foo%20bar?q=baz%20qux",
+        JettyUtils.concatenateForRewrite(
+            "http://example.com",
+            "/foo%20bar",
+            "q=baz%20qux"
+        )
+    );
   }
 }

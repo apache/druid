@@ -268,7 +268,7 @@ public class WorkerHolder
 
   public void shutdownTask(String taskId)
   {
-    URL url = TaskRunnerUtils.makeWorkerURL(worker, "/druid/worker/v1/task/%s/shutdown", StringUtils.urlEncode(taskId));
+    final URL url = TaskRunnerUtils.makeWorkerURL(worker, "/druid/worker/v1/task/%s/shutdown", taskId);
 
     try {
       RetryUtils.retry(
