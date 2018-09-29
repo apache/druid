@@ -213,12 +213,13 @@ public class NettyHttpClient extends AbstractHttpClient
                     if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
                       suspendWatermark = -1;
                       channel.setReadable(true);
+                      long backPressureDuration = System.nanoTime() - backPressureStartTimeNs;
                       log.debug("[%s] Resumed reads from channel (chunkNum = %,d).", requestDesc, resumeChunkNum);
+                      return backPressureDuration;
                     }
                   }
 
-                  long backPressureDuration = System.nanoTime() - backPressureStartTimeNs;
-                  return backPressureDuration;
+                  return 0; //If we didn't resume, don't know if backpressure was happening
                 };
                 response = handler.handleResponse(httpResponse, trafficCop);
                 if (response.isFinished()) {
