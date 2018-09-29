@@ -89,6 +89,7 @@
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
+        <gelf.version>1.11.1</gelf.version>
         <repoOrgId>org-apache-id</repoOrgId>
         <repoOrgName>org-apache-name</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/content/repositories/public/</repoOrgUrl>
@@ -499,6 +500,11 @@
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
                 <version>2.0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>biz.paluch.logging</groupId>
+                <artifactId>logstash-gelf</artifactId>
+                <version>${gelf.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
