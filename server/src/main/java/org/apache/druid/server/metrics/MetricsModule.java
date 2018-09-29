@@ -31,6 +31,7 @@ import com.google.inject.name.Names;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.JvmCpuMonitor;
 import org.apache.druid.java.util.metrics.JvmMonitor;
+import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.SysMonitor;
@@ -127,6 +128,18 @@ public class MetricsModule implements Module
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
     ));
+  }
+
+  @Provides
+  @ManageLifecycle
+  public JvmThreadsMonitor getJvmThreadsMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
+  {
+    return new JvmThreadsMonitor(
+        MonitorsConfig.mapOfDatasourceAndTaskID(
+            dataSourceTaskIdHolder.getDataSource(),
+            dataSourceTaskIdHolder.getTaskId()
+        )
+    );
   }
 
   @Provides

@@ -29,6 +29,10 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -50,7 +54,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -71,10 +74,6 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -103,6 +102,7 @@ public class DruidCoordinator
                                                                      .reverse();
 
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
+
   private final Object lock = new Object();
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
@@ -119,13 +119,14 @@ public class DruidCoordinator
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
   private final Set<DruidCoordinatorHelper> indexingServiceHelpers;
-  private volatile boolean started = false;
-  private volatile SegmentReplicantLookup segmentReplicantLookup = null;
   private final BalancerStrategyFactory factory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
 
   private final DruidCoordinatorSegmentCompactor segmentCompactor;
+
+  private volatile boolean started = false;
+  private volatile SegmentReplicantLookup segmentReplicantLookup = null;
 
   @Inject
   public DruidCoordinator(
@@ -533,6 +534,7 @@ public class DruidCoordinator
 
       metadataSegmentManager.start();
       metadataRuleManager.start();
+      lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
@@ -580,8 +582,6 @@ public class DruidCoordinator
             }
         );
       }
-
-      lookupCoordinatorManager.start();
     }
   }
 
@@ -598,9 +598,9 @@ public class DruidCoordinator
       loadManagementPeons.clear();
 
       serviceAnnouncer.unannounce(self);
+      lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
       metadataSegmentManager.stop();
-      lookupCoordinatorManager.stop();
     }
   }
 
@@ -697,13 +697,15 @@ public class DruidCoordinator
           ImmutableList.of(
               new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this),
               params -> {
-                // Display info about all historical servers
-                Iterable<ImmutableDruidServer> servers = FunctionalIterable
-                    .create(serverInventoryView.getInventory())
+                List<ImmutableDruidServer> servers = serverInventoryView
+                    .getInventory()
+                    .stream()
                     .filter(DruidServer::segmentReplicatable)
-                    .transform(DruidServer::toImmutableDruidServer);
+                    .map(DruidServer::toImmutableDruidServer)
+                    .collect(Collectors.toList());
 
                 if (log.isDebugEnabled()) {
+                  // Display info about all historical servers
                   log.debug("Servers");
                   for (ImmutableDruidServer druidServer : servers) {
                     log.debug("  %s", druidServer);
