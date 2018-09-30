@@ -426,6 +426,33 @@ public class NewestSegmentFirstPolicyTest
     );
   }
 
+  @Test
+  public void testIgnoreSingleSegmentToCompact()
+  {
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, 100, new Period("P1D"))),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-02T00:00:00/2017-12-03T00:00:00"),
+                    new Period("P1D"),
+                    200,
+                    1
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"),
+                    new Period("P1D"),
+                    200,
+                    1
+                )
+            )
+        )
+    );
+
+    Assert.assertFalse(iterator.hasNext());
+  }
+
   private static void assertCompactSegmentIntervals(
       CompactionSegmentIterator iterator,
       Period segmentPeriod,

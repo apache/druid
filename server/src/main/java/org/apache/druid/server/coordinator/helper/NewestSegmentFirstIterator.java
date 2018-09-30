@@ -168,7 +168,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         config
     );
 
-    if (!segmentsToCompact.isEmpty()) {
+    if (segmentsToCompact.size() > 1) {
       queue.add(new QueueEntry(segmentsToCompact.segments));
     }
   }
@@ -323,7 +323,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       compactibleTimelineObjectHolderCursor.next();
     }
 
-    return new SegmentsToCompact(segmentsToCompact);
+    if (segmentsToCompact.size() > 1) {
+      return new SegmentsToCompact(segmentsToCompact);
+    } else {
+      return new SegmentsToCompact(Collections.emptyList());
+    }
   }
 
   /**
@@ -405,9 +409,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return segments;
     }
 
-    boolean isEmpty()
+    int size()
     {
-      return segments.isEmpty();
+      return segments.size();
     }
   }
 }
