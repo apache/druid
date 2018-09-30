@@ -400,7 +400,7 @@ public class ITTLSTest
                                                  || "Connection reset by peer".contains(rootCause.getMessage()))) {
           if (retries > MAX_CONNECTION_EXCEPTION_RETRIES) {
             Assert.fail(StringUtils.format(
-                "Broken pipe retries exhausted, test failed, did not get %s.",
+                "Broken pipe / connection reset retries exhausted, test failed, did not get %s.",
                 expectedException
             ));
           } else {
