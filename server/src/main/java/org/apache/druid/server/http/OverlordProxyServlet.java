@@ -19,14 +19,13 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.security.AuthConfig;
 import com.google.inject.Provider;
 import org.eclipse.jetty.client.HttpClient;
@@ -36,8 +35,6 @@ import org.eclipse.jetty.proxy.ProxyServlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * A Proxy servlet that proxies requests to the overlord.
@@ -63,23 +60,16 @@ public class OverlordProxyServlet extends ProxyServlet
   @Override
   protected String rewriteTarget(HttpServletRequest request)
   {
-    try {
-      final String overlordLeader = druidLeaderClient.findCurrentLeader();
-      if (overlordLeader == null) {
-        throw new ISE("Can't find Overlord leader.");
-      }
-
-      String location = StringUtils.format("%s%s", overlordLeader, request.getRequestURI());
-
-      if (request.getQueryString() != null) {
-        location = StringUtils.format("%s?%s", location, request.getQueryString());
-      }
-
-      return new URI(location).toString();
+    final String overlordLeader = druidLeaderClient.findCurrentLeader();
+    if (overlordLeader == null) {
+      throw new ISE("Can't find Overlord leader.");
     }
-    catch (URISyntaxException e) {
-      throw Throwables.propagate(e);
-    }
+
+    return JettyUtils.concatenateForRewrite(
+        overlordLeader,
+        request.getRequestURI(),
+        request.getQueryString()
+    );
   }
 
   @Override

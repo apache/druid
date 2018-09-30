@@ -20,12 +20,12 @@
 package org.apache.druid.tests.indexer;
 
 import com.beust.jcommander.internal.Lists;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -43,6 +43,7 @@ import org.joda.time.DateTime;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -70,10 +71,13 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   IntegrationTestingConfig config;
 
   @Test
-  public void testUnionQuery()
+  public void testUnionQuery() throws IOException
   {
     final int numTasks = 3;
-
+    final Closer closer = Closer.create();
+    for (int i = 0; i < numTasks; i++) {
+      closer.register(unloader(UNION_DATASOURCE + i));
+    }
     try {
       // Load 4 datasources with same dimensions
       String task = setShutOffTime(
@@ -143,16 +147,12 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       this.queryHelper.testQueriesFromFile(UNION_QUERIES_RESOURCE, 2);
 
     }
-    catch (Exception e) {
-      LOG.error(e, "Error while testing");
-      throw Throwables.propagate(e);
+    catch (Throwable e) {
+      throw closer.rethrow(e);
     }
     finally {
-      for (int i = 0; i < numTasks; i++) {
-        unloadAndKillData(UNION_DATASOURCE + i);
-      }
+      closer.close();
     }
-
   }
 
   private String setShutOffTime(String taskAsString, DateTime time)
