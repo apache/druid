@@ -396,6 +396,36 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertFalse(iterator.hasNext());
   }
 
+  @Test
+  public void testSkipUnknownDataSource()
+  {
+    final String unknownDataSource = "unknown";
+    final Period segmentPeriod = new Period("PT1H");
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(
+            unknownDataSource,
+            createCompactionConfig(10000, 100, new Period("P2D")),
+            DATA_SOURCE,
+            createCompactionConfig(10000, 100, new Period("P2D"))
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
+                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
+            )
+        )
+    );
+
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
+        Intervals.of("2017-11-15T03:00:00/2017-11-15T04:00:00"),
+        true
+    );
+  }
+
   private static void assertCompactSegmentIntervals(
       CompactionSegmentIterator iterator,
       Period segmentPeriod,

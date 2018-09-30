@@ -154,11 +154,14 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    */
   private void updateQueue(String dataSourceName, DataSourceCompactionConfig config)
   {
-    final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor = Preconditions.checkNotNull(
-        timelineIterators.get(dataSourceName),
-        "Cannot find timeline for dataSource[%s]",
+    final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor = timelineIterators.get(
         dataSourceName
     );
+
+    if (compactibleTimelineObjectHolderCursor == null) {
+      log.warn("Cannot find timeline for dataSource[%s]. Skip this dataSource", dataSourceName);
+      return;
+    }
 
     final SegmentsToCompact segmentsToCompact = findSegmentsToCompact(
         compactibleTimelineObjectHolderCursor,
