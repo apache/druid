@@ -66,6 +66,12 @@ Following filtered dimension spec retains only the values matching regex. Note t
 { "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
 ```
 
+Following filtered dimension spec retains only the values starting with the same prefix.
+
+```json
+{ "type" : "prefixFiltered", "delegate" : <dimensionSpec>, "prefix": <prefix string> }
+```
+
 For more details and examples, see [multi-value dimensions](multi-value-dimensions.html).
 
 ### Lookup DimensionSpecs
