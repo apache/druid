@@ -277,6 +277,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   @Override
   public Collection<DruidServer> getInventory()
   {
+    // Returning a lazy collection, because currently getInventory() is always used for one-time iteration. It's OK for
+    // storing in a field and repetitive iteration as well, because the lambda is very cheap - just a final field
+    // access.
     return Collections2.transform(servers.values(), serverHolder -> serverHolder.druidServer);
   }
 
