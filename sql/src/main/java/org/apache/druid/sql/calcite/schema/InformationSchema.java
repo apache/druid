@@ -413,7 +413,7 @@ public class InformationSchema extends AbstractSchema
                       isDateTime ? String.valueOf(type.getPrecision()) : null, // DATETIME_PRECISION
                       isCharacter ? type.getCharset().name() : null, // CHARACTER_SET_NAME
                       isCharacter ? type.getCollation().getCollationName() : null, // COLLATION_NAME
-                      type.getSqlTypeName().getJdbcOrdinal() // JDBC_TYPE (Druid extension)
+                      Long.valueOf(type.getSqlTypeName().getJdbcOrdinal()) // JDBC_TYPE (Druid extension)
                   };
                 }
               }

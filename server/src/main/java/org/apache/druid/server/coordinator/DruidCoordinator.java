@@ -103,6 +103,7 @@ public class DruidCoordinator
                                                                      .reverse();
 
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
+
   private final Object lock = new Object();
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
@@ -119,13 +120,14 @@ public class DruidCoordinator
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
   private final Set<DruidCoordinatorHelper> indexingServiceHelpers;
-  private volatile boolean started = false;
-  private volatile SegmentReplicantLookup segmentReplicantLookup = null;
   private final BalancerStrategyFactory factory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
 
   private final DruidCoordinatorSegmentCompactor segmentCompactor;
+
+  private volatile boolean started = false;
+  private volatile SegmentReplicantLookup segmentReplicantLookup = null;
 
   @Inject
   public DruidCoordinator(
@@ -520,6 +522,7 @@ public class DruidCoordinator
 
       metadataSegmentManager.start();
       metadataRuleManager.start();
+      lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
@@ -567,8 +570,6 @@ public class DruidCoordinator
             }
         );
       }
-
-      lookupCoordinatorManager.start();
     }
   }
 
@@ -585,9 +586,9 @@ public class DruidCoordinator
       loadManagementPeons.clear();
 
       serviceAnnouncer.unannounce(self);
+      lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
       metadataSegmentManager.stop();
-      lookupCoordinatorManager.stop();
     }
   }
 

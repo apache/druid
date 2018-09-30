@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.firehose;
+package org.apache.druid.examples.wikipedia;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -234,13 +234,8 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
       @Override
       public Runnable commit()
       {
-        return new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            // nothing to see here
-          }
+        return () -> {
+          // nothing to see here
         };
       }
 

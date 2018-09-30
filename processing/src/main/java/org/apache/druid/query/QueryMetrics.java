@@ -279,6 +279,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs);
 
   /**
+   * Registers "time that channel is unreadable (backpressure)" metric.
+   */
+  QueryMetrics<QueryType> reportBackPressureTime(long timeNs);
+
+  /**
    * Registers "node time" metric.
    */
   QueryMetrics<QueryType> reportNodeTime(long timeNs);
