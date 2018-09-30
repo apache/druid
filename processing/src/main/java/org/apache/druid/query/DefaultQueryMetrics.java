@@ -24,12 +24,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
 import javax.annotation.concurrent.GuardedBy;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +46,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
-  protected final ObjectMapper jsonMapper;
+  private static final EmittingLogger log = new EmittingLogger(DefaultQueryMetrics.class);
 
+  protected final ObjectMapper jsonMapper;
   protected final Object lock = new Object();
   @GuardedBy("lock") private final Map<String, String> singleValueDims = new HashMap<>();
   @GuardedBy("lock") private final Map<String, String[]> multiValueDims = new HashMap<>();
@@ -68,23 +71,42 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   protected void setDimension(String dimension, String value)
   {
     synchronized (lock) {
-      singleValueDims.put(dimension, value);
+      String oldValue = singleValueDims.put(dimension, value);
+      if (oldValue != null && !oldValue.equals(value)) {
+        handleIllegalModification(singleValueDims.getOrDefault(DruidMetrics.ID, ""), dimension);
+      }
     }
   }
 
   protected void setDimensions(String dimension, String[] values)
   {
     synchronized (lock) {
-      multiValueDims.put(dimension, values);
+      String[] oldValues = multiValueDims.put(dimension, values);
+      if (oldValues != null && !Arrays.equals(oldValues, values)) {
+        handleIllegalModification(singleValueDims.getOrDefault(DruidMetrics.ID, ""), dimension);
+      }
     }
   }
 
   protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
   {
     synchronized (lock) {
-      metrics.put(metricName, value);
+      Number oldValue = metrics.put(metricName, value);
+      if (oldValue != null && !oldValue.equals(value)) {
+        handleIllegalModification(singleValueDims.getOrDefault(DruidMetrics.ID, ""), metricName);
+      }
       return this;
     }
+  }
+
+  private void handleIllegalModification(String queryId, String entryName)
+  {
+    Exception e = new Exception("stack trace");
+    log.makeAlert(e, "\"%s\" in QueryMetrics got modified to another value", entryName)
+       .addData("queryId", queryId)
+       .addData("entryName", entryName)
+       .addData("threadName", Thread.currentThread().getName())
+       .emit();
   }
 
   @Override
