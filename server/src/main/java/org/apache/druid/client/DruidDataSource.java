@@ -34,8 +34,8 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * A mutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
  *
- * Concurrency: could be updated concurrently via {@link #addSegment} and {@link
- * #removeSegment}, and accessed concurrently (e. g. via {@link #getSegments} as well.
+ * Concurrency: could be updated concurrently via {@link #addSegment} and {@link #removeSegment}, and accessed
+ * concurrently (e. g. via {@link #getSegments}) as well.
  *
  * @see ImmutableDruidDataSource - an immutable counterpart of this class
  */
@@ -69,6 +69,7 @@ public class DruidDataSource
     return properties;
   }
 
+  @Nullable
   public DataSegment getSegment(SegmentId segmentId)
   {
     return idToSegmentMap.get(segmentId);
@@ -77,12 +78,6 @@ public class DruidDataSource
   public Collection<DataSegment> getSegments()
   {
     return Collections.unmodifiableCollection(idToSegmentMap.values());
-  }
-
-  @Nullable
-  public DataSegment getSegment(String segmentId)
-  {
-    return idToSegmentMap.get(segmentId);
   }
 
   public DruidDataSource addSegment(DataSegment dataSegment)

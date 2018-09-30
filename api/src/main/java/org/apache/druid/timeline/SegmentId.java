@@ -61,8 +61,8 @@ public final class SegmentId implements Comparable<SegmentId>
    */
 
   /**
-   * {@link #dataSource} and {@link #version} are stored as canonical string values to decrease memory required for
-   * storing large numbers of segment identifiers.
+   * {@link #dataSource} field values are stored as canonical strings to decrease memory required for large numbers of
+   * segment identifiers.
    */
   private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
 
@@ -114,7 +114,7 @@ public final class SegmentId implements Comparable<SegmentId>
    * Returns a (potentially empty) lazy iteration of all possible valid parsings of the given segment id string into
    * {@code SegmentId} objects.
    *
-   * Warning: this iterable is repeats most of the parsing work on each iteration, so it should be iterated only once if
+   * Warning: this iterable repeats most of the parsing work on each iteration, so it should be iterated only once if
    * possible.
    */
   public static Iterable<SegmentId> iterateAllPossibleParsings(String segmentId)
