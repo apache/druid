@@ -20,42 +20,30 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.base.Preconditions;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
 /**
  * Util class used by {@link DruidCoordinatorSegmentCompactor} and {@link CompactionSegmentSearchPolicy}.
  */
 class SegmentCompactorUtil
 {
-  private static final Period LOOKUP_PERIOD = new Period("P1D");
-  private static final Duration LOOKUP_DURATION = LOOKUP_PERIOD.toStandardDuration();
   // Allow compaction of segments if totalSize(segments) <= remainingBytes * ALLOWED_MARGIN_OF_COMPACTION_SIZE
   private static final double ALLOWED_MARGIN_OF_COMPACTION_SIZE = .1;
 
-  static boolean isCompactible(long remainingBytes, long currentTotalBytes, long additionalBytes)
+  static boolean isCompactibleSize(long targetBytes, long currentTotalBytes, long additionalBytes)
   {
-    return remainingBytes * (1 + ALLOWED_MARGIN_OF_COMPACTION_SIZE) >= currentTotalBytes + additionalBytes;
+    return targetBytes * (1 + ALLOWED_MARGIN_OF_COMPACTION_SIZE) >= currentTotalBytes + additionalBytes;
+  }
+
+  static boolean isCompactibleNum(int numTargetSegments, int numCurrentSegments, int numAdditionalSegments)
+  {
+    return numCurrentSegments + numAdditionalSegments <= numTargetSegments;
   }
 
   static boolean isProperCompactionSize(long targetCompactionSizeBytes, long totalBytesOfSegmentsToCompact)
   {
     return targetCompactionSizeBytes * (1 - ALLOWED_MARGIN_OF_COMPACTION_SIZE) <= totalBytesOfSegmentsToCompact &&
            targetCompactionSizeBytes * (1 + ALLOWED_MARGIN_OF_COMPACTION_SIZE) >= totalBytesOfSegmentsToCompact;
-  }
-
-  /**
-   * Return an interval for looking up for timeline.
-   * If {@code totalInterval} is larger than {@link #LOOKUP_PERIOD}, it returns an interval of {@link #LOOKUP_PERIOD}
-   * and the end of {@code totalInterval}.
-   */
-  static Interval getNextLoopupInterval(Interval totalInterval)
-  {
-    final Duration givenDuration = totalInterval.toDuration();
-    return givenDuration.isLongerThan(LOOKUP_DURATION) ?
-           new Interval(LOOKUP_PERIOD, totalInterval.getEnd()) :
-           totalInterval;
   }
 
   /**
