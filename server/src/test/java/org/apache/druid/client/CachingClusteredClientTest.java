@@ -2639,9 +2639,8 @@ public class CachingClusteredClientTest
             return timeline;
           }
 
-          @Nullable
           @Override
-          public Map<String, QueryableDruidServer> getClients()
+          public Map<String, QueryableDruidServer> getQueryableServers()
           {
             throw new UnsupportedOperationException();
           }

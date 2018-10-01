@@ -324,7 +324,7 @@ public class BrokerServerView implements TimelineServerView
   }
 
   @Override
-  public Map<String, QueryableDruidServer> getClients()
+  public Map<String, QueryableDruidServer> getQueryableServers()
   {
     return clients;
   }

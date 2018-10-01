@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-
+// this class is used for testing and benchmark
 public class TestServerInventoryView implements TimelineServerView
 {
   private static final DruidServerMetadata DUMMY_SERVER = new DruidServerMetadata(
@@ -62,7 +62,7 @@ public class TestServerInventoryView implements TimelineServerView
 
   @Nullable
   @Override
-  public Map<String, QueryableDruidServer> getClients()
+  public Map<String, QueryableDruidServer> getQueryableServers()
   {
     throw new UnsupportedOperationException();
   }

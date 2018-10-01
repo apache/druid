@@ -22,8 +22,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -55,7 +57,15 @@ import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -65,14 +75,13 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 
 public class SystemSchema extends AbstractSchema
@@ -115,7 +124,7 @@ public class SystemSchema extends AbstractSchema
       .add("max_size", ValueType.LONG)
       .build();
 
-  private static final RowSignature SERVERSEGMENTS_SIGNATURE = RowSignature
+  private static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
       .builder()
       .add("server", ValueType.STRING)
       .add("segment_id", ValueType.STRING)
@@ -138,10 +147,20 @@ public class SystemSchema extends AbstractSchema
       .add("error_msg", ValueType.STRING)
       .build();
 
+  private static final Function<String, Iterable<ResourceAction>> SYS_TABLE_DS_RA_GENERATOR = datasourceName -> Collections
+      .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
+
+  private static final Function<String, Iterable<ResourceAction>> SYS_TABLE_STATE_RA_GENERATOR = state -> Collections
+      .singletonList(
+          new ResourceAction(
+              new Resource(state, ResourceType.STATE),
+              Action.READ
+          ));
+
   private final Map<String, Table> tableMap;
 
   static {
-    SEGMENT_SERVERS_TABLE_SIZE = SERVERSEGMENTS_SIGNATURE.getRowOrder().size();
+    SEGMENT_SERVERS_TABLE_SIZE = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
   }
 
   @Inject
@@ -157,10 +176,10 @@ public class SystemSchema extends AbstractSchema
     Preconditions.checkNotNull(serverView, "serverView");
     BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper, responseHandler),
-        SERVERS_TABLE, new ServersTable(serverView),
-        SEGMENT_SERVERS_TABLE, new ServerSegmentsTable(serverView),
-        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler)
+        SEGMENTS_TABLE, new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper),
+        SERVERS_TABLE, new ServersTable(serverView, authorizerMapper),
+        SEGMENT_SERVERS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
+        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
     );
   }
 
@@ -176,18 +195,21 @@ public class SystemSchema extends AbstractSchema
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
     private final BytesAccumulatingResponseHandler responseHandler;
+    private final AuthorizerMapper authorizerMapper;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
         DruidLeaderClient druidLeaderClient,
         ObjectMapper jsonMapper,
-        BytesAccumulatingResponseHandler responseHandler
+        BytesAccumulatingResponseHandler responseHandler,
+        AuthorizerMapper authorizerMapper
     )
     {
       this.druidSchema = druidSchemna;
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
       this.responseHandler = responseHandler;
+      this.authorizerMapper = authorizerMapper;
     }
 
     @Override
@@ -205,13 +227,10 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
       //get available segments from druidSchema
-      Map<String, ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder>> getSegmentMetadataInfo = druidSchema.getSegmentMetadataInfo();
-      final Map<DataSegment, SegmentMetadataHolder> availableSegmentMetadata = new HashMap<>();
-      for (ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder> val : getSegmentMetadataInfo.values()) {
-        availableSegmentMetadata.putAll(val);
-      }
+      final Map<DataSegment, SegmentMetadataHolder> availableSegmentMetadata = druidSchema.getSegmentMetadata();
       final Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries = availableSegmentMetadata.entrySet()
                                                                                                                   .iterator();
 
@@ -225,6 +244,20 @@ public class SystemSchema extends AbstractSchema
       Set<String> availableSegmentIds = new HashSet<>();
       final FluentIterable<Object[]> availableSegments = FluentIterable
           .from(() -> availableSegmentEntries)
+          .filter(input -> {
+            Access access = AuthorizationUtils.authorizeAllResourceActions(
+                authenticationResult,
+                ImmutableList.of(
+                    new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ),
+                    new ResourceAction(new Resource(input.getKey().getDataSource(), ResourceType.DATASOURCE), Action.READ)
+                ),
+                authorizerMapper
+            );
+            if (access.isAllowed()) {
+              return true;
+            }
+            return false;
+          })
           .transform(val -> {
             try {
               if (!availableSegmentIds.contains(val.getKey().getIdentifier())) {
@@ -254,6 +287,20 @@ public class SystemSchema extends AbstractSchema
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> metadataSegments)
+          .filter(input -> {
+            Access access = AuthorizationUtils.authorizeAllResourceActions(
+                authenticationResult,
+                ImmutableList.of(
+                    new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ),
+                    new ResourceAction(new Resource(input.getDataSource(), ResourceType.DATASOURCE), Action.READ)
+                ),
+                authorizerMapper
+            );
+            if (access.isAllowed()) {
+              return true;
+            }
+            return false;
+          })
           .transform(val -> {
             try {
               if (availableSegmentIds.contains(val.getIdentifier())) {
@@ -307,7 +354,7 @@ public class SystemSchema extends AbstractSchema
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    ListenableFuture<InputStream> future = coordinatorClient.goStream(
+    ListenableFuture<InputStream> future = coordinatorClient.goAsync(
         request,
         responseHandler
     );
@@ -327,7 +374,7 @@ public class SystemSchema extends AbstractSchema
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
     {
     });
-    JsonParserIterator<DataSegment> iterator = new JsonParserIterator<>(
+    return new JsonParserIterator<>(
         typeRef,
         future,
         request.getUrl().toString(),
@@ -335,16 +382,17 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().getHost(),
         jsonMapper
     );
-    return iterator;
   }
 
   static class ServersTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
+    private final AuthorizerMapper authorizerMapper;
 
-    public ServersTable(TimelineServerView serverView)
+    public ServersTable(TimelineServerView serverView, AuthorizerMapper authorizerMapper)
     {
       this.serverView = serverView;
+      this.authorizerMapper = authorizerMapper;
     }
 
     @Override
@@ -362,9 +410,24 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      Map<String, QueryableDruidServer> serverViewClients = serverView.getClients();
+      final Map<String, QueryableDruidServer> serverViewClients = serverView.getQueryableServers();
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
       final FluentIterable<Object[]> results = FluentIterable
           .from(serverViewClients.values())
+          .filter(input -> {
+            Access access = AuthorizationUtils.authorizeAllResourceActions(
+                authenticationResult,
+                ImmutableList.of(
+                    new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ)
+                ),
+                authorizerMapper
+            );
+            if (access.isAllowed()) {
+              return true;
+            }
+            return false;
+          })
           .transform(val -> new Object[]{
               val.getServer().getHost(),
               val.getServer().getHost().split(":")[0],
@@ -382,16 +445,18 @@ public class SystemSchema extends AbstractSchema
   private static class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
+    final AuthorizerMapper authorizerMapper;
 
-    public ServerSegmentsTable(TimelineServerView serverView)
+    public ServerSegmentsTable(TimelineServerView serverView, AuthorizerMapper authorizerMapper)
     {
       this.serverView = serverView;
+      this.authorizerMapper = authorizerMapper;
     }
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return SERVERSEGMENTS_SIGNATURE.getRelDataType(typeFactory);
+      return SERVER_SEGMENTS_SIGNATURE.getRelDataType(typeFactory);
     }
 
     @Override
@@ -404,7 +469,8 @@ public class SystemSchema extends AbstractSchema
     public Enumerable<Object[]> scan(DataContext root)
     {
       final List<Object[]> rows = new ArrayList<>();
-      final Map<String, QueryableDruidServer> serverViewClients = serverView.getClients();
+      final Map<String, QueryableDruidServer> serverViewClients = serverView.getQueryableServers();
+
       for (QueryableDruidServer queryableDruidServer : serverViewClients.values()) {
         final DruidServer druidServer = queryableDruidServer.getServer();
         final Map<String, DataSegment> segmentMap = druidServer.getSegments();
@@ -424,16 +490,19 @@ public class SystemSchema extends AbstractSchema
     private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
     private final BytesAccumulatingResponseHandler responseHandler;
+    private final AuthorizerMapper authorizerMapper;
 
     public TasksTable(
         DruidLeaderClient druidLeaderClient,
         ObjectMapper jsonMapper,
-        BytesAccumulatingResponseHandler responseHandler
+        BytesAccumulatingResponseHandler responseHandler,
+        AuthorizerMapper authorizerMapper
     )
     {
       this.druidLeaderClient = druidLeaderClient;
       this.jsonMapper = jsonMapper;
       this.responseHandler = responseHandler;
+      this.authorizerMapper = authorizerMapper;
     }
 
     @Override
@@ -454,6 +523,8 @@ public class SystemSchema extends AbstractSchema
       class TasksEnumerable extends DefaultEnumerable<Object[]>
       {
         private final JsonParserIterator<TaskStatusPlus> it;
+        final AuthenticationResult authenticationResult =
+            (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
         public TasksEnumerable(JsonParserIterator<TaskStatusPlus> tasks)
         {
@@ -475,20 +546,29 @@ public class SystemSchema extends AbstractSchema
             public Object[] current()
             {
               TaskStatusPlus task = it.next();
-              return new Object[]{task.getId(), task.getType(),
+              Access access = AuthorizationUtils.authorizeAllResourceActions(
+                  authenticationResult,
+                  ImmutableList.of(
+                      new ResourceAction(new Resource(task.getDataSource(), ResourceType.DATASOURCE), Action.READ)
+                  ),
+                  authorizerMapper
+              );
+              if (!access.isAllowed()) {
+                return null;
+              }
+              return new Object[]{task.getId(),
+                                  task.getType(),
                                   task.getDataSource(),
                                   task.getCreatedTime(),
                                   task.getQueueInsertionTime(),
                                   task.getState(),
                                   task.getRunnerTaskState(),
                                   task.getDuration(),
-                                  task.getLocation() != null
-                                  ? task.getLocation().getHost() + ":" + (task.getLocation().getTlsPort()
+                                  task.getLocation().getHost() + ":" + (task.getLocation().getTlsPort()
                                                                           == -1
                                                                           ? task.getLocation()
                                                                                 .getPort()
-                                                                          : task.getLocation().getTlsPort())
-                                  : null,
+                                                                          : task.getLocation().getTlsPort()),
                                   task.getLocation().getHost(),
                                   task.getLocation().getPort(),
                                   task.getLocation().getTlsPort(),
@@ -543,7 +623,7 @@ public class SystemSchema extends AbstractSchema
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    ListenableFuture<InputStream> future = indexingServiceClient.goStream(
+    ListenableFuture<InputStream> future = indexingServiceClient.goAsync(
         request,
         responseHandler
     );
@@ -563,7 +643,7 @@ public class SystemSchema extends AbstractSchema
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
     {
     });
-    JsonParserIterator<TaskStatusPlus> iterator = new JsonParserIterator<>(
+    return new JsonParserIterator<>(
         typeRef,
         future,
         request.getUrl().toString(),
@@ -571,7 +651,6 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().getHost(),
         jsonMapper
     );
-    return iterator;
   }
 
   static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler

@@ -34,7 +34,6 @@ import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -65,6 +64,7 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -325,7 +325,7 @@ public class DruidSchema extends AbstractSchema
       final Map<DataSegment, SegmentMetadataHolder> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       if (knownSegments == null || !knownSegments.containsKey(segment)) {
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
-        final long isPublished = server.getType().toString().equals(ServerType.HISTORICAL.toString()) ? 1 : 0;
+        final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
         SegmentMetadataHolder holder = new SegmentMetadataHolder(null, isPublished, 1, isRealtime, 1, null);
         // Unknown segment.
         setSegmentSignature(segment, holder);
@@ -337,7 +337,7 @@ public class DruidSchema extends AbstractSchema
           log.debug("Added new immutable segment[%s].", segment.getIdentifier());
         }
       } else {
-        if (knownSegments != null && knownSegments.containsKey(segment)) {
+        if (knownSegments.containsKey(segment)) {
           SegmentMetadataHolder holder = knownSegments.get(segment);
           holder.setNumReplicas(holder.getNumReplicas() + 1);
         }
@@ -440,13 +440,12 @@ public class DruidSchema extends AbstractSchema
         if (segment == null) {
           log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
-          final Pair<RowSignature, Long> pair = analysisToRowSignature(analysis);
-          final RowSignature rowSignature = pair.lhs;
+          final RowSignature rowSignature = analysisToRowSignature(analysis);
           log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
           final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
           SegmentMetadataHolder holder = dataSourceSegments.get(segment);
           holder.setRowSignature(rowSignature);
-          holder.setNumRows(pair.rhs);
+          holder.setNumRows(analysis.getNumRows());
           setSegmentSignature(segment, holder);
           retVal.add(segment);
         }
@@ -473,7 +472,7 @@ public class DruidSchema extends AbstractSchema
   {
     synchronized (lock) {
       segmentMetadataInfo.computeIfAbsent(segment.getDataSource(), x -> new ConcurrentSkipListMap<>(SEGMENT_ORDER))
-                       .put(segment, segmentMetadataHolder);
+                         .put(segment, segmentMetadataHolder);
     }
   }
 
@@ -532,7 +531,7 @@ public class DruidSchema extends AbstractSchema
     return queryLifecycleFactory.factorize().runSimple(segmentMetadataQuery, authenticationResult, null);
   }
 
-  private static Pair<RowSignature, Long> analysisToRowSignature(final SegmentAnalysis analysis)
+  private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
@@ -553,12 +552,18 @@ public class DruidSchema extends AbstractSchema
 
       rowSignatureBuilder.add(entry.getKey(), valueType);
     }
-    return Pair.of(rowSignatureBuilder.build(), analysis.getNumRows());
+    return rowSignatureBuilder.build();
   }
 
   // note this is a mutable map accessed only by SystemSchema
-  public Map<String, ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder>> getSegmentMetadataInfo()
+  public Map<DataSegment, SegmentMetadataHolder> getSegmentMetadata()
   {
-    return segmentMetadataInfo;
+    final Map<DataSegment, SegmentMetadataHolder> segmentMetadata = new HashMap<>();
+    synchronized (lock) {
+      for (ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder> val : segmentMetadataInfo.values()) {
+        segmentMetadata.putAll(val);
+      }
+    }
+    return segmentMetadata;
   }
 }

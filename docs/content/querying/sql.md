@@ -468,8 +468,8 @@ plan SQL queries. This metadata is cached on broker startup and also updated per
 [SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
-Druid exposes system information through special system tables. There are two such schemas available: Information Schema and System Schema.
-Information schema provides details about table and column types. Sys schema provides information about Druid internals like segments/tasks/servers.
+Druid exposes system information through special system tables. There are two such schemas available: Information Schema and Sys Schema.
+Information schema provides details about table and column types. The "sys" schema provides information about Druid internals like segments/tasks/servers.
 
 ## INFORMATION SCHEMA
 
@@ -526,7 +526,7 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 
 ## SYSTEM SCHEMA
 
-The sys schema provides visibility into Druid segments, servers and tasks.
+The "sys" schema provides visibility into Druid segments, servers and tasks.
 For example to retrieve all segments for datasource "wikipedia", use the query:
 ```sql
 SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
@@ -543,14 +543,14 @@ Segments table provides details on all Druid segments, whether they are publishe
 |start|Interval start time (in ISO 8601 format)|
 |end|Interval end time (in ISO 8601 format)|
 |size|Size of segment in bytes|
-|version|Version number (generally an ISO8601 timestamp corresponding to when the segment set was first started)|
+|version|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
 |partition_num|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
 |num_replicas|Number of replicas of this segment currently being served|
 |num_rows|Number of rows in current segment, this value could be null if unkown to broker at query time|
 |is_published|True if this segment has been published to the metadata store|
 |is_available|True if this segment is currently being served by any server|
 |is_realtime|True if this segment is being served on a realtime server|
-|payload|JSON-serialized datasegment payload|
+|payload|JSON-serialized data segment payload|
 
 ### SERVERS table
 Servers table lists all data servers(any server that hosts a segment). It includes both historicals and peons.
@@ -600,9 +600,9 @@ check out [ingestion tasks](#../ingestion/tasks.html)
 |Column|Notes|
 |------|-----|
 |task_id|Unique task identifier|
-|type|Task type, this should be "index" for indexing tasks|
+|type|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.md)|
 |datasource|Datasource name being indexed|
-|created_time|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to DateTimes.EPOCH|
+|created_time|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to 1970-01-01T00:00:00Z|
 |queue_insertion_time|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the overlord|
 |status|Status of a task can be RUNNING, FAILED, SUCCESS|
 |runner_status|Runner status of a completed task would be NONE, for in-progress tasks this can be RUNNING, WAITING, PENDING|

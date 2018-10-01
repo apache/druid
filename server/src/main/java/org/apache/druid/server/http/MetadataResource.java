@@ -46,6 +46,11 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -148,10 +153,16 @@ public class MetadataResource
         .stream()
         .flatMap(t -> t.getSegments().stream())
         .collect(Collectors.toSet());
+    StreamingOutput stream = os -> {
+      Writer writer = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8));
+      for (DataSegment ds : metadataSegments) {
+        writer.write(ds.toString());
+      }
+      writer.flush();
+    };
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(metadataSegments).build();
-
+    return builder.entity(stream).build();
   }
 
   @GET

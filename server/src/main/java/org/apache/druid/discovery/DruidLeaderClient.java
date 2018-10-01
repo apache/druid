@@ -134,7 +134,10 @@ public class DruidLeaderClient
     return go(request, new FullResponseHandler(StandardCharsets.UTF_8));
   }
 
-  public <Intermediate, Final> ListenableFuture<Final> goStream(
+  /**
+   * Executes the request object aimed at the leader and process the response with given handler
+   */
+  public <Intermediate, Final> ListenableFuture<Final> goAsync(
       final Request request,
       final HttpResponseHandler<Intermediate, Final> handler
   )
