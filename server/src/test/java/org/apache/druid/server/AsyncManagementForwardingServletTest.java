@@ -302,7 +302,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     overlordExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/proxy/overlord/%s", port, overlordExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d/proxy/overlord%s", port, overlordExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(overlordExpectedRequest.method);
 

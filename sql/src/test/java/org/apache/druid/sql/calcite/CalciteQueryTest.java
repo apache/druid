@@ -142,7 +142,8 @@ public class CalciteQueryTest extends CalciteTestBase
   private static final Logger log = new Logger(CalciteQueryTest.class);
 
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
-  private static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION = new PlannerConfig() {
+  private static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION = new PlannerConfig()
+  {
     @Override
     public boolean isRequireTimeCondition()
     {
@@ -591,6 +592,20 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{explanation}
+        )
+    );
+  }
+
+  @Test
+  public void testMinOnInformationSchemaColumns() throws Exception
+  {
+    testQuery(
+        "SELECT MIN(JDBC_TYPE)\n"
+        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
+        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{-5L}
         )
     );
   }
@@ -1796,11 +1811,11 @@ public class CalciteQueryTest extends CalciteTestBase
                                 "d0:v",
                                 "case_searched("
                                 + "(CAST(timestamp_extract(\"__time\",'DAY','UTC'), 'DOUBLE') == \"m1\"),"
-                                + "'match-m1 ',"
+                                + "'match-m1',"
                                 + "(timestamp_extract(\"__time\",'DAY','UTC') == \"cnt\"),"
                                 + "'match-cnt',"
                                 + "(timestamp_extract(\"__time\",'DAY','UTC') == 0),"
-                                + "'zero     ',"
+                                + "'zero',"
                                 + DruidExpression.nullLiteral() + ")",
                                 ValueType.STRING
                             )
@@ -1813,7 +1828,7 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 2L},
             new Object[]{"match-cnt", 1L},
-            new Object[]{"match-m1 ", 3L}
+            new Object[]{"match-m1", 3L}
         )
     );
   }
@@ -3151,13 +3166,21 @@ public class CalciteQueryTest extends CalciteTestBase
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .filters(SELECTOR("dim2", "a", null))
+                  .filters(
+                      AND(
+                          SELECTOR("dim2", "a", null),
+                          OR(
+                              BOUND("dim1", "a", null, true, false, null, StringComparators.LEXICOGRAPHIC),
+                              NOT(SELECTOR("dim1", null, null))
+                          )
+                      )
+                  )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{2L}
+            new Object[]{NullHandling.sqlCompatible() ? 2L : 1L}
         )
     );
   }
@@ -6857,7 +6880,7 @@ public class CalciteQueryTest extends CalciteTestBase
     final String explanation =
         "BindableSort(sort0=[$1], dir0=[ASC])\n"
         + "  BindableAggregate(group=[{0, 1}], EXPR$2=[COUNT()])\n"
-        + "    BindableFilter(condition=[OR(=($0, 'xxx'), CAST(AND(IS NOT NULL($4), <>($2, 0))):BOOLEAN)])\n"
+        + "    BindableFilter(condition=[OR(=($0, 'xxx'), CAST(AND(IS NOT NULL($4), <>($2, 0), IS NOT NULL($1))):BOOLEAN)])\n"
         + "      BindableJoin(condition=[=($1, $3)], joinType=[left])\n"
         + "        BindableJoin(condition=[true], joinType=[inner])\n"
         + "          DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"dim1\",\"dim2\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING, dim2:STRING}])\n"
@@ -7509,7 +7532,10 @@ public class CalciteQueryTest extends CalciteTestBase
                             new QueryDataSource(
                                 GroupByQuery.builder()
                                             .setDataSource(CalciteTests.DATASOURCE1)
-                                            .setInterval(QSS(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
+                                            .setInterval(QSS(Intervals.utc(
+                                                DateTimes.of("2000-01-01").getMillis(),
+                                                JodaUtils.MAX_INSTANT
+                                            )))
                                             .setGranularity(Granularities.ALL)
                                             .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
                                             .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
@@ -7562,10 +7588,10 @@ public class CalciteQueryTest extends CalciteTestBase
                   .intervals(QSS(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
                   .granularity(Granularities.ALL)
                   .filters(IN(
-                            "dim2",
-                            ImmutableList.of("1", "2", "a", "d"),
-                            new SubstringDimExtractionFn(0, 1)
-                        ))
+                      "dim2",
+                      ImmutableList.of("1", "2", "a", "d"),
+                      new SubstringDimExtractionFn(0, 1)
+                  ))
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()

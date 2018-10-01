@@ -154,7 +154,7 @@ public class DruidQuery
       sortingInputRowSignature = sourceRowSignature;
     }
 
-    this.sortProject = computeSortProject(partialQuery, plannerContext, sortingInputRowSignature, grouping);
+    this.sortProject = computeSortProject(partialQuery, plannerContext, sortingInputRowSignature);
 
     // outputRowSignature is used only for scan and select query, and thus sort and grouping must be null
     this.outputRowSignature = sortProject == null ? sortingInputRowSignature : sortProject.getOutputRowSignature();
@@ -328,8 +328,7 @@ public class DruidQuery
   private SortProject computeSortProject(
       PartialDruidQuery partialQuery,
       PlannerContext plannerContext,
-      RowSignature sortingInputRowSignature,
-      Grouping grouping
+      RowSignature sortingInputRowSignature
   )
   {
     final Project sortProject = partialQuery.getSortProject();

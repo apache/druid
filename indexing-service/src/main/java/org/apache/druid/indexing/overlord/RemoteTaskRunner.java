@@ -91,7 +91,6 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -560,7 +559,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
       URL url = null;
       try {
-        url = makeWorkerURL(zkWorker.getWorker(), StringUtils.format("/task/%s/shutdown", taskId));
+        url = TaskRunnerUtils.makeWorkerURL(zkWorker.getWorker(), "/druid/worker/v1/task/%s/shutdown", taskId);
         final StatusResponseHolder response = httpClient.go(
             new Request(HttpMethod.POST, url),
             RESPONSE_HANDLER,
@@ -598,7 +597,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return Optional.absent();
     } else {
       // Worker is still running this task
-      final URL url = makeWorkerURL(zkWorker.getWorker(), StringUtils.format("/task/%s/log?offset=%d", taskId, offset));
+      final URL url = TaskRunnerUtils.makeWorkerURL(
+          zkWorker.getWorker(),
+          "/druid/worker/v1/task/%s/log?offset=%d",
+          taskId,
+          offset
+      );
       return Optional.of(
           new ByteSource()
           {
@@ -622,18 +626,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             }
           }
       );
-    }
-  }
-
-  private URL makeWorkerURL(Worker worker, String path)
-  {
-    Preconditions.checkArgument(path.startsWith("/"), "path must start with '/': %s", path);
-
-    try {
-      return new URL(StringUtils.format("%s://%s/druid/worker/v1%s", worker.getScheme(), worker.getHost(), path));
-    }
-    catch (MalformedURLException e) {
-      throw Throwables.propagate(e);
     }
   }
 
@@ -816,7 +808,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
           if (immutableZkWorker != null &&
               workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.getWorker().getHost(), task.getId())
-                == null) {
+              == null) {
             assignedWorker = zkWorkers.get(immutableZkWorker.getWorker().getHost());
           }
         }

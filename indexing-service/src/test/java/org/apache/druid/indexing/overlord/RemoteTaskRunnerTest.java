@@ -84,7 +84,7 @@ public class RemoteTaskRunnerTest
     jsonMapper = rtrTestUtils.getObjectMapper();
     cf = rtrTestUtils.getCuratorFramework();
 
-    task = TestTasks.unending("task");
+    task = TestTasks.unending("task id with spaces");
   }
 
   @After
@@ -313,7 +313,7 @@ public class RemoteTaskRunnerTest
 
     Assert.assertTrue(workerRunningTask(task.getId()));
 
-    Assert.assertTrue(remoteTaskRunner.getRunningTasks().iterator().next().getTaskId().equals("task"));
+    Assert.assertTrue(remoteTaskRunner.getRunningTasks().iterator().next().getTaskId().equals(task.getId()));
 
     cf.delete().forPath(joiner.join(statusPath, task.getId()));
 

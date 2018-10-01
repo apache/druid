@@ -104,7 +104,6 @@ public class GroupByQueryMergeBufferTest
 
   public static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
   {
-
     @Override
     public String getFormatString()
     {

@@ -34,6 +34,7 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.io.Closeable;
 import java.io.InputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +81,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   void doTest()
   {
     LOG.info("Starting test: ITRealtimeIndexTaskTest");
-    try {
+    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
       // the task will run for 3 minutes and then shutdown itself
       String task = setShutOffTime(
           getTaskAsString(getTaskResource()),
@@ -152,9 +153,6 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
-    }
-    finally {
-      unloadAndKillData(INDEX_DATASOURCE);
     }
   }
 
