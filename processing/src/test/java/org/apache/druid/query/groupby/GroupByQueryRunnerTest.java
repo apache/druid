@@ -6270,9 +6270,9 @@ public class GroupByQueryRunnerTest
   public void testBySegmentResults()
   {
     int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueClass<>(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -6283,7 +6283,9 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -6327,9 +6329,9 @@ public class GroupByQueryRunnerTest
   public void testBySegmentResultsUnOptimizedDimextraction()
   {
     int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueClass<>(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -6340,7 +6342,9 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -6387,9 +6391,9 @@ public class GroupByQueryRunnerTest
   public void testBySegmentResultsOptimizedDimextraction()
   {
     int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueClass<>(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -6400,7 +6404,9 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();
@@ -6868,9 +6874,9 @@ public class GroupByQueryRunnerTest
   public void testBySegmentResultsWithAllFiltersWithExtractionFns()
   {
     int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueClass<>(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -6881,7 +6887,9 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = Lists.newArrayList();

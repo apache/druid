@@ -149,7 +149,7 @@ public class DoubleStorageTest
   public static Collection<?> dataFeeder()
   {
     SegmentAnalysis expectedSegmentAnalysisDouble = new SegmentAnalysis(
-        "segmentId",
+        SEGMENT_ID.toString(),
         ImmutableList.of(INTERVAL),
         ImmutableMap.of(
             TIME_COLUMN,
@@ -191,7 +191,7 @@ public class DoubleStorageTest
     );
 
     SegmentAnalysis expectedSegmentAnalysisFloat = new SegmentAnalysis(
-        "segmentId",
+        SEGMENT_ID.toString(),
         ImmutableList.of(INTERVAL),
         ImmutableMap.of(
             TIME_COLUMN,

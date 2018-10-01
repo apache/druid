@@ -267,7 +267,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithRollupMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -335,7 +335,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithHasMultipleValuesMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -403,7 +403,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithComplexColumnMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -518,7 +518,7 @@ public class SegmentMetadataQueryTest
   )
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         ImmutableList.of(expectedSegmentAnalysis1.getIntervals().get(0)),
         ImmutableMap.of(
             "__time",
@@ -582,7 +582,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithNoAnalysisTypesMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -644,7 +644,7 @@ public class SegmentMetadataQueryTest
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -702,7 +702,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithTimestampSpecMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -760,7 +760,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithQueryGranularityMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
