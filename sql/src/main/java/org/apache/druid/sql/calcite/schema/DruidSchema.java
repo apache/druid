@@ -444,6 +444,7 @@ public class DruidSchema extends AbstractSchema
           log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
           final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
           SegmentMetadataHolder holder = dataSourceSegments.get(segment);
+          dataSourceSegments.put(segment, holder);
           holder.setRowSignature(rowSignature);
           holder.setNumRows(analysis.getNumRows());
           setSegmentSignature(segment, holder);

@@ -36,8 +36,8 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -61,6 +61,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
@@ -301,23 +302,21 @@ public class SystemSchemaTest extends CalciteTestBase
       "foo2",
       new NoopServiceEmitter()
   );
-  private final QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-      new DruidServer(
-          "server1", "localhost:0000", null, 0, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0)
-          .addDataSegment(segment1).addDataSegment(segment2), client1
+  private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
+      new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
+      1L,
+      null,
+      ImmutableMap.of("segment1", segment1, "segment2", segment2)
   );
 
-  private final QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
-      new DruidServer(
-          "server2", "server2:1234", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
-          .addDataSegment(segment2).addDataSegment(segment4).addDataSegment(segment5), client2
+  private final ImmutableDruidServer druidServer2 = new ImmutableDruidServer(
+      new DruidServerMetadata("server2", "server2:1234", null, 5L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+      1L,
+      null,
+      ImmutableMap.of("segment2", segment2, "segment4", segment4, "segment5", segment5)
   );
-  private final Map<String, QueryableDruidServer> serverViewClients = ImmutableMap.of(
-      "server1",
-      queryableDruidServer1,
-      "server2",
-      queryableDruidServer2
-  );
+
+  private final List<ImmutableDruidServer> immutableDruidServers = ImmutableList.of(druidServer1, druidServer2);
 
   @Test
   public void testGetTableMap()
@@ -486,8 +485,8 @@ public class SystemSchemaTest extends CalciteTestBase
     SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class).withConstructor(serverView, authMapper).createMock();
     EasyMock.replay(serversTable);
 
-    EasyMock.expect(serverView.getQueryableServers())
-            .andReturn(serverViewClients)
+    EasyMock.expect(serverView.getDruidServers())
+            .andReturn(immutableDruidServers)
             .once();
     EasyMock.replay(serverView);
     DataContext dataContext = new DataContext()

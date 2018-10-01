@@ -23,7 +23,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import javax.annotation.Nullable;
 
 /**
- * Object of this class hold the RowSignature and other segment attributes needed by {@link org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable}
+ * Object of this class hold the RowSignature and other segment attributes needed by {@link SystemSchema.SegmentsTable}
  * To gaurantee safety all members are protected by a lock since the object can be updated by DruidSchema and read by SystemSchema
  */
 public class SegmentMetadataHolder

@@ -254,7 +254,7 @@ public class CachingClusteredClientFunctionalityTest
 
           @Nullable
           @Override
-          public Map<String, QueryableDruidServer> getQueryableServers()
+          public List<ImmutableDruidServer> getDruidServers()
           {
             throw new UnsupportedOperationException();
           }

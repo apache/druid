@@ -41,12 +41,11 @@ import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
-import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
@@ -410,11 +409,11 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      final Map<String, QueryableDruidServer> serverViewClients = serverView.getQueryableServers();
+      final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
       final FluentIterable<Object[]> results = FluentIterable
-          .from(serverViewClients.values())
+          .from(druidServers)
           .filter(input -> {
             Access access = AuthorizationUtils.authorizeAllResourceActions(
                 authenticationResult,
@@ -429,14 +428,14 @@ public class SystemSchema extends AbstractSchema
             return false;
           })
           .transform(val -> new Object[]{
-              val.getServer().getHost(),
-              val.getServer().getHost().split(":")[0],
-              val.getServer().getHostAndPort() == null ? -1 : val.getServer().getHostAndPort().split(":")[1],
-              val.getServer().getHostAndTlsPort() == null ? -1 : val.getServer().getHostAndTlsPort().split(":")[1],
-              val.getServer().getType(),
-              val.getServer().getTier(),
-              val.getServer().getCurrSize(),
-              val.getServer().getMaxSize()
+              val.getHost(),
+              val.getHost().split(":")[0],
+              val.getHostAndPort() == null ? -1 : val.getHostAndPort().split(":")[1],
+              val.getHostAndTlsPort() == null ? -1 : val.getHostAndTlsPort().split(":")[1],
+              val.getType(),
+              val.getTier(),
+              val.getCurrSize(),
+              val.getMaxSize()
           });
       return Linq4j.asEnumerable(results);
     }
@@ -469,10 +468,9 @@ public class SystemSchema extends AbstractSchema
     public Enumerable<Object[]> scan(DataContext root)
     {
       final List<Object[]> rows = new ArrayList<>();
-      final Map<String, QueryableDruidServer> serverViewClients = serverView.getQueryableServers();
+      final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
 
-      for (QueryableDruidServer queryableDruidServer : serverViewClients.values()) {
-        final DruidServer druidServer = queryableDruidServer.getServer();
+      for (ImmutableDruidServer druidServer : druidServers) {
         final Map<String, DataSegment> segmentMap = druidServer.getSegments();
         for (DataSegment segment : segmentMap.values()) {
           Object[] row = new Object[SEGMENT_SERVERS_TABLE_SIZE];
