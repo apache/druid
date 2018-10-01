@@ -221,7 +221,7 @@ public class RealtimePlumberSchoolTest
         handoffNotifierFactory,
         MoreExecutors.sameThreadExecutor(),
         TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory),
-        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
+        TestHelper.getTestIndexIO(),
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
         new CachePopulatorStats(),

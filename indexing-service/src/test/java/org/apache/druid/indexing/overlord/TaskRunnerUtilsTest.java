@@ -17,30 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.tests.indexer;
+package org.apache.druid.indexing.overlord;
 
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.apache.druid.indexing.worker.Worker;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.Closeable;
+import java.net.URL;
 
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITParallelIndexTest extends AbstractITBatchIndexTest
+public class TaskRunnerUtilsTest
 {
-  private static String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
-  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
-  private static String INDEX_DATASOURCE = "wikipedia_parallel_index_test";
-
   @Test
-  public void testIndexData() throws Exception
+  public void testMakeWorkerURL()
   {
-    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
-      doIndexTestTest(
-          INDEX_DATASOURCE,
-          INDEX_TASK,
-          INDEX_QUERIES_RESOURCE
-      );
-    }
+    final URL url = TaskRunnerUtils.makeWorkerURL(
+        new Worker("https", "1.2.3.4:8290", "1.2.3.4", 1, "0"),
+        "/druid/worker/v1/task/%s/log",
+        "foo bar&"
+    );
+    Assert.assertEquals("https://1.2.3.4:8290/druid/worker/v1/task/foo+bar%26/log", url.toString());
+    Assert.assertEquals("1.2.3.4:8290", url.getAuthority());
+    Assert.assertEquals("/druid/worker/v1/task/foo+bar%26/log", url.getPath());
   }
 }

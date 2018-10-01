@@ -139,7 +139,7 @@ public class TestIndex
 
   private static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {

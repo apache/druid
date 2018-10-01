@@ -34,8 +34,6 @@ public interface IndexingServiceClient
 
   int killPendingSegments(String dataSource, DateTime end);
 
-  void upgradeSegment(DataSegment dataSegment);
-
   void mergeSegments(List<DataSegment> segments);
 
   String compactSegments(

@@ -146,7 +146,7 @@ public class MultiValuedDimensionTest
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
               .persist(incrementalIndex, persistedSegmentDir, new IndexSpec(), null);
 
-    queryableIndex = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(persistedSegmentDir);
+    queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
   }
 
   @After

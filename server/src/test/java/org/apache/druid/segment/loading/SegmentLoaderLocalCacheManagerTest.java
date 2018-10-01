@@ -94,7 +94,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
+        TestHelper.getTestIndexIO(),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );
@@ -168,7 +168,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
+        TestHelper.getTestIndexIO(),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );
@@ -221,7 +221,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
+        TestHelper.getTestIndexIO(),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );
@@ -276,7 +276,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
+        TestHelper.getTestIndexIO(),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );
@@ -330,7 +330,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
+        TestHelper.getTestIndexIO(),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );

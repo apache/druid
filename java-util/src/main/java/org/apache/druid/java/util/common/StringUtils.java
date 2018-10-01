@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -161,6 +162,16 @@ public class StringUtils
     return s;
   }
 
+  public static String urlEncode(String s)
+  {
+    try {
+      return URLEncoder.encode(s, "UTF-8");
+    }
+    catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private static String removeChar(String s, char c, int firstOccurranceIndex)
   {
     StringBuilder sb = new StringBuilder(s.length() - 1);
@@ -180,6 +191,7 @@ public class StringUtils
    * irrelevant to null handling of the data.
    *
    * @param string the string to test and possibly return
+   *
    * @return {@code string} itself if it is non-null; {@code ""} if it is null
    */
   public static String nullToEmptyNonDruidDataString(@Nullable String string)
@@ -195,8 +207,9 @@ public class StringUtils
    * irrelevant to null handling of the data.
    *
    * @param string the string to test and possibly return
+   *
    * @return {@code string} itself if it is nonempty; {@code null} if it is
-   *     empty or null
+   * empty or null
    */
   @Nullable
   public static String emptyToNullNonDruidDataString(@Nullable String string)
