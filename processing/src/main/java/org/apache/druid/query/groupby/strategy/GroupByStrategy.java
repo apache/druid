@@ -82,7 +82,8 @@ public interface GroupByStrategy
       GroupByQuery subquery,
       GroupByQuery query,
       GroupByQueryResource resource,
-      Sequence<Row> subqueryResult
+      Sequence<Row> subqueryResult,
+      boolean wasQueryPushedDown
   );
 
   Sequence<Row> processSubtotalsSpec(
@@ -100,4 +101,6 @@ public interface GroupByStrategy
       GroupByQuery query,
       StorageAdapter storageAdapter
   );
+
+  boolean supportsNestedQueryPushDown();
 }

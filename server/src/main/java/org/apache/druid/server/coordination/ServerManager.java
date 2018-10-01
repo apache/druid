@@ -42,6 +42,7 @@ import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.PerSegmentOptimizingQueryRunner;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -110,6 +111,14 @@ public class ServerManager implements QuerySegmentWalker
     this.serverConfig = serverConfig;
   }
 
+  private DataSource getInnerMostDataSource(DataSource dataSource)
+  {
+    if (dataSource instanceof QueryDataSource) {
+      return getInnerMostDataSource(((QueryDataSource) dataSource).getQuery().getDataSource());
+    }
+    return dataSource;
+  }
+
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
@@ -121,7 +130,7 @@ public class ServerManager implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
-    DataSource dataSource = query.getDataSource();
+    DataSource dataSource = getInnerMostDataSource(query.getDataSource());
     if (!(dataSource instanceof TableDataSource)) {
       throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
     }
