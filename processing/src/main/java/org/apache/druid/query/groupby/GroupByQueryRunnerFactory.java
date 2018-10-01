@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
@@ -107,5 +108,11 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
 
       return strategySelector.strategize((GroupByQuery) query).process((GroupByQuery) query, adapter);
     }
+  }
+
+  @VisibleForTesting
+  public GroupByStrategySelector getStrategySelector()
+  {
+    return strategySelector;
   }
 }
