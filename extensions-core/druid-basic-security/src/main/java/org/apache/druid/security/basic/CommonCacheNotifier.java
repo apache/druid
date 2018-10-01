@@ -184,7 +184,7 @@ public class CommonCacheNotifier
           druidNode.getServiceScheme(),
           druidNode.getHost(),
           druidNode.getPortToUse(),
-          StringUtils.format(baseUrl, itemName)
+          StringUtils.format(baseUrl, StringUtils.urlEncode(itemName))
       );
     }
     catch (MalformedURLException mue) {

@@ -51,7 +51,7 @@ import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.URI;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 
@@ -174,12 +174,12 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected FullResponseHolder submitRequestWithEmptyContent(
       String taskId,
       HttpMethod method,
-      String pathSuffix,
-      @Nullable String query,
+      String encodedPathSuffix,
+      @Nullable String encodedQueryString,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
   {
-    return submitRequest(taskId, null, method, pathSuffix, query, new byte[0], retry);
+    return submitRequest(taskId, null, method, encodedPathSuffix, encodedQueryString, new byte[0], retry);
   }
 
   /**
@@ -188,13 +188,21 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected FullResponseHolder submitJsonRequest(
       String taskId,
       HttpMethod method,
-      String pathSuffix,
-      @Nullable String query,
+      String encodedPathSuffix,
+      @Nullable String encodedQueryString,
       byte[] content,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
   {
-    return submitRequest(taskId, MediaType.APPLICATION_JSON, method, pathSuffix, query, content, retry);
+    return submitRequest(
+        taskId,
+        MediaType.APPLICATION_JSON,
+        method,
+        encodedPathSuffix,
+        encodedQueryString,
+        content,
+        retry
+    );
   }
 
   /**
@@ -203,13 +211,21 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected FullResponseHolder submitSmileRequest(
       String taskId,
       HttpMethod method,
-      String pathSuffix,
-      @Nullable String query,
+      String encodedPathSuffix,
+      @Nullable String encodedQueryString,
       byte[] content,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
   {
-    return submitRequest(taskId, SmileMediaTypes.APPLICATION_JACKSON_SMILE, method, pathSuffix, query, content, retry);
+    return submitRequest(
+        taskId,
+        SmileMediaTypes.APPLICATION_JACKSON_SMILE,
+        method,
+        encodedPathSuffix,
+        encodedQueryString,
+        content,
+        retry
+    );
   }
 
   /**
@@ -219,8 +235,8 @@ public abstract class IndexTaskClient implements AutoCloseable
       String taskId,
       @Nullable String mediaType, // nullable if content is empty
       HttpMethod method,
-      String pathSuffix,
-      @Nullable String query,
+      String encodedPathSuffix,
+      @Nullable String encodedQueryString,
       byte[] content,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
@@ -231,7 +247,7 @@ public abstract class IndexTaskClient implements AutoCloseable
       FullResponseHolder response = null;
       Request request = null;
       TaskLocation location = TaskLocation.unknown();
-      String path = StringUtils.format("%s/%s/%s", BASE_PATH, taskId, pathSuffix);
+      String path = StringUtils.format("%s/%s/%s", BASE_PATH, StringUtils.urlEncode(taskId), encodedPathSuffix);
 
       Optional<TaskStatus> status = taskInfoProvider.getTaskStatus(taskId);
       if (!status.isPresent() || !status.get().isRunnable()) {
@@ -260,16 +276,14 @@ public abstract class IndexTaskClient implements AutoCloseable
         checkConnection(host, port);
 
         try {
-          URI serviceUri = new URI(
+          // Use URL constructor, not URI, since the path is already encoded.
+          final URL serviceUrl = new URL(
               scheme,
-              null,
               host,
               port,
-              path,
-              query,
-              null
+              encodedQueryString == null ? path : StringUtils.format("%s?%s", path, encodedQueryString)
           );
-          request = new Request(method, serviceUri.toURL());
+          request = new Request(method, serviceUrl);
 
           // used to validate that we are talking to the correct worker
           request.addHeader(ChatHandlerResource.TASK_ID_HEADER, taskId);
@@ -278,7 +292,7 @@ public abstract class IndexTaskClient implements AutoCloseable
             request.setContent(Preconditions.checkNotNull(mediaType, "mediaType"), content);
           }
 
-          log.debug("HTTP %s: %s", method.getName(), serviceUri.toString());
+          log.debug("HTTP %s: %s", method.getName(), serviceUrl.toString());
           response = httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
         }
         catch (IOException | ChannelException ioce) {

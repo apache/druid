@@ -24,12 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
@@ -69,8 +67,16 @@ public class MapVirtualColumn implements VirtualColumn
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
   {
-    // Could probably do something useful here if the column name is dot-style. But for now just return nothing.
-    return dimensionSpec.decorate(DimensionSelectorUtils.constantSelector(null, dimensionSpec.getExtractionFn()));
+    final DimensionSelector keySelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(keyDimension));
+    final DimensionSelector valueSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(valueDimension));
+    final String subColumnName = VirtualColumns.splitColumnName(dimensionSpec.getDimension()).rhs;
+    if (subColumnName == null) {
+      return dimensionSpec.decorate(new MapTypeMapVirtualColumnDimensionSelector(keySelector, valueSelector));
+    } else {
+      return dimensionSpec.decorate(
+          new StringTypeMapVirtualColumnDimensionSelector(keySelector, valueSelector, subColumnName)
+      );
+    }
   }
 
   @Override
@@ -161,52 +167,6 @@ public class MapVirtualColumn implements VirtualColumn
           return null;
         }
       };
-    }
-  }
-
-  private abstract static class MapVirtualColumnValueSelector<T> implements ColumnValueSelector<T>
-  {
-    final DimensionSelector keySelector;
-    final DimensionSelector valueSelector;
-
-    private MapVirtualColumnValueSelector(DimensionSelector keySelector, DimensionSelector valueSelector)
-    {
-      this.keySelector = keySelector;
-      this.valueSelector = valueSelector;
-    }
-
-    @Override
-    public double getDouble()
-    {
-      assert NullHandling.replaceWithDefault();
-      return 0.0;
-    }
-
-    @Override
-    public float getFloat()
-    {
-      assert NullHandling.replaceWithDefault();
-      return 0.0f;
-    }
-
-    @Override
-    public long getLong()
-    {
-      assert NullHandling.replaceWithDefault();
-      return 0L;
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      return false;
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("keySelector", keySelector);
-      inspector.visit("valueSelector", valueSelector);
     }
   }
 
