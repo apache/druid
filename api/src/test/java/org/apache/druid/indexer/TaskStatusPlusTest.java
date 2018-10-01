@@ -61,6 +61,45 @@ public class TaskStatusPlusTest
     Assert.assertEquals(status, mapper.readValue(json, TaskStatusPlus.class));
   }
 
+  @Test
+  public void testJsonAttributes() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(
+        new SimpleModule()
+            .addDeserializer(DateTime.class, new DateTimeDeserializer())
+            .addSerializer(DateTime.class, ToStringSerializer.instance)
+    );
+    final String json = "{\n"
+                        + "\"id\": \"testId\",\n"
+                        + "\"type\": \"testType\",\n"
+                        + "\"createdTime\": \"2018-09-17T06:35:17.392Z\",\n"
+                        + "\"queueInsertionTime\": \"2018-09-17T06:35:17.392Z\",\n"
+                        + "\"statusCode\": \"RUNNING\",\n"
+                        + "\"status\": \"RUNNING\",\n"
+                        + "\"runnerStatusCode\": \"RUNNING\",\n"
+                        + "\"duration\": 1000,\n"
+                        + "\"location\": {\n"
+                        + "\"host\": \"testHost\",\n"
+                        + "\"port\": 1010,\n"
+                        + "\"tlsPort\": -1\n"
+                        + "},\n"
+                        + "\"dataSource\": \"ds_test\",\n"
+                        + "\"errorMsg\": null\n"
+                        + "}";
+    TaskStatusPlus taskStatusPlus = mapper.readValue(json, TaskStatusPlus.class);
+    Assert.assertNotNull(taskStatusPlus);
+    Assert.assertNotNull(taskStatusPlus.getStatusCode());
+    Assert.assertTrue(taskStatusPlus.getStatusCode().isRunnable());
+    Assert.assertNotNull(taskStatusPlus.getRunnerStatusCode());
+
+    String serialized = mapper.writeValueAsString(taskStatusPlus);
+
+    Assert.assertTrue(serialized.contains("\"status\":"));
+    Assert.assertTrue(serialized.contains("\"statusCode\":"));
+    Assert.assertTrue(serialized.contains("\"runnerStatusCode\":"));
+  }
+
   // Copied from org.apache.druid.jackson.JodaStuff
   private static class DateTimeDeserializer extends StdDeserializer<DateTime>
   {

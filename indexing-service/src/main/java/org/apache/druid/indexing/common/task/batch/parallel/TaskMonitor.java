@@ -115,7 +115,7 @@ public class TaskMonitor<T extends Task>
                 final TaskStatusResponse taskStatusResponse = indexingServiceClient.getTaskStatus(taskId);
                 final TaskStatusPlus taskStatus = taskStatusResponse.getStatus();
                 if (taskStatus != null) {
-                  switch (Preconditions.checkNotNull(taskStatus.getState(), "taskState")) {
+                  switch (Preconditions.checkNotNull(taskStatus.getStatusCode(), "taskState")) {
                     case SUCCESS:
                       incrementNumSucceededTasks();
 
@@ -152,7 +152,7 @@ public class TaskMonitor<T extends Task>
                       monitorEntry.updateStatus(taskStatus);
                       break;
                     default:
-                      throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getState(), taskId);
+                      throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getStatusCode(), taskId);
                   }
                 }
               }
@@ -459,7 +459,7 @@ public class TaskMonitor<T extends Task>
 
     TaskState getLastState()
     {
-      return lastStatus == null ? TaskState.FAILED : lastStatus.getState();
+      return lastStatus == null ? TaskState.FAILED : lastStatus.getStatusCode();
     }
 
     @Nullable
