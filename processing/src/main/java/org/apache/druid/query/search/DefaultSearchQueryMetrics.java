@@ -209,6 +209,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public QueryMetrics reportBackPressureTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportBackPressureTime(timeNs);
+  }
+
+  @Override
   public QueryMetrics reportNodeTime(long timeNs)
   {
     return delegateQueryMetrics.reportNodeTime(timeNs);

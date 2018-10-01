@@ -72,6 +72,7 @@ public class NettyHttpClient extends AbstractHttpClient
   private final ResourcePool<String, ChannelFuture> pool;
   private final HttpClientConfig.CompressionCodec compressionCodec;
   private final Duration defaultReadTimeout;
+  private long backPressureStartTimeNs;
 
   NettyHttpClient(
       ResourcePool<String, ChannelFuture> pool,
@@ -212,9 +213,13 @@ public class NettyHttpClient extends AbstractHttpClient
                     if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
                       suspendWatermark = -1;
                       channel.setReadable(true);
+                      long backPressureDuration = System.nanoTime() - backPressureStartTimeNs;
                       log.debug("[%s] Resumed reads from channel (chunkNum = %,d).", requestDesc, resumeChunkNum);
+                      return backPressureDuration;
                     }
                   }
+
+                  return 0; //If we didn't resume, don't know if backpressure was happening
                 };
                 response = handler.handleResponse(httpResponse, trafficCop);
                 if (response.isFinished()) {
@@ -271,6 +276,7 @@ public class NettyHttpClient extends AbstractHttpClient
                 suspendWatermark = Math.max(suspendWatermark, currentChunkNum);
                 if (suspendWatermark > resumeWatermark) {
                   channel.setReadable(false);
+                  backPressureStartTimeNs = System.nanoTime();
                   log.debug("[%s] Suspended reads from channel (chunkNum = %,d).", requestDesc, currentChunkNum);
                 }
               }

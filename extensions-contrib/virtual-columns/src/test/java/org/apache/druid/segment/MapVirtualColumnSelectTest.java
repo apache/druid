@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.io.CharSource;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -60,7 +59,7 @@ import java.util.Map;
 /**
  */
 @RunWith(Parameterized.class)
-public class MapVirtualColumnTest
+public class MapVirtualColumnSelectTest
 {
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder() throws IOException
@@ -104,7 +103,7 @@ public class MapVirtualColumnTest
         "2011-01-12T00:00:00.000Z\tc\tkey1,key5\tvalue1,value5,value9\n"
     );
 
-    IncrementalIndex index1 = TestIndex.loadIncrementalIndex(index, input, parser);
+    IncrementalIndex index1 = TestIndex.loadIncrementalIndex(() -> index, input, parser);
     QueryableIndex index2 = TestIndex.persistRealtimeAndLoadMMapped(index1);
 
     return QueryRunnerTestHelper.transformToConstructionFeeder(
@@ -127,7 +126,7 @@ public class MapVirtualColumnTest
 
   private final QueryRunner runner;
 
-  public MapVirtualColumnTest(QueryRunner runner)
+  public MapVirtualColumnSelectTest(QueryRunner runner)
   {
     this.runner = runner;
   }
@@ -159,26 +158,26 @@ public class MapVirtualColumnTest
     Druids.SelectQueryBuilder builder = testBuilder();
 
     List<Map> expectedResults = Arrays.asList(
-        mapOf(
+        MapVirtualColumnTestBase.mapOf(
             "dim", "a",
             "params.key1", "value1",
             "params.key3", "value3",
             "params.key5", null,
-            "params", mapOf("key1", "value1", "key2", "value2", "key3", "value3")
+            "params", MapVirtualColumnTestBase.mapOf("key1", "value1", "key2", "value2", "key3", "value3")
         ),
-        mapOf(
+        MapVirtualColumnTestBase.mapOf(
             "dim", "b",
             "params.key1", null,
             "params.key3", null,
             "params.key5", null,
-            "params", mapOf("key4", "value4")
+            "params", MapVirtualColumnTestBase.mapOf("key4", "value4")
         ),
-        mapOf(
+        MapVirtualColumnTestBase.mapOf(
             "dim", "c",
             "params.key1", "value1",
             "params.key3", null,
             "params.key5", "value5",
-            "params", mapOf("key1", "value1", "key5", "value5")
+            "params", MapVirtualColumnTestBase.mapOf("key1", "value1", "key5", "value5")
         )
     );
     List<VirtualColumn> virtualColumns = Collections.singletonList(new MapVirtualColumn("keys", "values", "params"));
@@ -187,15 +186,6 @@ public class MapVirtualColumnTest
                                      .virtualColumns(virtualColumns)
                                      .build();
     checkSelectQuery(selectQuery, expectedResults);
-  }
-
-  private Map mapOf(Object... elements)
-  {
-    Map map = Maps.newHashMap();
-    for (int i = 0; i < elements.length; i += 2) {
-      map.put(elements[i], elements[i + 1]);
-    }
-    return map;
   }
 
   private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected)
