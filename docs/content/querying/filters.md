@@ -213,6 +213,8 @@ The grammar for a IN filter is as follows:
 
 The IN filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
+If an empty `values` array is passed to the IN filter, it will simply return an empty result.
+
 ### Like filter
 
 Like filters can be used for basic wildcard searches. They are equivalent to the SQL LIKE operator. Special characters
