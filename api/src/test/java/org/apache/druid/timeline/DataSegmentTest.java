@@ -172,7 +172,7 @@ public class DataSegmentTest
 
     Assert.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z",
-        segment.getId()
+        segment.getId().toString()
     );
   }
 
@@ -188,7 +188,7 @@ public class DataSegmentTest
 
     Assert.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z",
-        segment.getId()
+        segment.getId().toString()
     );
   }
 
@@ -204,7 +204,7 @@ public class DataSegmentTest
 
     Assert.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z_7",
-        segment.getId()
+        segment.getId().toString()
     );
   }
 

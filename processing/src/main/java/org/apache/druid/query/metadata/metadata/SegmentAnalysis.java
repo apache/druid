@@ -181,10 +181,6 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   @Override
   public int compareTo(SegmentAnalysis rhs)
   {
-    // Nulls first
-    if (rhs == null) {
-      return 1;
-    }
     return id.compareTo(rhs.getId());
   }
 }

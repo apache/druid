@@ -67,7 +67,7 @@ public class SegmentAnalyzerTest
     Assert.assertEquals(1, results.size());
 
     final SegmentAnalysis analysis = results.get(0);
-    Assert.assertEquals(null, analysis.getId());
+    Assert.assertEquals(SegmentId.dummy("ds").toString(), analysis.getId());
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
 
@@ -126,7 +126,7 @@ public class SegmentAnalyzerTest
     Assert.assertEquals(1, results.size());
 
     final SegmentAnalysis analysis = results.get(0);
-    Assert.assertEquals("test_1", analysis.getId());
+    Assert.assertEquals(SegmentId.dummy("test_1").toString(), analysis.getId());
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
     Assert.assertEquals(

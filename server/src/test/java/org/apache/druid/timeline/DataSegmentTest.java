@@ -47,7 +47,7 @@ import java.util.Set;
  */
 public class DataSegmentTest
 {
-  final ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Before
   public void setUp()
@@ -126,7 +126,7 @@ public class DataSegmentTest
 
     Assert.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z",
-        segment.getId()
+        segment.getId().toString()
     );
   }
 

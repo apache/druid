@@ -74,12 +74,7 @@ public class ExtensionsConfigTest
     Assert.assertEquals("testExtensions", config.getDirectory());
     Assert.assertEquals("testHadoopDependenciesDir", config.getHadoopDependenciesDir());
     Assert.assertEquals("testHadoopContainerClasspath", config.getHadoopContainerDruidClasspath());
-    Assert.assertEquals(
-        ImmutableList.of(
-            "b", "a"
-        ),
-            new ArrayList<>(config.getLoadList())
-    );
+    Assert.assertEquals(ImmutableList.of("b", "a"), new ArrayList<>(config.getLoadList()));
   }
   @Test
   public void testLoadList() throws Exception

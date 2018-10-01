@@ -733,7 +733,7 @@ public class CachingClusteredClientTest
     Assert.assertEquals(0, cache.getStats().getNumHits());
     Assert.assertEquals(0, cache.getStats().getNumMisses());
 
-    cache.close("0_0");
+    cache.close(SegmentId.dummy("0_0").toString());
 
     testQueryCaching(
         runner,
