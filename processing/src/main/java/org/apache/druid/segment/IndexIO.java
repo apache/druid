@@ -64,7 +64,6 @@ import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
 import org.apache.druid.segment.serde.FloatGenericColumnSupplier;
 import org.apache.druid.segment.serde.LongGenericColumnSupplier;
 import org.apache.druid.segment.serde.SpatialIndexColumnPartSupplier;
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -95,18 +94,11 @@ public class IndexIO
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
   private final ObjectMapper mapper;
-  private final SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory;
 
   @Inject
-  public IndexIO(
-      ObjectMapper mapper,
-      SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory,
-      ColumnConfig columnConfig
-  )
+  public IndexIO(ObjectMapper mapper, ColumnConfig columnConfig)
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
-    this.defaultSegmentWriteOutMediumFactory =
-        Preconditions.checkNotNull(defaultSegmentWriteOutMediumFactory, "null SegmentWriteOutMediumFactory");
     Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     ImmutableMap.Builder<Integer, IndexLoader> indexLoadersBuilder = ImmutableMap.builder();
     LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler(), columnConfig);
@@ -199,52 +191,11 @@ public class IndexIO
     }
   }
 
-  public static int getVersionFromDir(File inDir) throws IOException
-  {
-    File versionFile = new File(inDir, "version.bin");
-    if (versionFile.exists()) {
-      return Ints.fromByteArray(Files.toByteArray(versionFile));
-    }
-
-    final File indexFile = new File(inDir, "index.drd");
-    int version;
-    try (InputStream in = new FileInputStream(indexFile)) {
-      version = in.read();
-    }
-    return version;
-  }
-
   public static void checkFileSize(File indexFile) throws IOException
   {
     final long fileSize = indexFile.length();
     if (fileSize > Integer.MAX_VALUE) {
       throw new IOE("File[%s] too large[%d]", indexFile, fileSize);
-    }
-  }
-
-  public boolean convertSegment(
-      File toConvert,
-      File converted,
-      IndexSpec indexSpec,
-      boolean forceIfCurrent,
-      boolean validate,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-  ) throws IOException
-  {
-    final int version = SegmentUtils.getVersionFromDir(toConvert);
-    boolean current = version == CURRENT_VERSION_ID;
-    if (!current || forceIfCurrent) {
-      if (segmentWriteOutMediumFactory == null) {
-        segmentWriteOutMediumFactory = this.defaultSegmentWriteOutMediumFactory;
-      }
-      new IndexMergerV9(mapper, this, segmentWriteOutMediumFactory).convert(toConvert, converted, indexSpec);
-      if (validate) {
-        validateTwoSegments(toConvert, converted);
-      }
-      return true;
-    } else {
-      log.info("Current version[%d], skipping.", version);
-      return false;
     }
   }
 

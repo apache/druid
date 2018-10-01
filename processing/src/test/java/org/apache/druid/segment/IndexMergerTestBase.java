@@ -142,8 +142,7 @@ public class IndexMergerTestBase
       @Nullable BitmapSerdeFactory bitmapSerdeFactory,
       CompressionStrategy compressionStrategy,
       CompressionStrategy dimCompressionStrategy,
-      CompressionFactory.LongEncodingStrategy longEncodingStrategy,
-      SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      CompressionFactory.LongEncodingStrategy longEncodingStrategy
   )
   {
     this.indexSpec = makeIndexSpec(
@@ -152,7 +151,7 @@ public class IndexMergerTestBase
         dimCompressionStrategy,
         longEncodingStrategy
     );
-    this.indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    this.indexIO = TestHelper.getTestIndexIO();
     this.useBitmapIndexes = bitmapSerdeFactory != null;
   }
 
