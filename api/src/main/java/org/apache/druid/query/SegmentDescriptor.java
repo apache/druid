@@ -24,7 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
 /**
-*/
+ * The difference between this class and {@link org.apache.druid.timeline.DataSegment} is that this class is a "light"
+ * version of {@link org.apache.druid.timeline.DataSegment}, that only contains the interval, version, and partition
+ * number. SegmentDescriptor is used when Brokers tell data servers which segments to include for a particular query.
+ */
 public class SegmentDescriptor
 {
   private final Interval interval;
