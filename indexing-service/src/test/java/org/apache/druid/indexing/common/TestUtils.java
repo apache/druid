@@ -63,7 +63,6 @@ public class TestUtils
     this.jsonMapper = new DefaultObjectMapper();
     indexIO = new IndexIO(
         jsonMapper,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override

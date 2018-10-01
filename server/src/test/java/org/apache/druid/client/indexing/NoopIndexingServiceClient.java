@@ -43,12 +43,6 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void upgradeSegment(DataSegment dataSegment)
-  {
-
-  }
-
-  @Override
   public void mergeSegments(List<DataSegment> segments)
   {
     

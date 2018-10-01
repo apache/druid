@@ -87,7 +87,7 @@ public class IndexMergerV9WithSpatialIndexTest
     List<Object[]> argumentArrays = new ArrayList<>();
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       IndexMergerV9 indexMergerV9 = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
-      IndexIO indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+      IndexIO indexIO = TestHelper.getTestIndexIO();
 
       final IndexSpec indexSpec = new IndexSpec();
       final IncrementalIndex rtIndex = makeIncrementalIndex();

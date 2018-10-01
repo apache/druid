@@ -39,8 +39,7 @@ public class NoBitmapIndexMergerV9Test extends IndexMergerTestBase
         null,
         compressionStrategy,
         dimCompressionStrategy,
-        longEncodingStrategy,
-        segmentWriteOutMediumFactory
+        longEncodingStrategy
     );
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   }

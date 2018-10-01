@@ -93,7 +93,7 @@ public class IndexMergerV9CompatibilityTest
   public IndexMergerV9CompatibilityTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
-    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO();
     events = new ArrayList<>();
 
     final Map<String, Object> map1 = ImmutableMap.of(
