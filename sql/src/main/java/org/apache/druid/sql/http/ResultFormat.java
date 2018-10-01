@@ -28,6 +28,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 
 public enum ResultFormat
 {
@@ -111,6 +112,8 @@ public enum ResultFormat
      * Start of the response, called once per writer.
      */
     void writeResponseStart() throws IOException;
+
+    void writeHeader(List<String> columnNames) throws IOException;
 
     /**
      * Start of each result row.
