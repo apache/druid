@@ -88,12 +88,6 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void upgradeSegment(DataSegment dataSegment)
-  {
-    runTask(new ClientConversionQuery(dataSegment));
-  }
-
-  @Override
   public String compactSegments(
       List<DataSegment> segments,
       boolean keepSegmentGranularity,

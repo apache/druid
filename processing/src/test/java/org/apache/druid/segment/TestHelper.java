@@ -53,14 +53,13 @@ public class TestHelper
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(segmentWriteOutMediumFactory), segmentWriteOutMediumFactory);
+    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory);
   }
 
-  public static IndexIO getTestIndexIO(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  public static IndexIO getTestIndexIO()
   {
     return new IndexIO(
         JSON_MAPPER,
-        segmentWriteOutMediumFactory,
         new ColumnConfig()
         {
           @Override

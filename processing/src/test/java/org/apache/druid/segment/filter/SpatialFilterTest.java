@@ -77,7 +77,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SpatialFilterTest
 {
   private static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
-  private static IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+  private static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   public static final int NUM_POINTS = 5000;
   private static Interval DATA_INTERVAL = Intervals.of("2013-01-01/2013-01-07");

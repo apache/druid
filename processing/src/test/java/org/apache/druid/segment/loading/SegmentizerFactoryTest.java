@@ -25,7 +25,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,7 +44,6 @@ public class SegmentizerFactoryTest
     mapper.registerModule(new SegmentizerModule());
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override

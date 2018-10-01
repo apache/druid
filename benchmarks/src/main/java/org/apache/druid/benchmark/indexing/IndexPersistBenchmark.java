@@ -73,7 +73,6 @@ public class IndexPersistBenchmark
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         () -> 0
     );
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());

@@ -167,7 +167,6 @@ public class AppenderatorTester implements AutoCloseable
 
     indexIO = new IndexIO(
         objectMapper,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override

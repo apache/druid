@@ -145,7 +145,7 @@ public class SegmentGenerator implements Closeable
       return Iterables.getOnlyElement(indexes);
     } else {
       try {
-        final QueryableIndex merged = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()).loadIndex(
+        final QueryableIndex merged = TestHelper.getTestIndexIO().loadIndex(
             TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance()).merge(
                 indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList()),
                 false,

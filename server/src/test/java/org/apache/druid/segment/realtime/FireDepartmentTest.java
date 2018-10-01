@@ -113,7 +113,7 @@ public class FireDepartmentTest
                 null,
                 null,
                 TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance()),
-                TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()),
+                TestHelper.getTestIndexIO(),
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
                 new CachePopulatorStats(),

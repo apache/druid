@@ -40,7 +40,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -329,7 +328,7 @@ public class IndexIOTest
   {
     Exception ex = null;
     try {
-      TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()).validateTwoSegments(adapter1, adapter2);
+      TestHelper.getTestIndexIO().validateTwoSegments(adapter1, adapter2);
     }
     catch (Exception e) {
       ex = e;

@@ -71,7 +71,7 @@ public class QueryableIndexIndexableAdapterTest
   public QueryableIndexIndexableAdapterTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
-    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO();
   }
 
   @Test

@@ -109,7 +109,7 @@ public class DoubleStorageTest
 
   private static final IndexMergerV9 INDEX_MERGER_V9 =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
   private static final Integer MAX_ROWS = 10;
   private static final String TIME_COLUMN = "__time";
   private static final String DIM_NAME = "testDimName";

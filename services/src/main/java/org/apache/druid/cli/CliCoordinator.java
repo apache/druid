@@ -67,7 +67,6 @@ import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
@@ -208,10 +207,6 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.merge.on",
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentMerger.class
-            ).addConditionBinding(
-                "druid.coordinator.conversion.on",
-                Predicates.equalTo("true"),
-                DruidCoordinatorVersionConverter.class
             ).addConditionBinding(
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),

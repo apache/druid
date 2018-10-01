@@ -119,7 +119,6 @@ public class GroupByLimitPushDownInsufficientBufferTest
     );
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override

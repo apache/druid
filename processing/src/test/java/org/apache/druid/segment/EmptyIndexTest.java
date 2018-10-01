@@ -90,7 +90,7 @@ public class EmptyIndexTest
           new IndexSpec()
       );
 
-      QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(tmpDir);
+      QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);
 
       Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
       Assert.assertEquals("getMetricNames", 0, emptyQueryableIndex.getColumnNames().size());

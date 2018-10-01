@@ -155,7 +155,6 @@ public class AggregationTestHelper implements Closeable
 
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -212,7 +211,6 @@ public class AggregationTestHelper implements Closeable
 
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -254,7 +252,6 @@ public class AggregationTestHelper implements Closeable
 
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -309,7 +306,6 @@ public class AggregationTestHelper implements Closeable
 
     IndexIO indexIO = new IndexIO(
         mapper,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
