@@ -22,6 +22,8 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -29,11 +31,13 @@ import java.util.Objects;
 
 public class TaskStatusPlus
 {
+  private static final Logger log = new Logger(TaskStatusPlus.class);
+
   private final String id;
   private final String type;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
-  private final TaskState state;
+  private final TaskState statusCode;
   private final RunnerTaskState runnerTaskState;
   private final Long duration;
   private final TaskLocation location;
@@ -42,13 +46,43 @@ public class TaskStatusPlus
   @Nullable
   private final String errorMsg;
 
+  public TaskStatusPlus(
+      String id,
+      String type, // nullable for backward compatibility
+      DateTime createdTime,
+      DateTime queueInsertionTime,
+      @Nullable TaskState statusCode,
+      @Nullable RunnerTaskState runnerStatusCode,
+      @Nullable Long duration,
+      TaskLocation location,
+      @Nullable String dataSource, // nullable for backward compatibility
+      @Nullable String errorMsg
+  )
+  {
+    this(
+        id,
+        type,
+        createdTime,
+        queueInsertionTime,
+        statusCode,
+        statusCode,
+        runnerStatusCode,
+        duration,
+        location,
+        dataSource,
+        errorMsg
+    );
+  }
+
+
   @JsonCreator
   public TaskStatusPlus(
       @JsonProperty("id") String id,
       @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
-      @JsonProperty("statusCode") @Nullable TaskState state,
+      @JsonProperty("statusCode") @Nullable TaskState statusCode,
+      @Deprecated @JsonProperty("status") @Nullable TaskState status,  // present for backwards compatibility
       @JsonProperty("runnerStatusCode") @Nullable RunnerTaskState runnerTaskState,
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
@@ -56,14 +90,24 @@ public class TaskStatusPlus
       @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
-    if (state != null && state.isComplete()) {
+    if (statusCode != null && statusCode.isComplete()) {
       Preconditions.checkNotNull(duration, "duration");
     }
     this.id = Preconditions.checkNotNull(id, "id");
     this.type = type;
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
-    this.state = state;
+    //checks for deserialization safety
+    if (statusCode != null && status == null) {
+      this.statusCode = statusCode;
+    } else if (statusCode == null && status != null) {
+      this.statusCode = status;
+    } else {
+      if (statusCode != null && status != null && statusCode != status) {
+        throw new RuntimeException(StringUtils.format("statusCode[%s] and status[%s] must match", statusCode, status));
+      }
+      this.statusCode = statusCode;
+    }
     this.runnerTaskState = runnerTaskState;
     this.duration = duration;
     this.location = Preconditions.checkNotNull(location, "location");
@@ -98,14 +142,22 @@ public class TaskStatusPlus
 
   @Nullable
   @JsonProperty("statusCode")
-  public TaskState getState()
+  public TaskState getStatusCode()
   {
-    return state;
+    return statusCode;
+  }
+
+  @Deprecated
+  @Nullable
+  @JsonProperty("status")
+  public TaskState getStatus()
+  {
+    return statusCode;
   }
 
   @Nullable
   @JsonProperty("runnerStatusCode")
-  public RunnerTaskState getRunnerTaskState()
+  public RunnerTaskState getRunnerStatusCode()
   {
     return runnerTaskState;
   }
@@ -150,7 +202,7 @@ public class TaskStatusPlus
            Objects.equals(getType(), that.getType()) &&
            Objects.equals(getCreatedTime(), that.getCreatedTime()) &&
            Objects.equals(getQueueInsertionTime(), that.getQueueInsertionTime()) &&
-           getState() == that.getState() &&
+           getStatusCode() == that.getStatusCode() &&
            Objects.equals(getDuration(), that.getDuration()) &&
            Objects.equals(getLocation(), that.getLocation()) &&
            Objects.equals(getDataSource(), that.getDataSource()) &&
@@ -165,7 +217,7 @@ public class TaskStatusPlus
         getType(),
         getCreatedTime(),
         getQueueInsertionTime(),
-        getState(),
+        getStatusCode(),
         getDuration(),
         getLocation(),
         getDataSource(),
@@ -181,7 +233,7 @@ public class TaskStatusPlus
            ", type='" + type + '\'' +
            ", createdTime=" + createdTime +
            ", queueInsertionTime=" + queueInsertionTime +
-           ", state=" + state +
+           ", statusCode=" + statusCode +
            ", duration=" + duration +
            ", location=" + location +
            ", dataSource='" + dataSource + '\'' +

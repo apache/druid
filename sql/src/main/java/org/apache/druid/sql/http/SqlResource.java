@@ -52,6 +52,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.List;
 
 @Path("/druid/v2/sql/")
@@ -93,14 +94,12 @@ public class SqlResource
       final boolean[] timeColumns = new boolean[fieldList.size()];
       final boolean[] dateColumns = new boolean[fieldList.size()];
       final String[] columnNames = new String[fieldList.size()];
-      final String[] columnTypes = new String[fieldList.size()];
 
       for (int i = 0; i < fieldList.size(); i++) {
         final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
         timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
         dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
         columnNames[i] = fieldList.get(i).getName();
-        columnTypes[i] = sqlTypeName.getName();
       }
 
       final Yielder<Object[]> yielder0 = Yielders.each(plannerResult.run());
@@ -118,6 +117,10 @@ public class SqlResource
                     try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
                                                                     .createFormatter(outputStream, jsonMapper)) {
                       writer.writeResponseStart();
+
+                      if (sqlQuery.includeHeader()) {
+                        writer.writeHeader(Arrays.asList(columnNames));
+                      }
 
                       while (!yielder.isDone()) {
                         final Object[] row = yielder.get();
@@ -151,8 +154,6 @@ public class SqlResource
                   }
                 }
             )
-            .header("X-Druid-Column-Names", jsonMapper.writeValueAsString(columnNames))
-            .header("X-Druid-Column-Types", jsonMapper.writeValueAsString(columnTypes))
             .build();
       }
       catch (Throwable e) {
