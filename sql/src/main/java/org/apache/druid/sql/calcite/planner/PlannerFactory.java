@@ -38,7 +38,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.LeaderClient;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -68,8 +68,8 @@ public class PlannerFactory
   private final PlannerConfig plannerConfig;
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
-  private final DruidLeaderClient coordinatorDruidLeaderClient;
-  private final DruidLeaderClient overlordDruidLeaderClient;
+  private final LeaderClient coordinatorDruidLeaderClient;
+  private final LeaderClient overlordDruidLeaderClient;
 
   @Inject
   public PlannerFactory(
@@ -81,8 +81,8 @@ public class PlannerFactory
       final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper,
       final @Json ObjectMapper jsonMapper,
-      final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
-      final @IndexingService DruidLeaderClient overlordDruidLeaderClient
+      final @Coordinator LeaderClient coordinatorDruidLeaderClient,
+      final @IndexingService LeaderClient overlordDruidLeaderClient
   )
   {
     this.druidSchema = druidSchema;

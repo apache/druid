@@ -27,7 +27,8 @@ import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.LeaderClient;
+import org.apache.druid.discovery.NoopDruidLeaderClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -114,7 +115,7 @@ public class SqlBenchmark
         .createQueryRunnerFactoryConglomerate();
     final QueryRunnerFactoryConglomerate conglomerate = conglomerateCloserPair.lhs;
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
+    final LeaderClient druidLeaderClient = new NoopDruidLeaderClient();
 
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
     plannerFactory = new PlannerFactory(

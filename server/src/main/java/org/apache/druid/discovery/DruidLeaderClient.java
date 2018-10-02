@@ -59,7 +59,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * request.setXXX(..)
  * FullResponseHolder responseHolder = druidLeaderClient.go(request)
  */
-public class DruidLeaderClient
+public class DruidLeaderClient implements LeaderClient
 {
   private final Logger log = new Logger(DruidLeaderClient.class);
 
@@ -93,6 +93,7 @@ public class DruidLeaderClient
     this.serverDiscoverySelector = serverDiscoverySelector;
   }
 
+  @Override
   @LifecycleStart
   public void start()
   {
@@ -110,6 +111,7 @@ public class DruidLeaderClient
     }
   }
 
+  @Override
   @LifecycleStop
   public void stop()
   {
@@ -123,6 +125,7 @@ public class DruidLeaderClient
   /**
    * Make a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
+  @Override
   public Request makeRequest(HttpMethod httpMethod, String urlPath) throws IOException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -137,6 +140,7 @@ public class DruidLeaderClient
   /**
    * Executes the request object aimed at the leader and process the response with given handler
    */
+  @Override
   public <Intermediate, Final> ListenableFuture<Final> goAsync(
       final Request request,
       final HttpResponseHandler<Intermediate, Final> handler
@@ -148,6 +152,7 @@ public class DruidLeaderClient
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
+  @Override
   public FullResponseHolder go(
       Request request,
       HttpResponseHandler<FullResponseHolder, FullResponseHolder> responseHandler
