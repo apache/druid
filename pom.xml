@@ -97,8 +97,7 @@
     </properties>
 
     <modules>
-        <module>api</module>
-        <module>common</module>
+        <module>core</module>
         <module>examples</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
@@ -109,7 +108,6 @@
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>aws-common</module>
-        <module>java-util</module>
         <module>extendedset</module>
         <module>hll</module>
         <!-- Core extensions -->

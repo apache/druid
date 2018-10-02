@@ -90,7 +90,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
-      <artifactId>druid-common</artifactId>
+      <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
