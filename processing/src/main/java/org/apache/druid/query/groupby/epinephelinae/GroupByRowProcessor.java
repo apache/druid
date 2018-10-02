@@ -65,7 +65,8 @@ public class GroupByRowProcessor
       final ObjectMapper spillMapper,
       final String processingTmpDir,
       final int mergeBufferSize,
-      final List<Closeable> closeOnExit
+      final List<Closeable> closeOnExit,
+      final boolean wasQueryPushedDown
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -75,7 +76,6 @@ public class GroupByRowProcessor
     for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
       aggregatorFactories[i] = query.getAggregatorSpecs().get(i);
     }
-
 
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
@@ -152,7 +152,9 @@ public class GroupByRowProcessor
     final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
     closeOnExit.add(grouper);
 
-    final AggregateResult retVal = filteredSequence.accumulate(AggregateResult.ok(), accumulator);
+    final AggregateResult retVal = wasQueryPushedDown
+                                   ? rows.accumulate(AggregateResult.ok(), accumulator)
+                                   : filteredSequence.accumulate(AggregateResult.ok(), accumulator);
     if (!retVal.isOk()) {
       throw new ResourceLimitExceededException(retVal.getReason());
     }
@@ -183,5 +185,6 @@ public class GroupByRowProcessor
           }
         }
     );
+
   }
 }
