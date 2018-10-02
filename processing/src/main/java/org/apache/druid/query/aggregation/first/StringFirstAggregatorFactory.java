@@ -34,7 +34,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -118,7 +118,7 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   public Aggregator factorize(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
   {
     return new StringFirstAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
         selector,
         maxStringBytes
     );
@@ -128,7 +128,7 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseObjectColumnValueSelector selector)
   {
     return new StringFirstBufferAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
         selector,
         maxStringBytes
     );
@@ -199,7 +199,7 @@ public class StringFirstAggregatorFactory extends NullableAggregatorFactory<Base
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(Column.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
   }
 
   @Override

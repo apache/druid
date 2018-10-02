@@ -74,7 +74,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     );
   }
 
-  private static final class priorByteBufferSerializer extends HLLCV1
+  private static final class priorByteBufferSerializer extends VersionOneHyperLogLogCollector
   {
     @Override
     public ByteBuffer toByteBuffer()
@@ -108,7 +108,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     }
   }
 
-  private static final class newByteBufferSerializer extends HLLCV1
+  private static final class newByteBufferSerializer extends VersionOneHyperLogLogCollector
   {
     @Override
     public ByteBuffer toByteBuffer()
@@ -163,7 +163,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
   }
 
 
-  private static final class newByteBufferSerializerWithPuts extends HLLCV1
+  private static final class newByteBufferSerializerWithPuts extends VersionOneHyperLogLogCollector
   {
     @Override
     public ByteBuffer toByteBuffer()

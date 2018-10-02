@@ -61,7 +61,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -493,8 +493,8 @@ public class CompactionTask extends AbstractTask
       final Map<String, DimensionHandler> dimensionHandlerMap = queryableIndex.getDimensionHandlers();
 
       for (String dimension : queryableIndex.getAvailableDimensions()) {
-        final Column column = Preconditions.checkNotNull(
-            queryableIndex.getColumn(dimension),
+        final ColumnHolder columnHolder = Preconditions.checkNotNull(
+            queryableIndex.getColumnHolder(dimension),
             "Cannot find column for dimension[%s]",
             dimension
         );
@@ -510,10 +510,10 @@ public class CompactionTask extends AbstractTask
           dimensionSchemaMap.put(
               dimension,
               createDimensionSchema(
-                  column.getCapabilities().getType(),
+                  columnHolder.getCapabilities().getType(),
                   dimension,
                   dimensionHandler.getMultivalueHandling(),
-                  column.getCapabilities().hasBitmapIndexes()
+                  columnHolder.getCapabilities().hasBitmapIndexes()
               )
           );
         }

@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 /**
  */
 @Deprecated
-public class HLLCV0 extends HyperLogLogCollector
+public class VersionZeroHyperLogLogCollector extends HyperLogLogCollector
 {
   /**
    * Header:
@@ -35,7 +35,7 @@ public class HLLCV0 extends HyperLogLogCollector
   public static final int HEADER_NUM_BYTES = 3;
   public static final int NUM_BYTES_FOR_DENSE_STORAGE = NUM_BYTES_FOR_BUCKETS + HEADER_NUM_BYTES;
 
-  HLLCV0(ByteBuffer buffer)
+  VersionZeroHyperLogLogCollector(ByteBuffer buffer)
   {
     super(buffer);
   }

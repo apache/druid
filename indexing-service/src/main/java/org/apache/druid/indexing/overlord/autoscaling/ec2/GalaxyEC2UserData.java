@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.guice.annotations.Json;
 
 /**
  */

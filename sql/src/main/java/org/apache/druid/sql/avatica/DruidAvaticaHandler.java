@@ -20,11 +20,11 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.inject.Inject;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.server.DruidNode;
 import org.apache.calcite.avatica.remote.LocalService;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.server.AvaticaJsonHandler;
+import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.server.DruidNode;
 import org.eclipse.jetty.server.Request;
 
 import javax.servlet.ServletException;

@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class HLLCV1 extends HyperLogLogCollector
+public class VersionOneHyperLogLogCollector extends HyperLogLogCollector
 {
   /**
    * Header:
@@ -44,12 +44,12 @@ public class HLLCV1 extends HyperLogLogCollector
   private static final ByteBuffer defaultStorageBuffer = ByteBuffer.wrap(new byte[]{VERSION, 0, 0, 0, 0, 0, 0})
                                                                    .asReadOnlyBuffer();
 
-  HLLCV1()
+  VersionOneHyperLogLogCollector()
   {
     super(defaultStorageBuffer.duplicate());
   }
 
-  HLLCV1(ByteBuffer buffer)
+  VersionOneHyperLogLogCollector(ByteBuffer buffer)
   {
     super(buffer);
   }

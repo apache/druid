@@ -21,11 +21,10 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.IAE;
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.DoublesUnion;
-
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -44,6 +43,8 @@ import java.util.Objects;
 
 public class DoublesSketchAggregatorFactory extends AggregatorFactory
 {
+  public static final Comparator<DoublesSketch> COMPARATOR =
+      Comparator.nullsFirst(Comparator.comparingLong(DoublesSketch::getN));
 
   private static final int DEFAULT_K = 128;
 
@@ -120,15 +121,6 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     return DoublesSketchOperations.deserialize(object);
   }
-
-  public static final Comparator<DoublesSketch> COMPARATOR = new Comparator<DoublesSketch>()
-  {
-    @Override
-    public int compare(DoublesSketch a, DoublesSketch b)
-    {
-      return Long.compare(a.getN(), b.getN());
-    }
-  };
 
   @Override
   public Comparator<DoublesSketch> getComparator()

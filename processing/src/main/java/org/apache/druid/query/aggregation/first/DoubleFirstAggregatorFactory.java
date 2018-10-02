@@ -22,8 +22,6 @@ package org.apache.druid.query.aggregation.first;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -36,7 +34,7 @@ import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -49,15 +47,8 @@ import java.util.Objects;
 
 public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
-  public static final Comparator VALUE_COMPARATOR = (o1, o2) -> Doubles.compare(
-      ((SerializablePair<Long, Double>) o1).rhs,
-      ((SerializablePair<Long, Double>) o2).rhs
-  );
-
-  public static final Comparator TIME_COMPARATOR = (o1, o2) -> Longs.compare(
-      ((SerializablePair<Long, Object>) o1).lhs,
-      ((SerializablePair<Long, Object>) o2).lhs
-  );
+  public static final Comparator<SerializablePair<Long, Double>> VALUE_COMPARATOR =
+      Comparator.comparingDouble(o -> o.rhs);
 
   private final String fieldName;
   private final String name;
@@ -74,7 +65,7 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
 
     this.name = name;
     this.fieldName = fieldName;
-    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
+    this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
   }
 
   @Override
@@ -86,17 +77,14 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
   @Override
   protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    return new DoubleFirstAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        selector
-    );
+    return new DoubleFirstAggregator(metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME), selector);
   }
 
   @Override
   protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     return new DoubleFirstBufferAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
         selector
     );
   }
@@ -117,7 +105,13 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
     if (lhs == null) {
       return rhs;
     }
-    return TIME_COMPARATOR.compare(lhs, rhs) <= 0 ? lhs : rhs;
+    Long leftTime = ((SerializablePair<Long, Double>) lhs).lhs;
+    Long rightTime = ((SerializablePair<Long, Double>) rhs).lhs;
+    if (leftTime <= rightTime) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   @Override
@@ -210,7 +204,7 @@ public class DoubleFirstAggregatorFactory extends NullableAggregatorFactory<Colu
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(Column.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
   }
 
   @Override

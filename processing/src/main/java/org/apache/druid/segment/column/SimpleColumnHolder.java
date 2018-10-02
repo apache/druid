@@ -22,30 +22,28 @@ package org.apache.druid.segment.column;
 import com.google.common.base.Supplier;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 /**
  */
-class SimpleColumn implements Column
+class SimpleColumnHolder implements ColumnHolder
 {
   private final ColumnCapabilities capabilities;
-  private final Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn;
-  private final Supplier<GenericColumn> genericColumn;
-  private final Supplier<ComplexColumn> complexColumn;
+  private final Supplier<? extends BaseColumn> columnSupplier;
+  @Nullable
   private final Supplier<BitmapIndex> bitmapIndex;
+  @Nullable
   private final Supplier<SpatialIndex> spatialIndex;
 
-  SimpleColumn(
+  SimpleColumnHolder(
       ColumnCapabilities capabilities,
-      Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn,
-      Supplier<GenericColumn> genericColumn,
-      Supplier<ComplexColumn> complexColumn,
-      Supplier<BitmapIndex> bitmapIndex,
-      Supplier<SpatialIndex> spatialIndex
+      Supplier<? extends BaseColumn> columnSupplier,
+      @Nullable Supplier<BitmapIndex> bitmapIndex,
+      @Nullable Supplier<SpatialIndex> spatialIndex
   )
   {
     this.capabilities = capabilities;
-    this.dictionaryEncodedColumn = dictionaryEncodedColumn;
-    this.genericColumn = genericColumn;
-    this.complexColumn = complexColumn;
+    this.columnSupplier = columnSupplier;
     this.bitmapIndex = bitmapIndex;
     this.spatialIndex = spatialIndex;
   }
@@ -59,35 +57,25 @@ class SimpleColumn implements Column
   @Override
   public int getLength()
   {
-    try (final GenericColumn column = genericColumn.get()) {
+    try (final NumericColumn column = (NumericColumn) columnSupplier.get()) {
       return column.length();
     }
   }
 
   @Override
-  public DictionaryEncodedColumn getDictionaryEncoding()
+  public BaseColumn getColumn()
   {
-    return dictionaryEncodedColumn == null ? null : dictionaryEncodedColumn.get();
+    return columnSupplier.get();
   }
 
-  @Override
-  public GenericColumn getGenericColumn()
-  {
-    return genericColumn == null ? null : genericColumn.get();
-  }
-
-  @Override
-  public ComplexColumn getComplexColumn()
-  {
-    return complexColumn == null ? null : complexColumn.get();
-  }
-
+  @Nullable
   @Override
   public BitmapIndex getBitmapIndex()
   {
     return bitmapIndex == null ? null : bitmapIndex.get();
   }
 
+  @Nullable
   @Override
   public SpatialIndex getSpatialIndex()
   {
@@ -95,8 +83,8 @@ class SimpleColumn implements Column
   }
 
   @Override
-  public SettableColumnValueSelector makeSettableColumnValueSelector()
+  public SettableColumnValueSelector makeNewSettableColumnValueSelector()
   {
-    return getCapabilities().getType().makeSettableColumnValueSelector();
+    return getCapabilities().getType().makeNewSettableColumnValueSelector();
   }
 }

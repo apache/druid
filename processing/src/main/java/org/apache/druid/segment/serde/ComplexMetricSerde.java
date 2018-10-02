@@ -20,12 +20,14 @@
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Function;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -80,9 +82,14 @@ public abstract class ComplexMetricSerde
    *
    * @return serialized intermediate representation of aggregate in byte[]
    */
-  public byte[] toBytes(Object val)
+  public byte[] toBytes(@Nullable Object val)
   {
-    return getObjectStrategy().toBytes(val);
+    if (val != null) {
+      byte[] bytes = getObjectStrategy().toBytes(val);
+      return bytes != null ? bytes : ByteArrays.EMPTY_ARRAY;
+    } else {
+      return ByteArrays.EMPTY_ARRAY;
+    }
   }
 
   /**
@@ -105,8 +112,8 @@ public abstract class ComplexMetricSerde
 
   /**
    * This method provides the ability for a ComplexMetricSerde to control its own serialization.
-   * For large column (i.e columns greater than Integer.MAX) use
-   * (@link LargeColumnSupportedComplexColumnSerializer)
+   * For large column (i.e columns greater than {@link Integer#MAX_VALUE}) use
+   * {@link LargeColumnSupportedComplexColumnSerializer}
    *
    * @return an instance of GenericColumnSerializer used for serialization.
    */

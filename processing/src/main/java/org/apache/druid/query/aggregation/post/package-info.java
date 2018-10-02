@@ -17,49 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+@EverythingIsNonnullByDefault
+package org.apache.druid.query.aggregation.post;
 
-import org.apache.druid.segment.data.Indexed;
-
-/**
-*/
-public class IndexedComplexColumn implements ComplexColumn
-{
-  private final Indexed column;
-  private final String typeName;
-
-  public IndexedComplexColumn(String typeName, Indexed column)
-  {
-    this.column = column;
-    this.typeName = typeName;
-  }
-
-  @Override
-  public Class<?> getClazz()
-  {
-    return column.getClazz();
-  }
-
-  @Override
-  public String getTypeName()
-  {
-    return typeName;
-  }
-
-  @Override
-  public Object getRowValue(int rowNum)
-  {
-    return column.get(rowNum);
-  }
-
-  @Override
-  public int getLength()
-  {
-    return column.size();
-  }
-
-  @Override
-  public void close()
-  {
-  }
-}
+import org.apache.druid.annotations.EverythingIsNonnullByDefault;

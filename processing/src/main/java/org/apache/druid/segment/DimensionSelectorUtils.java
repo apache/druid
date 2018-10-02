@@ -46,7 +46,7 @@ public final class DimensionSelectorUtils
    * {@code makeValueMatcher()} to this method, but encouraged to implement {@code makeValueMatcher()} themselves,
    * bypassing the {@link IndexedInts} abstraction.
    */
-  public static ValueMatcher makeValueMatcherGeneric(DimensionSelector selector, String value)
+  public static ValueMatcher makeValueMatcherGeneric(DimensionSelector selector, @Nullable String value)
   {
     IdLookup idLookup = selector.idLookup();
     if (idLookup != null) {
@@ -118,7 +118,7 @@ public final class DimensionSelectorUtils
 
   private static ValueMatcher makeNonDictionaryEncodedValueMatcherGeneric(
       final DimensionSelector selector,
-      final String value
+      final @Nullable String value
   )
   {
     return new ValueMatcher()
@@ -293,5 +293,4 @@ public final class DimensionSelectorUtils
            && selector.getValueCardinality() == 1
            && selector.lookupName(0) == null;
   }
-
 }

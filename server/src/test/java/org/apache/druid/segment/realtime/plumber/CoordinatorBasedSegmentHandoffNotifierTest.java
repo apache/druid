@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
+import junit.framework.Assert;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.Intervals;
@@ -29,7 +30,6 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;

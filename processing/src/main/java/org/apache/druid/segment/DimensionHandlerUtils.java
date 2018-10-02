@@ -151,6 +151,7 @@ public final class DimensionHandlerUtils
   )
   {
     int dimCount = dimensionSpecs.size();
+    @SuppressWarnings("unchecked")
     ColumnSelectorPlus<ColumnSelectorStrategyClass>[] dims = new ColumnSelectorPlus[dimCount];
     for (int i = 0; i < dimCount; i++) {
       final DimensionSpec dimSpec = dimensionSpecs.get(i);
@@ -176,7 +177,7 @@ public final class DimensionHandlerUtils
     return dims;
   }
 
-  public static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
+  private static ColumnValueSelector getColumnValueSelectorFromDimensionSpec(
       DimensionSpec dimSpec,
       ColumnSelectorFactory columnSelectorFactory
   )
@@ -187,21 +188,19 @@ public final class DimensionHandlerUtils
     switch (capabilities.getType()) {
       case STRING:
         return columnSelectorFactory.makeDimensionSelector(dimSpec);
-      case LONG:
-      case FLOAT:
-      case DOUBLE:
-        return columnSelectorFactory.makeColumnValueSelector(dimSpec.getDimension());
       default:
-        return null;
+        return columnSelectorFactory.makeColumnValueSelector(dimSpec.getDimension());
     }
   }
 
-  // When determining the capabilities of a column during query processing, this function
-  // adjusts the capabilities for columns that cannot be handled as-is to manageable defaults
-  // (e.g., treating missing columns as empty String columns)
+  /**
+   * When determining the capabilities of a column during query processing, this function
+   * adjusts the capabilities for columns that cannot be handled as-is to manageable defaults
+   * (e.g., treating missing columns as empty String columns)
+   */
   private static ColumnCapabilities getEffectiveCapabilities(
       DimensionSpec dimSpec,
-      ColumnCapabilities capabilities
+      @Nullable ColumnCapabilities capabilities
   )
   {
     if (capabilities == null) {
@@ -233,7 +232,7 @@ public final class DimensionHandlerUtils
   private static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorStrategyClass makeStrategy(
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       DimensionSpec dimSpec,
-      ColumnCapabilities capabilities,
+      @Nullable ColumnCapabilities capabilities,
       ColumnValueSelector selector
   )
   {

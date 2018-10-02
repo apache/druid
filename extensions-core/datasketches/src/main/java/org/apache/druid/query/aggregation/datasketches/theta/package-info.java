@@ -17,30 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.serde;
+@EverythingIsNonnullByDefault
+package org.apache.druid.query.aggregation.datasketches.theta;
 
-import com.google.common.base.Supplier;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.segment.column.GenericColumn;
-import org.apache.druid.segment.column.LongsColumn;
-import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
-
-/**
-*/
-public class LongGenericColumnSupplier implements Supplier<GenericColumn>
-{
-  private final CompressedColumnarLongsSupplier column;
-  private final ImmutableBitmap nullValueBitmap;
-
-  public LongGenericColumnSupplier(CompressedColumnarLongsSupplier column, ImmutableBitmap nullValueBitmap)
-  {
-    this.column = column;
-    this.nullValueBitmap = nullValueBitmap;
-  }
-
-  @Override
-  public GenericColumn get()
-  {
-    return LongsColumn.create(column.get(), nullValueBitmap);
-  }
-}
+import org.apache.druid.annotations.EverythingIsNonnullByDefault;
