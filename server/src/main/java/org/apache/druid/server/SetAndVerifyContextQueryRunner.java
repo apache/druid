@@ -19,14 +19,14 @@
 
 package org.apache.druid.server;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.client.DirectDruidClient;
-import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 

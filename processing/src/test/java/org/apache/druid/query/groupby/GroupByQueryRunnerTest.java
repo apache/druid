@@ -121,7 +121,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -4324,11 +4324,15 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(new DefaultDimensionSpec("market", "market"), new ExtractionDimensionSpec(
-            Column.TIME_COLUMN_NAME,
-            Column.TIME_COLUMN_NAME,
-            new TimeFormatExtractionFn("EEEE", null, null, null, false)
-        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
+        .setDimensions(
+            new DefaultDimensionSpec("market", "market"),
+            new ExtractionDimensionSpec(
+                ColumnHolder.TIME_COLUMN_NAME,
+                ColumnHolder.TIME_COLUMN_NAME,
+                new TimeFormatExtractionFn("EEEE", null, null, null, false)
+            )
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
         .setPostAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimFilter(
@@ -5100,8 +5104,8 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final DimFilter fridayFilter = new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Friday", new TimeFormatExtractionFn("EEEE", null, null, null, false));
-    final DimFilter firstDaysFilter = new InDimFilter(Column.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"), new TimeFormatExtractionFn("d", null, null, null, false));
+    final DimFilter fridayFilter = new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Friday", new TimeFormatExtractionFn("EEEE", null, null, null, false));
+    final DimFilter firstDaysFilter = new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"), new TimeFormatExtractionFn("d", null, null, null, false));
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
@@ -5810,11 +5814,15 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(new DefaultDimensionSpec("market", "market"), new ExtractionDimensionSpec(
-            Column.TIME_COLUMN_NAME,
-            "dayOfWeek",
-            new TimeFormatExtractionFn("EEEE", null, null, null, false)
-        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
+        .setDimensions(
+            new DefaultDimensionSpec("market", "market"),
+            new ExtractionDimensionSpec(
+                ColumnHolder.TIME_COLUMN_NAME,
+                "dayOfWeek",
+                new TimeFormatExtractionFn("EEEE", null, null, null, false)
+            )
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
         .setPostAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimFilter(
@@ -6055,16 +6063,17 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(new DefaultDimensionSpec("market", "market"), new ExtractionDimensionSpec(
-            Column.TIME_COLUMN_NAME,
-            "dayOfWeek",
-            new CascadeExtractionFn(
-                new ExtractionFn[]{
-                    new TimeFormatExtractionFn("EEEE", null, null, null, false),
-                    nullWednesdays,
-                    }
+        .setDimensions(
+            new DefaultDimensionSpec("market", "market"),
+            new ExtractionDimensionSpec(
+                ColumnHolder.TIME_COLUMN_NAME,
+                "dayOfWeek",
+                new CascadeExtractionFn(
+                    new ExtractionFn[]{new TimeFormatExtractionFn("EEEE", null, null, null, false), nullWednesdays}
+                )
             )
-        )).setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
         .setPostAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimFilter(
@@ -6838,22 +6847,15 @@ public class GroupByQueryRunnerTest
       lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, true);
     }
 
-    GroupByQuery query = GroupByQuery.builder()
-                                     .setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
-                                     .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
-                                                         new LongSumAggregatorFactory("idx", "index"))
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(
-                                         new ExtractionDimFilter(
-                                             "null_column",
-                                             "EMPTY",
-                                             lookupExtractionFn,
-                                             null
-                                         )
-                                     )
-                                     .build();
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setDimFilter(new ExtractionDimFilter("null_column", "EMPTY", lookupExtractionFn, null))
+        .build();
     List<Row> expectedResults = Arrays
         .asList(
             GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
@@ -7646,7 +7648,7 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             new DefaultDimensionSpec("qualityLong", "ql_alias"),
             new DefaultDimensionSpec("qualityFloat", "qf_alias"),
-            new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias")
+            new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "time_alias")
         )
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
@@ -8135,12 +8137,15 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(new DefaultDimensionSpec("quality", "alias"), new ExtractionDimensionSpec(
-            Column.TIME_COLUMN_NAME,
-            "time_day",
-            ValueType.LONG,
-            new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)
-        ))
+        .setDimensions(
+            new DefaultDimensionSpec("quality", "alias"),
+            new ExtractionDimensionSpec(
+                ColumnHolder.TIME_COLUMN_NAME,
+                "time_day",
+                ValueType.LONG,
+                new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)
+            )
+        )
         .setDimFilter(new SelectorDimFilter("quality", "technology", null))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount)
         .setGranularity(QueryRunnerTestHelper.dayGran)

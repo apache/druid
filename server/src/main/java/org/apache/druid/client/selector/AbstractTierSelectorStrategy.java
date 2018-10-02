@@ -20,8 +20,8 @@
 package org.apache.druid.client.selector;
 
 import com.google.common.collect.Iterables;
-import org.apache.druid.timeline.DataSegment;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

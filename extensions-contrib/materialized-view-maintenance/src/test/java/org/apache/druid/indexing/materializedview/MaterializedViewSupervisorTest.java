@@ -46,15 +46,13 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import static org.easymock.EasyMock.expect;
-
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -64,7 +62,7 @@ import java.util.Set;
 import java.util.SortedMap;
 
 import static org.easymock.EasyMock.createMock;
-import org.junit.rules.ExpectedException;
+import static org.easymock.EasyMock.expect;
 
 public class MaterializedViewSupervisorTest
 {
@@ -85,7 +83,7 @@ public class MaterializedViewSupervisorTest
   private ObjectMapper objectMapper = TestHelper.makeJsonMapper();
   
   @Before
-  public void setUp() throws IOException 
+  public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
@@ -180,7 +178,7 @@ public class MaterializedViewSupervisorTest
 
 
   @Test
-  public void testSuspendedDoesntRun() throws IOException
+  public void testSuspendedDoesntRun()
   {
     MaterializedViewSupervisorSpec suspended = new MaterializedViewSupervisorSpec(
         "base",
@@ -208,10 +206,12 @@ public class MaterializedViewSupervisorTest
     // mock IndexerSQLMetadataStorageCoordinator to ensure that getDataSourceMetadata is not called
     // which will be true if truly suspended, since this is the first operation of the 'run' method otherwise
     IndexerSQLMetadataStorageCoordinator mock = createMock(IndexerSQLMetadataStorageCoordinator.class);
-    expect(mock.getDataSourceMetadata(suspended.getDataSourceName())).andAnswer((IAnswer) () -> {
-      Assert.fail();
-      return null;
-    }).anyTimes();
+    expect(mock.getDataSourceMetadata(suspended.getDataSourceName()))
+        .andAnswer(() -> {
+          Assert.fail();
+          return null;
+        })
+        .anyTimes();
 
     EasyMock.replay(mock);
     supervisor.run();

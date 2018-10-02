@@ -23,6 +23,7 @@ import com.google.inject.Injector;
 import io.airlift.airline.Cli;
 import io.airlift.airline.Help;
 import io.airlift.airline.ParseException;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.cli.validate.DruidJsonValidator;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.GuiceInjectors;
@@ -45,6 +46,7 @@ public class Main
   }
 
   @SuppressWarnings("unchecked")
+  @SuppressForbidden(reason = "System#out")
   public static void main(String[] args)
   {
     final Cli.CliBuilder<Runnable> builder = Cli.builder("druid");

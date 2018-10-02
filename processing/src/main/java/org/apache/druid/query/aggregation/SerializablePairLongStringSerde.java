@@ -76,7 +76,7 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder columnBuilder)
   {
     final GenericIndexed column = GenericIndexed.read(buffer, getObjectStrategy(), columnBuilder.getFileMapper());
-    columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   @Override

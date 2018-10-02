@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.hyperloglog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -38,7 +39,6 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;

@@ -20,9 +20,9 @@
 package org.apache.druid.security.kerberos;
 
 import com.google.common.base.Strings;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;

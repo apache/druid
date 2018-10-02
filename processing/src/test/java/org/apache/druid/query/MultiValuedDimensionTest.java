@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -60,7 +61,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
-import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -145,7 +145,7 @@ public class MultiValuedDimensionTest
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
               .persist(incrementalIndex, persistedSegmentDir, new IndexSpec(), null);
 
-    queryableIndex = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(persistedSegmentDir);
+    queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
   }
 
   @After

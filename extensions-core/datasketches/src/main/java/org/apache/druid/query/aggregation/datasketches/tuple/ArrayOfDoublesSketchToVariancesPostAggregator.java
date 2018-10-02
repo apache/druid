@@ -19,21 +19,19 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Map;
-
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketchIterator;
-
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Map;
 
 /**
  * Returns a list of variance values from a given {@link ArrayOfDoublesSketch}.

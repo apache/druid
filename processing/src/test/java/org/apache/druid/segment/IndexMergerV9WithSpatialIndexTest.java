@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.spatial.search.RadiusBound;
 import org.apache.druid.collections.spatial.search.RectangularBound;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -31,7 +32,6 @@ import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryPlus;
@@ -49,7 +49,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -87,7 +87,7 @@ public class IndexMergerV9WithSpatialIndexTest
     List<Object[]> argumentArrays = new ArrayList<>();
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       IndexMergerV9 indexMergerV9 = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
-      IndexIO indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+      IndexIO indexIO = TestHelper.getTestIndexIO();
 
       final IndexSpec indexSpec = new IndexSpec();
       final IncrementalIndex rtIndex = makeIncrementalIndex();

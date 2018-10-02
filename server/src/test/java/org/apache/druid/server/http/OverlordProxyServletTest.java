@@ -37,12 +37,14 @@ public class OverlordProxyServletTest
 
     HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
     EasyMock.expect(request.getQueryString()).andReturn("param1=test&param2=test2").anyTimes();
-    EasyMock.expect(request.getRequestURI()).andReturn("/druid/overlord/worker").anyTimes();
+
+    // %3A is a colon; test to make sure urlencoded paths work right.
+    EasyMock.expect(request.getRequestURI()).andReturn("/druid/over%3Alord/worker").anyTimes();
 
     EasyMock.replay(druidLeaderClient, request);
 
     URI uri = URI.create(new OverlordProxyServlet(druidLeaderClient, null, null).rewriteTarget(request));
-    Assert.assertEquals("https://overlord:port/druid/overlord/worker?param1=test&param2=test2", uri.toString());
+    Assert.assertEquals("https://overlord:port/druid/over%3Alord/worker?param1=test&param2=test2", uri.toString());
   }
 
 }

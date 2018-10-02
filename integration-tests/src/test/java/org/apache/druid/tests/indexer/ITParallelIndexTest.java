@@ -23,6 +23,8 @@ import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.io.Closeable;
+
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITParallelIndexTest extends AbstractITBatchIndexTest
 {
@@ -33,15 +35,12 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
   @Test
   public void testIndexData() throws Exception
   {
-    try {
+    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
       doIndexTestTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
           INDEX_QUERIES_RESOURCE
       );
-    }
-    finally {
-      unloadAndKillData(INDEX_DATASOURCE);
     }
   }
 }

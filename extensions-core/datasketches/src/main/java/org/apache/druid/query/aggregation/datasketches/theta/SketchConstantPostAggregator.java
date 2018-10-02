@@ -19,21 +19,19 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.commons.codec.digest.DigestUtils;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  */

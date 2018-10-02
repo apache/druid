@@ -19,10 +19,10 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.druid.java.util.common.StringUtils;
 
 public class CannotBuildQueryException extends RuntimeException
 {

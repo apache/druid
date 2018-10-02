@@ -25,7 +25,7 @@ import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
@@ -113,9 +113,9 @@ public class Transformer
     @Override
     public long getTimestampFromEpoch()
     {
-      final RowFunction transform = transforms.get(Column.TIME_COLUMN_NAME);
+      final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
       if (transform != null) {
-        return Rows.objectToNumber(Column.TIME_COLUMN_NAME, transform.eval(row)).longValue();
+        return Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row)).longValue();
       } else {
         return row.getTimestampFromEpoch();
       }
@@ -124,7 +124,7 @@ public class Transformer
     @Override
     public DateTime getTimestamp()
     {
-      final RowFunction transform = transforms.get(Column.TIME_COLUMN_NAME);
+      final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
       if (transform != null) {
         return DateTimes.utc(getTimestampFromEpoch());
       } else {

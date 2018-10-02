@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -31,6 +32,7 @@ public interface Segment extends Closeable
 {
   String getIdentifier();
   Interval getDataInterval();
+  @Nullable
   QueryableIndex asQueryableIndex();
   StorageAdapter asStorageAdapter();
   

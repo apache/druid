@@ -24,13 +24,11 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-
 import org.apache.druid.common.config.Log4jShutdown;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.impl.Log4jContextFactory;
 import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;

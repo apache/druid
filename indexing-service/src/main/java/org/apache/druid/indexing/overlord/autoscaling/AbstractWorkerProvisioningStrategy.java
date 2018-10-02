@@ -20,10 +20,10 @@
 package org.apache.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 

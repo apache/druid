@@ -21,11 +21,8 @@ package org.apache.druid.segment;
 
 import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
-import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
@@ -39,12 +36,7 @@ public class MetricHolder
   private static final byte[] version = new byte[]{0x0};
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
-  public static MetricHolder fromByteBuffer(ByteBuffer buf, SmooshedFileMapper mapper)
-  {
-    return fromByteBuffer(buf, null, mapper);
-  }
-
-  public static MetricHolder fromByteBuffer(ByteBuffer buf, ObjectStrategy strategy, SmooshedFileMapper mapper)
+  public static MetricHolder fromByteBuffer(ByteBuffer buf)
   {
     final byte ver = buf.get();
     if (version[0] != ver) {
@@ -60,17 +52,13 @@ public class MetricHolder
         holder.floatType = CompressedColumnarFloatsSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
         break;
       case COMPLEX:
-        if (strategy != null) {
-          holder.complexType = GenericIndexed.read(buf, strategy, mapper);
-        } else {
-          final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(holder.getTypeName());
+        final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(holder.getTypeName());
 
-          if (serdeForType == null) {
-            throw new ISE("Unknown type[%s], cannot load.", holder.getTypeName());
-          }
-
-          holder.complexType = GenericIndexed.read(buf, serdeForType.getObjectStrategy());
+        if (serdeForType == null) {
+          throw new ISE("Unknown type[%s], cannot load.", holder.getTypeName());
         }
+
+        holder.complexType = read(buf, serdeForType);
         break;
       case LONG:
       case DOUBLE:
@@ -80,9 +68,10 @@ public class MetricHolder
     return holder;
   }
 
-  private final String name;
-  private final String typeName;
-  private final MetricType type;
+  private static <T> GenericIndexed<T> read(ByteBuffer buf, ComplexMetricSerde serde)
+  {
+    return GenericIndexed.read(buf, serde.getObjectStrategy());
+  }
 
   public enum MetricType
   {
@@ -104,8 +93,11 @@ public class MetricHolder
     }
   }
 
+  private final String name;
+  private final String typeName;
+  private final MetricType type;
   CompressedColumnarFloatsSupplier floatType = null;
-  Indexed complexType = null;
+  GenericIndexed<?> complexType = null;
 
   private MetricHolder(
       String name,

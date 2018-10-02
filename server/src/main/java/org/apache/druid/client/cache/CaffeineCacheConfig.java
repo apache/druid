@@ -20,6 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.concurrent.Executor;
 
 public class CaffeineCacheConfig

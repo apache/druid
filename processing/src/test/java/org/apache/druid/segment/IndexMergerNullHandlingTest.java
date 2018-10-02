@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -66,7 +66,7 @@ public class IndexMergerNullHandlingTest
   public void setUp()
   {
     indexMerger = TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
-    indexIO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+    indexIO = TestHelper.getTestIndexIO();
     indexSpec = new IndexSpec();
   }
 
@@ -117,13 +117,13 @@ public class IndexMergerNullHandlingTest
 
       final File tempDir = temporaryFolder.newFolder();
       try (QueryableIndex index = indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))) {
-        final Column column = index.getColumn("d");
+        final ColumnHolder columnHolder = index.getColumnHolder("d");
 
         if (subsetList.stream().allMatch(nullFlavors::contains)) {
           // all null -> should be missing
-          Assert.assertNull(subsetList.toString(), column);
+          Assert.assertNull(subsetList.toString(), columnHolder);
         } else {
-          Assert.assertNotNull(subsetList.toString(), column);
+          Assert.assertNotNull(subsetList.toString(), columnHolder);
 
           // The column has multiple values if there are any lists with > 1 element in the input set.
           final boolean hasMultipleValues = subsetList.stream()
@@ -141,7 +141,8 @@ public class IndexMergerNullHandlingTest
             }
           }
 
-          try (final DictionaryEncodedColumn<String> dictionaryColumn = column.getDictionaryEncoding()) {
+          try (final DictionaryEncodedColumn<String> dictionaryColumn =
+                   (DictionaryEncodedColumn<String>) columnHolder.getColumn()) {
             // Verify unique values against the dictionary.
             Assert.assertEquals(
                 subsetList.toString(),
@@ -174,7 +175,7 @@ public class IndexMergerNullHandlingTest
             );
 
             // Verify that the bitmap index for null is correct.
-            final BitmapIndex bitmapIndex = column.getBitmapIndex();
+            final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
 
             // Read through the column to find all the rows that should match null.
             final List<Integer> expectedNullRows = new ArrayList<>();

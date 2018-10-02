@@ -33,14 +33,14 @@ import java.util.Objects;
 /**
  * Settable implementation of {@link DimensionSelector}.
  */
-public class SettableDimensionValueSelector implements SettableColumnValueSelector, DimensionSelector
+public class SettableDimensionValueSelector implements DimensionSelector, SettableColumnValueSelector<Object>
 {
   @Nullable
   private DimensionSelector keptSelector;
   private final ArrayBasedIndexedInts keptRow = new ArrayBasedIndexedInts();
 
   @Override
-  public void setValueFrom(ColumnValueSelector selector)
+  public void setValueFrom(ColumnValueSelector<?> selector)
   {
     DimensionSelector dimensionSelector = (DimensionSelector) selector;
     keptSelector = dimensionSelector;

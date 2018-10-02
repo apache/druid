@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.listener.announcer;
 
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.StringUtils;
@@ -26,7 +27,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.CloserRule;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.curator.utils.ZKPaths;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;

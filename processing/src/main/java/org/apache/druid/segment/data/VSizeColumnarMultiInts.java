@@ -109,12 +109,6 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   }
 
   @Override
-  public Class<? extends VSizeColumnarInts> getClazz()
-  {
-    return VSizeColumnarInts.class;
-  }
-
-  @Override
   public int size()
   {
     return size;

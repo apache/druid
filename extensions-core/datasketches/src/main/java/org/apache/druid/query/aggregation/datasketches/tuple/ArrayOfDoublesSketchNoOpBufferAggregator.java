@@ -19,13 +19,12 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import java.nio.ByteBuffer;
-
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
-
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
+import java.nio.ByteBuffer;
 
 public class ArrayOfDoublesSketchNoOpBufferAggregator implements BufferAggregator
 {

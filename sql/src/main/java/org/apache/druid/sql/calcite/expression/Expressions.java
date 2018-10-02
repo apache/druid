@@ -22,6 +22,17 @@ package org.apache.druid.sql.calcite.expression;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -41,8 +52,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
@@ -50,16 +60,6 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -219,12 +219,20 @@ public class Expressions
       final RexNode expression
   )
   {
-    if (expression.getKind() == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
+    final SqlKind kind = expression.getKind();
+
+    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+      return toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()));
+    } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
+      return new NotDimFilter(
+          toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()))
+      );
+    } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
       // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
       return toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()));
-    } else if (expression.getKind() == SqlKind.AND
-               || expression.getKind() == SqlKind.OR
-               || expression.getKind() == SqlKind.NOT) {
+    } else if (kind == SqlKind.AND
+               || kind == SqlKind.OR
+               || kind == SqlKind.NOT) {
       final List<DimFilter> filters = Lists.newArrayList();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
         final DimFilter nextFilter = toFilter(
@@ -238,12 +246,12 @@ public class Expressions
         filters.add(nextFilter);
       }
 
-      if (expression.getKind() == SqlKind.AND) {
+      if (kind == SqlKind.AND) {
         return new AndDimFilter(filters);
-      } else if (expression.getKind() == SqlKind.OR) {
+      } else if (kind == SqlKind.OR) {
         return new OrDimFilter(filters);
       } else {
-        assert expression.getKind() == SqlKind.NOT;
+        assert kind == SqlKind.NOT;
         return new NotDimFilter(Iterables.getOnlyElement(filters));
       }
     } else {
@@ -383,7 +391,7 @@ public class Expressions
       if (queryGranularity != null) {
         // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
         final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
-        return buildTimeFloorFilter(Column.TIME_COLUMN_NAME, queryGranularity, flippedKind, rhsMillis);
+        return buildTimeFloorFilter(ColumnHolder.TIME_COLUMN_NAME, queryGranularity, flippedKind, rhsMillis);
       }
 
       // In the general case, lhs must be translatable to a SimpleExtraction to be simple-filterable.
@@ -394,7 +402,7 @@ public class Expressions
       final String column = lhsExpression.getSimpleExtraction().getColumn();
       final ExtractionFn extractionFn = lhsExpression.getSimpleExtraction().getExtractionFn();
 
-      if (column.equals(Column.TIME_COLUMN_NAME) && extractionFn instanceof TimeFormatExtractionFn) {
+      if (column.equals(ColumnHolder.TIME_COLUMN_NAME) && extractionFn instanceof TimeFormatExtractionFn) {
         // Check if we can strip the extractionFn and convert the filter to a direct filter on __time.
         // This allows potential conversion to query-level "intervals" later on, which is ideal for Druid queries.
 
@@ -555,7 +563,7 @@ public class Expressions
     final Expr arg = expr.getArg();
     final Granularity granularity = expr.getGranularity();
 
-    if (Column.TIME_COLUMN_NAME.equals(Parser.getIdentifierIfIdentifier(arg))) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(Parser.getIdentifierIfIdentifier(arg))) {
       return granularity;
     } else {
       return null;

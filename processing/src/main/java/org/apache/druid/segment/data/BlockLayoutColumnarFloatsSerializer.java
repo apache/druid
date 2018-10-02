@@ -21,9 +21,9 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

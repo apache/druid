@@ -244,6 +244,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportBackPressureTime(long timeNs)
+  {
+    return reportMillisTimeMetric("query/node/backpressure", timeNs);
+  }
+
+  @Override
   public QueryMetrics<QueryType> reportNodeTime(long timeNs)
   {
     return reportMillisTimeMetric("query/node/time", timeNs);

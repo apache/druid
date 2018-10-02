@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -114,7 +115,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   public byte[] getCacheKey()
   {
-    final byte[] filterBytes = dimFilter == null ? new byte[] {} : dimFilter.getCacheKey();
+    final byte[] filterBytes = dimFilter == null ? ByteArrays.EMPTY_ARRAY : dimFilter.getCacheKey();
     final byte[] boundBytes = StringUtils.toUtf8(bound);
     final byte delimiter = (byte) 0xff;
     return ByteBuffer.allocate(2 + boundBytes.length + filterBytes.length)

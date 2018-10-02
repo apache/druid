@@ -31,9 +31,8 @@ public class ColumnBuilder
   private boolean hasMultipleValues = false;
   private boolean filterable = false;
 
-  private Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn = null;
-  private Supplier<GenericColumn> genericColumn = null;
-  private Supplier<ComplexColumn> complexColumn = null;
+  private Supplier<? extends BaseColumn> columnSupplier = null;
+  private boolean dictionaryEncoded = false;
   private Supplier<BitmapIndex> bitmapIndex = null;
   private Supplier<SpatialIndex> spatialIndex = null;
   private SmooshedFileMapper fileMapper = null;
@@ -61,6 +60,13 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setDictionaryEncodedColumnSupplier(Supplier<? extends DictionaryEncodedColumn<?>> columnSupplier)
+  {
+    this.columnSupplier = columnSupplier;
+    this.dictionaryEncoded = true;
+    return this;
+  }
+
   @SuppressWarnings("unused")
   public ColumnBuilder setFilterable(boolean filterable)
   {
@@ -68,21 +74,15 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setDictionaryEncodedColumn(Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn)
+  public ColumnBuilder setComplexColumnSupplier(Supplier<? extends ComplexColumn> columnSupplier)
   {
-    this.dictionaryEncodedColumn = dictionaryEncodedColumn;
+    this.columnSupplier = columnSupplier;
     return this;
   }
 
-  public ColumnBuilder setGenericColumn(Supplier<GenericColumn> genericColumn)
+  public ColumnBuilder setNumericColumnSupplier(Supplier<? extends NumericColumn> columnSupplier)
   {
-    this.genericColumn = genericColumn;
-    return this;
-  }
-
-  public ColumnBuilder setComplexColumn(Supplier<ComplexColumn> complexColumn)
-  {
-    this.complexColumn = complexColumn;
+    this.columnSupplier = columnSupplier;
     return this;
   }
 
@@ -98,21 +98,19 @@ public class ColumnBuilder
     return this;
   }
 
-  public Column build()
+  public ColumnHolder build()
   {
     Preconditions.checkState(type != null, "Type must be set.");
 
-    return new SimpleColumn(
+    return new SimpleColumnHolder(
         new ColumnCapabilitiesImpl()
             .setType(type)
-            .setDictionaryEncoded(dictionaryEncodedColumn != null)
+            .setDictionaryEncoded(dictionaryEncoded)
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
             .setHasMultipleValues(hasMultipleValues)
             .setFilterable(filterable),
-        dictionaryEncodedColumn,
-        genericColumn,
-        complexColumn,
+        columnSupplier,
         bitmapIndex,
         spatialIndex
     );
