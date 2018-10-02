@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 
 public class ObjectWriter implements ResultFormat.Writer
 {
@@ -51,6 +52,18 @@ public class ObjectWriter implements ResultFormat.Writer
     // End with LF.
     jsonGenerator.flush();
     outputStream.write('\n');
+  }
+
+  @Override
+  public void writeHeader(final List<String> columnNames) throws IOException
+  {
+    jsonGenerator.writeStartObject();
+
+    for (String columnName : columnNames) {
+      jsonGenerator.writeNullField(columnName);
+    }
+
+    jsonGenerator.writeEndObject();
   }
 
   @Override
