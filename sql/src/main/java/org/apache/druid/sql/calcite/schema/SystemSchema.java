@@ -559,8 +559,8 @@ public class SystemSchema extends AbstractSchema
                                   task.getDataSource(),
                                   task.getCreatedTime(),
                                   task.getQueueInsertionTime(),
-                                  task.getState(),
-                                  task.getRunnerTaskState(),
+                                  task.getStatusCode(),
+                                  task.getRunnerStatusCode(),
                                   task.getDuration(),
                                   task.getLocation().getHost() + ":" + (task.getLocation().getTlsPort()
                                                                           == -1
