@@ -33,6 +33,7 @@ import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
+import org.apache.commons.io.output.NullWriter;
 import org.apache.druid.cli.GuiceRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -51,7 +52,6 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
-import org.apache.commons.io.output.NullWriter;
 
 import java.io.File;
 import java.io.IOException;

@@ -26,12 +26,12 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
-import org.apache.druid.java.util.common.io.NativeIO;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
+import org.apache.druid.java.util.common.io.NativeIO;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;

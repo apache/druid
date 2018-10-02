@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.CachingIndexed;
@@ -43,27 +44,23 @@ import java.util.BitSet;
 
 /**
 */
-public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
+public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
+  @Nullable
   private final ColumnarInts column;
+  @Nullable
   private final ColumnarMultiInts multiValueColumn;
   private final CachingIndexed<String> cachedLookups;
 
-  public SimpleDictionaryEncodedColumn(
-      ColumnarInts singleValueColumn,
-      ColumnarMultiInts multiValueColumn,
+  public StringDictionaryEncodedColumn(
+      @Nullable ColumnarInts singleValueColumn,
+      @Nullable ColumnarMultiInts multiValueColumn,
       CachingIndexed<String> cachedLookups
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
     this.cachedLookups = cachedLookups;
-  }
-
-  @Override
-  public Class<String> getClazz()
-  {
-    return String.class;
   }
 
   @Override
@@ -115,7 +112,8 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Nullable final ExtractionFn extractionFn
   )
   {
-    abstract class QueryableDimensionSelector implements HistoricalDimensionSelector, IdLookup
+    abstract class QueryableDimensionSelector extends AbstractDimensionSelector
+        implements HistoricalDimensionSelector, IdLookup
     {
       @Override
       public int getValueCardinality()
@@ -126,10 +124,8 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       @Override
       public String lookupName(int id)
       {
-        final String value = SimpleDictionaryEncodedColumn.this.lookupName(id);
-        return extractionFn == null ?
-               value :
-               extractionFn.apply(value);
+        final String value = StringDictionaryEncodedColumn.this.lookupName(id);
+        return extractionFn == null ? value : extractionFn.apply(value);
       }
 
       @Override
@@ -151,7 +147,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         if (extractionFn != null) {
           throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
         }
-        return SimpleDictionaryEncodedColumn.this.lookupId(name);
+        return StringDictionaryEncodedColumn.this.lookupId(name);
       }
     }
 
@@ -171,7 +167,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(String value)
+        public ValueMatcher makeValueMatcher(@Nullable String value)
         {
           return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
         }
@@ -236,7 +232,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final String value)
+        public ValueMatcher makeValueMatcher(final @Nullable String value)
         {
           if (extractionFn == null) {
             final int valueId = lookupId(value);
@@ -252,7 +248,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
                 @Override
                 public void inspectRuntimeShape(RuntimeShapeInspector inspector)
                 {
-                  inspector.visit("column", SimpleDictionaryEncodedColumn.this);
+                  inspector.visit("column", StringDictionaryEncodedColumn.this);
                 }
               };
             } else {
@@ -293,7 +289,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
             @Override
             public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
-              inspector.visit("column", SimpleDictionaryEncodedColumn.this);
+              inspector.visit("column", StringDictionaryEncodedColumn.this);
             }
           };
         }

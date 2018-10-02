@@ -21,31 +21,33 @@ package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ColumnarDoubles;
-import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
+import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class DoubleGenericColumnPartSerde implements ColumnPartSerde
+/**
+ */
+public class LongNumericColumnPartSerde implements ColumnPartSerde
 {
   @JsonCreator
-  public static DoubleGenericColumnPartSerde getDoubleGenericColumnPartSerde(
+  public static LongNumericColumnPartSerde createDeserializer(
       @JsonProperty("byteOrder") ByteOrder byteOrder
   )
   {
-    return new DoubleGenericColumnPartSerde(byteOrder, null);
+    return new LongNumericColumnPartSerde(byteOrder, null);
   }
 
   private final ByteOrder byteOrder;
+  @Nullable
   private final Serializer serializer;
 
-  private DoubleGenericColumnPartSerde(ByteOrder byteOrder, Serializer serializer)
+  private LongNumericColumnPartSerde(ByteOrder byteOrder, @Nullable Serializer serializer)
   {
     this.byteOrder = byteOrder;
     this.serializer = serializer;
@@ -79,12 +81,13 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
-    public DoubleGenericColumnPartSerde build()
+    public LongNumericColumnPartSerde build()
     {
-      return new DoubleGenericColumnPartSerde(byteOrder, delegate);
+      return new LongNumericColumnPartSerde(byteOrder, delegate);
     }
   }
 
+  @Nullable
   @Override
   public Serializer getSerializer()
   {
@@ -99,15 +102,17 @@ public class DoubleGenericColumnPartSerde implements ColumnPartSerde
       @Override
       public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
       {
-        final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
+        final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
             buffer,
             byteOrder
         );
-        builder.setType(ValueType.DOUBLE)
+        LongNumericColumnSupplier columnSupplier = new LongNumericColumnSupplier(
+            column,
+            IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
+        );
+        builder.setType(ValueType.LONG)
                .setHasMultipleValues(false)
-               .setGenericColumn(new DoubleGenericColumnSupplier(column, IndexIO.LEGACY_FACTORY.getBitmapFactory()
-                                                                                             .makeEmptyImmutableBitmap()));
-
+               .setNumericColumnSupplier(columnSupplier);
       }
     };
   }

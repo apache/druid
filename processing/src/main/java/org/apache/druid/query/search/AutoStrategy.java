@@ -27,7 +27,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.List;
 
@@ -114,9 +114,9 @@ public class AutoStrategy extends SearchStrategy
   {
     long totalCard = 0;
     for (DimensionSpec dimension : dimensionSpecs) {
-      final Column column = index.getColumn(dimension.getDimension());
-      if (column != null) {
-        final BitmapIndex bitmapIndex = column.getBitmapIndex();
+      final ColumnHolder columnHolder = index.getColumnHolder(dimension.getDimension());
+      if (columnHolder != null) {
+        final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
         if (bitmapIndex != null) {
           totalCard += bitmapIndex.getCardinality();
         }

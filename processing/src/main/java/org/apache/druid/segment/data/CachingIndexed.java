@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -30,11 +31,12 @@ import java.util.Map;
 
 public class CachingIndexed<T> implements Indexed<T>, Closeable
 {
-  public static final int INITIAL_CACHE_CAPACITY = 16384;
+  private static final int INITIAL_CACHE_CAPACITY = 16384;
 
   private static final Logger log = new Logger(CachingIndexed.class);
 
   private final GenericIndexed<T>.BufferIndexed delegate;
+  @Nullable
   private final SizedLRUMap<Integer, T> cachedValues;
 
   /**
@@ -56,12 +58,6 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
     } else {
       cachedValues = null;
     }
-  }
-
-  @Override
-  public Class<? extends T> getClazz()
-  {
-    return delegate.getClazz();
   }
 
   @Override
@@ -88,7 +84,7 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
   }
 
   @Override
-  public int indexOf(T value)
+  public int indexOf(@Nullable T value)
   {
     return delegate.indexOf(value);
   }
@@ -120,7 +116,7 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
     private final int maxBytes;
     private int numBytes = 0;
 
-    public SizedLRUMap(int initialCapacity, int maxBytes)
+    SizedLRUMap(int initialCapacity, int maxBytes)
     {
       super(initialCapacity, 0.75f, true);
       this.maxBytes = maxBytes;
@@ -136,13 +132,14 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
       return false;
     }
 
-    public void put(K key, V value, int size)
+    public void put(K key, @Nullable V value, int size)
     {
       final int totalSize = size + 48; // add approximate object overhead
       numBytes += totalSize;
       super.put(key, new Pair<>(totalSize, value));
     }
 
+    @Nullable
     public V getValue(Object key)
     {
       final Pair<Integer, V> sizeValuePair = super.get(key);

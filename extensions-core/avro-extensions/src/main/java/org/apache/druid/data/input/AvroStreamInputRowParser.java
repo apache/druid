@@ -21,11 +21,11 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.avro.AvroBytesDecoder;
 import org.apache.druid.data.input.avro.AvroParsers;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
-import org.apache.avro.generic.GenericRecord;
 
 import java.nio.ByteBuffer;
 import java.util.List;

@@ -36,5 +36,5 @@ public interface BaseObjectColumnValueSelector<T> extends BaseNullableColumnValu
   @Nullable
   T getObject();
 
-  Class<T> classOfObject();
+  Class<? extends T> classOfObject();
 }

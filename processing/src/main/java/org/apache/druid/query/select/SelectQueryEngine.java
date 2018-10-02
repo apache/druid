@@ -45,8 +45,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
@@ -236,7 +236,7 @@ public class SelectQueryEngine
             );
 
             final BaseLongColumnValueSelector timestampColumnSelector =
-                cursor.getColumnSelectorFactory().makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+                cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
 
             final List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
                 DimensionHandlerUtils.createColumnSelectorPluses(

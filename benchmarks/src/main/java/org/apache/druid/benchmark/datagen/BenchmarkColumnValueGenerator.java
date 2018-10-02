@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.datagen;
 
-import org.apache.druid.segment.column.ValueType;
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
@@ -27,6 +26,7 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.apache.commons.math3.util.Pair;
+import org.apache.druid.segment.column.ValueType;
 
 import java.io.Serializable;
 import java.util.ArrayList;

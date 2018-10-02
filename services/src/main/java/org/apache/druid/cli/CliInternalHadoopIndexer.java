@@ -28,7 +28,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import org.apache.druid.guice.LazySingleton;

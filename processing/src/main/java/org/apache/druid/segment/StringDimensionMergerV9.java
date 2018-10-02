@@ -22,6 +22,8 @@ package org.apache.druid.segment;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
@@ -31,16 +33,17 @@ import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ArrayIndexed;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.ByteBufferWriter;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ColumnarIntsSerializer;
 import org.apache.druid.segment.data.ColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
@@ -50,27 +53,28 @@ import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarMultiIntsSerializer;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-import it.unimi.dsi.fastutil.ints.IntIterable;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class StringDimensionMergerV9 implements DimensionMergerV9
 {
   private static final Logger log = new Logger(StringDimensionMergerV9.class);
 
-  private static final Indexed<String> NULL_STR_DIM_VAL = new ArrayIndexed<>(new String[]{null}, String.class);
+  private static final Indexed<String> NULL_STR_DIM_VAL = new ListIndexed<>(Collections.singletonList(null));
   private static final Splitter SPLITTER = Splitter.on(",");
 
   private ColumnarIntsSerializer encodedValueSerializer;
@@ -89,24 +93,29 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   private int rowCount = 0;
   private ColumnCapabilities capabilities;
   private List<IndexableAdapter> adapters;
-  private ProgressIndicator progress;
   private final IndexSpec indexSpec;
   private IndexMerger.DictionaryMergeIterator dictionaryMergeIterator;
+
+  private final ProgressIndicator progress;
+  private final Closer closer;
 
   public StringDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      ProgressIndicator progress
+      ProgressIndicator progress,
+      Closer closer
   )
   {
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    this.progress = progress;
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+
+    this.progress = progress;
+    this.closer = closer;
   }
 
   @Override
@@ -128,7 +137,8 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     Indexed<String> dimValueLookup = null;
     Indexed<String>[] dimValueLookups = new Indexed[adapters.size() + 1];
     for (int i = 0; i < adapters.size(); i++) {
-      Indexed<String> dimValues = adapters.get(i).getDimValueLookup(dimensionName);
+      @SuppressWarnings("MustBeClosedChecker") // we register dimValues in the closer
+      Indexed<String> dimValues = closer.register(adapters.get(i).getDimValueLookup(dimensionName));
       if (dimValues != null && !allNull(dimValues)) {
         dimHasValues = true;
         hasNull |= dimValues.indexOf(null) >= 0;
@@ -667,8 +677,12 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
       if (dimConversion != null) {
         seekers[i] = new IndexSeekerWithConversion((IntBuffer) dimConversion.asReadOnlyBuffer().rewind());
       } else {
-        Indexed<String> dimValueLookup = adapters.get(i).getDimValueLookup(dimension);
-        seekers[i] = new IndexSeekerWithoutConversion(dimValueLookup == null ? 0 : dimValueLookup.size());
+        try (CloseableIndexed<String> dimValueLookup = adapters.get(i).getDimValueLookup(dimension)) {
+          seekers[i] = new IndexSeekerWithoutConversion(dimValueLookup == null ? 0 : dimValueLookup.size());
+        }
+        catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
       }
     }
     return seekers;

@@ -21,11 +21,11 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;

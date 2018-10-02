@@ -51,7 +51,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -306,8 +306,8 @@ public class DoubleStorageTest
 
   private static QueryableIndex buildIndex(String storeDoubleAsFloat) throws IOException
   {
-    String oldValue = System.getProperty(Column.DOUBLE_STORAGE_TYPE_PROPERTY);
-    System.setProperty(Column.DOUBLE_STORAGE_TYPE_PROPERTY, storeDoubleAsFloat);
+    String oldValue = System.getProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY);
+    System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, storeDoubleAsFloat);
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(DateTimes.of("2011-01-13T00:00:00.000Z").getMillis())
         .withDimensionsSpec(ROW_PARSER)
@@ -332,9 +332,9 @@ public class DoubleStorageTest
     });
 
     if (oldValue == null) {
-      System.clearProperty(Column.DOUBLE_STORAGE_TYPE_PROPERTY);
+      System.clearProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY);
     } else {
-      System.setProperty(Column.DOUBLE_STORAGE_TYPE_PROPERTY, oldValue);
+      System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, oldValue);
     }
     File someTmpFile = File.createTempFile("billy", "yay");
     someTmpFile.delete();

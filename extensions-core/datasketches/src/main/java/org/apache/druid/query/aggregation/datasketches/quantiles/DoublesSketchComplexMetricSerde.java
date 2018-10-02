@@ -104,7 +104,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
   {
     final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
-    builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+    builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   // support large columns

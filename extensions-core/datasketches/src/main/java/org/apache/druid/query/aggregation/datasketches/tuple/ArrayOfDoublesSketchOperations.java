@@ -20,22 +20,18 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.yahoo.memory.Memory;
-
-import java.nio.charset.StandardCharsets;
-
-import org.apache.commons.codec.binary.Base64;
-
 import com.yahoo.sketches.tuple.ArrayOfDoublesAnotB;
 import com.yahoo.sketches.tuple.ArrayOfDoublesCombiner;
 import com.yahoo.sketches.tuple.ArrayOfDoublesIntersection;
+import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
-import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
+import java.nio.charset.StandardCharsets;
 
 public class ArrayOfDoublesSketchOperations
 {

@@ -19,13 +19,12 @@
 
 package org.apache.druid.indexing.appenderator;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
@@ -61,14 +60,7 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
 
     for (Map.Entry<String, Set<SegmentIdWithShardSpec>> entry : identifiersByDataSource.entrySet()) {
       final List<Interval> intervals = JodaUtils.condenseIntervals(
-          Iterables.transform(entry.getValue(), new Function<SegmentIdWithShardSpec, Interval>()
-          {
-            @Override
-            public Interval apply(SegmentIdWithShardSpec input)
-            {
-              return input.getInterval();
-            }
-          })
+          Iterables.transform(entry.getValue(), input -> input.getInterval())
       );
 
       final List<DataSegment> usedSegmentsForIntervals = taskActionClient.submit(

@@ -19,17 +19,15 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import java.nio.ByteBuffer;
-
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.quantiles.DoublesSketch;
-
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.segment.data.ObjectStrategy;
+
+import java.nio.ByteBuffer;
 
 public class DoublesSketchObjectStrategy implements ObjectStrategy<DoublesSketch>
 {
-
-  private static final byte[] EMPTY_BYTES = new byte[] {};
 
   @Override
   public int compare(final DoublesSketch s1, final DoublesSketch s2)
@@ -47,7 +45,7 @@ public class DoublesSketchObjectStrategy implements ObjectStrategy<DoublesSketch
   }
 
   @Override
-  public Class<? extends DoublesSketch> getClazz()
+  public Class<DoublesSketch> getClazz()
   {
     return DoublesSketch.class;
   }
@@ -56,7 +54,7 @@ public class DoublesSketchObjectStrategy implements ObjectStrategy<DoublesSketch
   public byte[] toBytes(final DoublesSketch sketch)
   {
     if (sketch == null || sketch.isEmpty()) {
-      return EMPTY_BYTES;
+      return ByteArrays.EMPTY_ARRAY;
     }
     return sketch.toByteArray(true);
   }

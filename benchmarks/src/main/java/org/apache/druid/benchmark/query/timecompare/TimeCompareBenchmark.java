@@ -71,8 +71,8 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -198,7 +198,7 @@ public class TimeCompareBenchmark
                   "sumLongSequential", "sumLongSequential"
               ),
               new IntervalDimFilter(
-                  Column.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(recent),
                   null
               )
@@ -210,7 +210,7 @@ public class TimeCompareBenchmark
                   "_cmp_sumLongSequential", "sumLongSequential"
               ),
               new IntervalDimFilter(
-                  Column.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(previous),
                   null
               )
@@ -248,7 +248,7 @@ public class TimeCompareBenchmark
                   "sumLongSequential", "sumLongSequential"
               ),
               new IntervalDimFilter(
-                  Column.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(recent),
                   null
               )
@@ -260,7 +260,7 @@ public class TimeCompareBenchmark
                   "_cmp_sumLongSequential", "sumLongSequential"
               ),
               new IntervalDimFilter(
-                  Column.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(previous),
                   null
               )

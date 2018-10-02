@@ -20,7 +20,6 @@
 package org.apache.druid.client;
 
 import com.google.common.base.Predicate;
-
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;

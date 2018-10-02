@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 

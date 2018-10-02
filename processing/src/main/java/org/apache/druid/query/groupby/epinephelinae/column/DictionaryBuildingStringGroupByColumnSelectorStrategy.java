@@ -21,12 +21,12 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import java.nio.ByteBuffer;
 import java.util.List;

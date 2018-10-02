@@ -19,21 +19,27 @@
 
 package org.apache.druid.query.filter;
 
+import com.google.errorprone.annotations.MustBeClosed;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.data.CloseableIndexed;
+
+import javax.annotation.Nullable;
 
 /**
  */
 public interface BitmapIndexSelector
 {
-  Indexed<String> getDimensionValues(String dimension);
+  @MustBeClosed
+  @Nullable
+  CloseableIndexed<String> getDimensionValues(String dimension);
   boolean hasMultipleValues(String dimension);
   int getNumRows();
   BitmapFactory getBitmapFactory();
   BitmapIndex getBitmapIndex(String dimension);
+  @Nullable
   ImmutableBitmap getBitmapIndex(String dimension, String value);
   ImmutableRTree getSpatialIndex(String dimension);
 }

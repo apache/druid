@@ -22,9 +22,11 @@ package org.apache.druid.segment.column;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 /**
  */
-public interface Column
+public interface ColumnHolder
 {
   String TIME_COLUMN_NAME = "__time";
   String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
@@ -38,15 +40,14 @@ public interface Column
   ColumnCapabilities getCapabilities();
 
   int getLength();
-  DictionaryEncodedColumn getDictionaryEncoding();
-
-  GenericColumn getGenericColumn();
-  ComplexColumn getComplexColumn();
+  BaseColumn getColumn();
+  @Nullable
   BitmapIndex getBitmapIndex();
+  @Nullable
   SpatialIndex getSpatialIndex();
 
   /**
    * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
    */
-  SettableColumnValueSelector makeSettableColumnValueSelector();
+  SettableColumnValueSelector makeNewSettableColumnValueSelector();
 }

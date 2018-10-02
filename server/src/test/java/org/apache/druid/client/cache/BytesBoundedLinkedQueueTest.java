@@ -20,10 +20,9 @@
 package org.apache.druid.client.cache;
 
 
+import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.apache.druid.java.util.common.ISE;
 
 import java.util.ArrayList;
 import java.util.List;

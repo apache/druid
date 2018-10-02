@@ -21,21 +21,22 @@ package org.apache.druid.segment;
 
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.virtual.BaseSingleValueDimensionSelector;
 
 import javax.annotation.Nullable;
 
 public class FloatWrappingDimensionSelector extends BaseSingleValueDimensionSelector
 {
   private final BaseFloatColumnValueSelector selector;
+  @Nullable
   private final ExtractionFn extractionFn;
 
-  public FloatWrappingDimensionSelector(BaseFloatColumnValueSelector selector, ExtractionFn extractionFn)
+  public FloatWrappingDimensionSelector(BaseFloatColumnValueSelector selector, @Nullable ExtractionFn extractionFn)
   {
     this.selector = selector;
     this.extractionFn = extractionFn;
   }
 
+  @Nullable
   @Override
   protected String getValue()
   {
@@ -44,19 +45,6 @@ public class FloatWrappingDimensionSelector extends BaseSingleValueDimensionSele
     } else {
       return extractionFn.apply(selector.getFloat());
     }
-  }
-
-  @Nullable
-  @Override
-  public Object getObject()
-  {
-    return getValue();
-  }
-
-  @Override
-  public Class classOfObject()
-  {
-    return String.class;
   }
 
   @Override

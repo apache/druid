@@ -416,13 +416,13 @@ public class UriExtractionNamespace implements ExtractionNamespace
           columns.contains(this.keyColumn),
           "Column [%s] not found int columns: %s",
           this.keyColumn,
-          Arrays.toString(columns.toArray())
+          columns
       );
       Preconditions.checkArgument(
           columns.contains(this.valueColumn),
           "Column [%s] not found int columns: %s",
           this.valueColumn,
-          Arrays.toString(columns.toArray())
+          columns
       );
 
       this.parser = new DelegateParser(delegate, this.keyColumn, this.valueColumn);

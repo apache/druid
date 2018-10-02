@@ -19,13 +19,13 @@
 
 package org.apache.druid.client.selector;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
-import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 
-import java.util.ArrayList;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;

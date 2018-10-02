@@ -22,13 +22,11 @@ package org.apache.druid.curator.discovery;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-
-import org.apache.druid.curator.CuratorTestBase;
-import org.apache.druid.java.util.common.ISE;
-
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.druid.curator.CuratorTestBase;
+import org.apache.druid.java.util.common.ISE;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

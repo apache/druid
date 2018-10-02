@@ -19,8 +19,8 @@
 
 package org.apache.druid.security.kerberos;
 
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;

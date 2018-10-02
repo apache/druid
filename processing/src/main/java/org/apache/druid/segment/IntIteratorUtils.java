@@ -19,13 +19,13 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.IAE;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import it.unimi.dsi.fastutil.longs.LongHeaps;
+import org.apache.druid.java.util.common.IAE;
 
 import java.util.List;
 import java.util.NoSuchElementException;

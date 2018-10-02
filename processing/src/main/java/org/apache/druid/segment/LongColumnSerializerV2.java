@@ -40,9 +40,9 @@ import java.nio.channels.WritableByteChannel;
  * Column Serializer for long column.
  * The column is serialized in two parts, first a bitmap indicating the nullability of row values
  * and second the actual row values.
- * This class is Unsafe for concurrent use from multiple threads.
+ * This class is unsafe for concurrent use from multiple threads.
  */
-public class LongColumnSerializerV2 implements GenericColumnSerializer
+public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
 {
   public static LongColumnSerializerV2 create(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -111,7 +111,7 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<?> selector) throws IOException
   {
     if (selector.isNull()) {
       nullRowsBitmap.add(rowCount);

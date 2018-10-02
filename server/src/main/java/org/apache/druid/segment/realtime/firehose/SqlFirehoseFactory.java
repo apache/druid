@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.impl.prefetch.PrefetchSqlFirehoseFactory;
 import org.apache.druid.guice.annotations.Smile;
@@ -34,7 +33,6 @@ import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
 import org.skife.jdbi.v2.exceptions.StatementException;
-
 
 import java.io.File;
 import java.io.FileInputStream;

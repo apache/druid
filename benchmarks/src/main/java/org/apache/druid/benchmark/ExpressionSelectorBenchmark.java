@@ -37,7 +37,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.timeline.DataSegment;
@@ -175,7 +175,7 @@ public class ExpressionSelectorBenchmark
               .getColumnSelectorFactory()
               .makeDimensionSelector(
                   new ExtractionDimensionSpec(
-                      Column.TIME_COLUMN_NAME,
+                      ColumnHolder.TIME_COLUMN_NAME,
                       "v",
                       new TimeFormatExtractionFn(null, null, null, Granularities.HOUR, true)
                   )

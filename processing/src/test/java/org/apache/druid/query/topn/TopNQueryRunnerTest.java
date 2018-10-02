@@ -88,7 +88,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.AfterClass;
@@ -3848,7 +3848,7 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                Column.TIME_COLUMN_NAME,
+                ColumnHolder.TIME_COLUMN_NAME,
                 "dayOfWeek",
                 new TimeFormatExtractionFn("EEEE", null, null, null, false)
             )
@@ -5062,7 +5062,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "time_alias", ValueType.LONG))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
@@ -5269,7 +5269,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(new ExtractionDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias", jsExtractionFn))
+        .dimension(new ExtractionDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "time_alias", jsExtractionFn))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
@@ -5744,7 +5744,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .filters(new BoundDimFilter(
-            Column.TIME_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME,
             "0",
             String.valueOf(Long.MAX_VALUE),
             true,

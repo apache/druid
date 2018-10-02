@@ -50,6 +50,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -58,7 +59,9 @@ import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,6 +69,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -98,8 +102,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private BatchServerInventoryView baseView;
   private CoordinatorServerView serverView;
   private CountDownLatch segmentViewInitLatch;
-  private CountDownLatch segmentAddedLatch;
-  private CountDownLatch segmentRemovedLatch;
+  /**
+   * The following two fields are changed during {@link #testMoveSegment()}, the change might not be visible from the
+   * thread, that runs the callback, registered in {@link #setupView()}. volatile modificator doesn't guarantee
+   * visibility either, but somewhat increases the chances.
+   */
+  private volatile CountDownLatch segmentAddedLatch;
+  private volatile CountDownLatch segmentRemovedLatch;
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
 
@@ -241,7 +250,10 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     tearDownServerAndCurator();
   }
 
-  @Test(timeout = 60_000L)
+  @Rule
+  public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
+
+  @Test
   public void testMoveSegment() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
@@ -430,7 +442,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
       {
         super.registerSegmentCallback(
-            exec, new SegmentCallback()
+            exec,
+            new SegmentCallback()
             {
               @Override
               public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)

@@ -62,7 +62,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 
@@ -566,6 +566,7 @@ public class GroupByQuery extends BaseQuery<Row>
     }
   }
 
+  @Nullable
   private Comparator<Row> getTimeComparator(boolean granular)
   {
     if (Granularities.ALL.equals(getGranularity())) {
@@ -719,10 +720,10 @@ public class GroupByQuery extends BaseQuery<Row>
       }
     }
 
-    if (outputNames.contains(Column.TIME_COLUMN_NAME)) {
+    if (outputNames.contains(ColumnHolder.TIME_COLUMN_NAME)) {
       throw new IAE(
           "'%s' cannot be used as an output name for dimensions, aggregators, or post-aggregators.",
-          Column.TIME_COLUMN_NAME
+          ColumnHolder.TIME_COLUMN_NAME
       );
     }
   }

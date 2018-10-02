@@ -19,9 +19,9 @@
 package org.apache.druid.data.input.parquet;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

@@ -34,9 +34,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.apache.druid.segment.IntIteratorUtils.mergeAscending;
 import static it.unimi.dsi.fastutil.ints.IntIterators.EMPTY_ITERATOR;
 import static java.lang.Integer.MAX_VALUE;
+import static org.apache.druid.segment.IntIteratorUtils.mergeAscending;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
