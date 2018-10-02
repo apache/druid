@@ -21,10 +21,10 @@ package org.apache.druid.metadata.storage.derby;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.derby.drda.NetworkServerControl;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
-import org.apache.derby.drda.NetworkServerControl;
 
 import java.net.InetAddress;
 

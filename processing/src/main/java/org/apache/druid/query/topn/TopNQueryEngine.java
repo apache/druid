@@ -33,8 +33,8 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
@@ -131,7 +131,7 @@ public class TopNQueryEngine
         // TimeExtractionTopNAlgorithm can work on any single-value dimension of type long.
         // Once we have arbitrary dimension types following check should be replaced by checking
         // that the column is of type long and single-value.
-        dimension.equals(Column.TIME_COLUMN_NAME)
+        dimension.equals(ColumnHolder.TIME_COLUMN_NAME)
         ) {
       // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
       // currently relies on the dimension cardinality to support lexicographic sorting

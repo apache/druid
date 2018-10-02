@@ -17,14 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.segment.virtual;
+package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
 
@@ -34,6 +32,7 @@ import java.util.Objects;
 public abstract class BaseSingleValueDimensionSelector implements DimensionSelector
 {
   @CalledFromHotLoop
+  @Nullable
   protected abstract String getValue();
 
   @Override
@@ -45,17 +44,18 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
   @Override
   public int getValueCardinality()
   {
-    return DimensionSelector.CARDINALITY_UNKNOWN;
+    return CARDINALITY_UNKNOWN;
   }
 
   @Override
   public String lookupName(int id)
   {
+    assert id == 0;
     return getValue();
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final String value)
+  public ValueMatcher makeValueMatcher(final @Nullable String value)
   {
     return new ValueMatcher()
     {
@@ -108,13 +108,13 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
 
   @Nullable
   @Override
-  public Object getObject()
+  public String getObject()
   {
     return getValue();
   }
 
   @Override
-  public Class classOfObject()
+  public Class<String> classOfObject()
   {
     return String.class;
   }

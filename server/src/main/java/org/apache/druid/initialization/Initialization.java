@@ -30,6 +30,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.guice.AWSModule;
@@ -69,7 +70,6 @@ import org.apache.druid.server.initialization.AuthenticatorMapperModule;
 import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.metrics.MetricsModule;
-import org.apache.commons.io.FileUtils;
 import org.eclipse.aether.artifact.DefaultArtifact;
 
 import java.io.File;

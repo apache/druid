@@ -19,13 +19,12 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import java.util.Arrays;
-
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import java.util.Arrays;
 
 public class ArrayOfDoublesSketchTTestPostAggregatorTest
 {

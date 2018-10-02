@@ -19,16 +19,15 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import java.util.Comparator;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+
+import java.util.Comparator;
+import java.util.Map;
 
 /**
  * Returns the number of retained entries from a given {@link ArrayOfDoublesSketch}.

@@ -21,9 +21,11 @@ package org.apache.druid.data.input.impl.prefetch;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -31,8 +33,6 @@ import org.apache.druid.data.input.impl.SqlFirehose;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.LineIterator;
 
 import javax.annotation.Nullable;
 import java.io.File;

@@ -17,28 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.serde;
+@EverythingIsNonnullByDefault
+package org.apache.druid.segment.column;
 
-import com.google.common.base.Supplier;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.segment.column.DoublesColumn;
-import org.apache.druid.segment.column.GenericColumn;
-import org.apache.druid.segment.data.ColumnarDoubles;
-
-public class DoubleGenericColumnSupplier implements Supplier<GenericColumn>
-{
-  private final Supplier<ColumnarDoubles> column;
-  private final ImmutableBitmap nullValueBitmap;
-
-  DoubleGenericColumnSupplier(Supplier<ColumnarDoubles> column, ImmutableBitmap nullValueBitmap)
-  {
-    this.column = column;
-    this.nullValueBitmap = nullValueBitmap;
-  }
-
-  @Override
-  public GenericColumn get()
-  {
-    return DoublesColumn.create(column.get(), nullValueBitmap);
-  }
-}
+import org.apache.druid.annotations.EverythingIsNonnullByDefault;

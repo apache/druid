@@ -62,8 +62,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
@@ -185,7 +185,7 @@ public class FilterPartitionBenchmark
 
     Interval interval = schemaInfo.getDataInterval();
     timeFilterNone = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(Long.MAX_VALUE),
         String.valueOf(Long.MAX_VALUE),
         true,
@@ -197,7 +197,7 @@ public class FilterPartitionBenchmark
 
     long halfEnd = (interval.getEndMillis() + interval.getStartMillis()) / 2;
     timeFilterHalf = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(halfEnd),
         true,
@@ -208,7 +208,7 @@ public class FilterPartitionBenchmark
     ));
 
     timeFilterAll = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(interval.getEndMillis()),
         true,

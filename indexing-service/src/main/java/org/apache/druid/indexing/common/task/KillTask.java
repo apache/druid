@@ -23,9 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;

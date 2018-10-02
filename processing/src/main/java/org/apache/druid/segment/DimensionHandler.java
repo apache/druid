@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -92,14 +93,14 @@ public interface DimensionHandler
    * @param segmentWriteOutMedium  this SegmentWriteOutMedium object could be used internally in the created merger, if needed
    * @param capabilities  The ColumnCapabilities of the dimension represented by this DimensionHandler
    * @param progress      ProgressIndicator used by the merging process
-
    * @return A new DimensionMergerV9 object.
    */
   DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      ProgressIndicator progress
+      ProgressIndicator progress,
+      Closer closer
   );
 
   /**

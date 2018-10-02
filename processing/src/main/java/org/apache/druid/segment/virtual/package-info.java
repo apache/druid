@@ -17,20 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+@EverythingIsNonnullByDefault
+package org.apache.druid.segment.virtual;
 
-import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
-
-/**
- */
-public interface GenericColumn extends BaseColumn, HotLoopCallee
-{
-  int length();
-
-  @CalledFromHotLoop
-  long getLongSingleValueRow(int rowNum);
-
-  @Override
-  void close();
-}
+import org.apache.druid.annotations.EverythingIsNonnullByDefault;

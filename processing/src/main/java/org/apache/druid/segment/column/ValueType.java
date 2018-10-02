@@ -34,6 +34,8 @@ import org.apache.druid.segment.selector.settable.SettableFloatColumnValueSelect
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 /**
  * Should be the same as {@link org.apache.druid.data.input.impl.DimensionSchema.ValueType}.
  * TODO merge them when druid-api is merged back into the main repo
@@ -44,14 +46,14 @@ public enum ValueType
     @Override
     public DimensionSelector makeNumericWrappingDimensionSelector(
         ColumnValueSelector numericColumnValueSelector,
-        ExtractionFn extractionFn
+        @Nullable ExtractionFn extractionFn
     )
     {
       return new FloatWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
     }
 
     @Override
-    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
     {
       return new SettableFloatColumnValueSelector();
     }
@@ -60,14 +62,14 @@ public enum ValueType
     @Override
     public DimensionSelector makeNumericWrappingDimensionSelector(
         ColumnValueSelector numericColumnValueSelector,
-        ExtractionFn extractionFn
+        @Nullable ExtractionFn extractionFn
     )
     {
       return new DoubleWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
     }
 
     @Override
-    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
     {
       return new SettableDoubleColumnValueSelector();
     }
@@ -76,28 +78,28 @@ public enum ValueType
     @Override
     public DimensionSelector makeNumericWrappingDimensionSelector(
         ColumnValueSelector numericColumnValueSelector,
-        ExtractionFn extractionFn
+        @Nullable ExtractionFn extractionFn
     )
     {
       return new LongWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
     }
 
     @Override
-    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
     {
       return new SettableLongColumnValueSelector();
     }
   },
   STRING {
     @Override
-    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
     {
       return new SettableDimensionValueSelector();
     }
   },
   COMPLEX {
     @Override
-    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
     {
       return new SettableObjectColumnValueSelector();
     }
@@ -105,13 +107,13 @@ public enum ValueType
 
   public DimensionSelector makeNumericWrappingDimensionSelector(
       ColumnValueSelector numericColumnValueSelector,
-      ExtractionFn extractionFn
+      @Nullable ExtractionFn extractionFn
   )
   {
     throw new UnsupportedOperationException("Not a numeric value type: " + name());
   }
 
-  public abstract SettableColumnValueSelector makeSettableColumnValueSelector();
+  public abstract SettableColumnValueSelector makeNewSettableColumnValueSelector();
 
   public boolean isNumeric()
   {

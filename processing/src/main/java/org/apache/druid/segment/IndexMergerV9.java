@@ -29,6 +29,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
@@ -41,10 +42,10 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnDescriptor;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -54,15 +55,14 @@ import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
-import org.apache.druid.segment.serde.DoubleGenericColumnPartSerde;
-import org.apache.druid.segment.serde.DoubleGenericColumnPartSerdeV2;
-import org.apache.druid.segment.serde.FloatGenericColumnPartSerde;
-import org.apache.druid.segment.serde.FloatGenericColumnPartSerdeV2;
-import org.apache.druid.segment.serde.LongGenericColumnPartSerde;
-import org.apache.druid.segment.serde.LongGenericColumnPartSerdeV2;
+import org.apache.druid.segment.serde.DoubleNumericColumnPartSerde;
+import org.apache.druid.segment.serde.DoubleNumericColumnPartSerdeV2;
+import org.apache.druid.segment.serde.FloatNumericColumnPartSerde;
+import org.apache.druid.segment.serde.FloatNumericColumnPartSerdeV2;
+import org.apache.druid.segment.serde.LongNumericColumnPartSerde;
+import org.apache.druid.segment.serde.LongNumericColumnPartSerdeV2;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -101,7 +101,7 @@ public class IndexMergerV9 implements IndexMerger
 
   private File makeIndexFiles(
       final List<IndexableAdapter> adapters,
-      final AggregatorFactory[] metricAggs,
+      final @Nullable AggregatorFactory[] metricAggs,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
@@ -162,10 +162,10 @@ public class IndexMergerV9 implements IndexMerger
       mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
 
       final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
-      final List<DimensionMerger> mergers = new ArrayList<>();
+      final List<DimensionMergerV9> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionHandler handler = handlers.get(mergedDimensions.get(i));
-        mergers.add(handler.makeMerger(indexSpec, segmentWriteOutMedium, dimCapabilities.get(i), progress));
+        mergers.add(handler.makeMerger(indexSpec, segmentWriteOutMedium, dimCapabilities.get(i), progress, closer));
       }
 
       /************* Setup Dim Conversions **************/
@@ -213,7 +213,7 @@ public class IndexMergerV9 implements IndexMerger
       );
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
-        DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
+        DimensionMergerV9 merger = mergers.get(i);
         merger.writeIndexes(rowNumConversions);
         if (merger.canSkip()) {
           continue;
@@ -263,7 +263,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final ProgressIndicator progress,
       final IndexSpec indexSpec,
-      final List<DimensionMerger> mergers
+      final List<DimensionMergerV9> mergers
   ) throws IOException
   {
     final String section = "make index.drd";
@@ -372,14 +372,14 @@ public class IndexMergerV9 implements IndexMerger
 
   static ColumnPartSerde createLongColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use LongGenericColumnPartSerde to allow rollback to previous versions.
+    // If using default values for null use LongNumericColumnPartSerde to allow rollback to previous versions.
     if (NullHandling.replaceWithDefault()) {
-      return LongGenericColumnPartSerde.serializerBuilder()
+      return LongNumericColumnPartSerde.serializerBuilder()
                                        .withByteOrder(IndexIO.BYTE_ORDER)
                                        .withDelegate(serializer)
                                        .build();
     } else {
-      return LongGenericColumnPartSerdeV2.serializerBuilder()
+      return LongNumericColumnPartSerdeV2.serializerBuilder()
                                          .withByteOrder(IndexIO.BYTE_ORDER)
                                          .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                          .withDelegate(serializer)
@@ -389,14 +389,14 @@ public class IndexMergerV9 implements IndexMerger
 
   static ColumnPartSerde createDoubleColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use DoubleGenericColumnPartSerde to allow rollback to previous versions.
+    // If using default values for null use DoubleNumericColumnPartSerde to allow rollback to previous versions.
     if (NullHandling.replaceWithDefault()) {
-      return DoubleGenericColumnPartSerde.serializerBuilder()
+      return DoubleNumericColumnPartSerde.serializerBuilder()
                                          .withByteOrder(IndexIO.BYTE_ORDER)
                                          .withDelegate(serializer)
                                          .build();
     } else {
-      return DoubleGenericColumnPartSerdeV2.serializerBuilder()
+      return DoubleNumericColumnPartSerdeV2.serializerBuilder()
                                            .withByteOrder(IndexIO.BYTE_ORDER)
                                            .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                            .withDelegate(serializer)
@@ -406,14 +406,14 @@ public class IndexMergerV9 implements IndexMerger
 
   static ColumnPartSerde createFloatColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use FloatGenericColumnPartSerde to allow rollback to previous versions.
+    // If using default values for null use FloatNumericColumnPartSerde to allow rollback to previous versions.
     if (NullHandling.replaceWithDefault()) {
-      return FloatGenericColumnPartSerde.serializerBuilder()
+      return FloatNumericColumnPartSerde.serializerBuilder()
                                         .withByteOrder(IndexIO.BYTE_ORDER)
                                         .withDelegate(serializer)
                                         .build();
     } else {
-      return FloatGenericColumnPartSerdeV2.serializerBuilder()
+      return FloatNumericColumnPartSerdeV2.serializerBuilder()
                                           .withByteOrder(IndexIO.BYTE_ORDER)
                                           .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                           .withDelegate(serializer)
@@ -437,7 +437,7 @@ public class IndexMergerV9 implements IndexMerger
         .setValueType(ValueType.LONG)
         .addSerde(createLongColumnPartSerde(timeWriter, indexSpec))
         .build();
-    makeColumn(v9Smoosher, Column.TIME_COLUMN_NAME, serdeficator);
+    makeColumn(v9Smoosher, ColumnHolder.TIME_COLUMN_NAME, serdeficator);
     log.info("Completed time column in %,d millis.", System.currentTimeMillis() - startTime);
     progress.stopSection(section);
   }
@@ -469,7 +469,7 @@ public class IndexMergerV9 implements IndexMerger
       final TimeAndDimsIterator timeAndDimsIterator,
       final GenericColumnSerializer timeWriter,
       final ArrayList<GenericColumnSerializer> metricWriters,
-      final List<DimensionMerger> mergers,
+      final List<DimensionMergerV9> mergers,
       final boolean fillRowNumConversions
   ) throws IOException
   {
@@ -687,7 +687,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<IndexableAdapter> indexes,
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
-      final List<DimensionMerger> mergers
+      final List<DimensionMergerV9> mergers
   ) throws IOException
   {
     final String section = "setup dimension conversions";
@@ -1010,7 +1010,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
       final Map<String, DimensionHandler> handlers,
-      final List<DimensionMerger> mergers
+      final List<DimensionMergerV9> mergers
   )
   {
     List<TransformableRowIterator> perIndexRowIterators = Lists.newArrayListWithCapacity(indexes.size());

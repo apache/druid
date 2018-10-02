@@ -20,9 +20,9 @@
 package org.apache.druid.query;
 
 import com.google.inject.Inject;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.util.concurrent.ExecutorService;
 

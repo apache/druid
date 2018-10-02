@@ -19,11 +19,10 @@
 
 package org.apache.druid.common.utils;
 
+import org.apache.druid.java.util.common.ISE;
 import org.hamcrest.number.OrderingComparison;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.apache.druid.java.util.common.ISE;
 
 public class SocketUtilTest
 {

@@ -39,10 +39,10 @@ import com.google.inject.Provides;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.storage.s3.S3Utils;
-import org.easymock.EasyMock;
-import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
+import org.apache.druid.storage.s3.S3Utils;
+import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 

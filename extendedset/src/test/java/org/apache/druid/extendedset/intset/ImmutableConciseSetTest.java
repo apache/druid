@@ -20,8 +20,8 @@
 package org.apache.druid.extendedset.intset;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.StringUtils;
 import junit.framework.Assert;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Test;
 
 import java.nio.IntBuffer;

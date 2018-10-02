@@ -364,7 +364,7 @@ public class Sink implements Iterable<FireHydrant>
                 QueryableIndex oldIndex = segment.asQueryableIndex();
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
-                  oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumn(dim).getCapabilities());
+                  oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumnHolder(dim).getCapabilities());
                 }
               }
               finally {

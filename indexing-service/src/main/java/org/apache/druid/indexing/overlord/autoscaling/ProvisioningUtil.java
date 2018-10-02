@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Predicate;
-
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.java.util.common.ISE;
 

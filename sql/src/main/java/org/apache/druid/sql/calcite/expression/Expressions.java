@@ -52,7 +52,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
@@ -391,7 +391,7 @@ public class Expressions
       if (queryGranularity != null) {
         // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
         final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
-        return buildTimeFloorFilter(Column.TIME_COLUMN_NAME, queryGranularity, flippedKind, rhsMillis);
+        return buildTimeFloorFilter(ColumnHolder.TIME_COLUMN_NAME, queryGranularity, flippedKind, rhsMillis);
       }
 
       // In the general case, lhs must be translatable to a SimpleExtraction to be simple-filterable.
@@ -402,7 +402,7 @@ public class Expressions
       final String column = lhsExpression.getSimpleExtraction().getColumn();
       final ExtractionFn extractionFn = lhsExpression.getSimpleExtraction().getExtractionFn();
 
-      if (column.equals(Column.TIME_COLUMN_NAME) && extractionFn instanceof TimeFormatExtractionFn) {
+      if (column.equals(ColumnHolder.TIME_COLUMN_NAME) && extractionFn instanceof TimeFormatExtractionFn) {
         // Check if we can strip the extractionFn and convert the filter to a direct filter on __time.
         // This allows potential conversion to query-level "intervals" later on, which is ideal for Druid queries.
 
@@ -563,7 +563,7 @@ public class Expressions
     final Expr arg = expr.getArg();
     final Granularity granularity = expr.getGranularity();
 
-    if (Column.TIME_COLUMN_NAME.equals(Parser.getIdentifierIfIdentifier(arg))) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(Parser.getIdentifierIfIdentifier(arg))) {
       return granularity;
     } else {
       return null;

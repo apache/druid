@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.select;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;

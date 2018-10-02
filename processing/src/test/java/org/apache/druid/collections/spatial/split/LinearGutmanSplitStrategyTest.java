@@ -19,13 +19,13 @@
 
 package org.apache.druid.collections.spatial.split;
 
+import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.spatial.Node;
 import org.apache.druid.collections.spatial.Point;
 import org.apache.druid.collections.spatial.RTree;
-import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Random;

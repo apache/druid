@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
+import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -35,15 +35,15 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  */
-public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
+public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
 {
   @JsonCreator
-  public static LongGenericColumnPartSerdeV2 createDeserializer(
+  public static FloatNumericColumnPartSerdeV2 createDeserializer(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
       @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
   )
   {
-    return new LongGenericColumnPartSerdeV2(
+    return new FloatNumericColumnPartSerdeV2(
         byteOrder,
         bitmapSerdeFactory != null ? bitmapSerdeFactory : new BitmapSerde.LegacyBitmapSerdeFactory(),
         null
@@ -51,12 +51,14 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
   }
 
   private final ByteOrder byteOrder;
+  @Nullable
   private Serializer serializer;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
-  private LongGenericColumnPartSerdeV2(
+  private FloatNumericColumnPartSerdeV2(
       ByteOrder byteOrder,
-      BitmapSerdeFactory bitmapSerdeFactory, Serializer serializer
+      BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable Serializer serializer
   )
   {
     this.byteOrder = byteOrder;
@@ -105,28 +107,27 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
       return this;
     }
 
-    public LongGenericColumnPartSerdeV2 build()
+    public FloatNumericColumnPartSerdeV2 build()
     {
-      return new LongGenericColumnPartSerdeV2(
-          byteOrder, bitmapSerdeFactory,
-          new Serializer()
-          {
-            @Override
-            public long getSerializedSize() throws IOException
-            {
-              return delegate.getSerializedSize();
-            }
+      Serializer serializer = new Serializer()
+      {
+        @Override
+        public long getSerializedSize() throws IOException
+        {
+          return delegate.getSerializedSize();
+        }
 
-            @Override
-            public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-            {
-              delegate.writeTo(channel, smoosher);
-            }
-          }
-      );
+        @Override
+        public void writeTo(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+        {
+          delegate.writeTo(channel, fileSmoosher);
+        }
+      };
+      return new FloatNumericColumnPartSerdeV2(byteOrder, bitmapSerdeFactory, serializer);
     }
   }
 
+  @Nullable
   @Override
   public Serializer getSerializer()
   {
@@ -139,7 +140,7 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
     return (buffer, builder, columnConfig) -> {
       int offset = buffer.getInt();
       int initialPos = buffer.position();
-      final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
+      final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
           buffer,
           byteOrder
       );
@@ -150,9 +151,9 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
       }
-      builder.setType(ValueType.LONG)
+      builder.setType(ValueType.FLOAT)
              .setHasMultipleValues(false)
-             .setGenericColumn(new LongGenericColumnSupplier(column, bitmap));
+             .setNumericColumnSupplier(new FloatNumericColumnSupplier(column, bitmap));
     };
   }
 }

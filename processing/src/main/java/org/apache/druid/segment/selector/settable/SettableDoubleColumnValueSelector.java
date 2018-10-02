@@ -29,7 +29,7 @@ public class SettableDoubleColumnValueSelector implements SettableColumnValueSel
   private double value;
 
   @Override
-  public void setValueFrom(ColumnValueSelector selector)
+  public void setValueFrom(ColumnValueSelector<?> selector)
   {
     isNull = selector.isNull();
     if (!isNull) {

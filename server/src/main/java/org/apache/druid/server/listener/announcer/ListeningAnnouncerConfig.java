@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.curator.utils.ZKPaths;
 
 /**
  * Even though we provide the mechanism to get zk paths here, we do NOT handle announcing and unannouncing in this module.

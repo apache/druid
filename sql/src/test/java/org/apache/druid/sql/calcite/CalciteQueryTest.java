@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.hll.HLLCV1;
+import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -90,7 +90,7 @@ import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -614,6 +614,7 @@ public class CalciteQueryTest extends CalciteTestBase
   public void testSelectStar() throws Exception
   {
     String nullValue = NullHandling.replaceWithDefault() ? "" : null;
+    String hyperLogLogCollectorClassName = VersionOneHyperLogLogCollector.class.getName();
     testQuery(
         "SELECT * FROM druid.foo",
         ImmutableList.of(
@@ -626,12 +627,12 @@ public class CalciteQueryTest extends CalciteTestBase
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, hyperLogLogCollectorClassName}
         )
     );
   }
@@ -665,7 +666,7 @@ public class CalciteQueryTest extends CalciteTestBase
                 "abcd",
                 9999.0f,
                 NullHandling.defaultDoubleValue(),
-                HLLCV1.class.getName()
+                VersionOneHyperLogLogCollector.class.getName()
             }
         )
     );
@@ -723,8 +724,8 @@ public class CalciteQueryTest extends CalciteTestBase
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2.0f, 2.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2.0f, 2.0, VersionOneHyperLogLogCollector.class.getName()}
         )
     );
   }
@@ -775,8 +776,8 @@ public class CalciteQueryTest extends CalciteTestBase
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, HLLCV1.class.getName()}
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6d, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, VersionOneHyperLogLogCollector.class.getName()}
         )
     );
   }
@@ -816,12 +817,12 @@ public class CalciteQueryTest extends CalciteTestBase
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, VersionOneHyperLogLogCollector.class.getName()}
         )
     );
   }
@@ -2121,9 +2122,9 @@ public class CalciteQueryTest extends CalciteTestBase
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0f, 4.0d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0f, 5.0d, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0d, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0f, 4.0d, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0f, 5.0d, VersionOneHyperLogLogCollector.class.getName()}
         )
     );
   }
@@ -7860,7 +7861,7 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
     return new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(interval.getEndMillis()),
         false,

@@ -40,15 +40,16 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
-import static org.easymock.EasyMock.createMock;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Test;
-import org.hamcrest.CoreMatchers;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+
+import static org.easymock.EasyMock.createMock;
 
 public class MaterializedViewSupervisorSpecTest 
 {

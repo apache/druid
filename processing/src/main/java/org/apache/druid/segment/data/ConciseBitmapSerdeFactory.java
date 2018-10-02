@@ -58,7 +58,7 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
     public WrappedImmutableConciseBitmap fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
       buffer.limit(buffer.position() + numBytes);
-      return new WrappedImmutableConciseBitmap(new ImmutableConciseSet(buffer));
+      return new WrappedImmutableConciseBitmap(new ImmutableConciseSet(buffer.asIntBuffer()));
     }
 
     @Override

@@ -28,17 +28,16 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
 public class Rows
 {
-  public static final Long LONG_ZERO = 0L;
 
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
@@ -55,10 +54,7 @@ public class Rows
         dims.put(dim, dimValues);
       }
     }
-    return ImmutableList.of(
-        timeStamp,
-        dims
-    );
+    return ImmutableList.of(timeStamp, dims);
   }
 
   /**
@@ -70,14 +66,7 @@ public class Rows
       return Collections.emptyList();
     } else if (inputValue instanceof List) {
       // guava's toString function fails on null objects, so please do not use it
-      final List<Object> values = (List) inputValue;
-
-      final List<String> retVal = new ArrayList<>(values.size());
-      for (Object val : values) {
-        retVal.add(String.valueOf(val));
-      }
-
-      return retVal;
+      return ((List<?>) inputValue).stream().map(String::valueOf).collect(Collectors.toList());
     } else {
       return Collections.singletonList(String.valueOf(inputValue));
     }

@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.yahoo.sketches.quantiles.DoublesSketch;
+
+import java.io.IOException;
 
 public class DoublesSketchJsonSerializer extends JsonSerializer<DoublesSketch>
 {

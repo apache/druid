@@ -33,8 +33,8 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier;
@@ -158,17 +158,7 @@ public class BoundFilterBenchmark
     final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
-        FluentIterable.from(ints)
-                      .transform(
-                          new Function<Integer, String>()
-                          {
-                            @Override
-                            public String apply(Integer i)
-                            {
-                              return i.toString();
-                            }
-                          }
-                      ),
+        FluentIterable.from(ints).transform(i -> i.toString()),
         GenericIndexed.STRING_STRATEGY
     );
     final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier(
@@ -194,7 +184,7 @@ public class BoundFilterBenchmark
     selector = new BitmapIndexSelector()
     {
       @Override
-      public Indexed<String> getDimensionValues(String dimension)
+      public CloseableIndexed<String> getDimensionValues(String dimension)
       {
         return dictionary;
       }

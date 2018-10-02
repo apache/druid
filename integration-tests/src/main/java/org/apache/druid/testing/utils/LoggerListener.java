@@ -19,10 +19,9 @@
 
 package org.apache.druid.testing.utils;
 
+import org.apache.druid.java.util.common.logger.Logger;
 import org.testng.ITestResult;
 import org.testng.TestListenerAdapter;
-
-import org.apache.druid.java.util.common.logger.Logger;
 
 public class LoggerListener extends TestListenerAdapter
 {

@@ -17,10 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.segment.data;
+package org.apache.druid.segment;
+
+import javax.annotation.Nullable;
 
 /**
- * Implementing CacheableObjectStrategy instead of ObjectSrategy indicates
- * that a column scan may cache the results of {@link #fromByteBuffer}.
+ * An abstract class that provides an implementation of {@link #getObject()}.
+ * Don't extend this abstract class if you could provide a more efficient implementation for those methods, implement
+ * {@link DimensionSelector} directly then.
  */
-public interface CacheableObjectStrategy<T> extends ObjectStrategy<T> {}
+public abstract class AbstractDimensionSelector implements DimensionSelector
+{
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return defaultGetObject();
+  }
+}

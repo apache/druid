@@ -21,8 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.util.List;
 import java.util.Map;

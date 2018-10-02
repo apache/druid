@@ -22,10 +22,10 @@ package org.apache.druid.curator.discovery;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.DruidNode;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.DruidNode;
 
 import java.util.Map;
 

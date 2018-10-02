@@ -29,9 +29,8 @@ import javax.annotation.Nullable;
 
 /**
  */
-public interface DictionaryEncodedColumn<ActualType extends Comparable> extends BaseColumn
+public interface DictionaryEncodedColumn<ActualType extends Comparable<? super ActualType>> extends BaseColumn
 {
-  Class<ActualType> getClazz();
   int length();
   boolean hasMultipleValues();
   int getSingleValueRow(int rowNum);
@@ -43,7 +42,7 @@ public interface DictionaryEncodedColumn<ActualType extends Comparable> extends 
   DimensionSelector makeDimensionSelector(ReadableOffset offset, @Nullable ExtractionFn extractionFn);
 
   @Override
-  default ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  default ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return makeDimensionSelector(offset, null);
   }

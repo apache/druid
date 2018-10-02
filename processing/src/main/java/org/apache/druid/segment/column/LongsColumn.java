@@ -28,7 +28,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 
 /**
  */
-public class LongsColumn implements GenericColumn
+public class LongsColumn implements NumericColumn
 {
   /**
    * Factory method to create LongsColumn.
@@ -56,10 +56,9 @@ public class LongsColumn implements GenericColumn
   }
 
   @Override
-  public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
-    return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory()
-                                                                        .makeEmptyImmutableBitmap());
+    return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap());
   }
 
   @Override
