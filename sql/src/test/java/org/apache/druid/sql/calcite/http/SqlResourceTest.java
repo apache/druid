@@ -499,8 +499,8 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            "2000-01-01T00:00:00.000Z,1,,a,1.0,1.0,org.apache.druid.hll.HLLCV1,",
-            "2000-01-02T00:00:00.000Z,1,10.1,,2.0,2.0,org.apache.druid.hll.HLLCV1,",
+            "2000-01-01T00:00:00.000Z,1,,a,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-02T00:00:00.000Z,1,10.1,,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "",
             ""
         ),
