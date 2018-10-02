@@ -51,6 +51,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
@@ -146,16 +147,6 @@ public class SystemSchema extends AbstractSchema
       .add("error_msg", ValueType.STRING)
       .build();
 
-  private static final Function<String, Iterable<ResourceAction>> SYS_TABLE_DS_RA_GENERATOR = datasourceName -> Collections
-      .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
-
-  private static final Function<String, Iterable<ResourceAction>> SYS_TABLE_STATE_RA_GENERATOR = state -> Collections
-      .singletonList(
-          new ResourceAction(
-              new Resource(state, ResourceType.STATE),
-              Action.READ
-          ));
-
   private final Map<String, Table> tableMap;
 
   static {
@@ -226,8 +217,6 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      final AuthenticationResult authenticationResult =
-          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
       //get available segments from druidSchema
       final Map<DataSegment, SegmentMetadataHolder> availableSegmentMetadata = druidSchema.getSegmentMetadata();
       final Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries = availableSegmentMetadata.entrySet()
@@ -241,22 +230,14 @@ public class SystemSchema extends AbstractSchema
       );
 
       Set<String> availableSegmentIds = new HashSet<>();
+      //auth check for available segments
+      final Iterator<Entry<DataSegment, SegmentMetadataHolder>> authorizedAvailableSegments = getAuthorizedAvailableSegments(
+          availableSegmentEntries,
+          root
+      );
+
       final FluentIterable<Object[]> availableSegments = FluentIterable
-          .from(() -> availableSegmentEntries)
-          .filter(input -> {
-            Access access = AuthorizationUtils.authorizeAllResourceActions(
-                authenticationResult,
-                ImmutableList.of(
-                    new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ),
-                    new ResourceAction(new Resource(input.getKey().getDataSource(), ResourceType.DATASOURCE), Action.READ)
-                ),
-                authorizerMapper
-            );
-            if (access.isAllowed()) {
-              return true;
-            }
-            return false;
-          })
+          .from(() -> authorizedAvailableSegments)
           .transform(val -> {
             try {
               if (!availableSegmentIds.contains(val.getKey().getIdentifier())) {
@@ -284,22 +265,13 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
+      //auth check for published segments
+      final CloseableIterator<DataSegment> authorizedPublishedSegments = getAuthorizedPublishedSegments(
+          metadataSegments,
+          root
+      );
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> metadataSegments)
-          .filter(input -> {
-            Access access = AuthorizationUtils.authorizeAllResourceActions(
-                authenticationResult,
-                ImmutableList.of(
-                    new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ),
-                    new ResourceAction(new Resource(input.getDataSource(), ResourceType.DATASOURCE), Action.READ)
-                ),
-                authorizerMapper
-            );
-            if (access.isAllowed()) {
-              return true;
-            }
-            return false;
-          })
+          .from(() -> authorizedPublishedSegments)
           .transform(val -> {
             try {
               if (availableSegmentIds.contains(val.getIdentifier())) {
@@ -327,11 +299,45 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
-      Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
+      final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
           Iterables.concat(availableSegments, publishedSegments));
 
       return Linq4j.asEnumerable(allSegments).where(t -> t != null);
 
+    }
+
+    private Iterator<Entry<DataSegment, SegmentMetadataHolder>> getAuthorizedAvailableSegments(
+        Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries,
+        DataContext root
+    )
+    {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      Function<Entry<DataSegment, SegmentMetadataHolder>, Iterable<ResourceAction>> raGenerator = segment -> Collections
+          .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource()));
+
+      final Iterable<Entry<DataSegment, SegmentMetadataHolder>> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+          authenticationResult, () -> availableSegmentEntries, raGenerator, authorizerMapper);
+
+      return authorizedSegments.iterator();
+    }
+
+    private CloseableIterator<DataSegment> getAuthorizedPublishedSegments(
+        JsonParserIterator<DataSegment> it,
+        DataContext root
+    )
+    {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
+      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+          authenticationResult, () -> it, raGenerator, authorizerMapper);
+
+      return wrap(authorizedSegments.iterator(), it);
     }
   }
 
@@ -412,21 +418,16 @@ public class SystemSchema extends AbstractSchema
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+      final Access access = AuthorizationUtils.authorizeAllResourceActions(
+          authenticationResult,
+          Collections.singletonList(new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ)),
+          authorizerMapper
+      );
+      if (!access.isAllowed()) {
+        return Linq4j.asEnumerable(ImmutableList.of());
+      }
       final FluentIterable<Object[]> results = FluentIterable
           .from(druidServers)
-          .filter(input -> {
-            Access access = AuthorizationUtils.authorizeAllResourceActions(
-                authenticationResult,
-                ImmutableList.of(
-                    new ResourceAction(new Resource("STATE", ResourceType.STATE), Action.READ)
-                ),
-                authorizerMapper
-            );
-            if (access.isAllowed()) {
-              return true;
-            }
-            return false;
-          })
           .transform(val -> new Object[]{
               val.getHost(),
               val.getHost().split(":")[0],
@@ -520,13 +521,11 @@ public class SystemSchema extends AbstractSchema
     {
       class TasksEnumerable extends DefaultEnumerable<Object[]>
       {
-        private final JsonParserIterator<TaskStatusPlus> it;
-        final AuthenticationResult authenticationResult =
-            (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+        private final CloseableIterator<TaskStatusPlus> it;
 
         public TasksEnumerable(JsonParserIterator<TaskStatusPlus> tasks)
         {
-          this.it = tasks;
+          this.it = getAuthorizedTasks(tasks, root);
         }
 
         @Override
@@ -544,16 +543,6 @@ public class SystemSchema extends AbstractSchema
             public Object[] current()
             {
               TaskStatusPlus task = it.next();
-              Access access = AuthorizationUtils.authorizeAllResourceActions(
-                  authenticationResult,
-                  ImmutableList.of(
-                      new ResourceAction(new Resource(task.getDataSource(), ResourceType.DATASOURCE), Action.READ)
-                  ),
-                  authorizerMapper
-              );
-              if (!access.isAllowed()) {
-                return null;
-              }
               return new Object[]{task.getId(),
                                   task.getType(),
                                   task.getDataSource(),
@@ -601,6 +590,21 @@ public class SystemSchema extends AbstractSchema
 
       return new TasksEnumerable(getTasks(druidLeaderClient, jsonMapper, responseHandler));
     }
+
+    private CloseableIterator<TaskStatusPlus> getAuthorizedTasks(JsonParserIterator<TaskStatusPlus> it, DataContext root)
+    {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      Function<TaskStatusPlus, Iterable<ResourceAction>> raGenerator = task -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(task.getDataSource()));
+
+      final Iterable<TaskStatusPlus> authorizedTasks = AuthorizationUtils.filterAuthorizedResources(
+          authenticationResult, () -> it, raGenerator, authorizerMapper);
+
+      return wrap(authorizedTasks.iterator(), it);
+    }
+
   }
 
   //Note that overlord must be up to get tasks
@@ -649,6 +653,30 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().getHost(),
         jsonMapper
     );
+  }
+
+  private static <T> CloseableIterator<T> wrap(Iterator<T> iterator, JsonParserIterator<T> it)
+  {
+    return new CloseableIterator<T>()
+    {
+      @Override
+      public boolean hasNext()
+      {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public T next()
+      {
+        return iterator.next();
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        it.close();
+      }
+    };
   }
 
   static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
