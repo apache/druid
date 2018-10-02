@@ -248,7 +248,8 @@ public class DataSegment implements Comparable<DataSegment>
     return size;
   }
 
-  @JsonProperty("identifier") // matching the established public HTTP JSON API
+  // "identifier" for backward compatibility of JSON API
+  @JsonProperty(value = "identifier", access = JsonProperty.Access.READ_ONLY)
   public SegmentId getId()
   {
     return id;
