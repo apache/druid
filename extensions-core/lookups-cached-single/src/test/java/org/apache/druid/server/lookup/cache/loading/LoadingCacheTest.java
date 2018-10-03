@@ -160,8 +160,8 @@ public class LoadingCacheTest
   public void testSerDeser() throws IOException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertEquals(loadingCache, mapper.reader(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)));
-    Assert.assertTrue(loadingCache.hashCode() == mapper.reader(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)).hashCode());
+    Assert.assertEquals(loadingCache, mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)));
+    Assert.assertEquals(loadingCache.hashCode(), mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)).hashCode());
   }
 
 }

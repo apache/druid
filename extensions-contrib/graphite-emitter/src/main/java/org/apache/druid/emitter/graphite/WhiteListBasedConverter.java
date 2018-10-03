@@ -282,7 +282,7 @@ public class WhiteListBasedConverter implements DruidToGraphiteEventConverter
       } else {
         fileContent = Files.asCharSource(new File(mapPath), Charset.forName("UTF-8")).read();
       }
-      return mapper.reader(new TypeReference<ImmutableSortedMap<String, ImmutableSet<String>>>()
+      return mapper.readerFor(new TypeReference<ImmutableSortedMap<String, ImmutableSet<String>>>()
       {
       }).readValue(fileContent);
     }

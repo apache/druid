@@ -85,7 +85,7 @@ public class DimensionConverter
         log.info("Using metric dimensions at types at [%s]", dimensionMapPath);
         is = new FileInputStream(new File(dimensionMapPath));
       }
-      return mapper.reader(new TypeReference<Map<String, StatsDMetric>>()
+      return mapper.readerFor(new TypeReference<Map<String, StatsDMetric>>()
       {
       }).readValue(is);
     }
