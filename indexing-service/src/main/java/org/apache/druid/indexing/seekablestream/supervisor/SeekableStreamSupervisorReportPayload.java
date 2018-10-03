@@ -88,7 +88,7 @@ public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
     return dataSource;
   }
 
-  protected String getId()
+  public String getId()
   {
     return id;
   }

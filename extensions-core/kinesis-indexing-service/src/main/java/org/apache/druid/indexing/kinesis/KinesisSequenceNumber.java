@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis;
 
 import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
 
+import javax.validation.constraints.NotNull;
 import java.math.BigInteger;
 
 public class KinesisSequenceNumber extends SequenceNumber<String>
@@ -29,10 +30,10 @@ public class KinesisSequenceNumber extends SequenceNumber<String>
 
   private final BigInteger intSequence;
 
-  private KinesisSequenceNumber(String sequenceNumber, boolean useExclusive, boolean isExclusive)
+  private KinesisSequenceNumber(@NotNull String sequenceNumber, boolean useExclusive, boolean isExclusive)
   {
     super(sequenceNumber, useExclusive, isExclusive);
-    this.intSequence = new BigInteger(sequenceNumber);
+    this.intSequence = sequenceNumber.equals("") ? new BigInteger("-1") : new BigInteger(sequenceNumber);
   }
 
   public BigInteger getBigInteger()
