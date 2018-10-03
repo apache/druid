@@ -5,8 +5,8 @@
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
-        "paths": "wikipedia.gz.parquet"
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetInputFormat",
+        "paths": "example/wikipedia_list.parquet"
       },
       "metadataUpdateSpec": {
         "type": "postgresql",

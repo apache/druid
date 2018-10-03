@@ -32,6 +32,9 @@ The storage account is shared with the one used for Racksapce's Cloud Files deep
 
 As with the Azure blobstore, it is assumed to be gzipped if the extension ends in .gz
 
+This firehose is _splittable_ and can be used by [native parallel index tasks](../../ingestion/native_tasks.html#parallel-index-task).
+Since each split represents an object in this firehose, each worker task of `index_parallel` will read an object.
+
 Sample spec:
 
 ```json
@@ -51,11 +54,18 @@ Sample spec:
     ]
 }
 ```
+This firehose provides caching and prefetching features. In IndexTask, a firehose can be read twice if intervals or
+shardSpecs are not specified, and, in this case, caching can be useful. Prefetching is preferred when direct scan of objects is slow.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|This should be "static-cloudfiles".|N/A|yes|
+|type|This should be `static-cloudfiles`.|N/A|yes|
 |blobs|JSON array of Cloud Files blobs.|N/A|yes|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache.|1073741824|no|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|no|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|no|
+|fetchTimeout|Timeout for fetching a Cloud Files object.|60000|no|
+|maxFetchRetry|Maximum retry for fetching a Cloud Files object.|3|no|
 
 Cloud Files Blobs:
 

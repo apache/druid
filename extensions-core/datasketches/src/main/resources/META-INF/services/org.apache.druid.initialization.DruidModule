@@ -1,0 +1,5 @@
+org.apache.druid.query.aggregation.datasketches.theta.SketchModule
+org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldApiSketchModule
+org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule
+org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule
+org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule

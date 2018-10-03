@@ -4,15 +4,15 @@ When submitting a pull request (PR), please use the following guidelines:
 
 - Make sure your code respects existing formatting conventions. In general, follow
   the same coding style as the code that you are modifying.
-- For Intellij you can import our code style settings xml: [druid_intellij_formatting.xml](https://github.com/druid-io/druid/raw/master/druid_intellij_formatting.xml).
-- For Eclipse you can import our code style settings xml: [eclipse_formatting.xml](https://github.com/druid-io/druid/raw/master/eclipse_formatting.xml).
+- For Intellij you can import our code style settings xml: [druid_intellij_formatting.xml](https://github.com/apache/incubator-druid/raw/master/druid_intellij_formatting.xml).
+- For Eclipse you can import our code style settings xml: [eclipse_formatting.xml](https://github.com/apache/incubator-druid/raw/master/eclipse_formatting.xml).
 - Do add/update documentation appropriately for the change you are making.
-- If you are introducing a new feature you may want to first submit your idea
-  for feedback to the [mailing list](mailto:druid-development@googlegroups.com).
+- If you are introducing a new feature you may want to first write about your idea
+  for feedback to [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org).
   Non-trivial features should include unit tests covering the new functionality.
 - Bugfixes should include a unit test or integration test reproducing the issue.
 - Do not use author tags/information in the code.
-- Always include license header on each java file your create. See [this example](https://github.com/druid-io/druid/blob/master/common/src/main/java/io/druid/metadata/PasswordProvider.java)
+- Always include license header on each java file your create. See [this example](https://github.com/apache/incubator-druid/blob/master/common/src/main/java/org/apache/druid/metadata/PasswordProvider.java)
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
 - Keep the number of commits small and combine commits for related changes.
@@ -22,98 +22,100 @@ When submitting a pull request (PR), please use the following guidelines:
 
 ## GitHub Workflow
 
-1. Fork the druid-io/druid repository into your GitHub account
+1. Fork the apache/incubator-druid repository into your GitHub account
 
-  https://github.com/druid-io/druid/fork
+    https://github.com/apache/incubator-druid/fork
 
 1. Clone your fork of the GitHub repository
 
-  ```sh
-  git clone git@github.com:<username>/druid.git
-  ```
+    ```sh
+    git clone git@github.com:<username>/druid.git
+    ```
 
-  replace `<username>` with your GitHub username.
+    replace `<username>` with your GitHub username.
 
 1. Add a remote to keep up with upstream changes
 
-  ```
-  git remote add upstream https://github.com/druid-io/druid.git
-  ```
+    ```
+    git remote add upstream https://github.com/apache/incubator-druid.git
+    ```
 
-  If you already have a copy, fetch upstream changes
+    If you already have a copy, fetch upstream changes
 
-  ```
-  git fetch upstream
-  ```
+    ```
+    git fetch upstream master
+    ```
 
 1. Create a feature branch to work in
 
-  ```
-  git checkout -b feature-xxx remotes/upstream/master
-  ```
+    ```
+    git checkout -b feature-xxx remotes/upstream/master
+    ```
 
-1. Work in your feature branch
+1. _Before submitting a pull request_ periodically rebase your changes
+    (but don't do it when a pull request is already submitted)
 
-  ```
-  git commit -a
-  ```
+    ```
+    git pull --rebase upstream master
+    ```
 
-1. Periodically rebase your changes
+1. Before submitting a pull request, combine ("squash") related commits into a single one
 
-  ```
-  git pull --rebase
-  ```
+    ```
+    git rebase -i upstream/master
+    ```
 
-1. When done, combine ("squash") related commits into a single one
-
-  ```
-  git rebase -i upstream/master
-  ```
-
-  This will open your editor and allow you to re-order commits and merge them:
-  - Re-order the lines to change commit order (to the extent possible without creating conflicts)
-  - Prefix commits using `s` (squash) or `f` (fixup) to merge extraneous commits.
+    This will open your editor and allow you to re-order commits and merge them:
+    - Re-order the lines to change commit order (to the extent possible without creating conflicts)
+    - Prefix commits using `s` (squash) or `f` (fixup) to merge extraneous commits.
 
 1. Submit a pull-request
 
+    ```
+    git push origin feature-xxx
+    ```
+
+    Go to your Druid fork main page
+
+    ```
+    https://github.com/<username>/druid
+    ```
+
+    If you recently pushed your changes GitHub will automatically pop up a
+    `Compare & pull request` button for any branches you recently pushed to. If you
+    click that button it will automatically offer you to submit your pull-request
+    to the apache/incubator-druid repository.
+
+    - Give your pull-request a meaningful title.
+    - In the description, explain your changes and the problem they are solving.
+
+1. Addressing code review comments
+
+    Address code review comments by committing changes and pushing them to your feature
+    branch.
+
+    ```
+    git push origin feature-xxx
+    ```
+
+### If your pull request shows conflicts with master
+  If your pull request shows conflicts with master, merge master into your feature branch:
+  
+
+  ```
+  git merge upstream/master
+  ```
+  
+  and resolve the conflicts. After resolving conflicts, push your branch again:
+  
   ```
   git push origin feature-xxx
   ```
 
-  Go to your Druid fork main page
-
-  ```
-  https://github.com/<username>/druid
-  ```
-
-  If you recently pushed your changes GitHub will automatically pop up a
-  `Compare & pull request` button for any branches you recently pushed to. If you
-  click that button it will automatically offer you to submit your pull-request
-  to the druid-io/druid repository.
-
-  - Give your pull-request a meaningful title.
-  - In the description, explain your changes and the problem they are solving.
-
-1. Addressing code review comments
-
-  Repeat steps 5. through 7. to address any code review comments and
-  rebase your changes if necessary.
-
-  Push your updated changes to update the pull request
-
-  ```
-  git push origin [--force] feature-xxx
-  ```
-
-  `--force` may be necessary to overwrite your existing pull request in case your
-  commit history was changed when performing the rebase.
-
-  Note: Be careful when using `--force` since you may lose data if you are not careful.
-
-  ```
-  git push origin --force feature-xxx
-  ```
-
+  _Avoid rebasing and force pushes after submitting a pull request,_ since these make it
+  difficult for reviewers to see what you've changed in response to their reviews. The Druid
+  committer that merges your change will rebase and squash it into a single commit before
+  committing it to master.
 
 # FAQ
 

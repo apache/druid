@@ -46,7 +46,7 @@ Very large clusters should consider selecting larger servers.
 
 We recommend running your favorite Linux distribution. You will also need:
 
-  * Java 8 or better
+  * Java 8
 
 Your OS package manager should be able to help for both Java. If your Ubuntu-based OS
 does not have a recent enough version of Java, WebUpd8 offers [packages for those
@@ -121,7 +121,7 @@ druid.indexer.logs.s3Prefix=druid/indexing-logs
 
 In `conf/druid/_common/common.runtime.properties`,
 
-- Set `druid.extensions.loadList=["io.druid.extensions:druid-hdfs-storage"]`.
+- Set `druid.extensions.loadList=["druid-hdfs-storage"]`.
 
 - Comment out the configurations for local storage under "Deep Storage" and "Indexing service logs".
 
@@ -189,12 +189,12 @@ In this simple cluster, you will deploy a single Druid Coordinator, a
 single Druid Overlord, a single ZooKeeper instance, and an embedded Derby metadata store on the same server.
 
 In `conf/druid/_common/common.runtime.properties`, replace
-"zk.host.ip" with the IP address of the machine that runs your ZK instance:
+"zk.service.host" with the address of the machine that runs your ZK instance:
 
 - `druid.zk.service.host`
 
 In `conf/druid/_common/common.runtime.properties`, replace
-"metadata.store.ip" with the IP address of the machine that you will use as your metadata store:
+"metadata.storage.*" with the address of the machine that you will use as your metadata store:
 
 - `druid.metadata.storage.connector.connectURI`
 - `druid.metadata.storage.connector.host`
@@ -202,9 +202,8 @@ In `conf/druid/_common/common.runtime.properties`, replace
 <div class="note caution">
 In production, we recommend running 2 servers, each running a Druid Coordinator
 and a Druid Overlord. We also recommend running a ZooKeeper cluster on its own dedicated hardware,
-as well as  replicated [metadata
-storage](http://druid.io/docs/latest/dependencies/metadata-storage.html) such as MySQL or
-PostgreSQL, on its own dedicated hardware.
+as well as replicated <a href = "http://druid.io/docs/latest/dependencies/metadata-storage.html">metadata storage</a>
+such as MySQL or PostgreSQL, on its own dedicated hardware.
 </div>
 
 ## Tune Druid processes that serve queries
@@ -292,9 +291,9 @@ rsync -az druid-#{DRUIDVERSION}/ COORDINATION_SERVER:druid-#{DRUIDVERSION}/
 Log on to your coordination server and install Zookeeper:
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz -o zookeeper-3.4.9.tar.gz
-tar -xzf zookeeper-3.4.9.tar.gz
-cd zookeeper-3.4.9
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz -o zookeeper-3.4.11.tar.gz
+tar -xzf zookeeper-3.4.11.tar.gz
+cd zookeeper-3.4.11
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 ```
@@ -306,8 +305,8 @@ In production, we also recommend running a ZooKeeper cluster on its own dedicate
 On your coordination server, *cd* into the distribution and start up the coordination services (you should do this in different windows or pipe the log to a file):
 
 ```bash
-java `cat conf/druid/coordinator/jvm.config | xargs` -cp conf/druid/_common:conf/druid/coordinator:lib/* io.druid.cli.Main server coordinator
-java `cat conf/druid/overlord/jvm.config | xargs` -cp conf/druid/_common:conf/druid/overlord:lib/* io.druid.cli.Main server overlord
+java `cat conf/druid/coordinator/jvm.config | xargs` -cp conf/druid/_common:conf/druid/coordinator:lib/* org.apache.druid.cli.Main server coordinator
+java `cat conf/druid/overlord/jvm.config | xargs` -cp conf/druid/_common:conf/druid/overlord:lib/* org.apache.druid.cli.Main server overlord
 ```
 
 You should see a log message printed out for each service that starts up. You can view detailed logs
@@ -320,8 +319,8 @@ Copy the Druid distribution and your edited configurations to your servers set a
 On each one, *cd* into the distribution and run this command to start a Data server:
 
 ```bash
-java `cat conf/druid/historical/jvm.config | xargs` -cp conf/druid/_common:conf/druid/historical:lib/* io.druid.cli.Main server historical
-java `cat conf/druid/middleManager/jvm.config | xargs` -cp conf/druid/_common:conf/druid/middleManager:lib/* io.druid.cli.Main server middleManager
+java `cat conf/druid/historical/jvm.config | xargs` -cp conf/druid/_common:conf/druid/historical:lib/* org.apache.druid.cli.Main server historical
+java `cat conf/druid/middleManager/jvm.config | xargs` -cp conf/druid/_common:conf/druid/middleManager:lib/* org.apache.druid.cli.Main server middleManager
 ```
 
 You can add more servers with Druid Historicals and MiddleManagers as needed.
@@ -351,7 +350,7 @@ Copy the Druid distribution and your edited configurations to your servers set a
 On each one, *cd* into the distribution and run this command to start a Broker (you may want to pipe the output to a log file):
 
 ```bash
-java `cat conf/druid/broker/jvm.config | xargs` -cp conf/druid/_common:conf/druid/broker:lib/* io.druid.cli.Main server broker
+java `cat conf/druid/broker/jvm.config | xargs` -cp conf/druid/_common:conf/druid/broker:lib/* org.apache.druid.cli.Main server broker
 ```
 
 You can add more Brokers as needed based on query load.
@@ -359,4 +358,4 @@ You can add more Brokers as needed based on query load.
 ## Loading data
 
 Congratulations, you now have a Druid cluster! The next step is to learn about recommended ways to load data into
-Druid based on your use case. Read more about [loading data](ingestion.html).
+Druid based on your use case. Read more about [loading data](../ingestion/index.html).

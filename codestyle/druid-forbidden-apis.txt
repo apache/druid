@@ -1,0 +1,11 @@
+com.google.common.collect.MapMaker @ Create java.util.concurrent.ConcurrentHashMap directly
+com.google.common.collect.Maps#newConcurrentMap() @ Create java.util.concurrent.ConcurrentHashMap directly
+com.google.common.util.concurrent.Futures#transform(com.google.common.util.concurrent.ListenableFuture, com.google.common.util.concurrent.AsyncFunction) @ Use org.apache.druid.java.util.common.concurrent.ListenableFutures#transformAsync
+com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#emptyIterator()
+com.google.common.base.Charsets @ Use java.nio.charset.StandardCharsets instead
+java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
+org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
+java.util.LinkedList @ Use ArrayList or ArrayDeque instead
+com.google.common.collect.Lists#newLinkedList() @ Use ArrayList or ArrayDeque instead
+com.google.common.collect.Lists#newLinkedList(java.lang.Iterable) @ Use ArrayList or ArrayDeque instead
+java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)

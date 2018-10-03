@@ -28,7 +28,7 @@ segments and avoid the overhead of rebuilding new segments with reindexing, you 
 ### Reindexing and Delta Ingestion with Hadoop Batch Ingestion
 
 This section assumes the reader understands how to do batch ingestion using Hadoop. See 
-[batch-ingestion](batch-ingestion.html) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
+[Hadoop batch ingestion](./hadoop.html) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
 
 Druid uses an `inputSpec` in the `ioConfig` to know where the data to be ingested is located and how to read it. 
 For simple Hadoop batch ingestion, `static` or `granularity` spec types allow you to read data stored in deep storage.
@@ -37,13 +37,14 @@ There are other types of `inputSpec` to enable reindexing and delta ingestion.
 
 #### `dataSource`
 
-This is a type of `inputSpec` that reads data already stored inside Druid.
+This is a type of `inputSpec` that reads data already stored inside Druid. This is used to allow "re-indexing" data and for "delta-ingestion" described later in `multi` type inputSpec.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |type|String.|This should always be 'dataSource'.|yes|
 |ingestionSpec|JSON object.|Specification of Druid segments to be loaded. See below.|yes|
-|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. With -1, druid calculates max split size based on user specified number of map task(mapred.map.tasks or mapreduce.job.maps). By default, one split is made for one segment. |no|
+|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. With -1, druid calculates max split size based on user specified number of map task(mapred.map.tasks or mapreduce.job.maps). By default, one split is made for one segment. maxSplitSize is specified in bytes.|no|
+|useNewAggs|Boolean|If "false", then list of aggregators in "metricsSpec" of hadoop indexing task must be same as that used in original indexing task while ingesting raw data. Default value is "false". This field can be set to "true" when "inputSpec" type is "dataSource" and not "multi" to enable arbitrary aggregators while reindexing. See below for "multi" type support for delta-ingestion.|no|
 
 Here is what goes inside `ingestionSpec`:
 
@@ -52,7 +53,6 @@ Here is what goes inside `ingestionSpec`:
 |dataSource|String|Druid dataSource name from which you are loading the data.|yes|
 |intervals|List|A list of strings representing ISO-8601 Intervals.|yes|
 |segments|List|List of segments from which to read data from, by default it is obtained automatically. You can obtain list of segments to put here by making a POST query to coordinator at url /druid/coordinator/v1/metadata/datasources/segments?full with list of intervals specified in the request paylod e.g. ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]. You may want to provide this list manually in order to ensure that segments read are exactly same as they were at the time of task submission, task would fail if the list provided by the user does not match with state of database when the task actually runs.|no|
-|granularity|String|Defines the granularity of the query while loading data. Default value is "none". See [Granularities](../querying/granularities.html).|no|
 |filter|JSON|See [Filters](../querying/filters.html)|no|
 |dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have an explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
 |metrics|Array of String|Name of metric columns to load. By default, the list will be constructed from the "name" of all the configured aggregators.|no|
@@ -76,7 +76,8 @@ For example
 
 #### `multi`
 
-This is a composing inputSpec to combine other inputSpecs. This inputSpec is used for delta ingestion. Please note that you can have only one `dataSource` as child of `multi` inputSpec.
+This is a composing inputSpec to combine other inputSpecs. This inputSpec is used for delta ingestion. You can also use a `multi` inputSpec to combine data from multiple dataSources. However, each particular dataSource can only be specified one time.
+Note that, "useNewAggs" must be set to default value false to support delta-ingestion.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
@@ -131,9 +132,9 @@ POST `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
 Request Body: [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
 
 
-### Reindexing without Hadoop Batch Ingestion
+### Reindexing with Native Batch Ingestion
 
-This section assumes the reader understands how to do batch ingestion without Hadoop using the [IndexTask](../ingestion/tasks.html#index-task),  
+This section assumes the reader understands how to do batch ingestion without Hadoop using [Native Batch Indexing](../ingestion/native_tasks.html),
 which uses a "firehose" to know where and how to read the input data. [IngestSegmentFirehose](firehose.html#ingestsegmentfirehose) 
 can be used to read data from segments inside Druid. Note that IndexTask is to be used for prototyping purposes only as 
 it has to do all processing inside a single process and can't scale. Please use Hadoop batch ingestion for production 

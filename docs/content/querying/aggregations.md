@@ -17,7 +17,7 @@ Available aggregations are:
 ```
 
 Please note the count aggregator counts the number of Druid rows, which does not always reflect the number of raw events ingested. 
-This is because Druid rolls up data at ingestion time. To 
+This is because Druid can be configured to roll up data at ingestion time. To 
 count the number of ingested rows of data, include a count aggregator at ingestion time, and a longSum aggregator at 
 query time.
 
@@ -36,10 +36,18 @@ computes the sum of values as a 64-bit, signed integer
 
 #### `doubleSum` aggregator
 
-Computes the sum of values as 64-bit floating point value. Similar to `longSum`
+Computes and stores the sum of values as 64-bit floating point value. Similar to `longSum`
 
 ```json
 { "type" : "doubleSum", "name" : <output_name>, "fieldName" : <metric_name> }
+```
+
+#### `floatSum` aggregator
+
+Computes and stores the sum of values as 32-bit floating point value. Similar to `longSum` and `doubleSum`
+
+```json
+{ "type" : "floatSum", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
 ### Min / Max aggregators
@@ -60,6 +68,22 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 { "type" : "doubleMax", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
+#### `floatMin` aggregator
+
+`floatMin` computes the minimum of all metric values and Float.POSITIVE_INFINITY
+
+```json
+{ "type" : "floatMin", "name" : <output_name>, "fieldName" : <metric_name> }
+```
+
+#### `floatMax` aggregator
+
+`floatMax` computes the maximum of all metric values and Float.NEGATIVE_INFINITY
+
+```json
+{ "type" : "floatMax", "name" : <output_name>, "fieldName" : <metric_name> }
+```
+
 #### `longMin` aggregator
 
 `longMin` computes the minimum of all metric values and Long.MAX_VALUE
@@ -78,7 +102,7 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 
 ### First / Last aggregator
 
-First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
+(Double/Float/Long) First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
 
 Note that queries with first/last aggregators on a segment created with rollup enabled will return the rolled up value, and not the last value within the raw ingested data.
 
@@ -106,6 +130,30 @@ Note that queries with first/last aggregators on a segment created with rollup e
 }
 ```
 
+#### `floatFirst` aggregator
+
+`floatFirst` computes the metric value with the minimum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "floatFirst",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
+#### `floatLast` aggregator
+
+`floatLast` computes the metric value with the maximum timestamp or 0 if no row exist
+
+```json
+{
+  "type" : "floatLast",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>
+}
+```
+
 #### `longFirst` aggregator
 
 `longFirst` computes the metric value with the minimum timestamp or 0 if no row exist
@@ -127,6 +175,36 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "type" : "longLast",
   "name" : <output_name>, 
   "fieldName" : <metric_name>,
+}
+```
+
+#### `stringFirst` aggregator
+
+`stringFirst` computes the metric value with the minimum timestamp or `null` if no row exist
+
+```json
+{
+  "type" : "stringFirst",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "maxStringBytes" : <integer> # (optional, defaults to 1024),
+  "filterNullValues" : <boolean> # (optional, defaults to false)
+}
+```
+
+
+
+#### `stringLast` aggregator
+
+`stringLast` computes the metric value with the maximum timestamp or `null` if no row exist
+
+```json
+{
+  "type" : "stringLast",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "maxStringBytes" : <integer> # (optional, defaults to 1024),
+  "filterNullValues" : <boolean> # (optional, defaults to false)
 }
 ```
 
@@ -179,11 +257,16 @@ instead of the cardinality aggregator if you do not care about the individual va
   "type": "cardinality",
   "name": "<output_name>",
   "fields": [ <dimension1>, <dimension2>, ... ],
-  "byRow": <false | true> # (optional, defaults to false)
+  "byRow": <false | true> # (optional, defaults to false),
+  "round": <false | true> # (optional, defaults to false)
 }
 ```
 
 Each individual element of the "fields" list can be a String or [DimensionSpec](../querying/dimensionspecs.html). A String dimension in the fields list is equivalent to a DefaultDimensionSpec (no transformations).
+
+The HyperLogLog algorithm generates decimal estimates with some error. "round" can be set to true to round off estimated
+values to whole numbers. Note that even with rounding, the cardinality is still an estimate. The "round" field only
+affects query-time behavior, and is ignored at ingestion-time.
 
 #### Cardinality by value
 
@@ -267,14 +350,19 @@ Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to
   "type" : "hyperUnique",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
-  "isInputHyperUnique" : false
+  "isInputHyperUnique" : false,
+  "round" : false
 }
 ```
 
-isInputHyperUnique can be set to true to index pre-computed HLL (Base64 encoded output from druid-hll is expected).
-The isInputHyperUnique field only affects ingestion-time behavior, and is ignored at query time.
+"isInputHyperUnique" can be set to true to index pre-computed HLL (Base64 encoded output from druid-hll is expected).
+The "isInputHyperUnique" field only affects ingestion-time behavior, and is ignored at query-time.
 
-For more approximate aggregators, please see [theta sketches](../development/extensions-core/datasketches-aggregators.html).
+The HyperLogLog algorithm generates decimal estimates with some error. "round" can be set to true to round off estimated
+values to whole numbers. Note that even with rounding, the cardinality is still an estimate. The "round" field only
+affects query-time behavior, and is ignored at ingestion-time.
+
+For more approximate aggregators, check out the [DataSketches extension](../development/extensions-core/datasketches-extension.html).
 
 ## Miscellaneous Aggregations
 

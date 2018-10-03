@@ -12,7 +12,7 @@ of OLAP data.
 For more detailed information:
 
 * Every row in Druid must have a timestamp. Data is always partitioned by time, and every query has a time filter. Query results can also be broken down by time buckets like minutes, hours, days, and so on.
-* Dimensions are fields that can be filtered on or grouped by. They are always single Strings, arrays of Strings, single Longs, or single Floats.
+* Dimensions are fields that can be filtered on or grouped by. They are always single Strings, arrays of Strings, single Longs, single Doubles or single Floats.
 * Metrics are fields that can be aggregated. They are often stored as numbers (integers or floats) but can also be stored as complex objects like HyperLogLog sketches or approximate histogram sketches.
 
 Typical production tables (or datasources as they are known in Druid) have fewer than 100 dimensions and fewer 
@@ -22,15 +22,18 @@ Below, we outline some best practices with schema design:
 
 ## Numeric dimensions
 
-If the user wishes to ingest a column as a numeric-typed dimension (Long or Float), it is necessary to specify the type of the column in the `dimensions` section of the `dimensionsSpec`. If the type is omitted, Druid will ingest a column as the default String type.
+If the user wishes to ingest a column as a numeric-typed dimension (Long, Double or Float), it is necessary to specify the type of the column in the `dimensions` section of the `dimensionsSpec`. If the type is omitted, Druid will ingest a column as the default String type.
+
+There are performance tradeoffs between string and numeric columns. Numeric columns are generally faster to group on
+than string columns. But unlike string columns, numeric columns don't have indexes, so they are generally slower to
+filter on.
 
 See [Dimension Schema](../ingestion/index.html#dimension-schema) for more information.
-
 
 ## High cardinality dimensions (e.g. unique IDs)
 
 In practice, we see that exact counts for unique IDs are often not required. Storing unique IDs as a column will kill 
-[roll-up](../design/index.html), and impact compression. Instead, storing a sketch of the number of the unique IDs seen, and using that 
+[roll-up](../ingestion/index.html#rollup), and impact compression. Instead, storing a sketch of the number of the unique IDs seen, and using that 
 sketch as part of aggregations, will greatly improve performance (up to orders of magnitude performance improvement), and significantly reduce storage. 
 Druid's `hyperUnique` aggregator is based off of Hyperloglog and can be used for unique counts on a high cardinality dimension. 
 For more information, see [here](https://www.youtube.com/watch?v=Hpd3f_MLdXo).
@@ -49,6 +52,8 @@ then before indexing it, you should transform it to:
 ```
 {"foo_bar": 3}
 ```
+
+Druid is capable of flattening JSON input data, please see [Flatten JSON](../ingestion/flatten-json.html) for more details.
 
 ## Counting the number of ingested events
 
@@ -80,7 +85,7 @@ You should query for the number of ingested rows with:
 ## Schema-less dimensions
 
 If the `dimensions` field is left empty in your ingestion spec, Druid will treat every column that is not the timestamp column, 
-a dimension that has been excluded, or a metric column as a dimension. It should be noted that because of [#658](https://github.com/druid-io/druid/issues/658) 
+a dimension that has been excluded, or a metric column as a dimension. It should be noted that because of [#658](https://github.com/apache/incubator-druid/issues/658) 
 these segments will be slightly larger than if the list of dimensions was explicitly specified in lexicographic order. This limitation 
 does not impact query correctness- just storage requirements.
 

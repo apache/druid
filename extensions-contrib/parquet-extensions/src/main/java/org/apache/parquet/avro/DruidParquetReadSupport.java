@@ -1,31 +1,33 @@
 /*
- * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
+//CHECKSTYLE.OFF: PackageName
 package org.apache.parquet.avro;
+//CHECKSTYLE.ON: PackageName
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import io.druid.data.input.impl.DimensionSchema;
-import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.query.aggregation.AggregatorFactory;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.indexer.HadoopDruidIndexerConfig;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.parquet.hadoop.api.InitContext;
@@ -37,8 +39,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * This class must in package org.apache.parquet.avro to access the AvroRecordMaterializer constructor
+ */
 public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
 {
+
+  /**
+   * Select the columns from the parquet schema that are used in the schema of the ingestion job
+   *
+   * @param context The context of the file to be read
+   *
+   * @return the partial schema that only contains the columns that are being used in the schema
+   */
   private MessageType getPartialReadSchema(InitContext context)
   {
     MessageType fullSchema = context.getFileSchema();
@@ -73,6 +86,7 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
     return new MessageType(name, partialFields);
   }
 
+  @Override
   public ReadContext init(InitContext context)
   {
     MessageType requestedProjection = getSchemaForRead(context.getFileSchema(), getPartialReadSchema(context));
@@ -85,7 +99,6 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
       MessageType fileSchema, ReadContext readContext
   )
   {
-
     MessageType parquetSchema = readContext.getRequestedSchema();
     Schema avroSchema = new AvroSchemaConverter(configuration).convert(parquetSchema);
 
