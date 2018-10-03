@@ -145,7 +145,7 @@ public class JdbcDataFetcherTest
                                                           100);
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String jdbcDataFetcherSer = mapper.writeValueAsString(jdbcDataFetcher);
-    Assert.assertEquals(jdbcDataFetcher, mapper.reader(DataFetcher.class).readValue(jdbcDataFetcherSer));
+    Assert.assertEquals(jdbcDataFetcher, mapper.readerFor(DataFetcher.class).readValue(jdbcDataFetcherSer));
   }
 
   private void assertMapLookup(Map<String, String> map, DataFetcher dataFetcher)

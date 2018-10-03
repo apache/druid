@@ -61,7 +61,7 @@ public class LookupExtractorTest
   public void testSerDes() throws IOException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertEquals(lookupExtractor, mapper.reader(LookupExtractor.class).readValue(mapper.writeValueAsBytes(lookupExtractor)));
+    Assert.assertEquals(lookupExtractor, mapper.readerFor(LookupExtractor.class).readValue(mapper.writeValueAsBytes(lookupExtractor)));
   }
 
   @Test

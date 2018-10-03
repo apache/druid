@@ -104,7 +104,7 @@ public class EventConverter
         log.info("Using default metric map located at [%s]", metricMapPath);
         is = new FileInputStream(new File(metricMapPath));
       }
-      return mapper.reader(new TypeReference<Map<String, Set<String>>>()
+      return mapper.readerFor(new TypeReference<Map<String, Set<String>>>()
       {
       }).readValue(is);
     }
