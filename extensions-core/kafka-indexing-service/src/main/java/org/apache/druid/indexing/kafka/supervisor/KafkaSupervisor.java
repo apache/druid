@@ -260,6 +260,8 @@ public class KafkaSupervisor implements Supervisor
   private boolean listenerRegistered = false;
   private long lastRunTime;
 
+  private int initRetryCounter = 0;
+
   private volatile DateTime firstRunTime;
   private volatile KafkaConsumer consumer;
 
@@ -1000,6 +1002,7 @@ public class KafkaSupervisor implements Supervisor
         if (consumer != null) {
           consumer.close();
         }
+        initRetryCounter++;
         log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
            .emit();
 
@@ -2515,6 +2518,13 @@ public class KafkaSupervisor implements Supervisor
   public boolean isLifecycleStarted()
   {
     return lifecycleStarted;
+  }
+
+  // exposed for testing for visibility into initialization state
+  @VisibleForTesting
+  public int getInitRetryCounter()
+  {
+    return initRetryCounter;
   }
 
   // exposed for testing to allow "bootstrap.servers" to be changed after supervisor is created
