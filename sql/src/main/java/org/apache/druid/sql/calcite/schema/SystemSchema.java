@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -62,6 +61,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
@@ -91,9 +91,8 @@ public class SystemSchema extends AbstractSchema
   public static final String NAME = "sys";
   private static final String SEGMENTS_TABLE = "segments";
   private static final String SERVERS_TABLE = "servers";
-  private static final String SEGMENT_SERVERS_TABLE = "segment_servers";
+  private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
-  private static final int SEGMENT_SERVERS_TABLE_SIZE;
 
   private static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -149,10 +148,6 @@ public class SystemSchema extends AbstractSchema
 
   private final Map<String, Table> tableMap;
 
-  static {
-    SEGMENT_SERVERS_TABLE_SIZE = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
-  }
-
   @Inject
   public SystemSchema(
       final DruidSchema druidSchema,
@@ -168,7 +163,7 @@ public class SystemSchema extends AbstractSchema
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper),
         SERVERS_TABLE, new ServersTable(serverView, authorizerMapper),
-        SEGMENT_SERVERS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
+        SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
     );
   }
@@ -424,7 +419,7 @@ public class SystemSchema extends AbstractSchema
           authorizerMapper
       );
       if (!access.isAllowed()) {
-        return Linq4j.asEnumerable(ImmutableList.of());
+        throw new ForbiddenException("Insufficient permission to view servers :" + access.toString());
       }
       final FluentIterable<Object[]> results = FluentIterable
           .from(druidServers)
@@ -470,11 +465,11 @@ public class SystemSchema extends AbstractSchema
     {
       final List<Object[]> rows = new ArrayList<>();
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
-
+      final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
       for (ImmutableDruidServer druidServer : druidServers) {
         final Map<String, DataSegment> segmentMap = druidServer.getSegments();
         for (DataSegment segment : segmentMap.values()) {
-          Object[] row = new Object[SEGMENT_SERVERS_TABLE_SIZE];
+          Object[] row = new Object[serverSegmentsTableSize];
           row[0] = druidServer.getHost();
           row[1] = segment.getIdentifier();
           rows.add(row);

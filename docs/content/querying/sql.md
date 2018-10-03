@@ -580,23 +580,23 @@ To retrieve information about all servers, use the query:
 SELECT * FROM sys.servers;
 ```
 
-### SEGMENT_SERVERS table
+### SERVER_SEGMENTS table
 
-SEGMENT_SERVERS is used to join segments with servers table
+SERVER_SEGMENTS is used to join servers with segments table
 
 |Column|Notes|
 |------|-----|
 |server|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
 |segment_id|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
 
-JOIN between "segments" and "servers" can be used to query the number of segments for a specific datasource, 
+JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource, 
 grouped by server, example query:
 ```sql
 SELECT count(segments.segment_id) as num_segments from sys.segments as segments 
-INNER JOIN sys.segment_servers as segment_servers 
-ON segments.segment_id  = segment_servers.segment_id 
+INNER JOIN sys.server_segments as server_segments 
+ON segments.segment_id  = server_segments.segment_id 
 INNER JOIN sys.servers as servers 
-ON servers.server = segment_servers.server
+ON servers.server = server_segments.server
 WHERE segments.datasource = 'wikipedia' 
 GROUP BY servers.server;
 ```
