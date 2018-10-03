@@ -55,6 +55,7 @@ import org.apache.druid.indexing.kinesis.KinesisIndexTaskClient;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
 import org.apache.druid.indexing.kinesis.KinesisPartitions;
 import org.apache.druid.indexing.kinesis.KinesisSequenceNumber;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -62,7 +63,9 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -83,6 +86,7 @@ import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
+import org.easymock.IAnswer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -97,6 +101,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -109,7 +114,11 @@ import static org.easymock.EasyMock.anyBoolean;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
 import static org.easymock.EasyMock.capture;
+import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reset;
 
 // TODO: improve helper methods like insertData(...)
 @RunWith(LocalstackDockerTestRunner.class)
@@ -527,55 +536,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
-  //  @Test
-//  /**
-//   * Test generating the starting offsets from the partition high water marks in Kinesis.
-//   */
-//  public void testLatestOffset() throws Exception
-//  {
-//    final ExecutorService exec = Execs.singleThreaded("workerexec");
-//    supervisor = getSupervisor(1, 1, false, "PT1H", null, null);
-//    AmazonKinesis kinesis = getKinesisClientInstance();
-//
-//
-//    Capture<KinesisIndexTask> captured = Capture.newInstance();
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskQueue.add(capture(captured))).andReturn(true);
-//    replayAll();
-//
-//    supervisor.start();
-//    try {
-//      supervisor.runInternal();
-//    }
-//    catch (TimeoutException e) {
-//      supervisor.
-//      List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
-//      supervisor.runInternal();
-//    }
-//
-//
-//        verifyAll();
-//
-//    KinesisIndexTask task = captured.getValue();
-//    KinesisIOConfig taskConfig = task.getIOConfig();
-//    Assert.assertEquals(stream, taskConfig.getStartPartitions().getStream());
-//    Assert.assertEquals(
-//        getSequenceNumber(res, shardId1, 12),
-//        taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId1)
-//    );
-//    Assert.assertEquals(
-//        getSequenceNumber(res, shardId0, 1),
-//        taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId0)
-//    );
-//  }
-//
+
   @Test
   /**
    * Test generating the starting offsets from the partition data stored in druid_dataSource which contains the
@@ -928,1697 +889,2250 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
   }
-//
-//  @Test
-//  public void testRequeueTaskWhenFailed() throws Exception
-//  {
-//    supervisor = getSupervisor(2, 2, true, "PT1H", null, null, false);
-//    addSomeEvents(1);
-//
-//    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(Status.NOT_STARTED))
-//                                                  .anyTimes();
-//    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
-//    checkpoints1.put(0, ImmutableMap.of(0, 0L, 2, 0L));
-//    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
-//    checkpoints2.put(0, ImmutableMap.of(1, 0L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints1))
-//        .anyTimes();
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints2))
-//        .anyTimes();
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    List<Task> tasks = captured.getValues();
-//
-//    // test that running the main loop again checks the status of the tasks that were created and does nothing if they
-//    // are all still running
-//    reset(taskStorage);
-//    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
-//    for (Task task : tasks) {
-//      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
-//      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
-//    }
-//    replay(taskStorage);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    // test that a task failing causes a new task to be re-queued with the same parameters
-//    Capture<Task> aNewTaskCapture = Capture.newInstance();
-//    List<Task> imStillAlive = tasks.subList(0, 3);
-//    KinesisIndexTask iHaveFailed = (KinesisIndexTask) tasks.get(3);
-//    reset(taskStorage);
-//    reset(taskQueue);
-//    expect(taskStorage.getActiveTasks()).andReturn(imStillAlive).anyTimes();
-//    for (Task task : imStillAlive) {
-//      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
-//      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
-//    }
-//    expect(taskStorage.getStatus(iHaveFailed.getId())).andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
-//    expect(taskStorage.getTask(iHaveFailed.getId())).andReturn(Optional.of((Task) iHaveFailed)).anyTimes();
-//    expect(taskQueue.add(capture(aNewTaskCapture))).andReturn(true);
-//    replay(taskStorage);
-//    replay(taskQueue);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    Assert.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
-//    Assert.assertEquals(
-//        iHaveFailed.getIOConfig().getBaseSequenceName(),
-//        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getBaseSequenceName()
-//    );
-//  }
-//
-//  @Test
-//  public void testRequeueAdoptedTaskWhenFailed() throws Exception
-//  {
-//    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
-//    addSomeEvents(1);
-//
-//    DateTime now = DateTimes.nowUtc();
-//    DateTime maxi = now.plusMinutes(60);
-//    Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 0L, 2, 0L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        now,
-//        maxi
-//    );
-//
-//    List<Task> existingTasks = ImmutableList.of(id1);
-//
-//    Capture<Task> captured = Capture.newInstance();
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(existingTasks).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStartTimeAsync("id1")).andReturn(Futures.immediateFuture(now)).anyTimes();
-//    expect(taskQueue.add(capture(captured))).andReturn(true);
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 0L, 2, 0L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(2);
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    // check that replica tasks are created with the same minimumMessageTime as tasks inherited from another supervisor
-//    Assert.assertEquals(now, ((KinesisIndexTask) captured.getValue()).getIOConfig().getMinimumMessageTime().get());
-//
-//    // test that a task failing causes a new task to be re-queued with the same parameters
-//    String runningTaskId = captured.getValue().getId();
-//    Capture<Task> aNewTaskCapture = Capture.newInstance();
-//    KinesisIndexTask iHaveFailed = (KinesisIndexTask) existingTasks.get(0);
-//    reset(taskStorage);
-//    reset(taskQueue);
-//    reset(taskClient);
-//
-//    // for the newly created replica task
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(2);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(captured.getValue())).anyTimes();
-//    expect(taskStorage.getStatus(iHaveFailed.getId())).andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
-//    expect(taskStorage.getStatus(runningTaskId)).andReturn(Optional.of(TaskStatus.running(runningTaskId))).anyTimes();
-//    expect(taskStorage.getTask(iHaveFailed.getId())).andReturn(Optional.of((Task) iHaveFailed)).anyTimes();
-//    expect(taskStorage.getTask(runningTaskId)).andReturn(Optional.of(captured.getValue())).anyTimes();
-//    expect(taskClient.getStatusAsync(runningTaskId)).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStartTimeAsync(runningTaskId)).andReturn(Futures.immediateFuture(now)).anyTimes();
-//    expect(taskQueue.add(capture(aNewTaskCapture))).andReturn(true);
-//    replay(taskStorage);
-//    replay(taskQueue);
-//    replay(taskClient);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    Assert.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
-//    Assert.assertEquals(
-//        iHaveFailed.getIOConfig().getBaseSequenceName(),
-//        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getBaseSequenceName()
-//    );
-//
-//    // check that failed tasks are recreated with the same minimumMessageTime as the task it replaced, even if that
-//    // task came from another supervisor
-//    Assert.assertEquals(
-//        now,
-//        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMinimumMessageTime().get()
-//    );
-//    Assert.assertEquals(
-//        maxi,
-//        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime().get()
-//    );
-//  }
-//
-//  @Test
-//  public void testQueueNextTasksOnSuccess() throws Exception
-//  {
-//    supervisor = getSupervisor(2, 2, true, "PT1H", null, null, false);
-//    addSomeEvents(1);
-//
-//    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(Status.NOT_STARTED))
-//                                                  .anyTimes();
-//    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    List<Task> tasks = captured.getValues();
-//
-//    reset(taskStorage);
-//    reset(taskClient);
-//
-//    expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(Status.NOT_STARTED))
-//                                                  .anyTimes();
-//    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
-//    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
-//    checkpoints1.put(0, ImmutableMap.of(0, 0L, 2, 0L));
-//    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
-//    checkpoints2.put(0, ImmutableMap.of(1, 0L));
-//    // there would be 4 tasks, 2 for each task group
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints1))
-//        .times(2);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints2))
-//        .times(2);
-//
-//    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
-//    for (Task task : tasks) {
-//      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
-//      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
-//    }
-//    replay(taskStorage);
-//    replay(taskClient);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    // test that a task succeeding causes a new task to be re-queued with the next offset range and causes any replica
-//    // tasks to be shutdown
-//    Capture<Task> newTasksCapture = Capture.newInstance(CaptureType.ALL);
-//    Capture<String> shutdownTaskIdCapture = Capture.newInstance();
-//    List<Task> imStillRunning = tasks.subList(1, 4);
-//    KinesisIndexTask iAmSuccess = (KinesisIndexTask) tasks.get(0);
-//    reset(taskStorage);
-//    reset(taskQueue);
-//    reset(taskClient);
-//    expect(taskStorage.getActiveTasks()).andReturn(imStillRunning).anyTimes();
-//    for (Task task : imStillRunning) {
-//      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
-//      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
-//    }
-//    expect(taskStorage.getStatus(iAmSuccess.getId())).andReturn(Optional.of(TaskStatus.success(iAmSuccess.getId())));
-//    expect(taskStorage.getTask(iAmSuccess.getId())).andReturn(Optional.of((Task) iAmSuccess)).anyTimes();
-//    expect(taskQueue.add(capture(newTasksCapture))).andReturn(true).times(2);
-//    expect(taskClient.stopAsync(capture(shutdownTaskIdCapture), eq(false))).andReturn(Futures.immediateFuture(true));
-//    replay(taskStorage);
-//    replay(taskQueue);
-//    replay(taskClient);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    // make sure we killed the right task (sequenceName for replicas are the same)
-//    Assert.assertTrue(shutdownTaskIdCapture.getValue().contains(iAmSuccess.getIOConfig().getBaseSequenceName()));
-//  }
-//
-//  @Test
-//  public void testBeginPublishAndQueueNextTasks() throws Exception
-//  {
-//    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
-//
-//    supervisor = getSupervisor(2, 2, true, "PT1M", null, null, false);
-//    addSomeEvents(100);
-//
-//    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    List<Task> tasks = captured.getValues();
-//    Collection workItems = new ArrayList<>();
-//    for (Task task : tasks) {
-//      workItems.add(new TestTaskRunnerWorkItem(task, null, location));
-//    }
-//
-//    reset(taskStorage, taskRunner, taskClient, taskQueue);
-//    captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
-//    for (Task task : tasks) {
-//      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
-//      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
-//    }
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskClient.getStatusAsync(anyString()))
-//        .andReturn(Futures.immediateFuture(Status.READING))
-//        .anyTimes();
-//    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
-//    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
-//        .times(2);
-//    expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 10L, 1, 15L, 2, 35L)));
-//    expect(
-//        taskClient.setEndOffsetsAsync(
-//            EasyMock.contains("sequenceName-0"),
-//            EasyMock.eq(ImmutableMap.of(0, 10L, 1, 20L, 2, 35L)),
-//            EasyMock.eq(true)
-//        )
-//    ).andReturn(Futures.immediateFuture(true)).times(2);
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(2);
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
-//    checkpoints1.put(0, ImmutableMap.of(0, 0L, 2, 0L));
-//    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
-//    checkpoints2.put(0, ImmutableMap.of(1, 0L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints1))
-//        .times(2);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints2))
-//        .times(2);
-//
-//    replay(taskStorage, taskRunner, taskClient, taskQueue);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    for (Task task : captured.getValues()) {
-//      KinesisIndexTask KinesisIndexTask = (KinesisIndexTask) task;
-//      Assert.assertEquals(dataSchema, KinesisIndexTask.getDataSchema());
-//      Assert.assertEquals(tuningConfig.copyOf(), KinesisIndexTask.getTuningConfig());
-//
-//      KinesisSupervisor taskConfig = KinesisIndexTask.getIOConfig();
-//      Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
-//      Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
-//
-//      Assert.assertEquals(stream, taskConfig.getStartPartitions().getStream());
-//      Assert.assertEquals(10L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
-//      Assert.assertEquals(20L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(1));
-//      Assert.assertEquals(35L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(2));
-//    }
-//  }
-//
-//  @Test
-//  public void testDiscoverExistingPublishingTask() throws Exception
-//  {
-//    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
-//
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
-//    addSomeEvents(1);
-//
-//    Task task = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Collection workItems = new ArrayList<>();
-//    workItems.add(new TestTaskRunnerWorkItem(task, null, location));
-//
-//    Capture<KinesisIndexTask> captured = Capture.newInstance();
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(task)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(task)).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
-//    expect(taskClient.getCurrentOffsetsAsync("id1", false))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)));
-//    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//    expect(taskQueue.add(capture(captured))).andReturn(true);
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 0L, 1, 0L, 2, 0L));
-//    expect(taskClient.getCheckpoints(anyString(), anyBoolean())).andReturn(checkpoints).anyTimes();
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    supervisor.updateCurrentAndLatestOffsets().run();
-//    SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
-//    verifyAll();
-//
-//    Assert.assertEquals(DATASOURCE, report.getId());
-//
-//    KinesisSupervisorReportPayload payload = report.getPayload();
-//
-//    Assert.assertEquals(DATASOURCE, payload.getDataSource());
-//    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-//    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-//    Assert.assertEquals(1, (int) payload.getReplicas());
-//    Assert.assertEquals(stream, payload.getStream());
-//    Assert.assertEquals(0, payload.getActiveTasks().size());
-//    Assert.assertEquals(1, payload.getPublishingTasks().size());
-//
-//    TaskReportData publishingReport = payload.getPublishingTasks().get(0);
-//
-//    Assert.assertEquals("id1", publishingReport.getId());
-//    Assert.assertEquals(ImmutableMap.of(0, 0L, 1, 0L, 2, 0L), publishingReport.getStartingOffsets());
-//    Assert.assertEquals(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L), publishingReport.getCurrentOffsets());
-//
-//    KinesisIndexTask capturedTask = captured.getValue();
-//    Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-//    Assert.assertEquals(tuningConfig.copyOf(), capturedTask.getTuningConfig());
-//
-//    KinesisSupervisor capturedTaskConfig = capturedTask.getIOConfig();
-//    Assert.assertEquals(kafkaHost, capturedTaskConfig.getConsumerProperties().get("bootstrap.servers"));
-//    Assert.assertEquals("myCustomValue", capturedTaskConfig.getConsumerProperties().get("myCustomKey"));
-//    Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
-//    Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
-//
-//    // check that the new task was created with starting offsets matching where the publishing task finished
-//    Assert.assertEquals(stream, capturedTaskConfig.getStartPartitions().getStream());
-//    Assert.assertEquals(10L, (long) capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
-//    Assert.assertEquals(20L, (long) capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(1));
-//    Assert.assertEquals(30L, (long) capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(2));
-//
-//    Assert.assertEquals(stream, capturedTaskConfig.getEndPartitions().getStream());
-//    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(0));
-//    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(1));
-//    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(2));
-//  }
-//
-//  @Test
-//  public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
-//  {
-//    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
-//
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
-//    addSomeEvents(1);
-//
-//    Task task = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 0L, 2, 0L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Collection workItems = new ArrayList<>();
-//    workItems.add(new TestTaskRunnerWorkItem(task, null, location));
-//
-//    Capture<KinesisIndexTask> captured = Capture.newInstance();
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(task)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(task)).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
-//    expect(taskClient.getCurrentOffsetsAsync("id1", false))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 10L, 2, 30L)));
-//    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 2, 30L));
-//    expect(taskQueue.add(capture(captured))).andReturn(true);
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    supervisor.updateCurrentAndLatestOffsets().run();
-//    SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
-//    verifyAll();
-//
-//    Assert.assertEquals(DATASOURCE, report.getId());
-//
-//    KinesisSupervisorReportPayload payload = report.getPayload();
-//
-//    Assert.assertEquals(DATASOURCE, payload.getDataSource());
-//    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-//    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-//    Assert.assertEquals(1, (int) payload.getReplicas());
-//    Assert.assertEquals(stream, payload.getStream());
-//    Assert.assertEquals(0, payload.getActiveTasks().size());
-//    Assert.assertEquals(1, payload.getPublishingTasks().size());
-//
-//    TaskReportData publishingReport = payload.getPublishingTasks().get(0);
-//
-//    Assert.assertEquals("id1", publishingReport.getId());
-//    Assert.assertEquals(ImmutableMap.of(0, 0L, 2, 0L), publishingReport.getStartingOffsets());
-//    Assert.assertEquals(ImmutableMap.of(0, 10L, 2, 30L), publishingReport.getCurrentOffsets());
-//
-//    KinesisIndexTask capturedTask = captured.getValue();
-//    Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-//    Assert.assertEquals(tuningConfig.copyOf(), capturedTask.getTuningConfig());
-//
-//    KinesisSupervisor capturedTaskConfig = capturedTask.getIOConfig();
-//    Assert.assertEquals(kafkaHost, capturedTaskConfig.getConsumerProperties().get("bootstrap.servers"));
-//    Assert.assertEquals("myCustomValue", capturedTaskConfig.getConsumerProperties().get("myCustomKey"));
-//    Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
-//    Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
-//
-//    // check that the new task was created with starting offsets matching where the publishing task finished
-//    Assert.assertEquals(stream, capturedTaskConfig.getStartPartitions().getStream());
-//    Assert.assertEquals(10L, (long) capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
-//    Assert.assertEquals(0L, (long) capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(1));
-//    Assert.assertEquals(30L, (long) capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(2));
-//
-//    Assert.assertEquals(stream, capturedTaskConfig.getEndPartitions().getStream());
-//    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(0));
-//    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(1));
-//    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(2));
-//  }
-//
-//  @Test
-//  public void testDiscoverExistingPublishingAndReadingTask() throws Exception
-//  {
-//    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-//    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
-//    final DateTime startTime = DateTimes.nowUtc();
-//
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
-//    addSomeEvents(6);
-//
-//    Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id2 = createKinesisIndexTask(
-//        "id2",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 1L, 1, 2L, 2, 3L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Collection workItems = new ArrayList<>();
-//    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
-//    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
-//
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
-//    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getCurrentOffsetsAsync("id1", false))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 1L, 1, 2L, 2, 3L)));
-//    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L));
-//    expect(taskClient.getCurrentOffsetsAsync("id2", false))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 4L, 1, 5L, 2, 6L)));
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//
-//    // since id1 is publishing, so getCheckpoints wouldn't be called for it
-//    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 1L, 1, 2L, 2, 3L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    supervisor.updateCurrentAndLatestOffsets().run();
-//    SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
-//    verifyAll();
-//
-//    Assert.assertEquals(DATASOURCE, report.getId());
-//
-//    KinesisSupervisorReportPayload payload = report.getPayload();
-//
-//    Assert.assertEquals(DATASOURCE, payload.getDataSource());
-//    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-//    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-//    Assert.assertEquals(1, (int) payload.getReplicas());
-//    Assert.assertEquals(stream, payload.getStream());
-//    Assert.assertEquals(1, payload.getActiveTasks().size());
-//    Assert.assertEquals(1, payload.getPublishingTasks().size());
-//
-//    TaskReportData activeReport = payload.getActiveTasks().get(0);
-//    TaskReportData publishingReport = payload.getPublishingTasks().get(0);
-//
-//    Assert.assertEquals("id2", activeReport.getId());
-//    Assert.assertEquals(startTime, activeReport.getStartTime());
-//    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L), activeReport.getStartingOffsets());
-//    Assert.assertEquals(ImmutableMap.of(0, 4L, 1, 5L, 2, 6L), activeReport.getCurrentOffsets());
-//    Assert.assertEquals(ImmutableMap.of(0, 2L, 1, 1L, 2, 0L), activeReport.getLag());
-//
-//    Assert.assertEquals("id1", publishingReport.getId());
-//    Assert.assertEquals(ImmutableMap.of(0, 0L, 1, 0L, 2, 0L), publishingReport.getStartingOffsets());
-//    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L), publishingReport.getCurrentOffsets());
-//    Assert.assertEquals(null, publishingReport.getLag());
-//
-//    Assert.assertEquals(ImmutableMap.of(0, 6L, 1, 6L, 2, 6L), payload.getLatestOffsets());
-//    Assert.assertEquals(ImmutableMap.of(0, 2L, 1, 1L, 2, 0L), payload.getMinimumLag());
-//    Assert.assertEquals(3L, (long) payload.getAggregateLag());
-//    Assert.assertTrue(payload.getOffsetsLastUpdated().plusMinutes(1).isAfterNow());
-//  }
-//
-//  @Test
-//  public void testKillUnresponsiveTasksWhileGettingStartTime() throws Exception
-//  {
-//    supervisor = getSupervisor(2, 2, true, "PT1H", null, null, false);
-//    addSomeEvents(1);
-//
-//    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    List<Task> tasks = captured.getValues();
-//
-//    reset(taskStorage, taskClient, taskQueue);
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
-//    checkpoints1.put(0, ImmutableMap.of(0, 0L, 2, 0L));
-//    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
-//    checkpoints2.put(0, ImmutableMap.of(1, 0L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints1))
-//        .times(2);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints2))
-//        .times(2);
-//
-//    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
-//    for (Task task : tasks) {
-//      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
-//      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
-//      expect(taskClient.getStatusAsync(task.getId()))
-//          .andReturn(Futures.immediateFuture(Status.NOT_STARTED));
-//      expect(taskClient.getStartTimeAsync(task.getId()))
-//          .andReturn(Futures.immediateFailedFuture(new RuntimeException()));
-//      taskQueue.shutdown(task.getId());
-//    }
-//    replay(taskStorage, taskClient, taskQueue);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//  }
-//
-//  @Test
-//  public void testKillUnresponsiveTasksWhilePausing() throws Exception
-//  {
-//    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
-//
-//    supervisor = getSupervisor(2, 2, true, "PT1M", null, null, false);
-//    addSomeEvents(100);
-//
-//    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    List<Task> tasks = captured.getValues();
-//    Collection workItems = new ArrayList<>();
-//    for (Task task : tasks) {
-//      workItems.add(new TestTaskRunnerWorkItem(task, null, location));
-//    }
-//
-//    reset(taskStorage, taskRunner, taskClient, taskQueue);
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
-//    checkpoints1.put(0, ImmutableMap.of(0, 0L, 2, 0L));
-//    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
-//    checkpoints2.put(0, ImmutableMap.of(1, 0L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints1))
-//        .times(2);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints2))
-//        .times(2);
-//
-//    captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
-//    for (Task task : tasks) {
-//      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
-//      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
-//    }
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskClient.getStatusAsync(anyString()))
-//        .andReturn(Futures.immediateFuture(Status.READING))
-//        .anyTimes();
-//    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
-//    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
-//        .times(2);
-//    expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
-//        .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
-//    taskQueue.shutdown(EasyMock.contains("sequenceName-0"));
-//    expectLastCall().times(2);
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(2);
-//
-//    replay(taskStorage, taskRunner, taskClient, taskQueue);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    for (Task task : captured.getValues()) {
-//      KinesisSupervisor taskConfig = ((KinesisIndexTask) task).getIOConfig();
-//      Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
-//      Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(2));
-//    }
-//  }
-//
-//  @Test
-//  public void testKillUnresponsiveTasksWhileSettingEndOffsets() throws Exception
-//  {
-//    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
-//
-//    supervisor = getSupervisor(2, 2, true, "PT1M", null, null, false);
-//    addSomeEvents(100);
-//
-//    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    List<Task> tasks = captured.getValues();
-//    Collection workItems = new ArrayList<>();
-//    for (Task task : tasks) {
-//      workItems.add(new TestTaskRunnerWorkItem(task, null, location));
-//    }
-//
-//    reset(taskStorage, taskRunner, taskClient, taskQueue);
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
-//    checkpoints1.put(0, ImmutableMap.of(0, 0L, 2, 0L));
-//    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
-//    checkpoints2.put(0, ImmutableMap.of(1, 0L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints1))
-//        .times(2);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints2))
-//        .times(2);
-//
-//    captured = Capture.newInstance(CaptureType.ALL);
-//    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
-//    for (Task task : tasks) {
-//      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
-//      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
-//    }
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskClient.getStatusAsync(anyString()))
-//        .andReturn(Futures.immediateFuture(Status.READING))
-//        .anyTimes();
-//    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
-//    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
-//        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
-//        .times(2);
-//    expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 10L, 1, 15L, 2, 35L)));
-//    expect(
-//        taskClient.setEndOffsetsAsync(
-//            EasyMock.contains("sequenceName-0"),
-//            EasyMock.eq(ImmutableMap.of(0, 10L, 1, 20L, 2, 35L)),
-//            EasyMock.eq(true)
-//        )
-//    ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
-//    taskQueue.shutdown(EasyMock.contains("sequenceName-0"));
-//    expectLastCall().times(2);
-//    expect(taskQueue.add(capture(captured))).andReturn(true).times(2);
-//
-//    replay(taskStorage, taskRunner, taskClient, taskQueue);
-//
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    for (Task task : captured.getValues()) {
-//      KinesisSupervisor taskConfig = ((KinesisIndexTask) task).getIOConfig();
-//      Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
-//      Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(2));
-//    }
-//  }
-//
-//  @Test(expected = IllegalStateException.class)
-//  public void testStopNotStarted()
-//  {
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
-//    supervisor.stop(false);
-//  }
-//
-//  @Test
-//  public void testStop()
-//  {
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    taskClient.close();
-//    taskRunner.unregisterListener(StringUtils.format("KinesisSupervisor-%s", DATASOURCE));
-//    replayAll();
-//
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
-//    supervisor.start();
-//    supervisor.stop(false);
-//
-//    verifyAll();
-//  }
-//
-//  @Test
-//  public void testStopGracefully() throws Exception
-//  {
-//    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-//    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
-//    final DateTime startTime = DateTimes.nowUtc();
-//
-//    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
-//    addSomeEvents(1);
-//
-//    Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id2 = createKinesisIndexTask(
-//        "id2",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id3 = createKinesisIndexTask(
-//        "id3",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Collection workItems = new ArrayList<>();
-//    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
-//    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
-//
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-//    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-//    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
-//    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//
-//    // getCheckpoints will not be called for id1 as it is in publishing state
-//    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    reset(taskRunner, taskClient, taskQueue);
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskClient.pauseAsync("id2"))
-//        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(0, 15L, 1, 25L, 2, 30L)));
-//    expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(0, 15L, 1, 25L, 2, 30L), true))
-//        .andReturn(Futures.immediateFuture(true));
-//    taskQueue.shutdown("id3");
-//    expectLastCall().times(2);
-//
-//    replay(taskRunner, taskClient, taskQueue);
-//
-//    supervisor.gracefulShutdownInternal();
-//    verifyAll();
-//  }
-//
-//  @Test
-//  public void testResetNoTasks() throws Exception
-//  {
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    reset(indexerMetadataStorageCoordinator);
-//    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-//    replay(indexerMetadataStorageCoordinator);
-//
-//    supervisor.resetInternal(null);
-//    verifyAll();
-//
-//  }
-//
-//  @Test
-//  public void testResetDataSourceMetadata() throws Exception
-//  {
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    Capture<String> captureDataSource = EasyMock.newCapture();
-//    Capture<DataSourceMetadata> captureDataSourceMetadata = EasyMock.newCapture();
-//
-//    KinesisDataSourceMetadata KinesisDataSourceMetadata = new KinesisDataSourceMetadata(new KinesisPartitions(
-//        stream,
-//        ImmutableMap.of(0, 1000L, 1, 1000L, 2, 1000L)
-//    ));
-//
-//    KinesisDataSourceMetadata resetMetadata = new KinesisDataSourceMetadata(new KinesisPartitions(
-//        stream,
-//        ImmutableMap.of(1, 1000L, 2, 1000L)
-//    ));
-//
-//    KinesisDataSourceMetadata expectedMetadata = new KinesisDataSourceMetadata(new KinesisPartitions(
-//        stream,
-//        ImmutableMap.of(0, 1000L)
-//    ));
-//
-//    reset(indexerMetadataStorageCoordinator);
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(KinesisDataSourceMetadata);
-//    expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(
-//        EasyMock.capture(captureDataSource),
-//        EasyMock.capture(captureDataSourceMetadata)
-//    )).andReturn(true);
-//    replay(indexerMetadataStorageCoordinator);
-//
-//    try {
-//      supervisor.resetInternal(resetMetadata);
-//    }
-//    catch (NullPointerException npe) {
-//      // Expected as there will be an attempt to reset partitionGroups offsets to NOT_SET
-//      // however there would be no entries in the map as we have not put nay data in kafka
-//      Assert.assertTrue(npe.getCause() == null);
-//    }
-//    verifyAll();
-//
-//    Assert.assertEquals(captureDataSource.getValue(), DATASOURCE);
-//    Assert.assertEquals(captureDataSourceMetadata.getValue(), expectedMetadata);
-//  }
-//
-//  @Test
-//  public void testResetNoDataSourceMetadata() throws Exception
-//  {
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    KinesisDataSourceMetadata resetMetadata = new KinesisDataSourceMetadata(new KinesisPartitions(
-//        stream,
-//        ImmutableMap.of(1, 1000L, 2, 1000L)
-//    ));
-//
-//    reset(indexerMetadataStorageCoordinator);
-//    // no DataSourceMetadata in metadata store
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(null);
-//    replay(indexerMetadataStorageCoordinator);
-//
-//    supervisor.resetInternal(resetMetadata);
-//    verifyAll();
-//  }
-//
-//  @Test
-//  public void testResetRunningTasks() throws Exception
-//  {
-//    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-//    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
-//    final DateTime startTime = DateTimes.nowUtc();
-//
-//    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
-//    addSomeEvents(1);
-//
-//    Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id2 = createKinesisIndexTask(
-//        "id2",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id3 = createKinesisIndexTask(
-//        "id3",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Collection workItems = new ArrayList<>();
-//    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
-//    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
-//
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-//    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-//    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
-//    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    reset(taskQueue, indexerMetadataStorageCoordinator);
-//    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-//    taskQueue.shutdown("id2");
-//    taskQueue.shutdown("id3");
-//    replay(taskQueue, indexerMetadataStorageCoordinator);
-//
-//    supervisor.resetInternal(null);
-//    verifyAll();
-//  }
-//
-//  @Test
-//  public void testNoDataIngestionTasks() throws Exception
-//  {
-//    final DateTime startTime = DateTimes.nowUtc();
-//    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
-//    //not adding any events
-//    Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id2 = createKinesisIndexTask(
-//        "id2",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id3 = createKinesisIndexTask(
-//        "id3",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-//    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-//    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStartTimeAsync("id1")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-//
-//    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    reset(taskQueue, indexerMetadataStorageCoordinator);
-//    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-//    taskQueue.shutdown("id1");
-//    taskQueue.shutdown("id2");
-//    taskQueue.shutdown("id3");
-//    replay(taskQueue, indexerMetadataStorageCoordinator);
-//
-//    supervisor.resetInternal(null);
-//    verifyAll();
-//  }
-//
-//  @Test(timeout = 60_000L)
-//  public void testCheckpointForInactiveTaskGroup()
-//      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
-//  {
-//    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
-//    //not adding any events
-//    final Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    final Task id2 = createKinesisIndexTask(
-//        "id2",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    final Task id3 = createKinesisIndexTask(
-//        "id3",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-//    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
-//    Collection workItems = new ArrayList<>();
-//    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
-//    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
-//    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
-//
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-//    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-//    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-//    expect(
-//        indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
-//        null)
-//    ).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(Status.READING));
-//    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(Status.READING));
-//
-//    final DateTime startTime = DateTimes.nowUtc();
-//    expect(taskClient.getStartTimeAsync("id1")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-//
-//    final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//
-//    final Map<String, String> fakeCheckpoints = Collections.emptyMap();
-//    supervisor.moveTaskGroupToPendingCompletion(0);
-//    supervisor.checkpoint(
-//        0,
-//        ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
-//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, checkpoints.get(0))),
-//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, fakeCheckpoints))
-//    );
-//
-//    while (supervisor.getNoticesQueueSize() > 0) {
-//      Thread.sleep(100);
-//    }
-//
-//    verifyAll();
-//
-//    Assert.assertNull(serviceEmitter.getStackTrace(), serviceEmitter.getStackTrace());
-//    Assert.assertNull(serviceEmitter.getExceptionMessage(), serviceEmitter.getExceptionMessage());
-//    Assert.assertNull(serviceEmitter.getExceptionClass());
-//  }
-//
-//  @Test(timeout = 60_000L)
-//  public void testCheckpointForUnknownTaskGroup() throws InterruptedException
-//  {
-//    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
-//    //not adding any events
-//    final Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    final Task id2 = createKinesisIndexTask(
-//        "id2",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    final Task id3 = createKinesisIndexTask(
-//        "id3",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-//    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-//    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-//    expect(
-//        indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
-//        null)
-//    ).anyTimes();
-//
-//    replayAll();
-//
-//    supervisor.start();
-//
-//    supervisor.checkpoint(
-//        0,
-//        ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
-//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, Collections.emptyMap())),
-//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, Collections.emptyMap()))
-//    );
-//
-//    while (supervisor.getNoticesQueueSize() > 0) {
-//      Thread.sleep(100);
-//    }
-//
-//    verifyAll();
-//
-//    while (serviceEmitter.getStackTrace() == null) {
-//      Thread.sleep(100);
-//    }
-//
-//    Assert.assertTrue(serviceEmitter.getStackTrace()
-//                                    .startsWith("org.apache.druid.java.util.common.ISE: WTH?! cannot find"));
-//    Assert.assertEquals(
-//        "WTH?! cannot find taskGroup [0] among all taskGroups [{}]",
-//        serviceEmitter.getExceptionMessage()
-//    );
-//    Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
-//  }
-//
-//  @Test(timeout = 60_000L)
-//  public void testCheckpointWithNullTaskGroupId()
-//      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
-//  {
-//    supervisor = getSupervisor(1, 3, true, "PT1S", null, null, false);
-//    //not adding any events
-//    final Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    final Task id2 = createKinesisIndexTask(
-//        "id2",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    final Task id3 = createKinesisIndexTask(
-//        "id3",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
-//        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-//    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-//    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-//    expect(
-//        indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
-//        null)
-//    ).anyTimes();
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    expect(taskClient.getStatusAsync(anyString()))
-//        .andReturn(Futures.immediateFuture(Status.READING))
-//        .anyTimes();
-//    final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 0L));
-//    expect(taskClient.getCheckpointsAsync(anyString(), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(3);
-//    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
-//    expect(taskClient.pauseAsync(anyString()))
-//        .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L)))
-//        .anyTimes();
-//    expect(taskClient.setEndOffsetsAsync(anyString(), EasyMock.eq(ImmutableMap.of(0, 10L)), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(true))
-//        .anyTimes();
-//
-//    replayAll();
-//
-//    supervisor.start();
-//
-//    supervisor.runInternal();
-//
-//    final TreeMap<Integer, Map<String, String>> newCheckpoints = new TreeMap<>();
-//    newCheckpoints.put(0, ImmutableMap.of(0, 10L));
-//    supervisor.checkpoint(
-//        null,
-//        ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
-//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, checkpoints.get(0))),
-//        new KinesisDataSourceMetadata(new KinesisPartitions(stream, newCheckpoints.get(0)))
-//    );
-//
-//    while (supervisor.getNoticesQueueSize() > 0) {
-//      Thread.sleep(100);
-//    }
-//
-//    verifyAll();
-//  }
-//
-//  @Test
-//  public void testSuspendedNoRunningTasks() throws Exception
-//  {
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false, true);
-//    addSomeEvents(1);
-//
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    // this asserts that taskQueue.add does not in fact get called because supervisor should be suspended
-//    expect(taskQueue.add(anyObject())).andAnswer((IAnswer) () -> {
-//      Assert.fail();
-//      return null;
-//    }).anyTimes();
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//  }
-//
-//  @Test
-//  public void testSuspendedRunningTasks() throws Exception
-//  {
-//    // graceful shutdown is expected to be called on running tasks since state is suspended
-//
-//    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
-//    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
-//    final DateTime startTime = DateTimes.nowUtc();
-//
-//    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false, true);
-//    addSomeEvents(1);
-//
-//    Task id1 = createKinesisIndexTask(
-//        "id1",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id2 = createKinesisIndexTask(
-//        "id2",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Task id3 = createKinesisIndexTask(
-//        "id3",
-//        DATASOURCE,
-//        0,
-//        new KinesisPartitions("stream", ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)),
-//        new KinesisPartitions("stream", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
-//        null,
-//        null
-//    );
-//
-//    Collection workItems = new ArrayList<>();
-//    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
-//    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
-//
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
-//    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-//    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-//    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-//    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-//    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-//    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
-//    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
-//        new KinesisDataSourceMetadata(
-//            null
-//        )
-//    ).anyTimes();
-//    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.PUBLISHING));
-//    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
-//    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
-//    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-//    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//
-//    // getCheckpoints will not be called for id1 as it is in publishing state
-//    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-//    checkpoints.put(0, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
-//        .andReturn(Futures.immediateFuture(checkpoints))
-//        .times(1);
-//
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//
-//    expect(taskClient.pauseAsync("id2"))
-//        .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 15L, 1, 25L, 2, 30L)));
-//    expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(0, 15L, 1, 25L, 2, 30L), true))
-//        .andReturn(Futures.immediateFuture(true));
-//    taskQueue.shutdown("id3");
-//    expectLastCall().times(2);
-//
-//    replayAll();
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//  }
-//
-//  @Test
-//  public void testResetSuspended() throws Exception
-//  {
-//    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-//    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
-//    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
-//    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
-//    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-//    replayAll();
-//
-//    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false, true);
-//    supervisor.start();
-//    supervisor.runInternal();
-//    verifyAll();
-//
-//    reset(indexerMetadataStorageCoordinator);
-//    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-//    replay(indexerMetadataStorageCoordinator);
-//
-//    supervisor.resetInternal(null);
-//    verifyAll();
-//  }
-//
+
+  @Test
+  public void testRequeueTaskWhenFailed() throws Exception
+  {
+    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.NOT_STARTED))
+                                                  .anyTimes();
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
+
+    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(
+        0,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0)
+        )
+    );
+    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, ImmutableMap.of(
+        shardId0,
+        getSequenceNumber(res, shardId0, 0)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints1))
+        .anyTimes();
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints2))
+        .anyTimes();
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    List<Task> tasks = captured.getValues();
+
+    // test that running the main loop again checks the status of the tasks that were created and does nothing if they
+    // are all still running
+    reset(taskStorage);
+    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
+    for (Task task : tasks) {
+      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
+      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    replay(taskStorage);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    // test that a task failing causes a new task to be re-queued with the same parameters
+    Capture<Task> aNewTaskCapture = Capture.newInstance();
+    List<Task> imStillAlive = tasks.subList(0, 3);
+    KinesisIndexTask iHaveFailed = (KinesisIndexTask) tasks.get(3);
+    reset(taskStorage);
+    reset(taskQueue);
+    expect(taskStorage.getActiveTasks()).andReturn(imStillAlive).anyTimes();
+    for (Task task : imStillAlive) {
+      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
+      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    expect(taskStorage.getStatus(iHaveFailed.getId())).andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
+    expect(taskStorage.getTask(iHaveFailed.getId())).andReturn(Optional.of((Task) iHaveFailed)).anyTimes();
+    expect(taskQueue.add(capture(aNewTaskCapture))).andReturn(true);
+    replay(taskStorage);
+    replay(taskQueue);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    Assert.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
+    Assert.assertEquals(
+        iHaveFailed.getIOConfig().getBaseSequenceName(),
+        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getBaseSequenceName()
+    );
+  }
+
+  @Test
+  public void testRequeueAdoptedTaskWhenFailed() throws Exception
+  {
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    DateTime now = DateTimes.nowUtc();
+    DateTime maxi = now.plusMinutes(60);
+    Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0),
+            shardId0,
+            getSequenceNumber(res, shardId0, 0)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        now,
+        maxi
+    );
+
+    List<Task> existingTasks = ImmutableList.of(id1);
+
+    Capture<Task> captured = Capture.newInstance();
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(existingTasks).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStartTimeAsync("id1")).andReturn(Futures.immediateFuture(now)).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true);
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+
+    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0),
+        shardId0,
+        getSequenceNumber(res, shardId0, 0)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(2);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    // check that replica tasks are created with the same minimumMessageTime as tasks inherited from another supervisor
+    Assert.assertEquals(now, ((KinesisIndexTask) captured.getValue()).getIOConfig().getMinimumMessageTime().get());
+
+    // test that a task failing causes a new task to be re-queued with the same parameters
+    String runningTaskId = captured.getValue().getId();
+    Capture<Task> aNewTaskCapture = Capture.newInstance();
+    KinesisIndexTask iHaveFailed = (KinesisIndexTask) existingTasks.get(0);
+    reset(taskStorage);
+    reset(taskQueue);
+    reset(taskClient);
+
+    // for the newly created replica task
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(2);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(captured.getValue())).anyTimes();
+    expect(taskStorage.getStatus(iHaveFailed.getId())).andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
+    expect(taskStorage.getStatus(runningTaskId)).andReturn(Optional.of(TaskStatus.running(runningTaskId))).anyTimes();
+    expect(taskStorage.getTask(iHaveFailed.getId())).andReturn(Optional.of((Task) iHaveFailed)).anyTimes();
+    expect(taskStorage.getTask(runningTaskId)).andReturn(Optional.of(captured.getValue())).anyTimes();
+    expect(taskClient.getStatusAsync(runningTaskId)).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStartTimeAsync(runningTaskId)).andReturn(Futures.immediateFuture(now)).anyTimes();
+    expect(taskQueue.add(capture(aNewTaskCapture))).andReturn(true);
+    replay(taskStorage);
+    replay(taskQueue);
+    replay(taskClient);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    Assert.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
+    Assert.assertEquals(
+        iHaveFailed.getIOConfig().getBaseSequenceName(),
+        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getBaseSequenceName()
+    );
+
+    // check that failed tasks are recreated with the same minimumMessageTime as the task it replaced, even if that
+    // task came from another supervisor
+    Assert.assertEquals(
+        now,
+        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMinimumMessageTime().get()
+    );
+    Assert.assertEquals(
+        maxi,
+        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime().get()
+    );
+  }
+
+  @Test
+  public void testQueueNextTasksOnSuccess() throws Exception
+  {
+    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.NOT_STARTED))
+                                                  .anyTimes();
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    List<Task> tasks = captured.getValues();
+
+    reset(taskStorage);
+    reset(taskClient);
+
+    expect(taskClient.getStatusAsync(anyString())).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.NOT_STARTED))
+                                                  .anyTimes();
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
+    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0),
+        shardId0,
+        getSequenceNumber(res, shardId0, 0)
+    ));
+    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0)
+    ));
+    // there would be 4 tasks, 2 for each task group
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints1))
+        .times(2);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints2))
+        .times(2);
+
+    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
+    for (Task task : tasks) {
+      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
+      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    replay(taskStorage);
+    replay(taskClient);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    // test that a task succeeding causes a new task to be re-queued with the next offset range and causes any replica
+    // tasks to be shutdown
+    Capture<Task> newTasksCapture = Capture.newInstance(CaptureType.ALL);
+    Capture<String> shutdownTaskIdCapture = Capture.newInstance();
+    List<Task> imStillRunning = tasks.subList(1, 4);
+    KinesisIndexTask iAmSuccess = (KinesisIndexTask) tasks.get(0);
+    reset(taskStorage);
+    reset(taskQueue);
+    reset(taskClient);
+    expect(taskStorage.getActiveTasks()).andReturn(imStillRunning).anyTimes();
+    for (Task task : imStillRunning) {
+      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
+      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    expect(taskStorage.getStatus(iAmSuccess.getId())).andReturn(Optional.of(TaskStatus.success(iAmSuccess.getId())));
+    expect(taskStorage.getTask(iAmSuccess.getId())).andReturn(Optional.of((Task) iAmSuccess)).anyTimes();
+    expect(taskQueue.add(capture(newTasksCapture))).andReturn(true).times(2);
+    expect(taskClient.stopAsync(capture(shutdownTaskIdCapture), eq(false))).andReturn(Futures.immediateFuture(true));
+    replay(taskStorage);
+    replay(taskQueue);
+    replay(taskClient);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    // make sure we killed the right task (sequenceName for replicas are the same)
+    Assert.assertTrue(shutdownTaskIdCapture.getValue().contains(iAmSuccess.getIOConfig().getBaseSequenceName()));
+  }
+
+  @Test
+  public void testBeginPublishAndQueueNextTasks() throws Exception
+  {
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+
+    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    List<Task> tasks = captured.getValues();
+    Collection workItems = new ArrayList<>();
+    for (Task task : tasks) {
+      workItems.add(new TestTaskRunnerWorkItem(task, null, location));
+    }
+
+    reset(taskStorage, taskRunner, taskClient, taskQueue);
+    captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
+    for (Task task : tasks) {
+      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
+      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskClient.getStatusAsync(anyString()))
+        .andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING))
+        .anyTimes();
+    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
+    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+        .times(2);
+    expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 1),
+            shardId0,
+            getSequenceNumber(res, shardId0, 0)
+        )))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 3),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )));
+    expect(
+        taskClient.setEndOffsetsAsync(
+            EasyMock.contains("sequenceName-0"),
+            EasyMock.eq(ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 3),
+                shardId0,
+                getSequenceNumber(res, shardId0, 1)
+            )),
+            EasyMock.eq(true)
+        )
+    ).andReturn(Futures.immediateFuture(true)).times(2);
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(2);
+
+    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0)
+    ));
+    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, ImmutableMap.of(
+        shardId0,
+        getSequenceNumber(res, shardId0, 0)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints1))
+        .times(2);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints2))
+        .times(2);
+
+    replay(taskStorage, taskRunner, taskClient, taskQueue);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    for (Task task : captured.getValues()) {
+      KinesisIndexTask KinesisIndexTask = (KinesisIndexTask) task;
+      Assert.assertEquals(dataSchema, KinesisIndexTask.getDataSchema());
+      Assert.assertEquals(tuningConfig.copyOf(), KinesisIndexTask.getTuningConfig());
+
+      KinesisIOConfig taskConfig = KinesisIndexTask.getIOConfig();
+      Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+      Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
+
+      Assert.assertEquals(stream, taskConfig.getStartPartitions().getStream());
+      Assert.assertEquals(
+          getSequenceNumber(res, shardId1, 3),
+          taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId1)
+      );
+      Assert.assertEquals(
+          getSequenceNumber(res, shardId0, 1),
+          taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId0)
+      );
+    }
+  }
+
+  @Test
+  public void testDiscoverExistingPublishingTask() throws Exception
+  {
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Task task = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0),
+            shardId0,
+            getSequenceNumber(res, shardId0, 0)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(task, null, location));
+
+    Capture<KinesisIndexTask> captured = Capture.newInstance();
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(task)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(task)).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.PUBLISHING));
+    expect(taskClient.getCurrentOffsetsAsync("id1", false))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 2),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )));
+    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 2),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskQueue.add(capture(captured))).andReturn(true);
+
+    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0),
+        shardId0,
+        getSequenceNumber(res, shardId0, 0)
+    ));
+    expect(taskClient.getCheckpoints(anyString(), anyBoolean())).andReturn(checkpoints).anyTimes();
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    supervisor.updateCurrentAndLatestOffsets().run();
+    SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
+    verifyAll();
+
+    Assert.assertEquals(DATASOURCE, report.getId());
+
+    KinesisSupervisorReportPayload payload = report.getPayload();
+
+    Assert.assertEquals(DATASOURCE, payload.getDataSource());
+    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
+    Assert.assertEquals(2, (int) payload.getPartitions());
+    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(stream, payload.getId());
+    Assert.assertEquals(0, payload.getActiveTasks().size());
+    Assert.assertEquals(1, payload.getPublishingTasks().size());
+
+    TaskReportData publishingReport = payload.getPublishingTasks().get(0);
+
+    Assert.assertEquals("id1", publishingReport.getId());
+    Assert.assertEquals(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0),
+        shardId0,
+        getSequenceNumber(res, shardId0, 0)
+    ), publishingReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 2),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ), publishingReport.getCurrentOffsets());
+
+    KinesisIndexTask capturedTask = captured.getValue();
+    Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
+    Assert.assertEquals(tuningConfig.copyOf(), capturedTask.getTuningConfig());
+
+    KinesisIOConfig capturedTaskConfig = capturedTask.getIOConfig();
+    Assert.assertEquals(cloud.localstack.TestUtils.TEST_ACCESS_KEY, capturedTaskConfig.getAwsAccessKeyId());
+    Assert.assertEquals(cloud.localstack.TestUtils.TEST_SECRET_KEY, capturedTaskConfig.getAwsSecretAccessKey());
+    Assert.assertEquals(Localstack.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
+    Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
+    Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
+
+    // check that the new task was created with starting offsets matching where the publishing task finished
+    Assert.assertEquals(stream, capturedTaskConfig.getStartPartitions().getStream());
+    Assert.assertEquals(
+        getSequenceNumber(res, shardId1, 2),
+        capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId1)
+    );
+    Assert.assertEquals(
+        getSequenceNumber(res, shardId0, 1),
+        capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId0)
+    );
+
+    Assert.assertEquals(stream, capturedTaskConfig.getEndPartitions().getStream());
+    Assert.assertEquals(
+        KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+        capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(shardId1)
+    );
+    Assert.assertEquals(
+        KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+        capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(shardId0)
+    );
+  }
+
+  @Test
+  public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
+  {
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Task task = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0),
+            shardId0,
+            getSequenceNumber(res, shardId0, 0)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(task, null, location));
+
+    Capture<KinesisIndexTask> captured = Capture.newInstance();
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(task)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(task)).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.PUBLISHING));
+    expect(taskClient.getCurrentOffsetsAsync("id1", false))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 2),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )));
+    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 2),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskQueue.add(capture(captured))).andReturn(true);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    supervisor.updateCurrentAndLatestOffsets().run();
+    SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
+    verifyAll();
+
+    Assert.assertEquals(DATASOURCE, report.getId());
+
+    KinesisSupervisorReportPayload payload = report.getPayload();
+
+    Assert.assertEquals(DATASOURCE, payload.getDataSource());
+    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
+    Assert.assertEquals(2, (int) payload.getPartitions());
+    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(stream, payload.getId());
+    Assert.assertEquals(0, payload.getActiveTasks().size());
+    Assert.assertEquals(1, payload.getPublishingTasks().size());
+
+    TaskReportData publishingReport = payload.getPublishingTasks().get(0);
+
+    Assert.assertEquals("id1", publishingReport.getId());
+    Assert.assertEquals(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0),
+        shardId0,
+        getSequenceNumber(res, shardId0, 0)
+    ), publishingReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 2),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ), publishingReport.getCurrentOffsets());
+
+    KinesisIndexTask capturedTask = captured.getValue();
+    Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
+    Assert.assertEquals(tuningConfig.copyOf(), capturedTask.getTuningConfig());
+
+    KinesisIOConfig capturedTaskConfig = capturedTask.getIOConfig();
+    Assert.assertEquals(cloud.localstack.TestUtils.TEST_ACCESS_KEY, capturedTaskConfig.getAwsAccessKeyId());
+    Assert.assertEquals(cloud.localstack.TestUtils.TEST_SECRET_KEY, capturedTaskConfig.getAwsSecretAccessKey());
+    Assert.assertEquals(Localstack.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
+    Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
+    Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
+
+    // check that the new task was created with starting offsets matching where the publishing task finished
+    Assert.assertEquals(stream, capturedTaskConfig.getStartPartitions().getStream());
+    Assert.assertEquals(
+        getSequenceNumber(res, shardId1, 2),
+        capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId1)
+    );
+    Assert.assertEquals(
+        getSequenceNumber(res, shardId0, 1),
+        capturedTaskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId0)
+    );
+
+    Assert.assertEquals(stream, capturedTaskConfig.getEndPartitions().getStream());
+    Assert.assertEquals(
+        KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+        capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(shardId1)
+    );
+    Assert.assertEquals(
+        KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+        capturedTaskConfig.getEndPartitions().getPartitionSequenceNumberMap().get(shardId0)
+    );
+  }
+
+  @Test
+  public void testDiscoverExistingPublishingAndReadingTask() throws Exception
+  {
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final DateTime startTime = DateTimes.nowUtc();
+
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(
+            "stream",
+            ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 0),
+                shardId0,
+                getSequenceNumber(res, shardId0, 0)
+            )
+        ),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id2 = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 2),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.PUBLISHING));
+    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getCurrentOffsetsAsync("id1", false))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 2),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )));
+    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 2),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskClient.getCurrentOffsetsAsync("id2", false))
+        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 12),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )));
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+
+    // since id1 is publishing, so getCheckpoints wouldn't be called for it
+    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 2),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    supervisor.updateCurrentAndLatestOffsets().run();
+    SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
+    verifyAll();
+
+    Assert.assertEquals(DATASOURCE, report.getId());
+
+    KinesisSupervisorReportPayload payload = report.getPayload();
+
+    Assert.assertEquals(DATASOURCE, payload.getDataSource());
+    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
+    Assert.assertEquals(2, (int) payload.getPartitions());
+    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(stream, payload.getId());
+    Assert.assertEquals(1, payload.getActiveTasks().size());
+    Assert.assertEquals(1, payload.getPublishingTasks().size());
+
+    TaskReportData activeReport = payload.getActiveTasks().get(0);
+    TaskReportData publishingReport = payload.getPublishingTasks().get(0);
+
+    Assert.assertEquals("id2", activeReport.getId());
+    Assert.assertEquals(startTime, activeReport.getStartTime());
+    Assert.assertEquals(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 2),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ), activeReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 12),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ), activeReport.getCurrentOffsets());
+
+    Assert.assertEquals("id1", publishingReport.getId());
+    Assert.assertEquals(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0),
+        shardId0,
+        getSequenceNumber(res, shardId0, 0)
+    ), publishingReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 2),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ), publishingReport.getCurrentOffsets());
+  }
+
+  @Test
+  public void testKillUnresponsiveTasksWhileGettingStartTime() throws Exception
+  {
+    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    List<Task> tasks = captured.getValues();
+
+    reset(taskStorage, taskClient, taskQueue);
+
+    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, ImmutableMap.of(
+        shardId1,
+
+        getSequenceNumber(res, shardId1, 0),
+
+        shardId0,
+
+        getSequenceNumber(res, shardId0, 0)
+    ));
+    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, ImmutableMap.of(shardId0, getSequenceNumber(res, shardId0, 0)));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints1))
+        .times(2);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints2))
+        .times(2);
+
+    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
+    for (Task task : tasks) {
+      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
+      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+      expect(taskClient.getStatusAsync(task.getId()))
+          .andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.NOT_STARTED));
+      expect(taskClient.getStartTimeAsync(task.getId()))
+          .andReturn(Futures.immediateFailedFuture(new RuntimeException()));
+      taskQueue.shutdown(task.getId());
+    }
+    replay(taskStorage, taskClient, taskQueue);
+
+    supervisor.runInternal();
+    verifyAll();
+  }
+
+  @Test
+  public void testKillUnresponsiveTasksWhilePausing() throws Exception
+  {
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+
+    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    List<Task> tasks = captured.getValues();
+    Collection workItems = new ArrayList<>();
+    for (Task task : tasks) {
+      workItems.add(new TestTaskRunnerWorkItem(task, null, location));
+    }
+
+    reset(taskStorage, taskRunner, taskClient, taskQueue);
+
+    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0)
+    ));
+    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, ImmutableMap.of(shardId0, getSequenceNumber(res, shardId0, 0)));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints1))
+        .times(2);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints2))
+        .times(2);
+
+    captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
+    for (Task task : tasks) {
+      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
+      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskClient.getStatusAsync(anyString()))
+        .andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING))
+        .anyTimes();
+    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
+    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+        .times(2);
+    expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
+        .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
+    taskQueue.shutdown(EasyMock.contains("sequenceName-0"));
+    expectLastCall().times(2);
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(2);
+
+    replay(taskStorage, taskRunner, taskClient, taskQueue);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    for (Task task : captured.getValues()) {
+      KinesisIOConfig taskConfig = ((KinesisIndexTask) task).getIOConfig();
+      Assert.assertEquals(
+          getSequenceNumber(res, shardId1, 0),
+          taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId1)
+      );
+      Assert.assertNull(
+          taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId0)
+      );
+    }
+  }
+
+  @Test
+  public void testKillUnresponsiveTasksWhileSettingEndOffsets() throws Exception
+  {
+    final TaskLocation location = new TaskLocation("testHost", 1234, -1);
+
+    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(4);
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    List<Task> tasks = captured.getValues();
+    Collection workItems = new ArrayList<>();
+    for (Task task : tasks) {
+      workItems.add(new TestTaskRunnerWorkItem(task, null, location));
+    }
+
+    reset(taskStorage, taskRunner, taskClient, taskQueue);
+
+    TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 0)
+    ));
+    TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, ImmutableMap.of(shardId0, getSequenceNumber(res, shardId0, 0)));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints1))
+        .times(2);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints2))
+        .times(2);
+
+    captured = Capture.newInstance(CaptureType.ALL);
+    expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
+    for (Task task : tasks) {
+      expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(TaskStatus.running(task.getId()))).anyTimes();
+      expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
+    }
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskClient.getStatusAsync(anyString()))
+        .andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING))
+        .anyTimes();
+    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-0")))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc().minusMinutes(2)))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
+    expect(taskClient.getStartTimeAsync(EasyMock.contains("sequenceName-1")))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+        .times(2);
+    expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 1)
+        )))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 3)
+        )));
+    expect(
+        taskClient.setEndOffsetsAsync(
+            EasyMock.contains("sequenceName-0"),
+            EasyMock.eq(ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 3)
+            )),
+            EasyMock.eq(true)
+        )
+    ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
+    taskQueue.shutdown(EasyMock.contains("sequenceName-0"));
+    expectLastCall().times(2);
+    expect(taskQueue.add(capture(captured))).andReturn(true).times(2);
+
+    replay(taskStorage, taskRunner, taskClient, taskQueue);
+
+    supervisor.runInternal();
+    verifyAll();
+
+    for (Task task : captured.getValues()) {
+      KinesisIOConfig taskConfig = ((KinesisIndexTask) task).getIOConfig();
+      Assert.assertEquals(
+          getSequenceNumber(res, shardId1, 0),
+          taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId1)
+      );
+    }
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testStopNotStarted()
+  {
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor.stop(false);
+  }
+
+  @Test
+  public void testStop()
+  {
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    taskClient.close();
+    taskRunner.unregisterListener(StringUtils.format("KinesisSupervisor-%s", DATASOURCE));
+    replayAll();
+
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor.start();
+    supervisor.stop(false);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testStopGracefully() throws Exception
+  {
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final DateTime startTime = DateTimes.nowUtc();
+
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0),
+            shardId0,
+            getSequenceNumber(res, shardId0, 0)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id2 = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 3),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id3 = createKinesisIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 3),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.PUBLISHING));
+    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 3),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ));
+
+    // getCheckpoints will not be called for id1 as it is in publishing state
+    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 3),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    reset(taskRunner, taskClient, taskQueue);
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskClient.pauseAsync("id2"))
+        .andReturn(Futures.immediateFuture((Map<String, String>) ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 12),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )));
+    expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 12),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ), true))
+        .andReturn(Futures.immediateFuture(true));
+    taskQueue.shutdown("id3");
+    expectLastCall().times(2);
+
+    replay(taskRunner, taskClient, taskQueue);
+
+    supervisor.gracefulShutdownInternal();
+    verifyAll();
+  }
+
+  @Test
+  public void testResetNoTasks() throws Exception
+  {
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    reset(indexerMetadataStorageCoordinator);
+    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
+    replay(indexerMetadataStorageCoordinator);
+
+    supervisor.resetInternal(null);
+    verifyAll();
+
+  }
+
+  @Test
+  public void testResetDataSourceMetadata() throws Exception
+  {
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    Capture<String> captureDataSource = EasyMock.newCapture();
+    Capture<DataSourceMetadata> captureDataSourceMetadata = EasyMock.newCapture();
+
+    KinesisDataSourceMetadata KinesisDataSourceMetadata = new KinesisDataSourceMetadata(new KinesisPartitions(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )
+    ));
+
+    KinesisDataSourceMetadata resetMetadata = new KinesisDataSourceMetadata(new KinesisPartitions(
+        stream,
+        ImmutableMap.of(
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )
+    ));
+
+    KinesisDataSourceMetadata expectedMetadata = new KinesisDataSourceMetadata(new KinesisPartitions(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )
+    ));
+
+    reset(indexerMetadataStorageCoordinator);
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(KinesisDataSourceMetadata);
+    expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(
+        EasyMock.capture(captureDataSource),
+        EasyMock.capture(captureDataSourceMetadata)
+    )).andReturn(true);
+    replay(indexerMetadataStorageCoordinator);
+
+    try {
+      supervisor.resetInternal(resetMetadata);
+    }
+    catch (NullPointerException npe) {
+      // Expected as there will be an attempt to reset partitionGroups offsets to NOT_SET
+      // however there would be no entries in the map as we have not put nay data in kafka
+      Assert.assertTrue(npe.getCause() == null);
+    }
+    verifyAll();
+
+    Assert.assertEquals(captureDataSource.getValue(), DATASOURCE);
+    Assert.assertEquals(captureDataSourceMetadata.getValue(), expectedMetadata);
+  }
+
+  @Test
+  public void testResetNoDataSourceMetadata() throws Exception
+  {
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    KinesisDataSourceMetadata resetMetadata = new KinesisDataSourceMetadata(new KinesisPartitions(
+        stream,
+        ImmutableMap.of(
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )
+    ));
+
+    reset(indexerMetadataStorageCoordinator);
+    // no DataSourceMetadata in metadata store
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(null);
+    replay(indexerMetadataStorageCoordinator);
+
+    supervisor.resetInternal(resetMetadata);
+    verifyAll();
+  }
+
+  @Test
+  public void testResetRunningTasks() throws Exception
+  {
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final DateTime startTime = DateTimes.nowUtc();
+
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 0),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 0)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id2 = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 3),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id3 = createKinesisIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 3),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.PUBLISHING));
+    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(
+        shardId1,
+
+        getSequenceNumber(res, shardId1, 3),
+
+        shardId0,
+
+        getSequenceNumber(res, shardId0, 1)
+    ));
+
+    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId1,
+
+        getSequenceNumber(res, shardId1, 3),
+
+        shardId0,
+
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    reset(taskQueue, indexerMetadataStorageCoordinator);
+    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
+    taskQueue.shutdown("id2");
+    taskQueue.shutdown("id3");
+    replay(taskQueue, indexerMetadataStorageCoordinator);
+
+    supervisor.resetInternal(null);
+    verifyAll();
+  }
+
+  @Test
+  public void testNoDataIngestionTasks() throws Exception
+  {
+    final DateTime startTime = DateTimes.nowUtc();
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+    //not adding any events
+    Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 0),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 0)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id2 = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 3),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id3 = createKinesisIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 3),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStartTimeAsync("id1")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
+
+    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId1,
+
+        getSequenceNumber(res, shardId1, 3),
+
+        shardId0,
+
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    reset(taskQueue, indexerMetadataStorageCoordinator);
+    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
+    taskQueue.shutdown("id1");
+    taskQueue.shutdown("id2");
+    taskQueue.shutdown("id3");
+    replay(taskQueue, indexerMetadataStorageCoordinator);
+
+    supervisor.resetInternal(null);
+    verifyAll();
+  }
+
+  /*
+  @Test(timeout = 60_000L)
+  public void testCheckpointForInactiveTaskGroup()
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
+  {
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+    //not adding any events
+    final Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 0),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 0)
+        )),
+        new KinesisPartitions(stream, ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    final Task id2 = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 3),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions(stream, ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    final Task id3 = createKinesisIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(
+            shardId1,
+
+            getSequenceNumber(res, shardId1, 3),
+
+            shardId0,
+
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions(stream, ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(
+        indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
+        null)
+    ).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+
+    final DateTime startTime = DateTimes.nowUtc();
+    expect(taskClient.getStartTimeAsync("id1")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
+
+    final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId1,
+
+        getSequenceNumber(res, shardId1, 3),
+
+        shardId0,
+
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    final Map<String, String> fakeCheckpoints = Collections.emptyMap();
+    supervisor.moveTaskGroupToPendingCompletion(0);
+    supervisor.checkpoint(
+        0,
+        ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
+        new KinesisDataSourceMetadata(new KinesisPartitions(stream, checkpoints.get(0))),
+        new KinesisDataSourceMetadata(new KinesisPartitions(stream, fakeCheckpoints))
+    );
+
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
+
+    verifyAll();
+
+    Assert.assertNull(serviceEmitter.getStackTrace(), serviceEmitter.getStackTrace());
+    Assert.assertNull(serviceEmitter.getExceptionMessage(), serviceEmitter.getExceptionMessage());
+    Assert.assertNull(serviceEmitter.getExceptionClass());
+  }
+
+
+  @Test(timeout = 60_000L)
+  public void testCheckpointForUnknownTaskGroup() throws InterruptedException
+  {
+    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
+    //not adding any events
+    final Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(
+  shardId1,
+
+  getSequenceNumber(res, shardId1, 0),
+
+  shardId0,
+
+  getSequenceNumber(res, shardId0, 0)
+    )),
+        new KinesisPartitions(stream, ImmutableMap.of(
+  shardId1,
+  KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+  shardId0,
+  KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    final Task id2 = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(
+  shardId1,
+
+  getSequenceNumber(res, shardId1, 3),
+
+  shardId0,
+
+  getSequenceNumber(res, shardId0, 1)
+    )),
+        new KinesisPartitions(stream, ImmutableMap.of(
+  shardId1,
+  KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+  shardId0,
+  KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    final Task id3 = createKinesisIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(
+  shardId1,
+
+  getSequenceNumber(res, shardId1, 3),
+
+  shardId0,
+
+  getSequenceNumber(res, shardId0, 1)
+    )),
+        new KinesisPartitions(stream, ImmutableMap.of(
+  shardId1,
+  KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+  shardId0,
+  KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(
+        indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
+        null)
+    ).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+
+    supervisor.checkpoint(
+        0,
+        ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
+        new KinesisDataSourceMetadata(new KinesisPartitions(stream, Collections.emptyMap())),
+        new KinesisDataSourceMetadata(new KinesisPartitions(stream, Collections.emptyMap()))
+    );
+
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
+
+    verifyAll();
+
+    while (serviceEmitter.getStackTrace() == null) {
+      Thread.sleep(100);
+    }
+
+    Assert.assertTrue(serviceEmitter.getStackTrace()
+                                    .startsWith("org.apache.druid.java.util.common.ISE: WTH?! cannot find"));
+    Assert.assertEquals(
+        "WTH?! cannot find taskGroup [0] among all taskGroups [{}]",
+        serviceEmitter.getExceptionMessage()
+    );
+    Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testCheckpointWithNullTaskGroupId()
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
+  {
+    supervisor = getSupervisor(1, 3, true, "PT1S", null, null, false);
+    //not adding any events
+    final Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
+        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE)),
+        null,
+        null
+    );
+
+    final Task id2 = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
+        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE)),
+        null,
+        null
+    );
+
+    final Task id3 = createKinesisIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new KinesisPartitions(stream, ImmutableMap.of(0, 0L)),
+        new KinesisPartitions(stream, ImmutableMap.of(0, Long.MAX_VALUE)),
+        null,
+        null
+    );
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(
+        indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(new KinesisDataSourceMetadata(
+        null)
+    ).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    expect(taskClient.getStatusAsync(anyString()))
+        .andReturn(Futures.immediateFuture(Status.READING))
+        .anyTimes();
+    final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(0, 0L));
+    expect(taskClient.getCheckpointsAsync(anyString(), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(3);
+    expect(taskClient.getStartTimeAsync(anyString())).andReturn(Futures.immediateFuture(DateTimes.nowUtc())).anyTimes();
+    expect(taskClient.pauseAsync(anyString()))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L)))
+        .anyTimes();
+    expect(taskClient.setEndOffsetsAsync(anyString(), EasyMock.eq(ImmutableMap.of(0, 10L)), anyBoolean()))
+        .andReturn(Futures.immediateFuture(true))
+        .anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+
+    supervisor.runInternal();
+
+    final TreeMap<Integer, Map<String, String>> newCheckpoints = new TreeMap<>();
+    newCheckpoints.put(0, ImmutableMap.of(0, 10L));
+    supervisor.checkpoint(
+        null,
+        ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
+        new KinesisDataSourceMetadata(new KinesisPartitions(stream, checkpoints.get(0))),
+        new KinesisDataSourceMetadata(new KinesisPartitions(stream, newCheckpoints.get(0)))
+    );
+
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
+
+    verifyAll();
+  }
+  */
+
+  @Test
+  public void testSuspendedNoRunningTasks() throws Exception
+  {
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, true);
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    // this asserts that taskQueue.add does not in fact get called because supervisor should be suspended
+    expect(taskQueue.add(anyObject())).andAnswer((IAnswer) () -> {
+      Assert.fail();
+      return null;
+    }).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+  }
+
+  @Test
+  public void testSuspendedRunningTasks() throws Exception
+  {
+    // graceful shutdown is expected to be called on running tasks since state is suspended
+
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+    final DateTime startTime = DateTimes.nowUtc();
+
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, true);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    Task id1 = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0),
+            shardId0,
+            getSequenceNumber(res, shardId0, 0)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id2 = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 3),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Task id3 = createKinesisIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 3),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )),
+        new KinesisPartitions("stream", ImmutableMap.of(
+            shardId1,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER,
+            shardId0,
+            KinesisPartitions.NO_END_SEQUENCE_NUMBER
+        )),
+        null,
+        null
+    );
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(id1, id2, id3)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.PUBLISHING));
+    expect(taskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+    expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
+    expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 3),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ));
+
+    // getCheckpoints will not be called for id1 as it is in publishing state
+    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 3),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints))
+        .times(1);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+
+    expect(taskClient.pauseAsync("id2"))
+        .andReturn(Futures.immediateFuture(ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 12),
+            shardId0,
+            getSequenceNumber(res, shardId0, 1)
+        )));
+    expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(
+        shardId1,
+        getSequenceNumber(res, shardId1, 12),
+        shardId0,
+        getSequenceNumber(res, shardId0, 1)
+    ), true))
+        .andReturn(Futures.immediateFuture(true));
+    taskQueue.shutdown("id3");
+    expectLastCall().times(2);
+
+    replayAll();
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+  }
+
+  @Test
+  public void testResetSuspended() throws Exception
+  {
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, true);
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    reset(indexerMetadataStorageCoordinator);
+    expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
+    replay(indexerMetadataStorageCoordinator);
+
+    supervisor.resetInternal(null);
+    verifyAll();
+  }
+
 
   private static List<PutRecordsResultEntry> insertData(
       AmazonKinesis kinesis,
@@ -2872,6 +3386,84 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
+  private KinesisSupervisor getSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended
+  )
+  {
+    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+        stream,
+        Localstack.getEndpointKinesis(),
+        null,
+        replicas,
+        taskCount,
+        new Period(duration),
+        new Period("P1D"),
+        new Period("PT30S"),
+        useEarliestOffset,
+        new Period("PT30M"),
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        null,
+        null,
+        cloud.localstack.TestUtils.TEST_ACCESS_KEY,
+        cloud.localstack.TestUtils.TEST_SECRET_KEY,
+        null,
+        null,
+        false
+    );
+
+    KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
+        null,
+        null
+    )
+    {
+      @Override
+      public KinesisIndexTaskClient build(
+          TaskInfoProvider taskInfoProvider,
+          String dataSource,
+          int numThreads,
+          Duration httpTimeout,
+          long numRetries
+      )
+      {
+        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
+        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        return taskClient;
+      }
+    };
+
+    return new TestableKinesisSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        objectMapper,
+        new KinesisSupervisorSpec(
+            dataSchema,
+            tuningConfig,
+            KinesisSupervisorIOConfig,
+            null,
+            suspended,
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            taskClientFactory,
+            objectMapper,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig(),
+            rowIngestionMetersFactory
+        ),
+        rowIngestionMetersFactory
+    );
+  }
+
   private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final String taskType;
@@ -2940,4 +3532,5 @@ public class KinesisSupervisorTest extends EasyMockSupport
       return StringUtils.format("sequenceName-%d", groupId);
     }
   }
+
 }

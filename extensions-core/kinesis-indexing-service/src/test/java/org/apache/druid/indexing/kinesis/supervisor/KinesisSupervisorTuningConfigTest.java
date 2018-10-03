@@ -108,7 +108,7 @@ public class KinesisSupervisorTuningConfigTest
     Assert.assertEquals(100, config.getMaxRowsPerSegment());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(false, config.getBuildV9Directly());
+    Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(12, (int) config.getWorkerThreads());
