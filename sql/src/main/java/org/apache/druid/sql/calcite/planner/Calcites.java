@@ -37,7 +37,7 @@ import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.discovery.LeaderClient;
+import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -105,8 +105,8 @@ public class Calcites
       final TimelineServerView serverView,
       final DruidSchema druidSchema,
       final AuthorizerMapper authorizerMapper,
-      final LeaderClient coordinatorDruidLeaderClient,
-      final LeaderClient overlordDruidLeaderClient,
+      final DruidLeaderClient coordinatorDruidLeaderClient,
+      final DruidLeaderClient overlordDruidLeaderClient,
       final ObjectMapper jsonMapper
   )
   {

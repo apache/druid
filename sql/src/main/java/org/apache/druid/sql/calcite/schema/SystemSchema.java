@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -45,7 +46,7 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.LeaderClient;
+import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -61,7 +62,6 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
@@ -158,8 +158,8 @@ public class SystemSchema extends AbstractSchema
       final DruidSchema druidSchema,
       final TimelineServerView serverView,
       final AuthorizerMapper authorizerMapper,
-      final @Coordinator LeaderClient coordinatorDruidLeaderClient,
-      final @IndexingService LeaderClient overlordDruidLeaderClient,
+      final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
+      final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
       final ObjectMapper jsonMapper
   )
   {
@@ -182,14 +182,14 @@ public class SystemSchema extends AbstractSchema
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
     private final DruidSchema druidSchema;
-    private final LeaderClient druidLeaderClient;
+    private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
     private final BytesAccumulatingResponseHandler responseHandler;
     private final AuthorizerMapper authorizerMapper;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
-        LeaderClient druidLeaderClient,
+        DruidLeaderClient druidLeaderClient,
         ObjectMapper jsonMapper,
         BytesAccumulatingResponseHandler responseHandler,
         AuthorizerMapper authorizerMapper
@@ -343,7 +343,7 @@ public class SystemSchema extends AbstractSchema
 
   // Note that coordinator must be up to get segments
   private static JsonParserIterator<DataSegment> getMetadataSegments(
-      LeaderClient coordinatorClient,
+      DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       BytesAccumulatingResponseHandler responseHandler
   )
@@ -424,7 +424,7 @@ public class SystemSchema extends AbstractSchema
           authorizerMapper
       );
       if (!access.isAllowed()) {
-        throw new ForbiddenException("Insufficient permission to view servers :" + access.toString());
+        return Linq4j.asEnumerable(ImmutableList.of());
       }
       final FluentIterable<Object[]> results = FluentIterable
           .from(druidServers)
@@ -486,13 +486,13 @@ public class SystemSchema extends AbstractSchema
 
   static class TasksTable extends AbstractTable implements ScannableTable
   {
-    private final LeaderClient druidLeaderClient;
+    private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
     private final BytesAccumulatingResponseHandler responseHandler;
     private final AuthorizerMapper authorizerMapper;
 
     public TasksTable(
-        LeaderClient druidLeaderClient,
+        DruidLeaderClient druidLeaderClient,
         ObjectMapper jsonMapper,
         BytesAccumulatingResponseHandler responseHandler,
         AuthorizerMapper authorizerMapper
@@ -609,7 +609,7 @@ public class SystemSchema extends AbstractSchema
 
   //Note that overlord must be up to get tasks
   private static JsonParserIterator<TaskStatusPlus> getTasks(
-      LeaderClient indexingServiceClient,
+      DruidLeaderClient indexingServiceClient,
       ObjectMapper jsonMapper,
       BytesAccumulatingResponseHandler responseHandler
   )
