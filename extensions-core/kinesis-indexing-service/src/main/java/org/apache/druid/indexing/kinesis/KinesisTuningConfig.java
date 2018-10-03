@@ -177,7 +177,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),
         getIntermediatePersistPeriod(),
-        getBasePersistDirectory(),
+        dir,
         getMaxPendingPersists(),
         getIndexSpec(),
         true,

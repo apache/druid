@@ -142,7 +142,7 @@ public class KinesisIOConfigTest
     Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
     Assert.assertEquals(config.getExclusiveStartSequenceNumberPartitions(), ImmutableSet.of("0"));
-    Assert.assertEquals(4000, config.getRecordsPerFetch());
+    Assert.assertEquals(1000, config.getRecordsPerFetch());
     Assert.assertEquals(1000, config.getFetchDelayMillis());
     Assert.assertEquals("awsid", config.getAwsAccessKeyId());
     Assert.assertEquals("awskey", config.getAwsSecretAccessKey());

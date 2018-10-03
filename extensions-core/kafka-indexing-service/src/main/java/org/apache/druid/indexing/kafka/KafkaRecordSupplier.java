@@ -39,6 +39,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+// TODO: in the future, should refactor to do smt similar to KinesisRecordSupplier
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 {
   private static final Random RANDOM = new Random();

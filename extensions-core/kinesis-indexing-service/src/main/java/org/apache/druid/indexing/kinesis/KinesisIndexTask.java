@@ -42,7 +42,10 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
@@ -90,6 +93,7 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -101,7 +105,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -135,7 +138,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
   private final Map<String, String> endOffsets = new ConcurrentHashMap<>();
   private final Map<String, String> lastOffsets = new ConcurrentHashMap<>();
-  private final Map<String, String> nextOffsets = new ConcurrentHashMap<>(); // should use this instead of lastOffsets
   private final KinesisIOConfig ioConfig;
   private final KinesisTuningConfig tuningConfig;
   private ObjectMapper mapper;
@@ -264,12 +266,13 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     );
 
     try (
-        final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-        final StreamAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
         final RecordSupplier<String, String> recordSupplier = getRecordSupplier()
     ) {
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
       toolbox.getDataSegmentServerAnnouncer().announce();
+
+      final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
+      final StreamAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
 
       appenderator = appenderator0;
 
@@ -359,7 +362,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
       // Main loop.
       // Could eventually support leader/follower mode (for keeping replicas more in sync)
-      boolean stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+      boolean stillReading = !assignment.isEmpty();
       status = Status.READING;
       try {
         while (stillReading) {
@@ -507,7 +510,17 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
           }
         }
       }
+      catch (Exception e) {
+        log.error(e, "Encountered exception while running task.");
+        final String errorMsg = Throwables.getStackTraceAsString(e);
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports(errorMsg));
+        return TaskStatus.failure(
+            getId(),
+            errorMsg
+        );
+      }
       finally {
+        log.info("Persisting all pending data");
         driver.persist(committerSupplier.get()); // persist pending data
       }
 
@@ -587,6 +600,13 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       }
     }
     catch (InterruptedException | RejectedExecutionException e) {
+      final String errorMsg = Throwables.getStackTraceAsString(e);
+      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports(errorMsg));
+
+      if (appenderator != null) {
+        appenderator.closeNow();
+      }
+
       // handle the InterruptedException that gets wrapped in a RejectedExecutionException
       if (e instanceof RejectedExecutionException
           && (e.getCause() == null || !(e.getCause() instanceof InterruptedException))) {
@@ -610,7 +630,35 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
     toolbox.getDataSegmentServerAnnouncer().unannounce();
 
+    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports(null));
     return success();
+  }
+
+  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg)
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                ingestionState,
+                getTaskCompletionUnparseableEvents(),
+                getTaskCompletionRowStats(),
+                errorMsg
+            )
+        )
+    );
+  }
+
+  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  {
+    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        savedParseExceptions
+    );
+    if (buildSegmentsParseExceptionMessages != null) {
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
+    }
+    return unparseableEventsMap;
   }
 
   @Override
@@ -1022,8 +1070,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
                                              ioConfig.getStartPartitions().getPartitionSequenceMap().size());
     return Appenderators.createRealtime(
         dataSchema,
-        tuningConfig.withBasePersistDirectory(new File(toolbox.getPersistDir(), "persist"))
-                    .withMaxRowsInMemory(maxRowsInMemoryPerPartition),
+        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
@@ -1106,7 +1153,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     final Set<String> assignment = Sets.newHashSet();
     for (Map.Entry<String, String> entry : lastOffsets.entrySet()) {
       final String endOffset = endOffsets.get(entry.getKey());
-      if (KinesisPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset)
+      if (Record.END_OF_SHARD_MARKER.equals(endOffset)
+          || KinesisPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset)
           || KinesisSequenceNumber.of(entry.getValue()).compareTo(KinesisSequenceNumber.of(endOffset)) < 0) {
         assignment.add(entry.getKey());
       } else if (entry.getValue().equals(endOffset)) {
@@ -1197,10 +1245,12 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   {
     pauseLock.lockInterruptibly();
     try {
+      /*
       if (ioConfig.isPauseAfterRead() && assignment.isEmpty()) {
         pauseMillis = PAUSE_FOREVER;
         pauseRequested = true;
       }
+      */
 
       if (pauseRequested) {
         status = Status.PAUSED;
@@ -1316,5 +1366,12 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         rowIngestionMeters.getTotals()
     );
     return metrics;
+  }
+
+  @Override
+  @JsonProperty("ioConfig")
+  public KinesisIOConfig getIOConfig()
+  {
+    return (KinesisIOConfig) super.getIOConfig();
   }
 }

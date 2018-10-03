@@ -172,6 +172,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                 data
             );
 
+
             if (log.isTraceEnabled()) {
               log.trace(
                   "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
@@ -352,7 +353,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public Collection<StreamPartition<String>> getAssignment()
   {
-    return null;
+    return partitionResources.keySet();
   }
 
   @Override
@@ -399,10 +400,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     return getSequenceNumberInternal(partition, ShardIteratorType.TRIM_HORIZON);
   }
 
+  //TODO: remove in the future
   @Override
   public String position(StreamPartition<String> partition)
   {
-    return null;
+    throw new UnsupportedOperationException("position in KinesisRecordSupplier not supported");
   }
 
   @Override

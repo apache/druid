@@ -48,10 +48,10 @@ public interface RecordSupplier<T1, T2> extends Closeable
 
   T2 getEarliestSequenceNumber(StreamPartition<T1> partition) throws TimeoutException;
 
+  // TODO: maybe remove this, not needed in kinesis, only in kafka
   T2 position(StreamPartition<T1> partition);
 
   Set<T1> getPartitionIds(String streamName);
-
 
   @Override
   void close();
