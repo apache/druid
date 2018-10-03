@@ -2473,6 +2473,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
+    Thread.sleep(10000);
+
     // Portion below is the same test as testNoInitialState(), testing the supervisor after the initialiation is fixed
     resetAll();
 

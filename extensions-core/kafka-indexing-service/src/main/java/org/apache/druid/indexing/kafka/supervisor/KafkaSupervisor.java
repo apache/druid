@@ -70,6 +70,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -128,6 +129,7 @@ public class KafkaSupervisor implements Supervisor
   private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
   private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
+  private static final int MAX_INITIALIZATION_RETRIES = 20;
   private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
 
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
@@ -247,7 +249,6 @@ public class KafkaSupervisor implements Supervisor
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   private final ExecutorService exec;
-  private final ScheduledExecutorService initializationExec;
   private final ScheduledExecutorService scheduledExec;
   private final ScheduledExecutorService reportingExec;
   private final ListeningExecutorService workerExec;
@@ -293,7 +294,6 @@ public class KafkaSupervisor implements Supervisor
     this.taskTuningConfig = KafkaTuningConfig.copyOf(this.tuningConfig);
     this.supervisorId = StringUtils.format("KafkaSupervisor-%s", dataSource);
     this.exec = Execs.singleThreaded(supervisorId);
-    this.initializationExec = Execs.scheduledSingleThreaded(supervisorId + "-Initialization-%d");
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
 
@@ -366,15 +366,41 @@ public class KafkaSupervisor implements Supervisor
       Preconditions.checkState(!exec.isShutdown(), "already stopped");
 
       // Try normal initialization first, if that fails then schedule periodic initialization retries
-      tryInit();
-      if (!started) {
-        initializationExec.scheduleAtFixedRate(
-            this::tryInit,
-            ioConfig.getStartDelay().getMillis(),
-            Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
-            TimeUnit.MILLISECONDS
-        );
-        log.warn("First initialization attempt failed for KafkaSupervisor[%s], starting retries...", dataSource);
+      try {
+        tryInit();
+      }
+      catch (Exception e) {
+        if (!started) {
+          log.warn("First initialization attempt failed for KafkaSupervisor[%s], starting retries...", dataSource);
+
+          exec.submit(
+              () -> {
+                try {
+                  RetryUtils.retry(
+                      () -> {
+                        tryInit();
+                        return 0;
+                      },
+                      (throwable) -> {
+                        return !started;
+                      },
+                      0,
+                      MAX_INITIALIZATION_RETRIES,
+                      null,
+                      null
+                  );
+                }
+                catch (Exception e2) {
+                  log.makeAlert(
+                      "Failed to initialize after %s retries, aborting. Please resubmit the supervisor spec to restart this supervisor [%s]",
+                      MAX_INITIALIZATION_RETRIES,
+                      supervisorId
+                  ).emit();
+                  throw new RuntimeException(e2);
+                }
+              }
+          );
+        }
       }
 
       lifecycleStarted = true;
@@ -900,9 +926,13 @@ public class KafkaSupervisor implements Supervisor
   protected void tryInit()
   {
     synchronized (stateChangeLock) {
-      Preconditions.checkState(!started, "already started");
+      if (started) {
+        log.warn("SUpervisor was already started, skipping init");
+        return;
+      }
 
       if (stopped) {
+        log.warn("Supervisor was already stopped, skipping init.");
         return;
       }
 
@@ -965,8 +995,6 @@ public class KafkaSupervisor implements Supervisor
             ioConfig.getStartDelay(),
             spec.toString()
         );
-
-        initializationExec.shutdownNow();
       }
       catch (Exception e) {
         if (consumer != null) {
@@ -974,6 +1002,8 @@ public class KafkaSupervisor implements Supervisor
         }
         log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
            .emit();
+
+        throw new RuntimeException(e);
       }
     }
   }
