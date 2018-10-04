@@ -37,19 +37,23 @@ import java.util.Map;
 public class PeriodLoadRule extends LoadRule
 {
   private static final Logger log = new Logger(PeriodLoadRule.class);
+  public static final boolean DEFAULT_INCLUDE_FUTURE = true;
 
   private final Period period;
+  private final boolean includeFuture;
   private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
   public PeriodLoadRule(
       @JsonProperty("period") Period period,
+      @JsonProperty("includeFuture") Boolean includeFuture,
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
     this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
     validateTieredReplicants(this.tieredReplicants);
     this.period = period;
+    this.includeFuture = includeFuture == null ? DEFAULT_INCLUDE_FUTURE : includeFuture;
   }
 
   @Override
@@ -63,6 +67,12 @@ public class PeriodLoadRule extends LoadRule
   public Period getPeriod()
   {
     return period;
+  }
+
+  @JsonProperty
+  public boolean isIncludeFuture()
+  {
+    return includeFuture;
   }
 
   @Override
@@ -88,6 +98,6 @@ public class PeriodLoadRule extends LoadRule
   @Override
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
-    return Rules.eligibleForLoad(period, interval, referenceTimestamp);
+    return Rules.eligibleForLoad(period, interval, referenceTimestamp, includeFuture);
   }
 }

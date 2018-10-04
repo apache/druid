@@ -51,9 +51,9 @@ public class BroadcastDistributionRuleSerdeTest
         new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), ImmutableList.of("large_source"))},
         new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), ImmutableList.of())},
         new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), null)},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), ImmutableList.of("large_source"))},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), ImmutableList.of())},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null)}
+        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null, ImmutableList.of("large_source"))},
+        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null, ImmutableList.of())},
+        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null, null)}
     );
     return params;
   }
