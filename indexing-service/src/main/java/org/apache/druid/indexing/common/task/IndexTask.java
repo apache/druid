@@ -1512,6 +1512,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxBytesInMemory,
           maxTotalRows,
           numShards,
+          partitionDimensions,
           indexSpec,
           maxPendingPersists,
           forceExtendableShardSpecs,
