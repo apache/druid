@@ -345,7 +345,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       // Divide user-provided maxQueuedBytes by the number of servers, and limit each server to that much.
       final long maxQueuedBytes = QueryContexts.getMaxQueuedBytes(query, httpClientConfig.getMaxQueuedBytes());
-      final long maxQueuedBytesPerServer = maxQueuedBytes / serverCountAndStream.getLhs();
+      final long maxQueuedBytesPerServer = maxQueuedBytes / Math.max(serverCountAndStream.getLhs(), 1);
 
       return serverCountAndStream
           .getRhs()
