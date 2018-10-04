@@ -89,7 +89,7 @@ public class RealtimeIndexTask extends AbstractTask
 
   private static final int TASK_ID_BITS_PER_SYMBOL = 4;
   private static final int TASK_ID_SYMBOL_MASK = (1 << TASK_ID_BITS_PER_SYMBOL) - 1;
-  private static final int TASK_ID_LENGTH = Integer.BYTES / TASK_ID_BITS_PER_SYMBOL;
+  private static final int TASK_ID_LENGTH = Integer.SIZE / TASK_ID_BITS_PER_SYMBOL;
 
   public static String makeRandomId()
   {
