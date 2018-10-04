@@ -42,7 +42,7 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
 
   @JsonCreator
   public RoaringBitmapSerdeFactory(
-      @JsonProperty("compressRunOnSerialization") Boolean compressRunOnSerialization
+      @JsonProperty("compressRunOnSerialization") @Nullable Boolean compressRunOnSerialization
   )
   {
     this.compressRunOnSerialization = compressRunOnSerialization == null
@@ -85,8 +85,9 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
       return new WrappedImmutableRoaringBitmap(new ImmutableRoaringBitmap(buffer));
     }
 
+    @Nullable
     @Override
-    public byte[] toBytes(ImmutableBitmap val)
+    public byte[] toBytes(@Nullable ImmutableBitmap val)
     {
       if (val == null || val.size() == 0) {
         return new byte[]{};

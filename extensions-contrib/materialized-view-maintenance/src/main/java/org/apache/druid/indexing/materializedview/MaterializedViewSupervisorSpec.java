@@ -23,10 +23,11 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.base.Strings;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.HadoopIOConfig;
@@ -51,7 +52,6 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -81,6 +81,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   private final MaterializedViewTaskConfig config;
   private final AuthorizerMapper authorizerMapper;
   private final ChatHandlerProvider chatHandlerProvider;
+  private final boolean suspended;
   
   public MaterializedViewSupervisorSpec(
       @JsonProperty("baseDataSource") String baseDataSource,
@@ -92,6 +93,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
       @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates,
       @JsonProperty("classpathPrefix") String classpathPrefix,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("suspended") Boolean suspended,
       @JacksonInject ObjectMapper objectMapper,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject TaskStorage taskStorage,
@@ -139,7 +141,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.config = config;
-    
+    this.suspended = suspended != null ? suspended : false;
+
     this.metrics = Sets.newHashSet();
     for (AggregatorFactory aggregatorFactory : aggregators) {
       metrics.add(aggregatorFactory.getName());
@@ -305,7 +308,14 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   {
     return context;
   }
-  
+
+  @Override
+  @JsonProperty("suspended")
+  public boolean isSuspended()
+  {
+    return suspended;
+  }
+
   @Override
   public String getId() 
   {
@@ -331,7 +341,59 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   {
     return ImmutableList.of(dataSourceName);
   }
-  
+
+  @Override
+  public SupervisorSpec createSuspendedSpec()
+  {
+    return new MaterializedViewSupervisorSpec(
+        baseDataSource,
+        dimensionsSpec,
+        aggregators,
+        tuningConfig,
+        dataSourceName,
+        hadoopCoordinates,
+        hadoopDependencyCoordinates,
+        classpathPrefix,
+        context,
+        true,
+        objectMapper,
+        taskMaster,
+        taskStorage,
+        metadataSupervisorManager,
+        segmentManager,
+        metadataStorageCoordinator,
+        config,
+        authorizerMapper,
+        chatHandlerProvider
+    );
+  }
+
+  @Override
+  public SupervisorSpec createRunningSpec()
+  {
+    return new MaterializedViewSupervisorSpec(
+        baseDataSource,
+        dimensionsSpec,
+        aggregators,
+        tuningConfig,
+        dataSourceName,
+        hadoopCoordinates,
+        hadoopDependencyCoordinates,
+        classpathPrefix,
+        context,
+        false,
+        objectMapper,
+        taskMaster,
+        taskStorage,
+        metadataSupervisorManager,
+        segmentManager,
+        metadataStorageCoordinator,
+        config,
+        authorizerMapper,
+        chatHandlerProvider
+    );
+  }
+
   @Override
   public String toString()
   {

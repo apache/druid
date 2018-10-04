@@ -57,6 +57,6 @@ public class MapLookupExtractorFactoryTest
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
     LookupExtractorFactory lookupExtractorFactory = new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true);
-    Assert.assertEquals(lookupExtractorFactory, mapper.reader(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(lookupExtractorFactory)));
+    Assert.assertEquals(lookupExtractorFactory, mapper.readerFor(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(lookupExtractorFactory)));
   }
 }

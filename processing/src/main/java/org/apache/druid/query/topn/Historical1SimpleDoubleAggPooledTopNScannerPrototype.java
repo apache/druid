@@ -22,9 +22,9 @@ package org.apache.druid.query.topn;
 import org.apache.druid.query.aggregation.SimpleDoubleBufferAggregator;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.Offset;
+import org.apache.druid.segment.historical.HistoricalColumnSelector;
 import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
-import org.apache.druid.segment.historical.HistoricalColumnSelector;
 
 import java.nio.ByteBuffer;
 

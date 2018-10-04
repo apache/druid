@@ -20,8 +20,8 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;

@@ -34,6 +34,10 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import org.apache.calcite.avatica.AvaticaClientRuntimeException;
+import org.apache.calcite.avatica.Meta;
+import org.apache.calcite.avatica.MissingResultsException;
+import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
@@ -56,10 +60,6 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.calcite.avatica.AvaticaClientRuntimeException;
-import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.avatica.MissingResultsException;
-import org.apache.calcite.avatica.NoSuchStatementException;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -89,9 +89,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class DruidAvaticaHandlerTest extends CalciteTestBase
 {
@@ -192,7 +192,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
-    final int port = new Random().nextInt(9999) + 10000;
+    final int port = ThreadLocalRandom.current().nextInt(9999) + 10000;
     server = new Server(new InetSocketAddress("127.0.0.1", port));
     server.setHandler(handler);
     server.start();
@@ -788,7 +788,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         new DruidNode("dummy", "dummy", 1, null, true, false),
         new AvaticaMonitor()
     );
-    final int port = new Random().nextInt(9999) + 20000;
+    final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
     Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
     smallFrameServer.setHandler(handler);
     smallFrameServer.start();

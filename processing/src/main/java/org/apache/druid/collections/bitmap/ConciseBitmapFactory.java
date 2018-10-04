@@ -105,7 +105,7 @@ public class ConciseBitmapFactory implements BitmapFactory
   @Override
   public ImmutableBitmap mapImmutableBitmap(ByteBuffer b)
   {
-    return new WrappedImmutableConciseBitmap(b);
+    return new WrappedImmutableConciseBitmap(b.asIntBuffer());
   }
 
   @Override

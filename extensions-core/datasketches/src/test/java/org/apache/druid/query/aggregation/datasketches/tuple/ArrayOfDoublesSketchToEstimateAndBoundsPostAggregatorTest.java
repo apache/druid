@@ -19,11 +19,10 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregatorTest
 {

@@ -22,21 +22,22 @@ package org.apache.druid.query.dimension;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 import javax.annotation.Nullable;
 import java.util.BitSet;
 
-final class ForwardingFilteredDimensionSelector implements DimensionSelector, IdLookup
+final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelector implements IdLookup
 {
   private final DimensionSelector selector;
   private final IdLookup baseIdLookup;
@@ -192,13 +193,6 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
   public int lookupId(String name)
   {
     return forwardMapping.get(baseIdLookup.lookupId(name));
-  }
-
-  @Nullable
-  @Override
-  public Object getObject()
-  {
-    return defaultGetObject();
   }
 
   @Override

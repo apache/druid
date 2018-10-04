@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
@@ -34,7 +35,6 @@ import org.apache.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -57,6 +57,7 @@ public class EventReceiverFirehoseTest
 {
   private static final int CAPACITY = 300;
   private static final int NUM_EVENTS = 100;
+  private static final long MAX_IDLE_TIME = Long.MAX_VALUE;
   private static final String SERVICE_NAME = "test_firehose";
 
   private final String inputRow = "[{\n"
@@ -76,6 +77,7 @@ public class EventReceiverFirehoseTest
     eventReceiverFirehoseFactory = new EventReceiverFirehoseFactory(
         SERVICE_NAME,
         CAPACITY,
+        MAX_IDLE_TIME,
         null,
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),
@@ -217,6 +219,7 @@ public class EventReceiverFirehoseTest
     EventReceiverFirehoseFactory eventReceiverFirehoseFactory2 = new EventReceiverFirehoseFactory(
         SERVICE_NAME,
         CAPACITY,
+        MAX_IDLE_TIME,
         null,
         new DefaultObjectMapper(),
         new DefaultObjectMapper(),

@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import org.apache.druid.data.input.impl.FileIteratingFirehose;
@@ -31,7 +32,6 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.commons.io.LineIterator;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -221,21 +221,24 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
             }
 
             final OpenedObject<T> openedObject = fetcher.next();
-            final InputStream stream;
             try {
-              stream = wrapObjectStream(
-                  openedObject.getObject(),
-                  openedObject.getObjectStream()
+              return new ResourceCloseableLineIterator(
+                  new InputStreamReader(
+                      wrapObjectStream(openedObject.getObject(), openedObject.getObjectStream()),
+                      StandardCharsets.UTF_8
+                  ),
+                  openedObject.getResourceCloser()
               );
             }
             catch (IOException e) {
+              try {
+                openedObject.getResourceCloser().close();
+              }
+              catch (Throwable t) {
+                e.addSuppressed(t);
+              }
               throw new RuntimeException(e);
             }
-
-            return new ResourceCloseableLineIterator(
-                new InputStreamReader(stream, StandardCharsets.UTF_8),
-                openedObject.getResourceCloser()
-            );
           }
         },
         firehoseParser,
@@ -288,9 +291,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
     @Override
     public void close()
     {
-      super.close();
-      try {
-        resourceCloser.close();
+      try (Closeable ignore = this.resourceCloser) {
+        super.close();
       }
       catch (IOException e) {
         throw new RuntimeException(e);

@@ -69,7 +69,6 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
    *
    * @see AggregatorFactory#combine
    */
-  @SuppressWarnings("unused") // Going to be used when https://github.com/apache/incubator-druid/projects/2 is complete
   void fold(ColumnValueSelector selector);
 
   @Override

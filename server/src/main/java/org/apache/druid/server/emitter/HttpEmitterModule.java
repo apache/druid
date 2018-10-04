@@ -26,19 +26,19 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.util.HashedWheelTimer;
+import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.HttpEmitterConfig;
 import org.apache.druid.java.util.emitter.core.HttpPostEmitter;
-import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.security.TLSUtils;
-import io.netty.handler.ssl.ClientAuth;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.util.HashedWheelTimer;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
@@ -126,13 +126,13 @@ public class HttpEmitterModule implements Module
       }
     } else if (sslConfig.getTrustStorePath() != null) {
       log.info("Creating SSLContext for HttpEmitter client using config [%s]", sslConfig);
-      effectiveSSLContext = TLSUtils.createSSLContext(
-          sslConfig.getProtocol(),
-          sslConfig.getTrustStoreType(),
-          sslConfig.getTrustStorePath(),
-          sslConfig.getTrustStoreAlgorithm(),
-          sslConfig.getTrustStorePasswordProvider()
-      );
+      effectiveSSLContext = new TLSUtils.ClientSSLContextBuilder()
+          .setProtocol(sslConfig.getProtocol())
+          .setTrustStoreType(sslConfig.getTrustStoreType())
+          .setTrustStorePath(sslConfig.getTrustStorePath())
+          .setTrustStoreAlgorithm(sslConfig.getTrustStoreAlgorithm())
+          .setTrustStorePasswordProvider(sslConfig.getTrustStorePasswordProvider())
+          .build();
     } else {
       effectiveSSLContext = sslContext;
     }

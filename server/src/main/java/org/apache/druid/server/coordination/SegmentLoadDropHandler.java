@@ -35,12 +35,12 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
@@ -624,7 +624,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               synchronized (lock) {
                 try {
                   if (!(finished && queue.isEmpty())) {
-                    final List<DataSegment> segments = Lists.newLinkedList();
+                    final List<DataSegment> segments = new ArrayList<>();
                     queue.drainTo(segments);
                     try {
                       announcer.announceSegments(segments);
@@ -656,7 +656,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         finished = true;
         // announce any remaining segments
         try {
-          final List<DataSegment> segments = Lists.newLinkedList();
+          final List<DataSegment> segments = new ArrayList<>();
           queue.drainTo(segments);
           announcer.announceSegments(segments);
         }

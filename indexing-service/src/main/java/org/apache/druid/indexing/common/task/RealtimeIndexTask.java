@@ -27,6 +27,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -69,24 +70,36 @@ import org.apache.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import org.apache.druid.segment.realtime.plumber.VersioningPolicy;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RealtimeIndexTask extends AbstractTask
 {
   public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
-  private static final Random random = new Random();
+
+  private static final int TASK_ID_BITS_PER_SYMBOL = 4;
+  private static final int TASK_ID_SYMBOL_MASK = (1 << TASK_ID_BITS_PER_SYMBOL) - 1;
+  private static final int TASK_ID_LENGTH = Integer.SIZE / TASK_ID_BITS_PER_SYMBOL;
+
+  public static String makeRandomId()
+  {
+    final StringBuilder suffix = new StringBuilder(TASK_ID_LENGTH);
+    int randomBits = ThreadLocalRandom.current().nextInt();
+    for (int i = 0; i < TASK_ID_LENGTH; i++) {
+      suffix.append((char) ('a' + ((randomBits >>> (i * TASK_ID_BITS_PER_SYMBOL)) & TASK_ID_SYMBOL_MASK)));
+    }
+    return suffix.toString();
+  }
 
   private static String makeTaskId(FireDepartment fireDepartment)
   {
@@ -94,16 +107,12 @@ public class RealtimeIndexTask extends AbstractTask
         fireDepartment.getDataSchema().getDataSource(),
         fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
         DateTimes.nowUtc(),
-        random.nextInt()
+        makeRandomId()
     );
   }
 
-  static String makeTaskId(String dataSource, int partitionNumber, DateTime timestamp, int randomBits)
+  static String makeTaskId(String dataSource, int partitionNumber, DateTime timestamp, String suffix)
   {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
-    }
     return StringUtils.format(
         "index_realtime_%s_%d_%s_%s",
         dataSource,

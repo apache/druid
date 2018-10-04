@@ -25,9 +25,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.hll.HLLCV1;
+import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -89,7 +90,7 @@ import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -103,6 +104,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -140,6 +142,14 @@ public class CalciteQueryTest extends CalciteTestBase
   private static final Logger log = new Logger(CalciteQueryTest.class);
 
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
+  private static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION = new PlannerConfig()
+  {
+    @Override
+    public boolean isRequireTimeCondition()
+    {
+      return true;
+    }
+  };
   private static final PlannerConfig PLANNER_CONFIG_NO_TOPN = new PlannerConfig()
   {
     @Override
@@ -587,9 +597,24 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
+  public void testMinOnInformationSchemaColumns() throws Exception
+  {
+    testQuery(
+        "SELECT MIN(JDBC_TYPE)\n"
+        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
+        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{-5L}
+        )
+    );
+  }
+
+  @Test
   public void testSelectStar() throws Exception
   {
     String nullValue = NullHandling.replaceWithDefault() ? "" : null;
+    String hyperLogLogCollectorClassName = VersionOneHyperLogLogCollector.class.getName();
     testQuery(
         "SELECT * FROM druid.foo",
         ImmutableList.of(
@@ -602,12 +627,12 @@ public class CalciteQueryTest extends CalciteTestBase
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, hyperLogLogCollectorClassName},
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, hyperLogLogCollectorClassName}
         )
     );
   }
@@ -641,7 +666,7 @@ public class CalciteQueryTest extends CalciteTestBase
                 "abcd",
                 9999.0f,
                 NullHandling.defaultDoubleValue(),
-                HLLCV1.class.getName()
+                VersionOneHyperLogLogCollector.class.getName()
             }
         )
     );
@@ -699,8 +724,8 @@ public class CalciteQueryTest extends CalciteTestBase
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2.0f, 2.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2.0f, 2.0, VersionOneHyperLogLogCollector.class.getName()}
         )
     );
   }
@@ -751,8 +776,8 @@ public class CalciteQueryTest extends CalciteTestBase
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, HLLCV1.class.getName()}
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6d, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5d, VersionOneHyperLogLogCollector.class.getName()}
         )
     );
   }
@@ -792,12 +817,12 @@ public class CalciteQueryTest extends CalciteTestBase
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, HLLCV1.class.getName()},
-            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1f, 1.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2000-01-02"), 1L, "10.1", nullValue, 2f, 2.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2000-01-03"), 1L, "2", "", 3f, 3.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4f, 4.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5f, 5.0, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-03"), 1L, "abc", nullValue, 6f, 6.0, VersionOneHyperLogLogCollector.class.getName()}
         )
     );
   }
@@ -1786,11 +1811,11 @@ public class CalciteQueryTest extends CalciteTestBase
                                 "d0:v",
                                 "case_searched("
                                 + "(CAST(timestamp_extract(\"__time\",'DAY','UTC'), 'DOUBLE') == \"m1\"),"
-                                + "'match-m1 ',"
+                                + "'match-m1',"
                                 + "(timestamp_extract(\"__time\",'DAY','UTC') == \"cnt\"),"
                                 + "'match-cnt',"
                                 + "(timestamp_extract(\"__time\",'DAY','UTC') == 0),"
-                                + "'zero     ',"
+                                + "'zero',"
                                 + DruidExpression.nullLiteral() + ")",
                                 ValueType.STRING
                             )
@@ -1803,7 +1828,7 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 2L},
             new Object[]{"match-cnt", 1L},
-            new Object[]{"match-m1 ", 3L}
+            new Object[]{"match-m1", 3L}
         )
     );
   }
@@ -2097,9 +2122,9 @@ public class CalciteQueryTest extends CalciteTestBase
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0f, 4.0d, HLLCV1.class.getName()},
-            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0f, 5.0d, HLLCV1.class.getName()}
+            new Object[]{T("2000-01-01"), 1L, "", "a", 1.0f, 1.0d, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-01"), 1L, "1", "a", 4.0f, 4.0d, VersionOneHyperLogLogCollector.class.getName()},
+            new Object[]{T("2001-01-02"), 1L, "def", "abc", 5.0f, 5.0d, VersionOneHyperLogLogCollector.class.getName()}
         )
     );
   }
@@ -2720,7 +2745,8 @@ public class CalciteQueryTest extends CalciteTestBase
         + "SUM(case when dim1 <> '1' then cnt end) filter(WHERE dim2 = 'a'), "
         + "SUM(CASE WHEN dim1 <> '1' THEN cnt ELSE 0 END), "
         + "MAX(CASE WHEN dim1 <> '1' THEN cnt END), "
-        + "COUNT(DISTINCT CASE WHEN dim1 <> '1' THEN m1 END) "
+        + "COUNT(DISTINCT CASE WHEN dim1 <> '1' THEN m1 END), "
+        + "SUM(cnt) filter(WHERE dim2 = 'a' AND dim1 = 'b') "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -2783,6 +2809,10 @@ public class CalciteQueryTest extends CalciteTestBase
                               true
                           ),
                           NOT(SELECTOR("dim1", "1", null))
+                      ),
+                      new FilteredAggregatorFactory(
+                          new LongSumAggregatorFactory("a11", "cnt"),
+                          AND(SELECTOR("dim2", "a", null), SELECTOR("dim1", "b", null))
                       )
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2790,10 +2820,10 @@ public class CalciteQueryTest extends CalciteTestBase
         ),
         NullHandling.replaceWithDefault() ?
         ImmutableList.of(
-            new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L, 5L}
+            new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, 0L}
         ) :
         ImmutableList.of(
-            new Object[]{1L, 5L, 1L, 3L, 5L, 5L, 2L, 1L, 5L, 1L, 5L}
+            new Object[]{1L, 5L, 1L, 3L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, null}
         )
     );
   }
@@ -3136,13 +3166,21 @@ public class CalciteQueryTest extends CalciteTestBase
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .filters(SELECTOR("dim2", "a", null))
+                  .filters(
+                      AND(
+                          SELECTOR("dim2", "a", null),
+                          OR(
+                              BOUND("dim1", "a", null, true, false, null, StringComparators.LEXICOGRAPHIC),
+                              NOT(SELECTOR("dim1", null, null))
+                          )
+                      )
+                  )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{2L}
+            new Object[]{NullHandling.sqlCompatible() ? 2L : 1L}
         )
     );
   }
@@ -6842,7 +6880,7 @@ public class CalciteQueryTest extends CalciteTestBase
     final String explanation =
         "BindableSort(sort0=[$1], dir0=[ASC])\n"
         + "  BindableAggregate(group=[{0, 1}], EXPR$2=[COUNT()])\n"
-        + "    BindableFilter(condition=[OR(=($0, 'xxx'), CAST(AND(IS NOT NULL($4), <>($2, 0))):BOOLEAN)])\n"
+        + "    BindableFilter(condition=[OR(=($0, 'xxx'), CAST(AND(IS NOT NULL($4), <>($2, 0), IS NOT NULL($1))):BOOLEAN)])\n"
         + "      BindableJoin(condition=[=($1, $3)], joinType=[left])\n"
         + "        BindableJoin(condition=[true], joinType=[inner])\n"
         + "          DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"dim1\",\"dim2\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING, dim2:STRING}])\n"
@@ -7451,6 +7489,176 @@ public class CalciteQueryTest extends CalciteTestBase
     );
   }
 
+  @Test
+  public void testRequireTimeConditionPositive() throws Exception
+  {
+    // simple timeseries
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT SUM(cnt), gran FROM (\n"
+        + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "WHERE t >= '2000-01-01' and t < '2002-01-01'"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Intervals.of("2000-01-01/2002-01-01")))
+                  .granularity(Granularities.MONTH)
+                  .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L, T("2000-01-01")},
+            new Object[]{3L, T("2001-01-01")}
+        )
+    );
+
+    // nested groupby only requires time condition for inner most query
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo WHERE __time >= '2000-01-01' GROUP BY dim2)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(QSS(Intervals.utc(
+                                                DateTimes.of("2000-01-01").getMillis(),
+                                                JodaUtils.MAX_INSTANT
+                                            )))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(AGGS(
+                            new LongSumAggregatorFactory("_a0", "a0"),
+                            new CountAggregatorFactory("_a1")
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{6L, 3L}
+        ) :
+        ImmutableList.of(
+            new Object[]{6L, 4L}
+        )
+    );
+
+    // semi-join requires time condition on both left and right query
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE __time >= '2000-01-01' AND SUBSTRING(dim2, 1, 1) IN (\n"
+        + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
+        + "  WHERE dim1 <> '' AND __time >= '2000-01-01'\n"
+        + ")",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(NOT(SELECTOR("dim1", "", null)))
+                        .setDimensions(DIMS(new ExtractionDimensionSpec(
+                            "dim1",
+                            "d0",
+                            new SubstringDimExtractionFn(0, 1)
+                        )))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build(),
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
+                  .granularity(Granularities.ALL)
+                  .filters(IN(
+                      "dim2",
+                      ImmutableList.of("1", "2", "a", "d"),
+                      new SubstringDimExtractionFn(0, 1)
+                  ))
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testRequireTimeConditionSimpleQueryNegative() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("__time column");
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT SUM(cnt), gran FROM (\n"
+        + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
+        + "  cnt FROM druid.foo\n"
+        + ") AS x\n"
+        + "GROUP BY gran\n"
+        + "ORDER BY gran",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testRequireTimeConditionSubQueryNegative() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("__time column");
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testRequireTimeConditionSemiJoinNegative() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("__time column");
+
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+        + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
+        + "  WHERE dim1 <> '' AND __time >= '2000-01-01'\n"
+        + ")",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
   private void testQuery(
       final String sql,
       final List<Query> expectedQueries,
@@ -7653,7 +7861,7 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
     return new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(interval.getEndMillis()),
         false,

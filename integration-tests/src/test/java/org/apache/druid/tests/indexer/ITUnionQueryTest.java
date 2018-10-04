@@ -20,23 +20,32 @@
 package org.apache.druid.tests.indexer;
 
 import com.beust.jcommander.internal.Lists;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.EventReceiverFirehoseTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.ServerDiscoveryUtil;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -62,10 +71,13 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   IntegrationTestingConfig config;
 
   @Test
-  public void testUnionQuery()
+  public void testUnionQuery() throws IOException
   {
     final int numTasks = 3;
-
+    final Closer closer = Closer.create();
+    for (int i = 0; i < numTasks; i++) {
+      closer.register(unloader(UNION_DATASOURCE + i));
+    }
     try {
       // Load 4 datasources with same dimensions
       String task = setShutOffTime(
@@ -135,16 +147,12 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       this.queryHelper.testQueriesFromFile(UNION_QUERIES_RESOURCE, 2);
 
     }
-    catch (Exception e) {
-      LOG.error(e, "Error while testing");
-      throw Throwables.propagate(e);
+    catch (Throwable e) {
+      throw closer.rethrow(e);
     }
     finally {
-      for (int i = 0; i < numTasks; i++) {
-        unloadAndKillData(UNION_DATASOURCE + i);
-      }
+      closer.close();
     }
-
   }
 
   private String setShutOffTime(String taskAsString, DateTime time)
@@ -172,6 +180,26 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       String host = config.getMiddleManagerHost() + ":" + eventReceiverSelector.pick().getPort();
 
       LOG.info("Event Receiver Found at host [%s]", host);
+
+      LOG.info("Checking worker /status/health for [%s]", host);
+      final StatusResponseHandler handler = new StatusResponseHandler(StandardCharsets.UTF_8);
+      RetryUtil.retryUntilTrue(
+          () -> {
+            try {
+              StatusResponseHolder response = httpClient.go(
+                  new Request(HttpMethod.GET, new URL(StringUtils.format("https://%s/status/health", host))),
+                  handler
+              ).get();
+              return response.getStatus().equals(HttpResponseStatus.OK);
+            }
+            catch (Throwable e) {
+              LOG.error(e, "");
+              return false;
+            }
+          },
+          StringUtils.format("Checking /status/health for worker [%s]", host)
+      );
+      LOG.info("Finished checking worker /status/health for [%s], success", host);
 
       EventReceiverFirehoseTestClient client = new EventReceiverFirehoseTestClient(
           host,

@@ -122,7 +122,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`intermediatePersistPeriod`|ISO8601 Period|The period that determines the rate at which intermediate persists occur.|no (default == PT10M)|
 |`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|no (default == 0, meaning one persist can be running concurrently with ingestion, and none can be queued up)|
 |`indexSpec`|Object|Tune how data is indexed, see 'IndexSpec' below for more details.|no|
-|`reportParseExceptions`|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|no (default == false)|
+|`reportParseExceptions`|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
 |`handoffConditionTimeout`|Long|Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.|no (default == 0)|
 |`resetOffsetAutomatically`|Boolean|Whether to reset the consumer offset if the next offset that it is trying to fetch is less than the earliest available offset for that particular partition. The consumer offset will be reset to either the earliest or latest offset depending on `useEarliestOffset` property of `KafkaSupervisorIOConfig` (see below). This situation typically occurs when messages in Kafka are no longer available for consumption and therefore won't be ingested into Druid. If set to false then ingestion for that particular partition will halt and manual intervention is required to correct the situation, please see `Reset Supervisor` API below.|no (default == false)|
 |`workerThreads`|Integer|The number of threads that will be used by the supervisor for asynchronous operations.|no (default == min(10, taskCount))|
@@ -133,6 +133,9 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`offsetFetchPeriod`|ISO8601 Period|How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and calculate lag.|no (default == PT30S, min == PT5S)|
 |`segmentWriteOutMediumFactory`|String|Segment write-out medium to use when creating segments. See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../../configuration/index.html#segmentwriteoutmediumfactory) for explanation and available options.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used)|
 |`intermediateHandoffPeriod`|ISO8601 Period|How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == P2147483647D)|
+|`logParseExceptions`|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|no, default == false|
+|`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|no, unlimited default|
+|`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../../ingestion/reports.html). Overridden if `reportParseExceptions` is set.|no, default == 0|
 
 #### IndexSpec
 
@@ -194,17 +197,73 @@ existing publishing tasks and will create new tasks starting at the offsets the 
 
 Seamless schema migrations can thus be achieved by simply submitting the new schema using this endpoint.
 
-#### Shutdown Supervisor
+#### Suspend Supervisor 
+
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/suspend
+```
+Suspend indexing tasks associated with a supervisor. Note that the supervisor itself will still be
+operating and emitting logs and metrics, it will just ensure that no indexing tasks are running until the supervisor
+is resumed. Responds with updated SupervisorSpec.
+
+#### Resume Supervisor 
+
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/resume
+```
+Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
+
+#### Reset Supervisor
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/reset
+```
+The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
+guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
+generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
+(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
+refuse to start and in-flight tasks will fail.
+
+This endpoint can be used to clear the stored offsets which will cause the supervisor to start reading from
+either the earliest or latest offsets in Kafka (depending on the value of `useEarliestOffset`). The supervisor must be
+running for this endpoint to be available. After the stored offsets are cleared, the supervisor will automatically kill
+and re-create any active tasks so that tasks begin reading from valid offsets.
+
+Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
+may cause some Kafka messages to be skipped or to be read twice.
+
+#### Terminate Supervisor 
+```
+POST /druid/indexer/v1/supervisor/<supervisorId>/terminate
+```
+Terminate a supervisor and cause all associated indexing tasks managed by this supervisor to immediately stop and begin 
+publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved 
+with the supervisor history api, but will not be listed in the 'get supervisors' api response nor can it's configuration
+or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
+spec to the create api.
+
+#### Shutdown Supervisor 
+_Deprecated: use the equivalent 'terminate' instead_
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown
 ```
-Note that this will cause all indexing tasks managed by this supervisor to immediately stop and begin publishing their segments.
 
 #### Get Supervisor IDs
 ```
 GET /druid/indexer/v1/supervisor
 ```
-Returns a list of the currently active supervisors.
+Returns a list of strings of the currently active supervisor ids.
+
+#### Get Supervisors
+```
+GET /druid/indexer/v1/supervisor?full
+```
+Returns a list of objects of the currently active supervisors.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+
 
 #### Get Supervisor Spec
 ```
@@ -232,24 +291,6 @@ Returns an audit history of specs for all supervisors (current and past).
 GET /druid/indexer/v1/supervisor/<supervisorId>/history
 ```
 Returns an audit history of specs for the supervisor with the provided ID.
-
-#### Reset Supervisor
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/reset
-```
-The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
-guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
-generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
-(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
-refuse to start and in-flight tasks will fail.
-
-This endpoint can be used to clear the stored offsets which will cause the supervisor to start reading from
-either the earliest or latest offsets in Kafka (depending on the value of `useEarliestOffset`). The supervisor must be
-running for this endpoint to be available. After the stored offsets are cleared, the supervisor will automatically kill
-and re-create any active tasks so that tasks begin reading from valid offsets.
-
-Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
-may cause some Kafka messages to be skipped or to be read twice.
 
 ## Capacity Planning
 

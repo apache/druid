@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.List;
 
@@ -41,4 +42,19 @@ public interface SupervisorSpec
   Supervisor createSupervisor();
 
   List<String> getDataSources();
+
+  default SupervisorSpec createSuspendedSpec()
+  {
+    throw new NotImplementedException();
+  }
+
+  default SupervisorSpec createRunningSpec()
+  {
+    throw new NotImplementedException();
+  }
+
+  default boolean isSuspended()
+  {
+    return false;
+  }
 }

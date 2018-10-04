@@ -22,9 +22,9 @@ package org.apache.druid.client.cache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import net.spy.memcached.MemcachedClientIF;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.logger.Logger;
-import net.spy.memcached.MemcachedClientIF;
 import sun.misc.Cleaner;
 
 import java.util.concurrent.atomic.AtomicInteger;

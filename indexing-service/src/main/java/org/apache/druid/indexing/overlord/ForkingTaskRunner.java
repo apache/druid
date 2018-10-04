@@ -41,6 +41,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -65,7 +66,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -128,7 +128,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.taskLogPusher = taskLogPusher;
     this.jsonMapper = jsonMapper;
     this.node = node;
-    this.portFinder = new PortFinder(config.getStartPort());
+    this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -232,16 +232,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         final String childHost = node.getHost();
                         int childPort = -1;
                         int tlsChildPort = -1;
-                        int childChatHandlerPort = -1;
 
                         if (node.isEnablePlaintextPort()) {
-                          if (config.isSeparateIngestionEndpoint()) {
-                            Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
-                            childPort = portPair.lhs;
-                            childChatHandlerPort = portPair.rhs;
-                          } else {
-                            childPort = portFinder.findUnusedPort();
-                          }
+                          childPort = portFinder.findUnusedPort();
                         }
 
                         if (node.isEnableTlsPort()) {
@@ -396,22 +389,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                command.add("-XX:ThreadPriorityPolicy=42");
                                */
 
-                              if (config.isSeparateIngestionEndpoint()) {
-                                command.add(StringUtils.format(
-                                    "-Ddruid.indexer.task.chathandler.service=%s",
-                                    "placeholder/serviceName"
-                                ));
-                                // Actual serviceName will be passed by the EventReceiverFirehose when it registers itself with ChatHandlerProvider
-                                // Thus, "placeholder/serviceName" will be ignored
-                                command.add(StringUtils.format("-Ddruid.indexer.task.chathandler.host=%s", childHost));
-                                command.add(StringUtils.format(
-                                    "-Ddruid.indexer.task.chathandler.port=%d",
-                                    childChatHandlerPort
-                                ));
-                                // Note - TLS is not supported with separate ingestion config,
-                                // if set then peon task will fail to start
-                              }
-
                               command.add("org.apache.druid.cli.Main");
                               command.add("internal");
                               command.add("peon");
@@ -514,9 +491,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             }
                             if (node.isEnableTlsPort()) {
                               portFinder.markPortUnused(tlsChildPort);
-                            }
-                            if (childChatHandlerPort > 0) {
-                              portFinder.markPortUnused(childChatHandlerPort);
                             }
 
                             try {

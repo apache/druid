@@ -22,10 +22,10 @@ package org.apache.druid.indexing.kafka.test;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import org.apache.druid.java.util.common.StringUtils;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -40,11 +40,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TestBroker implements Closeable
 {
-  private static final Random RANDOM = new Random();
 
   private final String zookeeperConnect;
   private final File directory;
@@ -76,7 +75,7 @@ public class TestBroker implements Closeable
     props.setProperty("zookeeper.connection.timeout.ms", "30000");
     props.setProperty("log.dirs", directory.toString());
     props.setProperty("broker.id", String.valueOf(id));
-    props.setProperty("port", String.valueOf(new Random().nextInt(9999) + 10000));
+    props.setProperty("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
     props.setProperty("advertised.host.name", "localhost");
     props.putAll(brokerProps);
 
@@ -117,7 +116,7 @@ public class TestBroker implements Closeable
     props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
     props.put("key.deserializer", ByteArrayDeserializer.class.getName());
     props.put("value.deserializer", ByteArrayDeserializer.class.getName());
-    props.put("group.id", String.valueOf(RANDOM.nextInt()));
+    props.put("group.id", String.valueOf(ThreadLocalRandom.current().nextInt()));
     props.put("auto.offset.reset", "earliest");
     return props;
   }

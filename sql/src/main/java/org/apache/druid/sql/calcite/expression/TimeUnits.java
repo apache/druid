@@ -20,8 +20,8 @@
 package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.calcite.avatica.util.TimeUnitRange;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 

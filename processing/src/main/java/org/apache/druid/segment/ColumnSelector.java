@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -31,5 +31,5 @@ public interface ColumnSelector
   List<String> getColumnNames();
 
   @Nullable
-  Column getColumn(String columnName);
+  ColumnHolder getColumnHolder(String columnName);
 }

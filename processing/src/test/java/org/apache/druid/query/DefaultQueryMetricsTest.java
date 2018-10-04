@@ -20,8 +20,8 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
@@ -152,5 +152,10 @@ public class DefaultQueryMetricsTest
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/node/bytes", actualEvent.get("metric"));
     Assert.assertEquals(10L, actualEvent.get("value"));
+
+    queryMetrics.reportBackPressureTime(11000001).emit(serviceEmitter);
+    actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Assert.assertEquals("query/node/backpressure", actualEvent.get("metric"));
+    Assert.assertEquals(11L, actualEvent.get("value"));
   }
 }

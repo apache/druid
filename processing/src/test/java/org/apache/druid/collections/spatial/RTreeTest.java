@@ -19,16 +19,17 @@
 
 package org.apache.druid.collections.spatial;
 
+import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
-import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -94,7 +95,7 @@ public class RTreeTest
   @Test
   public void testSplitOccurs()
   {
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100; i++) {
       tree.insert(new float[]{rand.nextFloat(), rand.nextFloat()}, i);
     }
@@ -105,7 +106,7 @@ public class RTreeTest
   @Test
   public void testSplitOccursRoaring()
   {
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100; i++) {
       roaringtree.insert(new float[]{rand.nextFloat(), rand.nextFloat()}, i);
     }

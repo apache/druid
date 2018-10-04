@@ -20,7 +20,6 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import org.junit.Assert;
 import org.junit.Test;
 

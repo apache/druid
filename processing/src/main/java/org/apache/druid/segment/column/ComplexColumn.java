@@ -22,24 +22,42 @@ package org.apache.druid.segment.column;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
+import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
 
 /**
- */
-public interface ComplexColumn extends BaseColumn
+*/
+public class ComplexColumn implements BaseColumn
 {
-  Class<?> getClazz();
-  String getTypeName();
-  Object getRowValue(int rowNum);
-  int getLength();
+  private final GenericIndexed<?> index;
+  private final String typeName;
+
+  public ComplexColumn(String typeName, GenericIndexed<?> index)
+  {
+    this.index = index;
+    this.typeName = typeName;
+  }
+
+  public String getTypeName()
+  {
+    return typeName;
+  }
+
+  @Nullable
+  public Object getRowValue(int rowNum)
+  {
+    return index.get(rowNum);
+  }
+
+  public int getLength()
+  {
+    return index.size();
+  }
 
   @Override
-  void close();
-
-  @Override
-  default ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return new ObjectColumnSelector()
     {
@@ -53,7 +71,7 @@ public interface ComplexColumn extends BaseColumn
       @Override
       public Class classOfObject()
       {
-        return getClazz();
+        return index.getClazz();
       }
 
       @Override
@@ -62,5 +80,11 @@ public interface ComplexColumn extends BaseColumn
         inspector.visit("column", ComplexColumn.this);
       }
     };
+  }
+
+  @Override
+  public void close()
+  {
+    // nothing to close
   }
 }

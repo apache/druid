@@ -32,6 +32,8 @@ import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.netty.util.SuppressForbidden;
+import org.apache.commons.io.output.NullWriter;
 import org.apache.druid.cli.GuiceRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -40,7 +42,6 @@ import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
-import org.apache.druid.guice.ParsersModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -51,7 +52,6 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
-import org.apache.commons.io.output.NullWriter;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,6 +69,7 @@ import java.util.List;
     name = "validator",
     description = "Validates that a given Druid JSON object is correctly formatted"
 )
+@SuppressForbidden(reason = "System#out")
 public class DruidJsonValidator extends GuiceRunnable
 {
   private static final Logger LOG = new Logger(DruidJsonValidator.class);
@@ -128,8 +129,7 @@ public class DruidJsonValidator extends GuiceRunnable
                 new FirehoseModule(),
                 new IndexingHadoopModule(),
                 new IndexingServiceFirehoseModule(),
-                new LocalDataStorageDruidModule(),
-                new ParsersModule()
+                new LocalDataStorageDruidModule()
             )
         )
     );

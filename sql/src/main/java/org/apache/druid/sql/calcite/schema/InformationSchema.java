@@ -28,13 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.Enumerable;
@@ -52,6 +45,13 @@ import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -413,7 +413,7 @@ public class InformationSchema extends AbstractSchema
                       isDateTime ? String.valueOf(type.getPrecision()) : null, // DATETIME_PRECISION
                       isCharacter ? type.getCharset().name() : null, // CHARACTER_SET_NAME
                       isCharacter ? type.getCollation().getCollationName() : null, // COLLATION_NAME
-                      type.getSqlTypeName().getJdbcOrdinal() // JDBC_TYPE (Druid extension)
+                      Long.valueOf(type.getSqlTypeName().getJdbcOrdinal()) // JDBC_TYPE (Druid extension)
                   };
                 }
               }

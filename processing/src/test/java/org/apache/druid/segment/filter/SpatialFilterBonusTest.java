@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryPlus;
@@ -59,6 +58,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -74,6 +74,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -101,7 +102,7 @@ public class SpatialFilterBonusTest
     List<Object[]> argumentArrays = new ArrayList<>();
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
-      IndexIO indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+      IndexIO indexIO = TestHelper.getTestIndexIO();
       final IndexSpec indexSpec = new IndexSpec();
       final IncrementalIndex rtIndex = makeIncrementalIndex();
       final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMerger, indexIO);
@@ -213,7 +214,7 @@ public class SpatialFilterBonusTest
 
     // Add a bunch of random points, without replacement
     Set<String> alreadyChosen = Sets.newHashSet();
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 6; i < NUM_POINTS; i++) {
       String coord = null;
       while (coord == null) {
@@ -408,7 +409,7 @@ public class SpatialFilterBonusTest
       );
 
       // Add a bunch of random points
-      Random rand = new Random();
+      Random rand = ThreadLocalRandom.current();
       for (int i = 6; i < NUM_POINTS; i++) {
         third.add(
             new MapBasedInputRow(

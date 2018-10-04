@@ -21,14 +21,14 @@ package org.apache.druid.data.input.avro;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.AvroStreamInputRowParserTest;
-import org.apache.druid.data.input.SomeAvroDatum;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
+import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.SomeAvroDatum;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 

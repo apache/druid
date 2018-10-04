@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Bytes;
+import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -34,7 +35,6 @@ import org.apache.druid.collections.spatial.search.RectangularBound;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
-import junit.framework.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;
 
@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -172,7 +173,7 @@ public class ImmutableRTreeTest
     tree.insert(new float[]{5, 0}, 4);
     tree.insert(new float[]{-4, -3}, 5);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 95; i++) {
       tree.insert(
           new float[]{(float) (rand.nextDouble() * 10 + 10.0), (float) (rand.nextDouble() * 10 + 10.0)},
@@ -203,7 +204,7 @@ public class ImmutableRTreeTest
     tree.insert(new float[]{5, 0}, 4);
     tree.insert(new float[]{-4, -3}, 5);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 95; i++) {
       tree.insert(
           new float[]{(float) (rand.nextDouble() * 10 + 10.0), (float) (rand.nextDouble() * 10 + 10.0)},
@@ -235,7 +236,7 @@ public class ImmutableRTreeTest
     tree.insert(new float[]{7.0f, 3.0f}, 3);
     tree.insert(new float[]{8.0f, 6.0f}, 4);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 5; i < 5000; i++) {
       tree.insert(
           new float[]{(float) (rand.nextDouble() * 10 + 10.0), (float) (rand.nextDouble() * 10 + 10.0)},
@@ -271,7 +272,7 @@ public class ImmutableRTreeTest
     tree.insert(new float[]{7.0f, 3.0f}, 3);
     tree.insert(new float[]{8.0f, 6.0f}, 4);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 5; i < 5000; i++) {
       tree.insert(
           new float[]{(float) (rand.nextDouble() * 10 + 10.0), (float) (rand.nextDouble() * 10 + 10.0)},
@@ -307,7 +308,7 @@ public class ImmutableRTreeTest
     tree.insert(new float[]{7.0f, 3.0f}, 3);
     tree.insert(new float[]{8.0f, 6.0f}, 4);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 5; i < 5000; i++) {
       tree.insert(
           new float[]{(float) (rand.nextFloat() * 10 + 10.0), (float) (rand.nextFloat() * 10 + 10.0)},
@@ -340,7 +341,7 @@ public class ImmutableRTreeTest
     tree.insert(new float[]{7.0f, 3.0f}, 3);
     tree.insert(new float[]{8.0f, 6.0f}, 4);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 5; i < 5000; i++) {
       tree.insert(
           new float[]{(float) (rand.nextFloat() * 10 + 10.0), (float) (rand.nextFloat() * 10 + 10.0)},
@@ -367,7 +368,7 @@ public class ImmutableRTreeTest
   {
     BitmapFactory bf = new ConciseBitmapFactory();
     RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
 
     int outPolygon = 0, inPolygon = 0;
     for (; inPolygon < 500; ) {
@@ -413,7 +414,7 @@ public class ImmutableRTreeTest
   {
     BitmapFactory bf = new RoaringBitmapFactory();
     RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
 
     int outPolygon = 0, inPolygon = 0;
     for (; inPolygon < 500; ) {
@@ -496,7 +497,7 @@ public class ImmutableRTreeTest
     tree.insert(new float[]{5, 0}, 4);
     tree.insert(new float[]{-4, -3}, 5);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 4995; i++) {
       tree.insert(
           new float[]{(float) (rand.nextDouble() * 10 + 10.0), (float) (rand.nextDouble() * 10 + 10.0)},
@@ -528,7 +529,7 @@ public class ImmutableRTreeTest
     tree.insert(new float[]{5, 0}, 4);
     tree.insert(new float[]{-4, -3}, 5);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 4995; i++) {
       tree.insert(
           new float[]{(float) (rand.nextDouble() * 10 + 10.0), (float) (rand.nextDouble() * 10 + 10.0)},
@@ -562,7 +563,7 @@ public class ImmutableRTreeTest
         RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
 
         Stopwatch stopwatch = Stopwatch.createStarted();
-        Random rand = new Random();
+        Random rand = ThreadLocalRandom.current();
         for (int i = 0; i < numPoints; i++) {
           tree.insert(new float[]{(float) (rand.nextDouble() * 100), (float) (rand.nextDouble() * 100)}, i);
         }
@@ -612,7 +613,7 @@ public class ImmutableRTreeTest
         RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
 
         Stopwatch stopwatch = Stopwatch.createStarted();
-        Random rand = new Random();
+        Random rand = ThreadLocalRandom.current();
         for (int i = 0; i < numPoints; i++) {
           tree.insert(new float[]{(float) (rand.nextDouble() * 100), (float) (rand.nextDouble() * 100)}, i);
         }

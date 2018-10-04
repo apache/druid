@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
@@ -49,18 +50,19 @@ import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
@@ -133,7 +135,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.Runnables;
-import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -149,10 +150,11 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -178,7 +180,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private static class TestFirehose implements Firehose
   {
     private final InputRowParser<Map<String, Object>> parser;
-    private final List<Map<String, Object>> queue = new LinkedList<>();
+    private final Deque<Optional<Map<String, Object>>> queue = new ArrayDeque<>();
     private boolean closed = false;
 
     public TestFirehose(final InputRowParser<Map<String, Object>> parser)
@@ -189,7 +191,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     public void addRows(List<Map<String, Object>> rows)
     {
       synchronized (this) {
-        queue.addAll(rows);
+        rows.stream().map(Optional::ofNullable).forEach(queue::add);
         notifyAll();
       }
     }
@@ -215,7 +217,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     public InputRow nextRow()
     {
       synchronized (this) {
-        final InputRow row = parser.parseBatch(queue.remove(0)).get(0);
+        final InputRow row = parser.parseBatch(queue.removeFirst().orElse(null)).get(0);
         if (row != null && row.getRaw(FAIL_DIM) != null) {
           throw new ParseException(FAIL_DIM);
         }
@@ -1525,7 +1527,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
-        taskActionToolbox
+        taskActionToolbox,
+        new TaskAuditLogConfig(false)
     );
     IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
         null,

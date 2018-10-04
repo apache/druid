@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
@@ -70,12 +71,11 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -156,7 +156,6 @@ public class TimeCompareBenchmark
 
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -198,7 +197,7 @@ public class TimeCompareBenchmark
                   "sumLongSequential", "sumLongSequential"
               ),
               new IntervalDimFilter(
-                  Column.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(recent),
                   null
               )
@@ -210,7 +209,7 @@ public class TimeCompareBenchmark
                   "_cmp_sumLongSequential", "sumLongSequential"
               ),
               new IntervalDimFilter(
-                  Column.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(previous),
                   null
               )
@@ -248,7 +247,7 @@ public class TimeCompareBenchmark
                   "sumLongSequential", "sumLongSequential"
               ),
               new IntervalDimFilter(
-                  Column.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(recent),
                   null
               )
@@ -260,7 +259,7 @@ public class TimeCompareBenchmark
                   "_cmp_sumLongSequential", "sumLongSequential"
               ),
               new IntervalDimFilter(
-                  Column.TIME_COLUMN_NAME,
+                  ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(previous),
                   null
               )

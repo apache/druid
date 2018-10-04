@@ -45,7 +45,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -54,6 +54,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -234,7 +235,7 @@ public class ScanQueryRunnerTest
   {
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
-        .columns(Column.TIME_COLUMN_NAME, QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
+        .columns(ColumnHolder.TIME_COLUMN_NAME, QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -628,7 +629,7 @@ public class ScanQueryRunnerTest
 
   private String getTimestampName()
   {
-    return legacy ? "timestamp" : Column.TIME_COLUMN_NAME;
+    return legacy ? "timestamp" : ColumnHolder.TIME_COLUMN_NAME;
   }
 
   private List<ScanResultValue> toExpected(
@@ -754,11 +755,11 @@ public class ScanQueryRunnerTest
       @Override
       public ScanResultValue apply(ScanResultValue input)
       {
-        List mapEvents = Lists.newLinkedList();
-        List events = ((List) input.getEvents());
+        List<Map<String, Object>> mapEvents = new ArrayList<>();
+        List<?> events = ((List<?>) input.getEvents());
         for (Object event : events) {
-          Iterator compactedEventIter = ((List) event).iterator();
-          Map mapEvent = new LinkedHashMap();
+          Iterator<?> compactedEventIter = ((List<?>) event).iterator();
+          Map<String, Object> mapEvent = new LinkedHashMap<>();
           for (String column : input.getColumns()) {
             mapEvent.put(column, compactedEventIter.next());
           }

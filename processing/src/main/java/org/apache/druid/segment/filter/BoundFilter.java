@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
@@ -39,7 +40,6 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapIndex;
-import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.util.Comparator;
 

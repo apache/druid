@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
@@ -37,7 +38,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
-import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -93,7 +93,7 @@ public class IndexMergerV9CompatibilityTest
   public IndexMergerV9CompatibilityTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
-    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO();
     events = new ArrayList<>();
 
     final Map<String, Object> map1 = ImmutableMap.of(

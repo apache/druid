@@ -20,12 +20,12 @@
 package org.apache.druid.server.listener.announcer;
 
 import com.google.common.base.Throwables;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.HostAndPortWithScheme;
-import org.apache.curator.utils.ZKPaths;
 
 import java.nio.ByteBuffer;
 

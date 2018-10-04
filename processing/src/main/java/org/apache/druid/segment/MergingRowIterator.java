@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.io.Closer;
 import it.unimi.dsi.fastutil.objects.ObjectHeaps;
+import org.apache.druid.java.util.common.io.Closer;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
