@@ -45,6 +45,6 @@ public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<
   @Override
   protected KinesisDataSourceMetadata createConcretDataSourceMetaData(String streamName, Map<String, String> newMap)
   {
-    return new KinesisDataSourceMetadata(new SeekableStreamPartitions<String, String>(streamName, newMap));
+    return new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(streamName, newMap));
   }
 }

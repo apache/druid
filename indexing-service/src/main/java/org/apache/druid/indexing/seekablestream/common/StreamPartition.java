@@ -19,6 +19,11 @@
 
 package org.apache.druid.indexing.seekablestream.common;
 
+/**
+ * wrapper class for a Kinesis/Kafka partition with stream name and partitionId
+ *
+ * @param <T1> partition id type
+ */
 public class StreamPartition<T1>
 {
   private final String streamName;

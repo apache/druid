@@ -87,6 +87,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -344,18 +345,21 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
         ), "Sequence offsets are not compatible with start offsets of task");
         nextOffsets.putAll(sequences.get(0).startOffsets);
       } else {
+        @SuppressWarnings("unchecked")
         final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
-        final SeekableStreamPartitions restoredNextPartitions = toolbox.getObjectMapper().convertValue(
-            restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
-            toolbox.getObjectMapper()
-                   .getTypeFactory()
-                   .constructParametrizedType(
-                       SeekableStreamPartitions.class,
-                       SeekableStreamPartitions.class,
-                       Integer.class,
-                       Long.class
-                   )
-        );
+        final SeekableStreamPartitions<Integer, Long> restoredNextPartitions = toolbox
+            .getObjectMapper()
+            .convertValue(
+                restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
+                toolbox.getObjectMapper()
+                       .getTypeFactory()
+                       .constructParametrizedType(
+                           SeekableStreamPartitions.class,
+                           SeekableStreamPartitions.class,
+                           Integer.class,
+                           Long.class
+                       )
+            );
 
         nextOffsets.putAll(restoredNextPartitions.getPartitionOffsetMap());
 
@@ -569,7 +573,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
                         }
 
                         @Override
-                        public void onFailure(Throwable t)
+                        public void onFailure(@ParametersAreNonnullByDefault Throwable t)
                         {
                           log.error("Persist failed, dying");
                           backgroundThreadException = t;
@@ -881,7 +885,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
           }
 
           @Override
-          public void onFailure(Throwable t)
+          public void onFailure(@ParametersAreNonnullByDefault Throwable t)
           {
             log.error(t, "Error while publishing segments for sequence[%s]", sequenceMetadata);
             handoffFuture.setException(t);
@@ -1448,11 +1452,11 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
 
   private Map<Integer, Map<Integer, Long>> getCheckpoints()
   {
-    TreeMap<Integer, Map<Integer, Long>> result = new TreeMap<>();
-    result.putAll(
-        sequences.stream().collect(Collectors.toMap(SequenceMetadata::getSequenceId, SequenceMetadata::getStartOffsets))
-    );
-    return result;
+    return new TreeMap<>(sequences.stream()
+                                  .collect(Collectors.toMap(
+                                      SequenceMetadata::getSequenceId,
+                                      SequenceMetadata::getStartOffsets
+                                  )));
   }
 
   /**

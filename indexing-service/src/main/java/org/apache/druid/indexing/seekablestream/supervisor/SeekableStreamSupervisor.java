@@ -105,8 +105,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-//TODO: documentation
-//TODO: compare with kinesis supervisor for subsequently discovered partitions
+/**
+ * this class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
+ * logic are similar enough so they're grouped together into this class.
+ * <p>
+ * incremental handoff & checkpointing are not yet supported by Kinesis, but the logic is left in here
+ * so in the future it's easier to implement
+ *
+ * @param <T1> partition id type
+ * @param <T2> sequence number type
+ */
 public abstract class SeekableStreamSupervisor<T1, T2>
     implements Supervisor
 {
@@ -684,7 +692,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       @SuppressWarnings("unchecked")
       final SeekableStreamDataSourceMetadata<T1, T2> resetMetadata = (SeekableStreamDataSourceMetadata<T1, T2>) dataSourceMetadata;
 
-      if (resetMetadata.getSeekableStreamPartitions().getId().equals(ioConfig.getId())) {
+      if (resetMetadata.getSeekableStreamPartitions().getStream().equals(ioConfig.getId())) {
         // metadata can be null
         final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
         if (metadata != null && !checkSourceMetaDataMatch(metadata)) {
@@ -751,7 +759,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       } else {
         log.warn(
             "Reset metadata topic [%s] and supervisor's stream name [%s] do not match",
-            resetMetadata.getSeekableStreamPartitions().getId(),
+            resetMetadata.getSeekableStreamPartitions().getStream(),
             ioConfig.getId()
         );
       }
@@ -992,8 +1000,6 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     }
   }
 
-  //TODO: prob wanna refactor this
-
   /**
    * This method does two things -
    * 1. Makes sure the checkpoints information in the taskGroup is consistent with that of the tasks, if not kill
@@ -1059,7 +1065,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     final boolean hasValidOffsetsFromDb = latestDataSourceMetadata != null &&
                                           latestDataSourceMetadata.getSeekableStreamPartitions() != null &&
                                           ioConfig.getId().equals(
-                                              latestDataSourceMetadata.getSeekableStreamPartitions().getId()
+                                              latestDataSourceMetadata.getSeekableStreamPartitions().getStream()
                                           );
     final Map<T1, T2> latestOffsetsFromDb;
     if (hasValidOffsetsFromDb) {
@@ -1312,7 +1318,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
 
       if (!initialPartitionDiscovery && !this.partitionIds.contains(partitionId)) {
         subsequentlyDiscoveredPartitions.add(partitionId);
-        //TODO: early publish time
+        // should check for earlyPublishTime (Kinesis) here, not supported yet
       }
 
       int taskGroupId = getTaskGroupIdForPartition(partitionId);
@@ -1971,10 +1977,10 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       @SuppressWarnings("unchecked")
       SeekableStreamPartitions<T1, T2> partitions = ((SeekableStreamDataSourceMetadata) dataSourceMetadata).getSeekableStreamPartitions();
       if (partitions != null) {
-        if (!ioConfig.getId().equals(partitions.getId())) {
+        if (!ioConfig.getId().equals(partitions.getStream())) {
           log.warn(
               "Topic/stream in metadata storage [%s] doesn't match spec topic/stream [%s], ignoring stored offsets",
-              partitions.getId(),
+              partitions.getStream(),
               ioConfig.getId()
           );
           return Collections.emptyMap();
@@ -2215,7 +2221,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
     final Optional<DateTime> minimumMessageTime;
     final Optional<DateTime> maximumMessageTime;
-    final Set<T1> exclusiveStartSequenceNumberPartitions; //TODO: exclusiveSequence
+    final Set<T1> exclusiveStartSequenceNumberPartitions;
     final TreeMap<Integer, Map<T1, T2>> checkpointSequences = new TreeMap<>();
     final String baseSequenceName;
     DateTime completionTimeout;

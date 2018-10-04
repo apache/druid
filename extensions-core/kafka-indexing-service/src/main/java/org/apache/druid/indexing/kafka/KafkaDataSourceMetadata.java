@@ -48,6 +48,6 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
       String streamId, Map<Integer, Long> newMap
   )
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamPartitions<Integer, Long>(streamId, newMap));
+    return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(streamId, newMap));
   }
 }

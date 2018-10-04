@@ -97,12 +97,6 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   }
 
   @JsonProperty
-  public String getStream()
-  {
-    return getId();
-  }
-
-  @JsonProperty
   public String getEndpoint()
   {
     return endpoint;
@@ -173,6 +167,12 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +
            '}';
+  }
+
+  @JsonProperty
+  public String getStream()
+  {
+    return getId();
   }
 
 }

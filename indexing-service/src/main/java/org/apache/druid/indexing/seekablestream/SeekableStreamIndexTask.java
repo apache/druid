@@ -46,7 +46,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Random;
 
-//TODO: need more refactoring for run()
+
 public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask
     implements ChatHandler
 {

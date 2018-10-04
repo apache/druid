@@ -76,20 +76,6 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
   }
 
   @Override
-  @JsonProperty
-  public SeekableStreamPartitions<Integer, Long> getStartPartitions()
-  {
-    return super.getStartPartitions();
-  }
-
-  @Override
-  @JsonProperty
-  public SeekableStreamPartitions<Integer, Long> getEndPartitions()
-  {
-    return super.getEndPartitions();
-  }
-
-  @Override
   public Set<Integer> getExclusiveStartSequenceNumberPartitions()
   {
     return null;

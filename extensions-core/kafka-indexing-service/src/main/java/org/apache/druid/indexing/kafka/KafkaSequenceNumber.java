@@ -52,4 +52,11 @@ public class KafkaSequenceNumber extends SequenceNumber<Long>
     return this.compareTo((KafkaSequenceNumber) o) == 0;
   }
 
+  @Override
+  public int hashCode()
+  {
+    return super.hashCode();
+  }
+
+
 }

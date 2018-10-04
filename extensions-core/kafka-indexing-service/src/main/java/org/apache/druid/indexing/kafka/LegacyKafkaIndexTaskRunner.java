@@ -89,6 +89,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -462,9 +463,9 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
                 if (isPersistRequired) {
                   driver.persist(committerSupplier.get());
                 }
-                segmentsToMoveOut.entrySet().forEach(sequenceSegments -> driver.moveSegmentOut(
-                    sequenceSegments.getKey(),
-                    sequenceSegments.getValue().stream().collect(Collectors.toList())
+                segmentsToMoveOut.forEach((key, value) -> driver.moveSegmentOut(
+                    key,
+                    new ArrayList<SegmentIdentifier>(value)
                 ));
               }
               catch (ParseException e) {
@@ -503,7 +504,14 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
       final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
         final SeekableStreamPartitions<Integer, Long> finalPartitions = toolbox.getObjectMapper().convertValue(
             ((Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata")).get(METADATA_NEXT_PARTITIONS),
-            SeekableStreamPartitions.class
+            toolbox.getObjectMapper()
+                   .getTypeFactory()
+                   .constructParametrizedType(
+                       SeekableStreamPartitions.class,
+                       SeekableStreamPartitions.class,
+                       Integer.class,
+                       Long.class
+                   )
         );
 
         // Sanity check, we should only be publishing things that match our desired end state.
@@ -622,7 +630,7 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
       }
     }
 
-    task.assignPartitions(consumer, topic, assignment);
+    KafkaIndexTask.assignPartitions(consumer, topic, assignment);
 
     // Seek to starting offsets.
     for (final int partition : assignment) {

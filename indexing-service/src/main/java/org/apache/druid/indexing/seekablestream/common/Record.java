@@ -23,7 +23,6 @@ import java.util.List;
 
 public class Record<T1, T2>
 {
-  // TODO: end of shard marker
   public static final String END_OF_SHARD_MARKER = "EOS";
 
   private final String streamName;

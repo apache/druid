@@ -29,15 +29,26 @@ import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 
+/**
+ * Interface for abstracting the indexing task run logic. Only used by Kafka indexing tasks,
+ * but will also be used by Kinesis indexing tasks once implemented
+ *
+ * @param <T1> Partition Number Type
+ * @param <T2> Sequence Number Type
+ */
 public interface SeekableStreamIndexTaskRunner<T1, T2> extends ChatHandler
 {
   Appenderator getAppenderator();
 
+  /**
+   * Run the task
+   */
   TaskStatus run(TaskToolbox toolbox);
 
+  /**
+   * Stop the task
+   */
   void stopGracefully();
-
-  // The below methods are mostly for unit testing.
 
   @VisibleForTesting
   RowIngestionMeters getRowIngestionMeters();

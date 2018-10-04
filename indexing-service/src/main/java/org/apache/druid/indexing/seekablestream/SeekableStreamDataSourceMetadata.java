@@ -77,7 +77,7 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
     @SuppressWarnings("unchecked")
     final SeekableStreamDataSourceMetadata<T1, T2> that = (SeekableStreamDataSourceMetadata<T1, T2>) other;
 
-    if (that.getSeekableStreamPartitions().getId().equals(seekableStreamPartitions.getId())) {
+    if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
       // Same topic, merge offsets.
       final Map<T1, T2> newMap = Maps.newHashMap();
 
@@ -89,7 +89,7 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
         newMap.put(entry.getKey(), entry.getValue());
       }
 
-      return createConcretDataSourceMetaData(seekableStreamPartitions.getId(), newMap);
+      return createConcretDataSourceMetaData(seekableStreamPartitions.getStream(), newMap);
     } else {
       // Different topic, prefer "other".
       return other;
@@ -111,7 +111,7 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
     @SuppressWarnings("unchecked")
     final SeekableStreamDataSourceMetadata<T1, T2> that = (SeekableStreamDataSourceMetadata<T1, T2>) other;
 
-    if (that.getSeekableStreamPartitions().getId().equals(seekableStreamPartitions.getId())) {
+    if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
       // Same stream, remove partitions present in "that" from "this"
       final Map<T1, T2> newMap = Maps.newHashMap();
 
@@ -121,7 +121,7 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
         }
       }
 
-      return createConcretDataSourceMetaData(seekableStreamPartitions.getId(), newMap);
+      return createConcretDataSourceMetaData(seekableStreamPartitions.getStream(), newMap);
     } else {
       // Different stream, prefer "this".
       return this;

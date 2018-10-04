@@ -62,7 +62,7 @@ public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
 
     Preconditions.checkArgument(
-        startPartitions.getId().equals(endPartitions.getId()),
+        startPartitions.getStream().equals(endPartitions.getStream()),
         "start topic/stream and end topic/stream must match"
     );
 
@@ -70,20 +70,6 @@ public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
         startPartitions.getMap().keySet().equals(endPartitions.getMap().keySet()),
         "start partition set and end partition set must match"
     );
-
-    // are sequence numbers guranteed to be greater?
-    /*
-    for (T1 partition : endPartitions.getMap().keySet()) {
-      Preconditions.checkArgument(
-          endPartitions.getMap()
-                       .get(partition)
-                       .compareTo(startPartitions.getMap().get(partition)) >= 0,
-          "end offset must be >= start offset for partition[%s]",
-          partition
-      );
-    }
-    */
-
   }
 
   @Nullable

@@ -105,6 +105,7 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
@@ -175,8 +176,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import static org.apache.druid.query.QueryPlus.wrap;
 
 @RunWith(Parameterized.class)
 public class KafkaIndexTaskTest
@@ -491,12 +490,44 @@ public class KafkaIndexTaskTest
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
 
-    final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L, 1, 0L));
+    final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(
+            0,
+            0L,
+            1,
+            0L
+        )
+    );
     // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
     // of events fetched across two partitions from Kafka
-    final SeekableStreamPartitions<Integer, Long> checkpoint1 = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L, 1, 0L));
-    final SeekableStreamPartitions<Integer, Long> checkpoint2 = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 4L, 1, 2L));
-    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L, 1, 2L));
+    final SeekableStreamPartitions<Integer, Long> checkpoint1 = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(
+            0,
+            5L,
+            1,
+            0L
+        )
+    );
+    final SeekableStreamPartitions<Integer, Long> checkpoint2 = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(
+            0,
+            4L,
+            1,
+            2L
+        )
+    );
+    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(
+            0,
+            10L,
+            1,
+            2L
+        )
+    );
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
@@ -586,11 +617,43 @@ public class KafkaIndexTaskTest
       Map<String, Object> consumerProps = kafkaServer.consumerProperties();
       consumerProps.put("max.poll.records", "1");
 
-      final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L, 1, 0L));
-      final SeekableStreamPartitions<Integer, Long> checkpoint1 = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 3L, 1, 0L));
-      final SeekableStreamPartitions<Integer, Long> checkpoint2 = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L, 1, 0L));
+      final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(
+          topic,
+          ImmutableMap.of(
+              0,
+              0L,
+              1,
+              0L
+          )
+      );
+      final SeekableStreamPartitions<Integer, Long> checkpoint1 = new SeekableStreamPartitions<>(
+          topic,
+          ImmutableMap.of(
+              0,
+              3L,
+              1,
+              0L
+          )
+      );
+      final SeekableStreamPartitions<Integer, Long> checkpoint2 = new SeekableStreamPartitions<>(
+          topic,
+          ImmutableMap.of(
+              0,
+              10L,
+              1,
+              0L
+          )
+      );
 
-      final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L, 1, 2L));
+      final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
+          topic,
+          ImmutableMap.of(
+              0,
+              10L,
+              1,
+              2L
+          )
+      );
       final KafkaIndexTask task = createTask(
           null,
           new KafkaIOConfig(
@@ -703,10 +766,34 @@ public class KafkaIndexTaskTest
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
 
-    final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L, 1, 0L));
+    final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(
+            0,
+            0L,
+            1,
+            0L
+        )
+    );
     // Checkpointing will happen at checkpoint
-    final SeekableStreamPartitions<Integer, Long> checkpoint = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 1L, 1, 0L));
-    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L, 1, 0L));
+    final SeekableStreamPartitions<Integer, Long> checkpoint = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(
+            0,
+            1L,
+            1,
+            0L
+        )
+    );
+    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(
+            0,
+            2L,
+            1,
+            0L
+        )
+    );
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
@@ -2360,7 +2447,7 @@ public class KafkaIndexTaskTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(wrap(query), ImmutableMap.of()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
     return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }

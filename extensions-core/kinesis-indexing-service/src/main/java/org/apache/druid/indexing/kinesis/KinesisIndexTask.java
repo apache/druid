@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -64,12 +63,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -123,7 +120,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-// TODO: kinesis task read from startPartitions to endPartitions inclusive, whereas kafka is exclusive, should change behavior to that of kafka's
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 {
   public static final long PAUSE_FOREVER = -1L;
@@ -141,15 +137,24 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   private final Map<String, String> lastOffsets = new ConcurrentHashMap<>();
   private final KinesisIOConfig ioConfig;
   private final KinesisTuningConfig tuningConfig;
+  private final Lock pauseLock = new ReentrantLock();
+  private final Condition hasPaused = pauseLock.newCondition();
+  private final Condition shouldResume = pauseLock.newCondition();
+  // [pollRetryLock] and [isAwaitingRetry] is used when the Kafka consumer returns an OffsetOutOfRangeException and we
+  // pause polling from Kafka for POLL_RETRY_MS before trying again. This allows us to signal the sleeping thread and
+  // resume the main run loop in the case of a pause or stop request from a Jetty thread.
+  private final Lock pollRetryLock = new ReentrantLock();
+  private final Condition isAwaitingRetry = pollRetryLock.newCondition();
+  // [statusLock] is used to synchronize the Jetty thread calling stopGracefully() with the main run thread. It prevents
+  // the main run thread from switching into a publishing state while the stopGracefully() thread thinks it's still in
+  // a pre-publishing state. This is important because stopGracefully() will try to use the [stopRequested] flag to stop
+  // the main thread where possible, but this flag is not honored once publishing has begun so in this case we must
+  // interrupt the thread. The lock ensures that if the run thread is about to transition into publishing state, it
+  // blocks until after stopGracefully() has set [stopRequested] and then does a final check on [stopRequested] before
+  // transitioning to publishing state.
+  private final Object statusLock = new Object();
+  private final RowIngestionMeters rowIngestionMeters;
   private ObjectMapper mapper;
-
-  private volatile Appenderator appenderator = null;
-  private volatile FireDepartmentMetrics fireDepartmentMetrics = null;
-  private volatile DateTime startTime;
-  private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
-  private volatile Thread runThread = null;
-  private volatile boolean stopRequested = false;
-  private volatile boolean publishOnStop = false;
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
@@ -166,27 +171,13 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   //     change to something other than PAUSED, with the condition checked when [shouldResume] is signalled.
   //   - In possiblyPause(), when [shouldResume] is signalled, if [pauseRequested] has become false the pause loop ends,
   //     [status] is changed to STARTING and [shouldResume] is signalled.
-
-  private final Lock pauseLock = new ReentrantLock();
-  private final Condition hasPaused = pauseLock.newCondition();
-  private final Condition shouldResume = pauseLock.newCondition();
-
-  // [pollRetryLock] and [isAwaitingRetry] is used when the Kafka consumer returns an OffsetOutOfRangeException and we
-  // pause polling from Kafka for POLL_RETRY_MS before trying again. This allows us to signal the sleeping thread and
-  // resume the main run loop in the case of a pause or stop request from a Jetty thread.
-  private final Lock pollRetryLock = new ReentrantLock();
-  private final Condition isAwaitingRetry = pollRetryLock.newCondition();
-
-  // [statusLock] is used to synchronize the Jetty thread calling stopGracefully() with the main run thread. It prevents
-  // the main run thread from switching into a publishing state while the stopGracefully() thread thinks it's still in
-  // a pre-publishing state. This is important because stopGracefully() will try to use the [stopRequested] flag to stop
-  // the main thread where possible, but this flag is not honored once publishing has begun so in this case we must
-  // interrupt the thread. The lock ensures that if the run thread is about to transition into publishing state, it
-  // blocks until after stopGracefully() has set [stopRequested] and then does a final check on [stopRequested] before
-  // transitioning to publishing state.
-  private final Object statusLock = new Object();
-
-  private final RowIngestionMeters rowIngestionMeters;
+  private volatile Appenderator appenderator = null;
+  private volatile FireDepartmentMetrics fireDepartmentMetrics = null;
+  private volatile DateTime startTime;
+  private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
+  private volatile Thread runThread = null;
+  private volatile boolean stopRequested = false;
+  private volatile boolean publishOnStop = false;
   private IngestionState ingestionState;
 
   private volatile boolean pauseRequested = false;
@@ -255,7 +246,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
     final LookupNodeService lookupNodeService = getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER) == null ?
                                                 toolbox.getLookupNodeService() :
-                                                new LookupNodeService((String) getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER));
+                                                new LookupNodeService(getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER));
 
     final DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
         toolbox.getDruidNode(),
@@ -277,26 +268,34 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
       appenderator = appenderator0;
 
-      final String topic = ioConfig.getStartPartitions().getId();
+      final String topic = ioConfig.getStartPartitions().getStream();
 
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
       if (restoredMetadata == null) {
         lastOffsets.putAll(ioConfig.getStartPartitions().getMap());
       } else {
+        @SuppressWarnings("unchecked")
         final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
-        final SeekableStreamPartitions<String, String> restoredNextPartitions = toolbox.getObjectMapper().convertValue(
-            restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
-            SeekableStreamPartitions.class
-        );
+        final SeekableStreamPartitions<String, String> restoredNextPartitions = toolbox
+            .getObjectMapper()
+            .convertValue(
+                restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
+                toolbox.getObjectMapper().getTypeFactory().constructParametrizedType(
+                    SeekableStreamPartitions.class,
+                    SeekableStreamPartitions.class,
+                    String.class,
+                    String.class
+                )
+            );
         lastOffsets.putAll(restoredNextPartitions.getMap());
 
         // Sanity checks.
-        if (!restoredNextPartitions.getId().equals(ioConfig.getStartPartitions().getId())) {
+        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartPartitions().getStream())) {
           throw new ISE(
               "WTF?! Restored stream[%s] but expected stream[%s]",
-              restoredNextPartitions.getId(),
-              ioConfig.getStartPartitions().getId()
+              restoredNextPartitions.getStream(),
+              ioConfig.getStartPartitions().getStream()
           );
         }
 
@@ -326,33 +325,28 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       }
 
       // Set up committer.
-      final Supplier<Committer> committerSupplier = new Supplier<Committer>()
-      {
-        @Override
-        public Committer get()
+      final Supplier<Committer> committerSupplier = () -> {
+        final Map<String, String> snapshot = ImmutableMap.copyOf(lastOffsets);
+
+        return new Committer()
         {
-          final Map<String, String> snapshot = ImmutableMap.copyOf(lastOffsets);
-
-          return new Committer()
+          @Override
+          public Object getMetadata()
           {
-            @Override
-            public Object getMetadata()
-            {
-              return ImmutableMap.of(
-                  METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
-                      ioConfig.getStartPartitions().getId(),
-                      snapshot
-                  )
-              );
-            }
+            return ImmutableMap.of(
+                METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
+                    ioConfig.getStartPartitions().getStream(),
+                    snapshot
+                )
+            );
+          }
 
-            @Override
-            public void run()
-            {
-              // Do nothing.
-            }
-          };
-        }
+          @Override
+          public void run()
+          {
+            // Do nothing.
+          }
+        };
       };
 
       Set<String> assignment = assignPartitions(recordSupplier, topic);
@@ -488,9 +482,9 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
               if (isPersistRequired) {
                 driver.persist(committerSupplier.get());
               }
-              segmentsToMoveOut.entrySet().forEach(sequenceSegments -> driver.moveSegmentOut(
-                  sequenceSegments.getKey(),
-                  sequenceSegments.getValue().stream().collect(Collectors.toList())
+              segmentsToMoveOut.forEach((key, value) -> driver.moveSegmentOut(
+                  key,
+                  new ArrayList<SegmentIdentifier>(value)
               ));
             }
             catch (ParseException e) {
@@ -536,7 +530,12 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
         final SeekableStreamPartitions<String, String> finalPartitions = toolbox.getObjectMapper().convertValue(
             ((Map) commitMetadata).get(METADATA_NEXT_PARTITIONS),
-            SeekableStreamPartitions.class
+            toolbox.getObjectMapper().getTypeFactory().constructParametrizedType(
+                SeekableStreamPartitions.class,
+                SeekableStreamPartitions.class,
+                String.class,
+                String.class
+            )
         );
 
         // Sanity check, we should only be publishing things that match our desired end state.
@@ -586,14 +585,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
             Joiner.on(", ").join(
                 Iterables.transform(
                     handedOff.getSegments(),
-                    new Function<DataSegment, String>()
-                    {
-                      @Override
-                      public String apply(DataSegment input)
-                      {
-                        return input.getIdentifier();
-                      }
-                    }
+                    DataSegment::getIdentifier
                 )
             ),
             handedOff.getCommitMetadata()
@@ -635,434 +627,27 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     return success();
   }
 
-  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg)
+  private RecordSupplier<String, String> getRecordSupplier()
   {
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                ingestionState,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMsg
-            )
-        )
+    int fetchThreads = tuningConfig.getFetchThreads() != null
+                       ? tuningConfig.getFetchThreads()
+                       : Math.max(1, ioConfig.getStartPartitions().getMap().size());
+
+    return new KinesisRecordSupplier(
+        ioConfig.getEndpoint(),
+        ioConfig.getAwsAccessKeyId(),
+        ioConfig.getAwsSecretAccessKey(),
+        ioConfig.getRecordsPerFetch(),
+        ioConfig.getFetchDelayMillis(),
+        fetchThreads,
+        ioConfig.getAwsAssumedRoleArn(),
+        ioConfig.getAwsExternalId(),
+        ioConfig.isDeaggregate(),
+        tuningConfig.getRecordBufferSize(),
+        tuningConfig.getRecordBufferOfferTimeout(),
+        tuningConfig.getRecordBufferFullWait(),
+        tuningConfig.getFetchSequenceNumberTimeout()
     );
-  }
-
-  private Map<String, Object> getTaskCompletionUnparseableEvents()
-  {
-    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        savedParseExceptions
-    );
-    if (buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
-    }
-    return unparseableEventsMap;
-  }
-
-  @Override
-  public boolean canRestore()
-  {
-    return true;
-  }
-
-  /**
-   * Authorizes action to be performed on this task's datasource
-   *
-   * @return authorization result
-   */
-  private Access authorizationCheck(final HttpServletRequest req, Action action)
-  {
-    ResourceAction resourceAction = new ResourceAction(
-        new Resource(dataSchema.getDataSource(), ResourceType.DATASOURCE),
-        action
-    );
-
-    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
-    }
-
-    return access;
-  }
-
-  private void handleParseException(ParseException pe, Record record)
-  {
-    if (pe.isFromPartiallyValidRow()) {
-      rowIngestionMeters.incrementProcessedWithError();
-    } else {
-      rowIngestionMeters.incrementUnparseable();
-    }
-
-    if (tuningConfig.isLogParseExceptions()) {
-      log.error(
-          pe,
-          "Encountered parse exception on row from partition[%s] sequenceNumber[%s]",
-          record.getPartitionId(),
-          record.getSequenceNumber()
-      );
-    }
-
-    if (savedParseExceptions != null) {
-      savedParseExceptions.add(pe);
-    }
-
-    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
-        > tuningConfig.getMaxParseExceptions()) {
-      log.error("Max parse exceptions exceeded, terminating task...");
-      throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
-    }
-  }
-
-  @Override
-  public void stopGracefully()
-  {
-    log.info("Stopping gracefully (status: [%s])", status);
-    stopRequested = true;
-
-    synchronized (statusLock) {
-      if (status == Status.PUBLISHING) {
-        runThread.interrupt();
-        return;
-      }
-    }
-
-    try {
-      if (pauseLock.tryLock(LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-        try {
-          if (pauseRequested) {
-            pauseRequested = false;
-            shouldResume.signalAll();
-          }
-        }
-        finally {
-          pauseLock.unlock();
-        }
-      } else {
-        log.warn("While stopping: failed to acquire pauseLock before timeout, interrupting run thread");
-        runThread.interrupt();
-        return;
-      }
-
-      if (pollRetryLock.tryLock(LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-        try {
-          isAwaitingRetry.signalAll();
-        }
-        finally {
-          pollRetryLock.unlock();
-        }
-      } else {
-        log.warn("While stopping: failed to acquire pollRetryLock before timeout, interrupting run thread");
-        runThread.interrupt();
-      }
-    }
-    catch (Exception e) {
-      Throwables.propagate(e);
-    }
-  }
-
-  @Override
-  public <T> QueryRunner<T> getQueryRunner(Query<T> query)
-  {
-    if (appenderator == null) {
-      // Not yet initialized, no data yet, just return a noop runner.
-      return new NoopQueryRunner<>();
-    }
-
-    return new QueryRunner<T>()
-    {
-      @Override
-      public Sequence<T> run(final QueryPlus<T> query, final Map<String, Object> responseContext)
-      {
-        return query.run(appenderator, responseContext);
-      }
-    };
-  }
-
-  @POST
-  @Path("/stop")
-  public Response stop(@Context final HttpServletRequest req)
-  {
-    authorizationCheck(req, Action.WRITE);
-    stopGracefully();
-    return Response.status(Response.Status.OK).build();
-  }
-
-  @GET
-  @Path("/status")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Status getStatusHTTP(@Context final HttpServletRequest req)
-  {
-    authorizationCheck(req, Action.READ);
-    return status;
-  }
-
-  public Status getStatus()
-  {
-    return status;
-  }
-
-  @GET
-  @Path("/offsets/current")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Map<String, String> getCurrentOffsets(@Context final HttpServletRequest req)
-  {
-    authorizationCheck(req, Action.READ);
-    return getCurrentOffsets();
-  }
-
-  public Map<String, String> getCurrentOffsets()
-  {
-    return lastOffsets;
-  }
-
-  @GET
-  @Path("/offsets/end")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Map<String, String> getEndOffsetsHTTP(@Context final HttpServletRequest req)
-  {
-    authorizationCheck(req, Action.READ);
-    return getEndOffsets();
-  }
-
-  public Map<String, String> getEndOffsets()
-  {
-    return endOffsets;
-  }
-
-  @POST
-  @Path("/offsets/end")
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response setEndOffsetsHTTP(
-      Map<String, String> offsets,
-      @QueryParam("resume") @DefaultValue("false") final boolean resume,
-      @Context final HttpServletRequest req
-  ) throws InterruptedException
-  {
-    authorizationCheck(req, Action.WRITE);
-    return setEndOffsets(offsets, resume);
-  }
-
-  public Response setEndOffsets(Map<String, String> offsets, final boolean resume) throws InterruptedException
-  {
-    if (offsets == null) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("Request body must contain a map of { partition:endOffset }")
-                     .build();
-    } else if (!endOffsets.keySet().containsAll(offsets.keySet())) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(
-                         String.format(
-                             "Request contains partitions not being handled by this task, my partitions: %s",
-                             endOffsets.keySet()
-                         )
-                     )
-                     .build();
-    }
-
-    pauseLock.lockInterruptibly();
-    try {
-      if (!isPaused()) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("Task must be paused before changing the end offsets")
-                       .build();
-      }
-
-      for (Map.Entry<String, String> entry : offsets.entrySet()) {
-        if (entry.getValue().compareTo(lastOffsets.get(entry.getKey())) < 0) {
-          return Response.status(Response.Status.BAD_REQUEST)
-                         .entity(
-                             String.format(
-                                 "End offset must be >= current offset for partition [%s] (current: %s)",
-                                 entry.getKey(),
-                                 lastOffsets.get(entry.getKey())
-                             )
-                         )
-                         .build();
-        }
-      }
-
-      endOffsets.putAll(offsets);
-      log.info("endOffsets changed to %s", endOffsets);
-    }
-    finally {
-      pauseLock.unlock();
-    }
-
-    if (resume) {
-      resume();
-    }
-
-    return Response.ok(endOffsets).build();
-  }
-
-  /**
-   * Signals the ingestion loop to pause.
-   *
-   * @param timeout how long to pause for before resuming in milliseconds, <= 0 means indefinitely
-   *
-   * @return one of the following Responses: 400 Bad Request if the task has started publishing; 202 Accepted if the
-   * method has timed out and returned before the task has paused; 200 OK with a map of the current partition offsets
-   * in the response body if the task successfully paused
-   */
-  @POST
-  @Path("/pause")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response pauseHTTP(
-      @QueryParam("timeout") @DefaultValue("0") final long timeout, @Context final HttpServletRequest req
-  ) throws InterruptedException
-  {
-    authorizationCheck(req, Action.WRITE);
-    return pause(timeout);
-  }
-
-  public Response pause(final long timeout) throws InterruptedException
-  {
-    if (!(status == Status.PAUSED || status == Status.READING)) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(String.format("Can't pause, task is not in a pausable state (state: [%s])", status))
-                     .build();
-    }
-
-    pauseLock.lockInterruptibly();
-    try {
-      pauseMillis = timeout <= 0 ? PAUSE_FOREVER : timeout;
-      pauseRequested = true;
-
-      pollRetryLock.lockInterruptibly();
-      try {
-        isAwaitingRetry.signalAll();
-      }
-      finally {
-        pollRetryLock.unlock();
-      }
-
-      if (isPaused()) {
-        shouldResume.signalAll(); // kick the monitor so it re-awaits with the new pauseMillis
-      }
-
-      long nanos = TimeUnit.SECONDS.toNanos(2);
-      while (!isPaused()) {
-        if (nanos <= 0L) {
-          return Response.status(Response.Status.ACCEPTED)
-                         .entity("Request accepted but task has not yet paused")
-                         .build();
-        }
-        nanos = hasPaused.awaitNanos(nanos);
-      }
-    }
-    finally {
-      pauseLock.unlock();
-    }
-
-    try {
-      return Response.ok().entity(mapper.writeValueAsString(getCurrentOffsets())).build();
-    }
-    catch (JsonProcessingException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  @POST
-  @Path("/resume")
-  public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
-  {
-    authorizationCheck(req, Action.WRITE);
-    resume();
-    return Response.status(Response.Status.OK).build();
-  }
-
-  public void resume() throws InterruptedException
-  {
-    pauseLock.lockInterruptibly();
-    try {
-      pauseRequested = false;
-      shouldResume.signalAll();
-
-      long nanos = TimeUnit.SECONDS.toNanos(5);
-      while (isPaused()) {
-        if (nanos <= 0L) {
-          throw new RuntimeException("Resume command was not accepted within 5 seconds");
-        }
-        nanos = shouldResume.awaitNanos(nanos);
-      }
-    }
-    finally {
-      pauseLock.unlock();
-    }
-  }
-
-  @GET
-  @Path("/time/start")
-  @Produces(MediaType.APPLICATION_JSON)
-  public DateTime getStartTime(@Context final HttpServletRequest req)
-  {
-    authorizationCheck(req, Action.READ);
-    return startTime;
-  }
-
-  @GET
-  @Path("/rowStats")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getRowStats(
-      @Context final HttpServletRequest req
-  )
-  {
-    authorizationCheck(req, Action.READ);
-    Map<String, Object> returnMap = Maps.newHashMap();
-    Map<String, Object> totalsMap = Maps.newHashMap();
-    Map<String, Object> averagesMap = Maps.newHashMap();
-
-    totalsMap.put(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        rowIngestionMeters.getTotals()
-    );
-    averagesMap.put(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        rowIngestionMeters.getMovingAverages()
-    );
-
-    returnMap.put("movingAverages", averagesMap);
-    returnMap.put("totals", totalsMap);
-    return Response.ok(returnMap).build();
-  }
-
-  @GET
-  @Path("/unparseableEvents")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getUnparseableEvents(
-      @Context final HttpServletRequest req
-  )
-  {
-    authorizationCheck(req, Action.READ);
-    List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
-    return Response.ok(events).build();
-  }
-
-  @VisibleForTesting
-  RowIngestionMeters getRowIngestionMeters()
-  {
-    return rowIngestionMeters;
-  }
-
-  @VisibleForTesting
-  Appenderator getAppenderator()
-  {
-    return appenderator;
-  }
-
-  @VisibleForTesting
-  FireDepartmentMetrics getFireDepartmentMetrics()
-  {
-    return fireDepartmentMetrics;
-  }
-
-  private boolean isPaused()
-  {
-    return status == Status.PAUSED;
   }
 
   private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
@@ -1116,39 +701,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     );
   }
 
-  private RecordSupplier<String, String> getRecordSupplier()
-  {
-    int fetchThreads = tuningConfig.getFetchThreads() != null
-                       ? tuningConfig.getFetchThreads()
-                       : Math.max(1, ioConfig.getStartPartitions().getMap().size());
-
-    return new KinesisRecordSupplier(
-        ioConfig.getEndpoint(),
-        ioConfig.getAwsAccessKeyId(),
-        ioConfig.getAwsSecretAccessKey(),
-        ioConfig.getRecordsPerFetch(),
-        ioConfig.getFetchDelayMillis(),
-        fetchThreads,
-        ioConfig.getAwsAssumedRoleArn(),
-        ioConfig.getAwsExternalId(),
-        ioConfig.isDeaggregate(),
-        tuningConfig.getRecordBufferSize(),
-        tuningConfig.getRecordBufferOfferTimeout(),
-        tuningConfig.getRecordBufferFullWait(),
-        tuningConfig.getFetchSequenceNumberTimeout()
-    );
-  }
-
-  private static void assignPartitions(
-      final RecordSupplier recordSupplier,
-      final String topic,
-      final Set<String> partitions
-  )
-  {
-    recordSupplier.assign(partitions.stream().map(x -> StreamPartition.of(topic, x)).collect(Collectors.toSet()));
-  }
-
-  private Set<String> assignPartitions(RecordSupplier recordSupplier, String topic)
+  private Set<String> assignPartitions(RecordSupplier<String, String> recordSupplier, String topic)
   {
     // Initialize consumer assignment.
     final Set<String> assignment = Sets.newHashSet();
@@ -1288,42 +841,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     return false;
   }
 
-  private void sendResetRequestAndWait(
-      Map<StreamPartition<String>, String> outOfRangePartitions,
-      TaskToolbox taskToolbox
-  )
-      throws IOException
-  {
-    Map<String, String> partitionOffsetMap = outOfRangePartitions
-        .entrySet().stream().collect(Collectors.toMap(x -> x.getKey().getPartitionId(), Map.Entry::getValue));
-
-    boolean result = taskToolbox
-        .getTaskActionClient()
-        .submit(
-            new ResetDataSourceMetadataAction(
-                getDataSource(),
-                new KinesisDataSourceMetadata(
-                    new SeekableStreamPartitions<String, String>(ioConfig.getStartPartitions().getId(), partitionOffsetMap)
-                )
-            )
-        );
-
-    if (result) {
-      log.makeAlert("Resetting Kinesis offsets for datasource [%s]", getDataSource())
-         .addData("partitions", partitionOffsetMap.keySet())
-         .emit();
-      // wait for being killed by supervisor
-      try {
-        pause(-1);
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException("Got interrupted while pausing task");
-      }
-    } else {
-      log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
-    }
-  }
-
   private boolean withinMinMaxRecordTime(final InputRow row)
   {
     final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
@@ -1359,6 +876,109 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 
+  private void handleParseException(ParseException pe, Record record)
+  {
+    if (pe.isFromPartiallyValidRow()) {
+      rowIngestionMeters.incrementProcessedWithError();
+    } else {
+      rowIngestionMeters.incrementUnparseable();
+    }
+
+    if (tuningConfig.isLogParseExceptions()) {
+      log.error(
+          pe,
+          "Encountered parse exception on row from partition[%s] sequenceNumber[%s]",
+          record.getPartitionId(),
+          record.getSequenceNumber()
+      );
+    }
+
+    if (savedParseExceptions != null) {
+      savedParseExceptions.add(pe);
+    }
+
+    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
+        > tuningConfig.getMaxParseExceptions()) {
+      log.error("Max parse exceptions exceeded, terminating task...");
+      throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
+    }
+  }
+
+  private static void assignPartitions(
+      final RecordSupplier<String, String> recordSupplier,
+      final String topic,
+      final Set<String> partitions
+  )
+  {
+    recordSupplier.assign(partitions.stream().map(x -> StreamPartition.of(topic, x)).collect(Collectors.toSet()));
+  }
+
+  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg)
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                ingestionState,
+                getTaskCompletionUnparseableEvents(),
+                getTaskCompletionRowStats(),
+                errorMsg
+            )
+        )
+    );
+  }
+
+  private void sendResetRequestAndWait(
+      Map<StreamPartition<String>, String> outOfRangePartitions,
+      TaskToolbox taskToolbox
+  )
+      throws IOException
+  {
+    Map<String, String> partitionOffsetMap = outOfRangePartitions
+        .entrySet().stream().collect(Collectors.toMap(x -> x.getKey().getPartitionId(), Map.Entry::getValue));
+
+    boolean result = taskToolbox
+        .getTaskActionClient()
+        .submit(
+            new ResetDataSourceMetadataAction(
+                getDataSource(),
+                new KinesisDataSourceMetadata(
+                    new SeekableStreamPartitions<>(
+                        ioConfig.getStartPartitions().getStream(),
+                        partitionOffsetMap
+                    )
+                )
+            )
+        );
+
+    if (result) {
+      log.makeAlert("Resetting Kinesis offsets for datasource [%s]", getDataSource())
+         .addData("partitions", partitionOffsetMap.keySet())
+         .emit();
+      // wait for being killed by supervisor
+      try {
+        pause(-1);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException("Got interrupted while pausing task");
+      }
+    } else {
+      log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
+    }
+  }
+
+  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  {
+    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        savedParseExceptions
+    );
+    if (buildSegmentsParseExceptionMessages != null) {
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
+    }
+    return unparseableEventsMap;
+  }
+
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
@@ -1367,6 +987,374 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         rowIngestionMeters.getTotals()
     );
     return metrics;
+  }
+
+  public Response pause(final long timeout) throws InterruptedException
+  {
+    if (!(status == Status.PAUSED || status == Status.READING)) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(String.format("Can't pause, task is not in a pausable state (state: [%s])", status))
+                     .build();
+    }
+
+    pauseLock.lockInterruptibly();
+    try {
+      pauseMillis = timeout <= 0 ? PAUSE_FOREVER : timeout;
+      pauseRequested = true;
+
+      pollRetryLock.lockInterruptibly();
+      try {
+        isAwaitingRetry.signalAll();
+      }
+      finally {
+        pollRetryLock.unlock();
+      }
+
+      if (isPaused()) {
+        shouldResume.signalAll(); // kick the monitor so it re-awaits with the new pauseMillis
+      }
+
+      long nanos = TimeUnit.SECONDS.toNanos(2);
+      while (!isPaused()) {
+        if (nanos <= 0L) {
+          return Response.status(Response.Status.ACCEPTED)
+                         .entity("Request accepted but task has not yet paused")
+                         .build();
+        }
+        nanos = hasPaused.awaitNanos(nanos);
+      }
+    }
+    finally {
+      pauseLock.unlock();
+    }
+
+    try {
+      return Response.ok().entity(mapper.writeValueAsString(getCurrentOffsets())).build();
+    }
+    catch (JsonProcessingException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  private boolean isPaused()
+  {
+    return status == Status.PAUSED;
+  }
+
+  public Map<String, String> getCurrentOffsets()
+  {
+    return lastOffsets;
+  }
+
+  @Override
+  public boolean canRestore()
+  {
+    return true;
+  }
+
+  @Override
+  public <T> QueryRunner<T> getQueryRunner(Query<T> query)
+  {
+    if (appenderator == null) {
+      // Not yet initialized, no data yet, just return a noop runner.
+      return new NoopQueryRunner<>();
+    }
+
+    return (query1, responseContext) -> query1.run(appenderator, responseContext);
+  }
+
+  @POST
+  @Path("/stop")
+  public Response stop(@Context final HttpServletRequest req)
+  {
+    authorizationCheck(req, Action.WRITE);
+    stopGracefully();
+    return Response.status(Response.Status.OK).build();
+  }
+
+  /**
+   * Authorizes action to be performed on this task's datasource
+   *
+   * @return authorization result
+   */
+  private Access authorizationCheck(final HttpServletRequest req, Action action)
+  {
+    ResourceAction resourceAction = new ResourceAction(
+        new Resource(dataSchema.getDataSource(), ResourceType.DATASOURCE),
+        action
+    );
+
+    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
+    if (!access.isAllowed()) {
+      throw new ForbiddenException(access.toString());
+    }
+
+    return access;
+  }
+
+  @Override
+  public void stopGracefully()
+  {
+    log.info("Stopping gracefully (status: [%s])", status);
+    stopRequested = true;
+
+    synchronized (statusLock) {
+      if (status == Status.PUBLISHING) {
+        runThread.interrupt();
+        return;
+      }
+    }
+
+    try {
+      if (pauseLock.tryLock(LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        try {
+          if (pauseRequested) {
+            pauseRequested = false;
+            shouldResume.signalAll();
+          }
+        }
+        finally {
+          pauseLock.unlock();
+        }
+      } else {
+        log.warn("While stopping: failed to acquire pauseLock before timeout, interrupting run thread");
+        runThread.interrupt();
+        return;
+      }
+
+      if (pollRetryLock.tryLock(LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        try {
+          isAwaitingRetry.signalAll();
+        }
+        finally {
+          pollRetryLock.unlock();
+        }
+      } else {
+        log.warn("While stopping: failed to acquire pollRetryLock before timeout, interrupting run thread");
+        runThread.interrupt();
+      }
+    }
+    catch (Exception e) {
+      Throwables.propagate(e);
+    }
+  }
+
+  @GET
+  @Path("/status")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Status getStatusHTTP(@Context final HttpServletRequest req)
+  {
+    authorizationCheck(req, Action.READ);
+    return status;
+  }
+
+  public Status getStatus()
+  {
+    return status;
+  }
+
+  @GET
+  @Path("/offsets/current")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Map<String, String> getCurrentOffsets(@Context final HttpServletRequest req)
+  {
+    authorizationCheck(req, Action.READ);
+    return getCurrentOffsets();
+  }
+
+  @GET
+  @Path("/offsets/end")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Map<String, String> getEndOffsetsHTTP(@Context final HttpServletRequest req)
+  {
+    authorizationCheck(req, Action.READ);
+    return getEndOffsets();
+  }
+
+  public Map<String, String> getEndOffsets()
+  {
+    return endOffsets;
+  }
+
+  @POST
+  @Path("/offsets/end")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response setEndOffsetsHTTP(
+      Map<String, String> offsets,
+      @QueryParam("resume") @DefaultValue("false") final boolean resume,
+      @Context final HttpServletRequest req
+  ) throws InterruptedException
+  {
+    authorizationCheck(req, Action.WRITE);
+    return setEndOffsets(offsets, resume);
+  }
+
+  public Response setEndOffsets(Map<String, String> offsets, final boolean resume) throws InterruptedException
+  {
+    if (offsets == null) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity("Request body must contain a map of { partition:endOffset }")
+                     .build();
+    } else if (!endOffsets.keySet().containsAll(offsets.keySet())) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(
+                         String.format(
+                             "Request contains partitions not being handled by this task, my partitions: %s",
+                             endOffsets.keySet()
+                         )
+                     )
+                     .build();
+    }
+
+    pauseLock.lockInterruptibly();
+    try {
+      if (!isPaused()) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity("Task must be paused before changing the end offsets")
+                       .build();
+      }
+
+      for (Map.Entry<String, String> entry : offsets.entrySet()) {
+        if (entry.getValue().compareTo(lastOffsets.get(entry.getKey())) < 0) {
+          return Response.status(Response.Status.BAD_REQUEST)
+                         .entity(
+                             String.format(
+                                 "End offset must be >= current offset for partition [%s] (current: %s)",
+                                 entry.getKey(),
+                                 lastOffsets.get(entry.getKey())
+                             )
+                         )
+                         .build();
+        }
+      }
+
+      endOffsets.putAll(offsets);
+      log.info("endOffsets changed to %s", endOffsets);
+    }
+    finally {
+      pauseLock.unlock();
+    }
+
+    if (resume) {
+      resume();
+    }
+
+    return Response.ok(endOffsets).build();
+  }
+
+  public void resume() throws InterruptedException
+  {
+    pauseLock.lockInterruptibly();
+    try {
+      pauseRequested = false;
+      shouldResume.signalAll();
+
+      long nanos = TimeUnit.SECONDS.toNanos(5);
+      while (isPaused()) {
+        if (nanos <= 0L) {
+          throw new RuntimeException("Resume command was not accepted within 5 seconds");
+        }
+        nanos = shouldResume.awaitNanos(nanos);
+      }
+    }
+    finally {
+      pauseLock.unlock();
+    }
+  }
+
+  /**
+   * Signals the ingestion loop to pause.
+   *
+   * @param timeout how long to pause for before resuming in milliseconds, <= 0 means indefinitely
+   *
+   * @return one of the following Responses: 400 Bad Request if the task has started publishing; 202 Accepted if the
+   * method has timed out and returned before the task has paused; 200 OK with a map of the current partition offsets
+   * in the response body if the task successfully paused
+   */
+  @POST
+  @Path("/pause")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response pauseHTTP(
+      @QueryParam("timeout") @DefaultValue("0") final long timeout, @Context final HttpServletRequest req
+  ) throws InterruptedException
+  {
+    authorizationCheck(req, Action.WRITE);
+    return pause(timeout);
+  }
+
+  @POST
+  @Path("/resume")
+  public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
+  {
+    authorizationCheck(req, Action.WRITE);
+    resume();
+    return Response.status(Response.Status.OK).build();
+  }
+
+  @GET
+  @Path("/time/start")
+  @Produces(MediaType.APPLICATION_JSON)
+  public DateTime getStartTime(@Context final HttpServletRequest req)
+  {
+    authorizationCheck(req, Action.READ);
+    return startTime;
+  }
+
+  @GET
+  @Path("/rowStats")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRowStats(
+      @Context final HttpServletRequest req
+  )
+  {
+    authorizationCheck(req, Action.READ);
+    Map<String, Object> returnMap = Maps.newHashMap();
+    Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
+
+    totalsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
+    averagesMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getMovingAverages()
+    );
+
+    returnMap.put("movingAverages", averagesMap);
+    returnMap.put("totals", totalsMap);
+    return Response.ok(returnMap).build();
+  }
+
+  @GET
+  @Path("/unparseableEvents")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getUnparseableEvents(
+      @Context final HttpServletRequest req
+  )
+  {
+    authorizationCheck(req, Action.READ);
+    List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
+    return Response.ok(events).build();
+  }
+
+  @VisibleForTesting
+  RowIngestionMeters getRowIngestionMeters()
+  {
+    return rowIngestionMeters;
+  }
+
+  @VisibleForTesting
+  Appenderator getAppenderator()
+  {
+    return appenderator;
+  }
+
+  @VisibleForTesting
+  FireDepartmentMetrics getFireDepartmentMetrics()
+  {
+    return fireDepartmentMetrics;
   }
 
   @Override

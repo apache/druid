@@ -24,6 +24,7 @@ import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
 
 import javax.validation.constraints.NotNull;
 import java.math.BigInteger;
+import java.util.Objects;
 
 public class KinesisSequenceNumber extends SequenceNumber<String>
 {
@@ -33,12 +34,7 @@ public class KinesisSequenceNumber extends SequenceNumber<String>
   private KinesisSequenceNumber(@NotNull String sequenceNumber, boolean useExclusive, boolean isExclusive)
   {
     super(sequenceNumber, useExclusive, isExclusive);
-    this.intSequence = sequenceNumber.equals("") ? new BigInteger("-1") : new BigInteger(sequenceNumber);
-  }
-
-  public BigInteger getBigInteger()
-  {
-    return intSequence;
+    this.intSequence = "".equals(sequenceNumber) ? new BigInteger("-1") : new BigInteger(sequenceNumber);
   }
 
   public static KinesisSequenceNumber of(String sequenceNumber)
@@ -49,6 +45,11 @@ public class KinesisSequenceNumber extends SequenceNumber<String>
   public static KinesisSequenceNumber of(String sequenceNumber, boolean useExclusive, boolean isExclusive)
   {
     return new KinesisSequenceNumber(sequenceNumber, useExclusive, isExclusive);
+  }
+
+  public BigInteger getBigInteger()
+  {
+    return intSequence;
   }
 
   @Override
@@ -62,8 +63,14 @@ public class KinesisSequenceNumber extends SequenceNumber<String>
 
 
   @Override
-  public int compareTo(SequenceNumber<String> o)
+  public int compareTo(@NotNull SequenceNumber<String> o)
   {
     return this.intSequence.compareTo(new BigInteger(o.get()));
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), intSequence);
   }
 }

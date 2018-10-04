@@ -74,6 +74,7 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
         minimumMessageTime,
         maximumMessageTime
     );
+
     this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
     this.endpoint = Preconditions.checkNotNull(endpoint, "endpoint");
     this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : DEFAULT_RECORDS_PER_FETCH;
@@ -84,7 +85,6 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
-
   }
 
   @JsonProperty
@@ -146,20 +146,6 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
   public boolean isDeaggregate()
   {
     return deaggregate;
-  }
-
-  @Override
-  @JsonProperty
-  public SeekableStreamPartitions<String, String> getStartPartitions()
-  {
-    return super.getStartPartitions();
-  }
-
-  @Override
-  @JsonProperty
-  public SeekableStreamPartitions<String, String> getEndPartitions()
-  {
-    return super.getEndPartitions();
   }
 
   @Override

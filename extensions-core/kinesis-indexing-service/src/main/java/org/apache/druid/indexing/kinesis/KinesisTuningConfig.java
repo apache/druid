@@ -120,7 +120,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getMaxRowsPerSegment(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
-        getMaxPendingPersists(),
+        0,
         getIndexSpec(),
         true,
         isReportParseExceptions(),
@@ -178,7 +178,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getMaxRowsPerSegment(),
         getIntermediatePersistPeriod(),
         dir,
-        getMaxPendingPersists(),
+        0,
         getIndexSpec(),
         true,
         isReportParseExceptions(),
@@ -205,7 +205,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getMaxRowsPerSegment(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
-        getMaxPendingPersists(),
+        0,
         getIndexSpec(),
         true,
         isReportParseExceptions(),
@@ -266,9 +266,9 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getMaxRowsPerSegment(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
-        getMaxPendingPersists(),
+        0,
         getIndexSpec(),
-        getBuildV9Directly(),
+        true,
         isReportParseExceptions(),
         getHandoffConditionTimeout(),
         isResetOffsetAutomatically(),
@@ -294,7 +294,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
-           ", maxPendingPersists=" + getMaxPendingPersists() +
+           ", maxPendingPersists=" + 0 +
            ", indexSpec=" + getIndexSpec() +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +

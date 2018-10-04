@@ -50,11 +50,6 @@ public enum KinesisRegion
   SA_EAST_1,
   US_GOV_WEST_1;
 
-  public String getEndpoint()
-  {
-    return StringUtils.format("kinesis.%s.amazonaws.com%s", toString(), toString().startsWith("cn-") ? ".cn" : "");
-  }
-
   @JsonCreator
   public static KinesisRegion fromString(String value)
   {
@@ -65,15 +60,20 @@ public enum KinesisRegion
                   .orElseThrow(() -> new IAE("Region must be one of: %s", getNames()));
   }
 
+  private static List<String> getNames()
+  {
+    return EnumSet.allOf(KinesisRegion.class).stream().map(KinesisRegion::toString).collect(Collectors.toList());
+  }
+
+  public String getEndpoint()
+  {
+    return StringUtils.format("kinesis.%s.amazonaws.com%s", toString(), toString().startsWith("cn-") ? ".cn" : "");
+  }
+
   @Override
   @JsonValue
   public String toString()
   {
     return StringUtils.toLowerCase(name()).replace('_', '-');
-  }
-
-  private static List<String> getNames()
-  {
-    return EnumSet.allOf(KinesisRegion.class).stream().map(KinesisRegion::toString).collect(Collectors.toList());
   }
 }

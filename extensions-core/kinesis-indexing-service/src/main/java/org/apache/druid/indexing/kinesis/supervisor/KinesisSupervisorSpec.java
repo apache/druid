@@ -137,18 +137,6 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
-  public KinesisSupervisorSpec createSuspendedSpec()
-  {
-    return toggleSuspend(true);
-  }
-
-  @Override
-  public KinesisSupervisorSpec createRunningSpec()
-  {
-    return toggleSuspend(false);
-  }
-
-  @Override
   @JsonProperty
   public KinesisSupervisorTuningConfig getTuningConfig()
   {
@@ -160,6 +148,12 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   public KinesisSupervisorIOConfig getIoConfig()
   {
     return (KinesisSupervisorIOConfig) super.getIoConfig();
+  }
+
+  @Override
+  public KinesisSupervisorSpec createSuspendedSpec()
+  {
+    return toggleSuspend(true);
   }
 
   @Override
@@ -180,5 +174,11 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         monitorSchedulerConfig,
         rowIngestionMetersFactory
     );
+  }
+
+  @Override
+  public KinesisSupervisorSpec createRunningSpec()
+  {
+    return toggleSuspend(false);
   }
 }

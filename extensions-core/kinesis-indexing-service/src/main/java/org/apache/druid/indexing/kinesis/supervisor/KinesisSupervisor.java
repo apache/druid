@@ -49,7 +49,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -65,16 +64,17 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Supervisor responsible for managing the KafkaIndexTasks for a single dataSource. At a high level, the class accepts a
+ * Supervisor responsible for managing the KinesisIndexTask for a single dataSource. At a high level, the class accepts a
  * {@link KinesisSupervisorSpec} which includes the Kafka topic and configuration as well as an ingestion spec which will
  * be used to generate the indexing tasks. The run loop periodically refreshes its view of the Kafka topic's partitions
  * and the list of running indexing tasks and ensures that all partitions are being read from and that there are enough
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
- * Kafka offsets.
+ * Kinesis sequences.
+ * <p>
+ * the Kinesis supervisor does not yet support incremental handoff and emitLag
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
-  private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
   private static final String NOT_SET = "";
   private final KinesisSupervisorSpec spec;
 
@@ -132,8 +132,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     KinesisSupervisorIOConfig ioConfig = (KinesisSupervisorIOConfig) ioConfigg;
     return new KinesisIOConfig(
         baseSequenceName,
-        new SeekableStreamPartitions<String, String>(ioConfig.getStream(), startPartitions),
-        new SeekableStreamPartitions<String, String>(ioConfig.getStream(), endPartitions),
+        new SeekableStreamPartitions<>(ioConfig.getStream(), startPartitions),
+        new SeekableStreamPartitions<>(ioConfig.getStream(), endPartitions),
         true,
         true, // should pause after reading otherwise the task may complete early which will confuse the supervisor
         minimumMessageTime,
@@ -205,7 +205,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected void scheduleReporting(ScheduledExecutorService reportingExec)
   {
-    // TODO: Implement this for Kinesis which uses approximate time from latest instead of offset lag
+    // Implement this for Kinesis which uses approximate time from latest instead of offset lag
 /*
         reportingExec.scheduleAtFixedRate(
             computeAndEmitLag(taskClient),
@@ -334,7 +334,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected boolean checkSequenceAvailability(String partition, @NotNull String sequenceFromMetadata)
+  protected boolean checkSequenceAvailability(@NotNull String partition, @NotNull String sequenceFromMetadata)
       throws TimeoutException
   {
     String earliestSequence = super.getOffsetFromStreamForPartition(partition, true);
@@ -343,7 +343,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
 
-// TODO: Implement this for Kinesis which uses approximate time from latest instead of offset lag
+// Implement this for Kinesis which uses approximate time from latest instead of offset lag
 /*
   private Runnable computeAndEmitLag(final KinesisIndexTaskClient taskClient)
   {

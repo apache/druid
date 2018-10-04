@@ -141,9 +141,9 @@ public class KinesisSupervisorTuningConfig extends KinesisTuningConfig implement
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
-           ", maxPendingPersists=" + getMaxPendingPersists() +
+           ", maxPendingPersists=" + 0 +
            ", indexSpec=" + getIndexSpec() +
-           ", buildV9Directly=" + getBuildV9Directly() +
+           ", buildV9Directly=" + true +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +

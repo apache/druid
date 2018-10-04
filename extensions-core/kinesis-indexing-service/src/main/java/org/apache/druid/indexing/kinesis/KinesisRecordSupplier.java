@@ -22,7 +22,9 @@ package org.apache.druid.indexing.kinesis;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
-import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.kinesis.AmazonKinesis;
+import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import com.amazonaws.services.kinesis.clientlibrary.proxies.IKinesisProxy;
 import com.amazonaws.services.kinesis.clientlibrary.proxies.IKinesisProxyFactory;
 import com.amazonaws.services.kinesis.clientlibrary.proxies.KinesisProxyFactory;
@@ -31,7 +33,8 @@ import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
+import com.amazonaws.util.AwsHostNameUtils;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.indexing.kinesis.aws.ConstructibleAWSCredentialsConfig;
@@ -42,6 +45,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -136,7 +140,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             log.info("shardIterator[%s] has been closed and has no more records", streamPartition.getPartitionId());
 
             // add an end-of-shard marker so caller knows this shard is closed
-            Record<String, String> endOfShardRecord = new Record<String, String>(
+            Record<String, String> endOfShardRecord = new Record<>(
                 streamPartition.getStreamName(), streamPartition.getPartitionId(), Record.END_OF_SHARD_MARKER, null
             );
 
@@ -273,7 +277,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
       STSAssumeRoleSessionCredentialsProvider.Builder builder = new STSAssumeRoleSessionCredentialsProvider
           .Builder(awsAssumedRoleArn, String.format("druid-kinesis-%s", UUID.randomUUID().toString()))
-          .withStsClient(new AWSSecurityTokenServiceClient(awsCredentialsProvider));
+          .withStsClient(AWSSecurityTokenServiceClientBuilder.standard()
+                                                             .withCredentials(awsCredentialsProvider)
+                                                             .build());
 
       if (awsExternalId != null) {
         builder.withExternalId(awsExternalId);
@@ -281,9 +287,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
       awsCredentialsProvider = builder.build();
     }
-
-    AmazonKinesisClient kinesisClient = new AmazonKinesisClient(awsCredentialsProvider, new ClientConfiguration());
-    kinesisClient.setEndpoint(endpoint);
+    AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.standard()
+                                                            .withCredentials(awsCredentialsProvider)
+                                                            .withClientConfiguration(new ClientConfiguration())
+                                                            .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                                                                endpoint,
+                                                                AwsHostNameUtils.parseRegion(endpoint, null)
+                                                            ))
+                                                            .build();
 
     kinesisProxyFactory = new KinesisProxyFactory(awsCredentialsProvider, kinesisClient);
     records = new LinkedBlockingQueue<>(recordBufferSize);
@@ -304,7 +315,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     checkIfClosed();
 
-    collection.stream().forEach(
+    collection.forEach(
         streamPartition -> partitionResources.putIfAbsent(
             streamPartition,
             new PartitionResource(streamPartition, getKinesisProxy(streamPartition.getStreamName()), scheduledExec)
@@ -356,6 +367,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     return partitionResources.keySet();
   }
 
+  @Nullable
   @Override
   public Record<String, String> poll(long timeout)
   {
@@ -400,10 +412,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     return getSequenceNumberInternal(partition, ShardIteratorType.TRIM_HORIZON);
   }
 
-  //TODO: remove in the future
   @Override
   public String position(StreamPartition<String> partition)
   {
+    // only needed in calcLag, which is not supported in Kinesis
     throw new UnsupportedOperationException("position in KinesisRecordSupplier not supported");
   }
 

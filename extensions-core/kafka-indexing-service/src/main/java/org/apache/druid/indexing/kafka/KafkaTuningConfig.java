@@ -85,7 +85,7 @@ public class KafkaTuningConfig extends SeekableStreamTuningConfig
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
-        getMaxPendingPersists(),
+        0,
         getIndexSpec(),
         true,
         isReportParseExceptions(),
@@ -109,7 +109,7 @@ public class KafkaTuningConfig extends SeekableStreamTuningConfig
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
         dir,
-        getMaxPendingPersists(),
+        0,
         getIndexSpec(),
         true,
         isReportParseExceptions(),
@@ -133,7 +133,7 @@ public class KafkaTuningConfig extends SeekableStreamTuningConfig
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
-           ", maxPendingPersists=" + getMaxPendingPersists() +
+           ", maxPendingPersists=" + 0 +
            ", indexSpec=" + getIndexSpec() +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +

@@ -22,6 +22,12 @@ package org.apache.druid.indexing.seekablestream.common;
 
 import java.util.Objects;
 
+/**
+ * Wrapper class for Kafka and Kinesis stream sequence numbers. Mainly used to do
+ * comparison and indicate whether the sequence number should be excluded
+ *
+ * @param <T> type of sequence number
+ */
 public abstract class SequenceNumber<T> implements Comparable<SequenceNumber<T>>
 {
   private final T sequenceNumber;
@@ -45,12 +51,25 @@ public abstract class SequenceNumber<T> implements Comparable<SequenceNumber<T>>
     return useExclusive && isExclusive;
   }
 
-  @Override
-  public abstract boolean equals(Object o);
 
   @Override
   public int hashCode()
   {
     return Objects.hash(sequenceNumber, useExclusive, isExclusive);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SequenceNumber<?> that = (SequenceNumber<?>) o;
+    return isExclusive == that.isExclusive &&
+           useExclusive == that.useExclusive &&
+           Objects.equals(sequenceNumber, that.sequenceNumber);
   }
 }

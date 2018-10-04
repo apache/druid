@@ -112,6 +112,7 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
@@ -180,20 +181,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.apache.druid.query.QueryPlus.wrap;
-
-// TODO: improve helper methods like insertData(...)
 @RunWith(LocalstackDockerTestRunner.class)
 @LocalstackDockerProperties(services = {"kinesis"})
 public class KinesisIndexTaskTest
 {
   static {
-    /*
-     * Need to disable CBOR protocol, see:
-     * https://github.com/mhart/kinesalite/blob/master/README.md#cbor-protocol-issues-with-the-java-sdk
-     */
     TestUtils.setEnv("AWS_CBOR_DISABLE", "1");
-    /* Disable SSL certificate checks for local testing */
     if (Localstack.useSSL()) {
       TestUtils.disableSslCertChecking();
     }
@@ -1578,7 +1571,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                Record.END_OF_SHARD_MARKER
+                SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER
             )),
             true,
             null,
@@ -2114,7 +2107,7 @@ public class KinesisIndexTaskTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(wrap(query), ImmutableMap.of()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
     return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }
