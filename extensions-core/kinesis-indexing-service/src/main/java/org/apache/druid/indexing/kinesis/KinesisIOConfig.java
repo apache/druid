@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.joda.time.DateTime;
 
 import java.util.Set;
@@ -47,8 +48,8 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
   @JsonCreator
   public KinesisIOConfig(
       @JsonProperty("baseSequenceName") String baseSequenceName,
-      @JsonProperty("startPartitions") KinesisPartitions startPartitions,
-      @JsonProperty("endPartitions") KinesisPartitions endPartitions,
+      @JsonProperty("startPartitions") SeekableStreamPartitions<String, String> startPartitions,
+      @JsonProperty("endPartitions") SeekableStreamPartitions<String, String> endPartitions,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("pauseAfterRead") Boolean pauseAfterRead,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
@@ -149,16 +150,16 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
 
   @Override
   @JsonProperty
-  public KinesisPartitions getStartPartitions()
+  public SeekableStreamPartitions<String, String> getStartPartitions()
   {
-    return (KinesisPartitions) super.getStartPartitions();
+    return super.getStartPartitions();
   }
 
   @Override
   @JsonProperty
-  public KinesisPartitions getEndPartitions()
+  public SeekableStreamPartitions<String, String> getEndPartitions()
   {
-    return (KinesisPartitions) super.getEndPartitions();
+    return super.getEndPartitions();
   }
 
   @Override

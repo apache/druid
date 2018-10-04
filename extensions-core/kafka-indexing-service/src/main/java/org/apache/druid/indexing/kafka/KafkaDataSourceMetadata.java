@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 
 import java.util.Map;
 
@@ -30,16 +31,16 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
 
   @JsonCreator
   public KafkaDataSourceMetadata(
-      @JsonProperty("partitions") KafkaPartitions kafkaPartitions
+      @JsonProperty("partitions") SeekableStreamPartitions<Integer, Long> kafkaPartitions
   )
   {
     super(kafkaPartitions);
   }
 
   @JsonProperty("partitions")
-  public KafkaPartitions getKafkaPartitions()
+  public SeekableStreamPartitions<Integer, Long> getKafkaPartitions()
   {
-    return (KafkaPartitions) super.getSeekableStreamPartitions();
+    return super.getSeekableStreamPartitions();
   }
 
   @Override
@@ -47,6 +48,6 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
       String streamId, Map<Integer, Long> newMap
   )
   {
-    return new KafkaDataSourceMetadata(new KafkaPartitions(streamId, newMap));
+    return new KafkaDataSourceMetadata(new SeekableStreamPartitions<Integer, Long>(streamId, newMap));
   }
 }

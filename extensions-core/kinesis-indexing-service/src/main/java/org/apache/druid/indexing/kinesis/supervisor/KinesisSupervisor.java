@@ -31,7 +31,6 @@ import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
 import org.apache.druid.indexing.kinesis.KinesisIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisIndexTask;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
-import org.apache.druid.indexing.kinesis.KinesisPartitions;
 import org.apache.druid.indexing.kinesis.KinesisRecordSupplier;
 import org.apache.druid.indexing.kinesis.KinesisSequenceNumber;
 import org.apache.druid.indexing.kinesis.KinesisTuningConfig;
@@ -42,6 +41,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
@@ -132,8 +132,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     KinesisSupervisorIOConfig ioConfig = (KinesisSupervisorIOConfig) ioConfigg;
     return new KinesisIOConfig(
         baseSequenceName,
-        new KinesisPartitions(ioConfig.getStream(), startPartitions),
-        new KinesisPartitions(ioConfig.getStream(), endPartitions),
+        new SeekableStreamPartitions<String, String>(ioConfig.getStream(), startPartitions),
+        new SeekableStreamPartitions<String, String>(ioConfig.getStream(), endPartitions),
         true,
         true, // should pause after reading otherwise the task may complete early which will confuse the supervisor
         minimumMessageTime,
@@ -267,7 +267,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   )
   {
     return new KinesisDataSourceMetadata(
-        new KinesisPartitions(stream, map)
+        new SeekableStreamPartitions<>(stream, map)
     );
   }
 
@@ -276,7 +276,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   {
     Map<String, String> endPartitions = new HashMap<>();
     for (String partition : startPartitions) {
-      endPartitions.put(partition, KinesisPartitions.NO_END_SEQUENCE_NUMBER);
+      endPartitions.put(partition, SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER);
     }
     return endPartitions;
   }

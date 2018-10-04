@@ -80,6 +80,7 @@ import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.CompressionUtils;
@@ -383,8 +384,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -408,7 +409,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -425,8 +426,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -462,7 +463,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -490,12 +491,12 @@ public class KafkaIndexTaskTest
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
 
-    final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
+    final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L, 1, 0L));
     // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
     // of events fetched across two partitions from Kafka
-    final KafkaPartitions checkpoint1 = new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 0L));
-    final KafkaPartitions checkpoint2 = new KafkaPartitions(topic, ImmutableMap.of(0, 4L, 1, 2L));
-    final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 2L));
+    final SeekableStreamPartitions<Integer, Long> checkpoint1 = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L, 1, 0L));
+    final SeekableStreamPartitions<Integer, Long> checkpoint2 = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 4L, 1, 2L));
+    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L, 1, 2L));
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
@@ -527,7 +528,7 @@ public class KafkaIndexTaskTest
                 DATA_SCHEMA.getDataSource(),
                 0,
                 new KafkaDataSourceMetadata(startPartitions),
-                new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets))
+                new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, currentOffsets))
             )
         )
     );
@@ -547,7 +548,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 2L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L, 1, 2L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -585,11 +586,11 @@ public class KafkaIndexTaskTest
       Map<String, Object> consumerProps = kafkaServer.consumerProperties();
       consumerProps.put("max.poll.records", "1");
 
-      final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
-      final KafkaPartitions checkpoint1 = new KafkaPartitions(topic, ImmutableMap.of(0, 3L, 1, 0L));
-      final KafkaPartitions checkpoint2 = new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 0L));
+      final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L, 1, 0L));
+      final SeekableStreamPartitions<Integer, Long> checkpoint1 = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 3L, 1, 0L));
+      final SeekableStreamPartitions<Integer, Long> checkpoint2 = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L, 1, 0L));
 
-      final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 2L));
+      final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L, 1, 2L));
       final KafkaIndexTask task = createTask(
           null,
           new KafkaIOConfig(
@@ -635,7 +636,7 @@ public class KafkaIndexTaskTest
                   DATA_SCHEMA.getDataSource(),
                   0,
                   new KafkaDataSourceMetadata(startPartitions),
-                  new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets))
+                  new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, currentOffsets))
               )
           )
       );
@@ -644,8 +645,8 @@ public class KafkaIndexTaskTest
               Objects.hash(
                   DATA_SCHEMA.getDataSource(),
                   0,
-                  new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets)),
-                  new KafkaDataSourceMetadata(new KafkaPartitions(topic, nextOffsets))
+                  new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, currentOffsets)),
+                  new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, nextOffsets))
               )
           )
       );
@@ -665,7 +666,7 @@ public class KafkaIndexTaskTest
       SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
       Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
       Assert.assertEquals(
-          new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 10L, 1, 2L))),
+          new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L, 1, 2L))),
           metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
       );
 
@@ -702,10 +703,10 @@ public class KafkaIndexTaskTest
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
 
-    final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
+    final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L, 1, 0L));
     // Checkpointing will happen at checkpoint
-    final KafkaPartitions checkpoint = new KafkaPartitions(topic, ImmutableMap.of(0, 1L, 1, 0L));
-    final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L));
+    final SeekableStreamPartitions<Integer, Long> checkpoint = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 1L, 1, 0L));
+    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L, 1, 0L));
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
@@ -738,7 +739,7 @@ public class KafkaIndexTaskTest
                 DATA_SCHEMA.getDataSource(),
                 0,
                 new KafkaDataSourceMetadata(startPartitions),
-                new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoint.getPartitionOffsetMap()))
+                new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, checkpoint.getPartitionOffsetMap()))
             )
         )
     );
@@ -753,7 +754,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L, 1, 0L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -770,8 +771,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             DateTimes.of("2010"),
@@ -807,7 +808,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -824,8 +825,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -862,7 +863,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -888,8 +889,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -924,7 +925,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc1 = SD(task, "2009/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -948,8 +949,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -989,8 +990,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1014,7 +1015,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1041,8 +1042,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1066,7 +1067,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1096,8 +1097,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 7L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 7L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1140,8 +1141,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 13L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 13L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1171,7 +1172,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc4 = SD(task, "2049/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 13L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 13L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1222,8 +1223,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1282,8 +1283,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1296,8 +1297,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1333,7 +1334,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1350,8 +1351,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1364,8 +1365,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             1,
             "sequence1",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 3L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1402,7 +1403,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1419,8 +1420,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             false,
             null,
@@ -1433,8 +1434,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             1,
             "sequence1",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 3L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 10L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 3L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
             false,
             null,
@@ -1493,8 +1494,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L, 1, 0L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L, 1, 2L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1531,7 +1532,7 @@ public class KafkaIndexTaskTest
                         ? ImmutableSet.of(desc1, desc2, desc4)
                         : ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 2L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L, 1, 2L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1558,8 +1559,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1572,8 +1573,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             1,
             "sequence1",
-            new KafkaPartitions(topic, ImmutableMap.of(1, 0L)),
-            new KafkaPartitions(topic, ImmutableMap.of(1, 1L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(1, 0L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(1, 1L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1610,7 +1611,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc3 = SD(task2, "2012/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L, 1, 1L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L, 1, 1L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1628,8 +1629,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1665,8 +1666,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1700,7 +1701,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1717,8 +1718,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1784,7 +1785,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1801,8 +1802,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 2L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1840,8 +1841,8 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             0,
             "sequence0",
-            new KafkaPartitions(topic, ImmutableMap.of(0, 200L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 500L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 200L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 500L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1894,8 +1895,8 @@ public class KafkaIndexTaskTest
             0,
             "sequence0",
             // task should ignore these and use sequence info sent in the context
-            new KafkaPartitions(topic, ImmutableMap.of(0, 0L)),
-            new KafkaPartitions(topic, ImmutableMap.of(0, 5L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
             null,
@@ -1920,7 +1921,7 @@ public class KafkaIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 5L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 

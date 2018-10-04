@@ -70,12 +70,12 @@ public class KinesisIOConfigTest
     Assert.assertEquals("mystream", config.getStartPartitions().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
-        config.getStartPartitions().getPartitionSequenceNumberMap()
+        config.getStartPartitions().getMap()
     );
     Assert.assertEquals("mystream", config.getEndPartitions().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
-        config.getEndPartitions().getPartitionSequenceNumberMap()
+        config.getEndPartitions().getMap()
     );
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertTrue(config.isPauseAfterRead());
@@ -127,12 +127,12 @@ public class KinesisIOConfigTest
     Assert.assertEquals("mystream", config.getStartPartitions().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
-        config.getStartPartitions().getPartitionSequenceNumberMap()
+        config.getStartPartitions().getMap()
     );
     Assert.assertEquals("mystream", config.getEndPartitions().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
-        config.getEndPartitions().getPartitionSequenceNumberMap()
+        config.getEndPartitions().getMap()
     );
     Assert.assertFalse(config.isUseTransaction());
     Assert.assertFalse(config.isPauseAfterRead());

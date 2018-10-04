@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -41,8 +42,8 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
   public KafkaIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
       @JsonProperty("baseSequenceName") String baseSequenceName,
-      @JsonProperty("startPartitions") KafkaPartitions startPartitions,
-      @JsonProperty("endPartitions") KafkaPartitions endPartitions,
+      @JsonProperty("startPartitions") SeekableStreamPartitions<Integer, Long> startPartitions,
+      @JsonProperty("endPartitions") SeekableStreamPartitions<Integer, Long> endPartitions,
       @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
@@ -63,11 +64,11 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
 
-    for (int partition : endPartitions.getPartitionSequenceMap().keySet()) {
+    for (int partition : endPartitions.getMap().keySet()) {
       Preconditions.checkArgument(
-          endPartitions.getPartitionSequenceMap()
+          endPartitions.getMap()
                        .get(partition)
-                       .compareTo(startPartitions.getPartitionSequenceMap().get(partition)) >= 0,
+                       .compareTo(startPartitions.getMap().get(partition)) >= 0,
           "end offset must be >= start offset for partition[%s]",
           partition
       );
@@ -76,16 +77,16 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
 
   @Override
   @JsonProperty
-  public KafkaPartitions getStartPartitions()
+  public SeekableStreamPartitions<Integer, Long> getStartPartitions()
   {
-    return (KafkaPartitions) super.getStartPartitions();
+    return super.getStartPartitions();
   }
 
   @Override
   @JsonProperty
-  public KafkaPartitions getEndPartitions()
+  public SeekableStreamPartitions<Integer, Long> getEndPartitions()
   {
-    return (KafkaPartitions) super.getEndPartitions();
+    return super.getEndPartitions();
   }
 
   @Override

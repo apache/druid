@@ -24,25 +24,33 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
+import javax.validation.constraints.NotNull;
 import java.util.Map;
 import java.util.Objects;
 
-// TODO: may consider deleting Kinesis and KafaPartitions classes and just use this instead
-public abstract class SeekableStreamPartitions<T1, T2>
+public class SeekableStreamPartitions<T1, T2>
 {
+  public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
+
   private final String id;
-  private final Map<T1, T2> partitionSequenceMap;
+  private final Map<T1, T2> map;
 
   @JsonCreator
   public SeekableStreamPartitions(
-      @JsonProperty("id") final String id,
-      @JsonProperty("partitionSequenceMap") final Map<T1, T2> partitionOffsetMap
+      @JsonProperty("stream") final String stream,
+      @JsonProperty("topic") final String topic,
+      @JsonProperty("partitionSequenceNumberMap") final Map<T1, T2> partitionSequenceNumberMap,
+      @JsonProperty("partitionOffsetMap") final Map<T1, T2> partitionOffsetMap
   )
   {
-    this.id = id;
-    this.partitionSequenceMap = ImmutableMap.copyOf(partitionOffsetMap);
-    // Validate partitionSequenceNumberMap
-    for (Map.Entry<T1, T2> entry : partitionOffsetMap.entrySet()) {
+    this.id = stream == null ? topic : stream;
+    this.map = ImmutableMap.copyOf(partitionOffsetMap == null
+                                   ? partitionSequenceNumberMap
+                                   : partitionOffsetMap);
+    Preconditions.checkArgument(id != null);
+    Preconditions.checkArgument(map != null);
+    // Validate map
+    for (Map.Entry<T1, T2> entry : map.entrySet()) {
       Preconditions.checkArgument(
           entry.getValue() != null,
           String.format(
@@ -54,16 +62,44 @@ public abstract class SeekableStreamPartitions<T1, T2>
     }
   }
 
-  @JsonProperty
+  // for backward compatibility
+  public SeekableStreamPartitions(@NotNull final String id, final Map<T1, T2> partitionOffsetMap)
+  {
+    this(id, null, partitionOffsetMap, null);
+  }
+
   public String getId()
   {
     return id;
   }
 
   @JsonProperty
-  public Map<T1, T2> getPartitionSequenceMap()
+  public String getStream()
   {
-    return partitionSequenceMap;
+    return id;
+  }
+
+  @JsonProperty
+  public String getTopic()
+  {
+    return id;
+  }
+
+  public Map<T1, T2> getMap()
+  {
+    return map;
+  }
+
+  @JsonProperty
+  public Map<T1, T2> getPartitionSequenceNumberMap()
+  {
+    return map;
+  }
+
+  @JsonProperty
+  public Map<T1, T2> getPartitionOffsetMap()
+  {
+    return map;
   }
 
   @Override
@@ -77,13 +113,13 @@ public abstract class SeekableStreamPartitions<T1, T2>
     }
     SeekableStreamPartitions that = (SeekableStreamPartitions) o;
     return Objects.equals(id, that.id) &&
-           Objects.equals(partitionSequenceMap, that.partitionSequenceMap);
+           Objects.equals(map, that.map);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, partitionSequenceMap);
+    return Objects.hash(id, map);
   }
 
   @Override
@@ -91,9 +127,7 @@ public abstract class SeekableStreamPartitions<T1, T2>
   {
     return "SeekableStreamPartitions{" +
            "stream/topic='" + id + '\'' +
-           ", partitionSequenceMap=" + partitionSequenceMap +
+           ", partitionSequenceNumberMap/partitionOffsetMap=" + map +
            '}';
   }
-
-  public abstract T2 getNoEndSequenceNumber();
 }

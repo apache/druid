@@ -21,6 +21,7 @@
 package org.apache.druid.indexing.kinesis;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -126,6 +127,6 @@ public class KinesisDataSourceMetadataTest
 
   private static KinesisDataSourceMetadata KM(String stream, Map<String, String> offsets)
   {
-    return new KinesisDataSourceMetadata(new KinesisPartitions(stream, offsets));
+    return new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, offsets));
   }
 }

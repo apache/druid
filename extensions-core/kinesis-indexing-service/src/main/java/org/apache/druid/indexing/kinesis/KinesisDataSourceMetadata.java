@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 
 import java.util.Map;
 
@@ -29,21 +30,21 @@ public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<
 {
   @JsonCreator
   public KinesisDataSourceMetadata(
-      @JsonProperty("partitions") KinesisPartitions kinesisPartitions
+      @JsonProperty("partitions") SeekableStreamPartitions<String, String> kinesisPartitions
   )
   {
     super(kinesisPartitions);
   }
 
   @JsonProperty("partitions")
-  public KinesisPartitions getKinesisPartitions()
+  public SeekableStreamPartitions<String, String> getKinesisPartitions()
   {
-    return (KinesisPartitions) super.getSeekableStreamPartitions();
+    return getSeekableStreamPartitions();
   }
 
   @Override
   protected KinesisDataSourceMetadata createConcretDataSourceMetaData(String streamName, Map<String, String> newMap)
   {
-    return new KinesisDataSourceMetadata(new KinesisPartitions(streamName, newMap));
+    return new KinesisDataSourceMetadata(new SeekableStreamPartitions<String, String>(streamName, newMap));
   }
 }

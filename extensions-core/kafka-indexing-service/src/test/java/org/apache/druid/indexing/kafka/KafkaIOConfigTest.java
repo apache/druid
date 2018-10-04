@@ -212,7 +212,7 @@ public class KafkaIOConfigTest
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-    exception.expectMessage(CoreMatchers.containsString("start topic and end topic must match"));
+    exception.expectMessage(CoreMatchers.containsString("start topic/stream and end topic/stream must match"));
     mapper.readValue(jsonStr, IOConfig.class);
   }
 

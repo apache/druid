@@ -48,6 +48,7 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -283,9 +284,14 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
         nextOffsets.putAll(ioConfig.getStartPartitions().getPartitionOffsetMap());
       } else {
         final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
-        final KafkaPartitions restoredNextPartitions = toolbox.getObjectMapper().convertValue(
+        final SeekableStreamPartitions<Integer, Long> restoredNextPartitions = toolbox.getObjectMapper().convertValue(
             restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
-            KafkaPartitions.class
+            toolbox.getObjectMapper().getTypeFactory().constructParametrizedType(
+                SeekableStreamPartitions.class,
+                SeekableStreamPartitions.class,
+                Integer.class,
+                Long.class
+            )
         );
         nextOffsets.putAll(restoredNextPartitions.getPartitionOffsetMap());
 
@@ -327,7 +333,7 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
             public Object getMetadata()
             {
               return ImmutableMap.of(
-                  METADATA_NEXT_PARTITIONS, new KafkaPartitions(
+                  METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
                       ioConfig.getStartPartitions().getTopic(),
                       snapshot
                   )
@@ -495,9 +501,9 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
       }
 
       final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-        final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(
+        final SeekableStreamPartitions<Integer, Long> finalPartitions = toolbox.getObjectMapper().convertValue(
             ((Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata")).get(METADATA_NEXT_PARTITIONS),
-            KafkaPartitions.class
+            SeekableStreamPartitions.class
         );
 
         // Sanity check, we should only be publishing things that match our desired end state.
@@ -716,7 +722,7 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
     boolean result = taskToolbox.getTaskActionClient()
                                 .submit(new ResetDataSourceMetadataAction(
                                     task.getDataSource(),
-                                    new KafkaDataSourceMetadata(new KafkaPartitions(
+                                    new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(
                                         ioConfig.getStartPartitions()
                                                 .getTopic(),
                                         partitionOffsetMap

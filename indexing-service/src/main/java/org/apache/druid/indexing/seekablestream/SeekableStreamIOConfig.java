@@ -67,17 +67,17 @@ public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
     );
 
     Preconditions.checkArgument(
-        startPartitions.getPartitionSequenceMap().keySet().equals(endPartitions.getPartitionSequenceMap().keySet()),
+        startPartitions.getMap().keySet().equals(endPartitions.getMap().keySet()),
         "start partition set and end partition set must match"
     );
 
     // are sequence numbers guranteed to be greater?
     /*
-    for (T1 partition : endPartitions.getPartitionSequenceMap().keySet()) {
+    for (T1 partition : endPartitions.getMap().keySet()) {
       Preconditions.checkArgument(
-          endPartitions.getPartitionSequenceMap()
+          endPartitions.getMap()
                        .get(partition)
-                       .compareTo(startPartitions.getPartitionSequenceMap().get(partition)) >= 0,
+                       .compareTo(startPartitions.getMap().get(partition)) >= 0,
           "end offset must be >= start offset for partition[%s]",
           partition
       );

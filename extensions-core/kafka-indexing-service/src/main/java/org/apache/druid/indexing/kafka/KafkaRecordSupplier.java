@@ -26,27 +26,35 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-// TODO: in the future, should refactor to do smt similar to KinesisRecordSupplier
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 {
+  private static final EmittingLogger log = new EmittingLogger(KafkaRecordSupplier.class);
   private static final Random RANDOM = new Random();
 
   private final KafkaConsumer<byte[], byte[]> consumer;
   private final KafkaSupervisorIOConfig ioConfig;
   private boolean closed;
+  private final BlockingQueue<Record<Integer, Long>> records;
 
 
   public KafkaRecordSupplier(
@@ -56,6 +64,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     this.ioConfig = ioConfig;
     this.consumer = getKafkaConsumer();
     this.closed = false;
+    this.records = new LinkedBlockingQueue<>();
   }
 
   @Override
@@ -110,7 +119,25 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public Record<Integer, Long> poll(long timeout)
   {
-    throw new UnsupportedOperationException();
+    if (records.isEmpty()) {
+      ConsumerRecords<byte[], byte[]> polledRecords = consumer.poll(timeout);
+      for (ConsumerRecord<byte[], byte[]> record : polledRecords) {
+        records.offer(new Record<>(
+            record.topic(),
+            record.partition(),
+            record.offset(),
+            Arrays.asList(record.value())
+        ));
+      }
+    }
+
+    try {
+      return records.poll(timeout, TimeUnit.MILLISECONDS);
+    }
+    catch (InterruptedException e) {
+      log.warn(e, "InterruptedException");
+      return null;
+    }
   }
 
   @Override

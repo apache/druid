@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -125,6 +126,6 @@ public class KafkaDataSourceMetadataTest
 
   private static KafkaDataSourceMetadata KM(String topic, Map<Integer, Long> offsets)
   {
-    return new KafkaDataSourceMetadata(new KafkaPartitions(topic, offsets));
+    return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, offsets));
   }
 }

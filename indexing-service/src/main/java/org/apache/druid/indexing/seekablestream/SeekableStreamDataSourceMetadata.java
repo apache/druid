@@ -81,11 +81,11 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
       // Same topic, merge offsets.
       final Map<T1, T2> newMap = Maps.newHashMap();
 
-      for (Map.Entry<T1, T2> entry : seekableStreamPartitions.getPartitionSequenceMap().entrySet()) {
+      for (Map.Entry<T1, T2> entry : seekableStreamPartitions.getMap().entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
       }
 
-      for (Map.Entry<T1, T2> entry : that.getSeekableStreamPartitions().getPartitionSequenceMap().entrySet()) {
+      for (Map.Entry<T1, T2> entry : that.getSeekableStreamPartitions().getMap().entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
       }
 
@@ -115,8 +115,8 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
       // Same stream, remove partitions present in "that" from "this"
       final Map<T1, T2> newMap = Maps.newHashMap();
 
-      for (Map.Entry<T1, T2> entry : seekableStreamPartitions.getPartitionSequenceMap().entrySet()) {
-        if (!that.getSeekableStreamPartitions().getPartitionSequenceMap().containsKey(entry.getKey())) {
+      for (Map.Entry<T1, T2> entry : seekableStreamPartitions.getMap().entrySet()) {
+        if (!that.getSeekableStreamPartitions().getMap().containsKey(entry.getKey())) {
           newMap.put(entry.getKey(), entry.getValue());
         }
       }

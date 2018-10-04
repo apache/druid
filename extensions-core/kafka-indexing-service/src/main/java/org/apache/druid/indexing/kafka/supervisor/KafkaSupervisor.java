@@ -33,7 +33,6 @@ import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
 import org.apache.druid.indexing.kafka.KafkaIOConfig;
 import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
-import org.apache.druid.indexing.kafka.KafkaPartitions;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.indexing.kafka.KafkaSequenceNumber;
 import org.apache.druid.indexing.kafka.KafkaTuningConfig;
@@ -43,6 +42,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
@@ -241,8 +241,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     return new KafkaIOConfig(
         groupId,
         baseSequenceName,
-        new KafkaPartitions(kafkaIoConfig.getTopic(), startPartitions),
-        new KafkaPartitions(kafkaIoConfig.getTopic(), endPartitions),
+        new SeekableStreamPartitions<>(kafkaIoConfig.getTopic(), startPartitions),
+        new SeekableStreamPartitions<>(kafkaIoConfig.getTopic(), endPartitions),
         kafkaIoConfig.getConsumerProperties(),
         true,
         minimumMessageTime,
@@ -319,7 +319,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
       String topic, Map<Integer, Long> map
   )
   {
-    return new KafkaDataSourceMetadata(new KafkaPartitions(topic, map));
+    return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, map));
   }
 
   @Override
@@ -327,7 +327,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   {
     Map<Integer, Long> endPartitions = new HashMap<>();
     for (int partition : startPartitions) {
-      endPartitions.put(partition, KafkaPartitions.NO_END_SEQUENCE_NUMBER);
+      endPartitions.put(partition, Long.MAX_VALUE);
     }
     return endPartitions;
   }

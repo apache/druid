@@ -85,6 +85,7 @@ import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.Record;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
@@ -423,11 +424,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -463,7 +464,7 @@ public class KinesisIndexTaskTest
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
-        new KinesisDataSourceMetadata(new KinesisPartitions(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(
             stream,
             ImmutableMap.of(
                 shardId1,
@@ -501,11 +502,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
                 getSequenceNumber(res, shardId0, 0)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
                 Record.END_OF_SHARD_MARKER
             )),
@@ -554,7 +555,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(
+            new SeekableStreamPartitions<>(
                 stream,
                 ImmutableMap.of(
                     shardId0,
@@ -581,11 +582,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 0)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -626,7 +627,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(
+            new SeekableStreamPartitions<>(
                 stream,
                 ImmutableMap.of(
                     shardId1,
@@ -651,11 +652,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 0)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -697,7 +698,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(
+            new SeekableStreamPartitions<>(
                 stream,
                 ImmutableMap.of(
                     shardId1,
@@ -731,11 +732,11 @@ public class KinesisIndexTaskTest
         ),
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 0)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -775,7 +776,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(
+            new SeekableStreamPartitions<>(
                 stream,
                 ImmutableMap.of(
                     shardId1,
@@ -800,11 +801,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
@@ -854,11 +855,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 6)
             )),
@@ -908,11 +909,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 12)
             )),
@@ -953,7 +954,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(
+            new SeekableStreamPartitions<>(
                 stream,
                 ImmutableMap.of(
                     shardId1,
@@ -1007,11 +1008,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 9)
             )),
@@ -1084,11 +1085,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -1111,11 +1112,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -1156,7 +1157,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(
+            new SeekableStreamPartitions<>(
                 stream,
                 ImmutableMap.of(
                     shardId1,
@@ -1182,11 +1183,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -1209,11 +1210,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence1",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 3)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 9)
             )),
@@ -1255,7 +1256,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(
+            new SeekableStreamPartitions<>(
                 stream,
                 ImmutableMap.of(
                     shardId1,
@@ -1281,11 +1282,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -1308,11 +1309,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence1",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 3)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 9)
             )),
@@ -1378,13 +1379,13 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence1",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2),
                 shardId0,
                 getSequenceNumber(res, shardId0, 0)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4),
                 shardId0,
@@ -1427,7 +1428,7 @@ public class KinesisIndexTaskTest
                         ? ImmutableSet.of(desc1, desc2, desc4)
                         : ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
-        new KinesisDataSourceMetadata(new KinesisPartitions(stream, ImmutableMap.of(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
             shardId1,
             getSequenceNumber(res, shardId1, 4),
             shardId0,
@@ -1462,11 +1463,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4)
             )),
@@ -1489,11 +1490,11 @@ public class KinesisIndexTaskTest
         null,
         new KinesisIOConfig(
             "sequence1",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
                 getSequenceNumber(res, shardId0, 0)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
                 getSequenceNumber(res, shardId0, 1)
             )),
@@ -1537,7 +1538,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 4),
                 shardId0,
@@ -1571,11 +1572,11 @@ public class KinesisIndexTaskTest
         "task1",
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 Record.END_OF_SHARD_MARKER
             )),
@@ -1616,11 +1617,11 @@ public class KinesisIndexTaskTest
         task1.getId(),
         new KinesisIOConfig(
             "sequence0",
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 getSequenceNumber(res, shardId1, 2)
             )),
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 Record.END_OF_SHARD_MARKER
             )),
@@ -1666,7 +1667,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
-            new KinesisPartitions(stream, ImmutableMap.of(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
                 Record.END_OF_SHARD_MARKER
             ))),
