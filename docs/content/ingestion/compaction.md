@@ -13,6 +13,8 @@ Compaction tasks merge all segments of the given interval. The syntax is:
     "dataSource": <task_datasource>,
     "interval": <interval to specify segments to be merged>,
     "dimensions" <custom dimensionsSpec>,
+    "keepSegmentGranularity": <true or false>,
+    "targetCompactionSizeBytes": <target size of compacted segments>
     "tuningConfig" <index task tuningConfig>,
     "context": <task context>
 }
@@ -22,9 +24,11 @@ Compaction tasks merge all segments of the given interval. The syntax is:
 |-----|-----------|--------|
 |`type`|Task type. Should be `compact`|Yes|
 |`id`|Task id|No|
-|`dataSource`|dataSource name to be compacted|Yes|
-|`interval`|interval of segments to be compacted|Yes|
-|`dimensions`|custom dimensionsSpec. compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
+|`dataSource`|DataSource name to be compacted|Yes|
+|`interval`|Interval of segments to be compacted|Yes|
+|`dimensions`|Custom dimensionsSpec. compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
+|`keepSegmentGranularity`|If set to true, compactionTask will keep the time chunk boundaries and merge segments only if they fall into the same time chunk.|No (default = true)|
+|`targetCompactionSizeBytes`|Target segment size after comapction. Cannot be used with `targetPartitionSize`, `maxTotalRows`, and `numShards` in tuningConfig.|No|
 |`tuningConfig`|[Index task tuningConfig](../ingestion/native_tasks.html#tuningconfig)|No|
 |`context`|[Task context](../ingestion/locking-and-priority.html#task-context)|No|
 
@@ -62,4 +66,3 @@ your own ordering and types, you can specify a custom `dimensionsSpec` in the co
 - Roll-up: the output segment is rolled up only when `rollup` is set for all input segments.
 See [Roll-up](../ingestion/index.html#rollup) for more details. 
 You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes).
-- Partitioning: The compaction task is a special form of native batch indexing task, so it always uses hash-based partitioning on the full set of dimensions.

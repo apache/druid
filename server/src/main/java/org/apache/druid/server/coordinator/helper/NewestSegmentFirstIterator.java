@@ -186,7 +186,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         Interval totalIntervalToSearch
     )
     {
-      // TODO: lazy??
       this.holders = timeline
           .lookup(totalIntervalToSearch)
           .stream()
@@ -278,7 +277,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           segmentsToCompact.clear();
 
           if (!SegmentCompactorUtil.isCompactibleSize(inputSegmentSize, 0, timeChunkSizeBytes)) {
-            // TODO: this should be changed to compact many small segments into a few large segments
             final DataSegment segment = chunks.get(0).getObject();
             log.warn(
                 "shardSize[%d] for dataSource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
@@ -305,7 +303,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
               // We found a segment which is smaller than targetCompactionSize but too large to compact with other
               // segments. Skip this one.
               // Note that segmentsToCompact is already cleared at (*).
-              // TODO: handle this
               chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
               totalSegmentsToCompactBytes = timeChunkSizeBytes;
             } else {

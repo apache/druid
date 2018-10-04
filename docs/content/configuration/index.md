@@ -782,9 +782,11 @@ A description of the compaction config is:
 |Property|Description|Required|
 |--------|-----------|--------|
 |`dataSource`|dataSource name to be compacted.|yes|
+|`keepSegmentGranularity`|Set [keepSegmentGranularity](../ingestion/compaction.html) to true for compactionTask.|no (default = true)|
 |`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compact task.|no (default = 25)|
-|`targetCompactionSizeBytes`|The target segment size of compaction. The actual size of a compact segment might be slightly larger or smaller than this value.|no (default = 838860800)|
-|`numTargetCompactionSegments`|Max number of segments to compact together.|no (default = 150)|
+|`inputSegmentSizeBytes`|Total input segment size of a compactionTask. The actual input size can be slightly larger than this value.|no (default = 419430400)|
+|`targetCompactionSizeBytes`|The target segment size of compaction. The actual size of a compact segment might be slightly larger or smaller than this value.|no (default = 419430400)|
+|`maxNumSegmentsToCompact`|Max number of segments to compact together.|no (default = 150)|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
 |`tuningConfig`|Tuning config for compact tasks. See below [Compact Task TuningConfig](#compact-task-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.html#task-context) for compact tasks.|no|
