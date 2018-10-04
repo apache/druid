@@ -138,7 +138,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         throw new RE(
             e,
             "Failure getting results for query[%s] url[%s] because of [%s]",
-            query.getId(),
+            query == null ? null : query.getId(),
             url,
             e.getMessage()
         );
