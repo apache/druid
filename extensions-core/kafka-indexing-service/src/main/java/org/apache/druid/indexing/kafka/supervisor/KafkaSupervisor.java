@@ -63,6 +63,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
@@ -304,7 +305,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         .stream()
         .collect(
             Collectors.toMap(
-                Map.Entry::getKey,
+                Entry::getKey,
                 e -> latestSequenceFromStream != null
                      && latestSequenceFromStream.get(e.getKey()) != null
                      && e.getValue() != null
@@ -376,6 +377,16 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     };
   }
 
+  @Override
+  protected boolean checkSequenceAvailability(
+      @NotNull Integer partition, @NotNull Long sequenceFromMetadata
+  ) throws TimeoutException
+  {
+    Long latestOffset = getOffsetFromStreamForPartition(partition, false);
+    return latestOffset != null
+           && KafkaSequenceNumber.of(latestOffset).compareTo(KafkaSequenceNumber.of(sequenceFromMetadata)) >= 0;
+  }
+
   // the following are for unit testing purposes only
   @Override
   @VisibleForTesting
@@ -420,15 +431,18 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     return super.getNoticesQueueSize();
   }
 
+
   @Override
-  protected boolean checkSequenceAvailability(
-      @NotNull Integer partition, @NotNull Long sequenceFromMetadata
-  ) throws TimeoutException
+  @VisibleForTesting
+  public KafkaSupervisorIOConfig getIoConfig()
   {
-    Long latestOffset = getOffsetFromStreamForPartition(partition, false);
-    return latestOffset != null
-           && KafkaSequenceNumber.of(latestOffset).compareTo(KafkaSequenceNumber.of(sequenceFromMetadata)) >= 0;
+    return spec.getIoConfig();
   }
 
-
+  @Override
+  @VisibleForTesting
+  protected void tryInit()
+  {
+    super.tryInit();
+  }
 }
