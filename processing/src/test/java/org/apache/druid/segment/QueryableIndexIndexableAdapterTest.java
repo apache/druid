@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.data.BitmapValues;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -70,7 +71,7 @@ public class QueryableIndexIndexableAdapterTest
   public QueryableIndexIndexableAdapterTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
-    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO();
   }
 
   @Test
@@ -96,9 +97,11 @@ public class QueryableIndexIndexableAdapterTest
     String dimension = "dim1";
     @SuppressWarnings("UnusedAssignment") //null is added to all dimensions with value
     BitmapValues bitmapValues = adapter.getBitmapValues(dimension, 0);
-    for (int i = 0; i < adapter.getDimValueLookup(dimension).size(); i++) {
-      bitmapValues = adapter.getBitmapValues(dimension, i);
-      Assert.assertEquals(1, bitmapValues.size());
+    try (CloseableIndexed<String> dimValueLookup = adapter.getDimValueLookup(dimension)) {
+      for (int i = 0; i < dimValueLookup.size(); i++) {
+        bitmapValues = adapter.getBitmapValues(dimension, i);
+        Assert.assertEquals(1, bitmapValues.size());
+      }
     }
   }
 }

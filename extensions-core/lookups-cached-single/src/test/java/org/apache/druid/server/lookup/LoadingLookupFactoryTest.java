@@ -126,7 +126,7 @@ public class LoadingLookupFactoryTest
     mapper.registerSubtypes(LoadingLookupFactory.class);
     Assert.assertEquals(
         loadingLookupFactory,
-        mapper.reader(LookupExtractorFactory.class)
+        mapper.readerFor(LookupExtractorFactory.class)
               .readValue(mapper.writeValueAsString(loadingLookupFactory))
     );
   }

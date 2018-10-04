@@ -19,15 +19,14 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
-
 import org.apache.druid.query.aggregation.PostAggregator;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Base class for post aggs taking multiple sketches as input

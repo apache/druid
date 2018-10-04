@@ -329,14 +329,12 @@ public class GroupByQueryEngine
         }
 
         final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(dimSpec);
-        if (selector != null) {
-          if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
-            throw new UnsupportedOperationException(
-                "GroupBy v1 does not support dimension selectors with unknown cardinality.");
-          }
-          dimensions.add(selector);
-          dimNames.add(dimSpec.getOutputName());
+        if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
+          throw new UnsupportedOperationException(
+              "GroupBy v1 does not support dimension selectors with unknown cardinality.");
         }
+        dimensions.add(selector);
+        dimNames.add(dimSpec.getOutputName());
       }
 
       aggregatorSpecs = query.getAggregatorSpecs();

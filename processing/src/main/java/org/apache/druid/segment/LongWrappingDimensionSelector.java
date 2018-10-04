@@ -21,21 +21,22 @@ package org.apache.druid.segment;
 
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.virtual.BaseSingleValueDimensionSelector;
 
 import javax.annotation.Nullable;
 
 public class LongWrappingDimensionSelector extends BaseSingleValueDimensionSelector
 {
   private final BaseLongColumnValueSelector selector;
+  @Nullable
   private final ExtractionFn extractionFn;
 
-  public LongWrappingDimensionSelector(BaseLongColumnValueSelector selector, ExtractionFn extractionFn)
+  public LongWrappingDimensionSelector(BaseLongColumnValueSelector selector, @Nullable ExtractionFn extractionFn)
   {
     this.selector = selector;
     this.extractionFn = extractionFn;
   }
 
+  @Nullable
   @Override
   protected String getValue()
   {
@@ -44,19 +45,6 @@ public class LongWrappingDimensionSelector extends BaseSingleValueDimensionSelec
     } else {
       return extractionFn.apply(selector.getLong());
     }
-  }
-
-  @Nullable
-  @Override
-  public Object getObject()
-  {
-    return getValue();
-  }
-
-  @Override
-  public Class classOfObject()
-  {
-    return String.class;
   }
 
   @Override

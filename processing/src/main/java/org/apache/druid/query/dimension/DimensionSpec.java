@@ -26,6 +26,8 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
+
 /**
  * Provides information about a dimension for a grouping query, like topN or groupBy. Note that this is not annotated
  * with {@code PublicApi}, since it is not meant to be stable for usage by non-built-in queries.
@@ -47,6 +49,7 @@ public interface DimensionSpec extends Cacheable
 
   //ExtractionFn can be implemented with decorate(..) fn
   @Deprecated
+  @Nullable
   ExtractionFn getExtractionFn();
 
   DimensionSelector decorate(DimensionSelector selector);

@@ -20,10 +20,8 @@
 package org.apache.druid.indexer;
 
 import com.google.common.primitives.Bytes;
-
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
-
 import org.hamcrest.number.OrderingComparison;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;

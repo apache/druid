@@ -19,10 +19,10 @@
 
 package org.apache.druid.curator.discovery;
 
-import org.apache.druid.client.selector.Server;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
+import org.apache.druid.client.selector.Server;
+import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;

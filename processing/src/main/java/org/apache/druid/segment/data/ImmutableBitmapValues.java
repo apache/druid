@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.data;
 
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.IntIteratorUtils;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 
 /**
  */

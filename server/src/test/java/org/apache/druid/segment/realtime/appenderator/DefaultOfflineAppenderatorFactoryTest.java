@@ -106,7 +106,7 @@ public class DefaultOfflineAppenderatorFactoryTest
         )
     );
     ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
-    AppenderatorFactory defaultOfflineAppenderatorFactory = objectMapper.reader(AppenderatorFactory.class)
+    AppenderatorFactory defaultOfflineAppenderatorFactory = objectMapper.readerFor(AppenderatorFactory.class)
                                                                         .readValue("{\"type\":\"offline\"}");
 
     final Map<String, Object> parserMap = objectMapper.convertValue(

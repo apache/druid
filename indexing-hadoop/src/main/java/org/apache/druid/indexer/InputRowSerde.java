@@ -25,7 +25,6 @@ import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
-
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -290,20 +289,18 @@ public class InputRowSerde
       List<String> dimList = row.getDimensions();
 
       WritableUtils.writeVInt(out, dimList.size());
-      if (dimList != null) {
-        for (String dim : dimList) {
-          IndexSerdeTypeHelper typeHelper = typeHelperMap.get(dim);
-          if (typeHelper == null) {
-            typeHelper = STRING_HELPER;
-          }
-          writeString(dim, out);
+      for (String dim : dimList) {
+        IndexSerdeTypeHelper typeHelper = typeHelperMap.get(dim);
+        if (typeHelper == null) {
+          typeHelper = STRING_HELPER;
+        }
+        writeString(dim, out);
 
-          try {
-            typeHelper.serialize(out, row.getRaw(dim));
-          }
-          catch (ParseException pe) {
-            parseExceptionMessages.add(pe.getMessage());
-          }
+        try {
+          typeHelper.serialize(out, row.getRaw(dim));
+        }
+        catch (ParseException pe) {
+          parseExceptionMessages.add(pe.getMessage());
         }
       }
 
@@ -315,12 +312,7 @@ public class InputRowSerde
         writeString(k, out);
 
         try (Aggregator agg = aggFactory.factorize(
-            IncrementalIndex.makeColumnSelectorFactory(
-                VirtualColumns.EMPTY,
-                aggFactory,
-                supplier,
-                true
-            )
+            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, aggFactory, supplier, true)
         )) {
           try {
             agg.aggregate();

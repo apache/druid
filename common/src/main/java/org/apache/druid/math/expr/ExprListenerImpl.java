@@ -19,13 +19,13 @@
 
 package org.apache.druid.math.expr;
 
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.annotations.UsedInGeneratedCode;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.math.expr.antlr.ExprBaseListener;
 import org.apache.druid.math.expr.antlr.ExprParser;
-import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.TerminalNode;
-import org.apache.commons.lang.StringEscapeUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;

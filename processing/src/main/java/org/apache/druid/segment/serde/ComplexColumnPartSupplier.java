@@ -21,17 +21,16 @@ package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.segment.column.ComplexColumn;
-import org.apache.druid.segment.column.IndexedComplexColumn;
 import org.apache.druid.segment.data.GenericIndexed;
 
 /**
 */
 public class ComplexColumnPartSupplier implements Supplier<ComplexColumn>
 {
-  private final GenericIndexed complexType;
+  private final GenericIndexed<?> complexType;
   private final String typeName;
 
-  public ComplexColumnPartSupplier(final String typeName, final GenericIndexed complexType)
+  public ComplexColumnPartSupplier(final String typeName, final GenericIndexed<?> complexType)
   {
     this.complexType = complexType;
     this.typeName = typeName;
@@ -40,6 +39,6 @@ public class ComplexColumnPartSupplier implements Supplier<ComplexColumn>
   @Override
   public ComplexColumn get()
   {
-    return new IndexedComplexColumn(typeName, complexType);
+    return new ComplexColumn(typeName, complexType);
   }
 }

@@ -27,7 +27,7 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.SuppressedAggregatorFactory;
 import org.apache.druid.query.filter.IntervalDimFilter;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,7 +44,7 @@ public class PerSegmentQueryOptimizeTest
     FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
         longSumAggregatorFactory,
         new IntervalDimFilter(
-            Column.TIME_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME,
             Collections.singletonList(Intervals.utc(1000, 2000)),
             null
         )
@@ -65,7 +65,7 @@ public class PerSegmentQueryOptimizeTest
     AggregatorFactory expectedPartialFilteredAgg = new FilteredAggregatorFactory(
         longSumAggregatorFactory,
         new IntervalDimFilter(
-            Column.TIME_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME,
             Collections.singletonList(Intervals.utc(1500, 2000)),
             null
         )

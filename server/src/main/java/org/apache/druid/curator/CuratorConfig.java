@@ -19,13 +19,12 @@
 
 package org.apache.druid.curator;
 
-import javax.validation.constraints.Min;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.PasswordProvider;
+
+import javax.validation.constraints.Min;
 
 /**
  */

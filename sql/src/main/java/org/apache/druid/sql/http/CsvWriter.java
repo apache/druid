@@ -59,6 +59,12 @@ public class CsvWriter implements ResultFormat.Writer
   }
 
   @Override
+  public void writeHeader(final List<String> columnNames)
+  {
+    writer.writeNext(columnNames.toArray(new String[0]), false);
+  }
+
+  @Override
   public void writeRowStart()
   {
     // Do nothing.

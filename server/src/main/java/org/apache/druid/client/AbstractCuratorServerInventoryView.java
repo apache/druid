@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.inventory.CuratorInventoryManager;
 import org.apache.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import org.apache.druid.curator.inventory.InventoryManagerConfig;
@@ -32,7 +33,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.curator.framework.CuratorFramework;
 
 import java.io.IOException;
 import java.util.Collection;

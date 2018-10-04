@@ -65,9 +65,9 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -190,6 +190,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
               return extractor.extractedClass();
             }
 
+            @Nullable
             @Override
             public Object getObject()
             {
@@ -320,7 +321,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     //__time capabilities
     ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl();
     timeCapabilities.setType(ValueType.LONG);
-    columnCapabilities.put(Column.TIME_COLUMN_NAME, timeCapabilities);
+    columnCapabilities.put(ColumnHolder.TIME_COLUMN_NAME, timeCapabilities);
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
@@ -823,6 +824,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
+  @Nullable
   public DimensionDesc getDimension(String dimension)
   {
     synchronized (dimensionDescs) {
@@ -1006,7 +1008,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                   continue;
                 }
                 final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
+                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
                 theVals.put(dimensionName, rowVals);
               }
 

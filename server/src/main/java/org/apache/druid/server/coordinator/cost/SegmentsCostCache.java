@@ -21,13 +21,13 @@ package org.apache.druid.server.coordinator.cost;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
+import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.CostBalancerStrategy;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;

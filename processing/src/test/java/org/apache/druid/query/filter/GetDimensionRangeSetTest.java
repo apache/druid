@@ -29,7 +29,7 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -66,7 +66,7 @@ public class GetDimensionRangeSetTest
   private final DimFilter other3 = new SearchQueryDimFilter("dim", new ContainsSearchQuerySpec("a", true), null);
 
   private final DimFilter interval1 = new IntervalDimFilter(
-      Column.TIME_COLUMN_NAME,
+      ColumnHolder.TIME_COLUMN_NAME,
       Arrays.asList(
           Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
           Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -115,7 +115,7 @@ public class GetDimensionRangeSetTest
     Assert.assertNull(other2.getDimensionRangeSet("someOtherDim"));
     Assert.assertNull(other3.getDimensionRangeSet("dim"));
 
-    Assert.assertNull(interval1.getDimensionRangeSet(Column.TIME_COLUMN_NAME));
+    Assert.assertNull(interval1.getDimensionRangeSet(ColumnHolder.TIME_COLUMN_NAME));
     Assert.assertNull(interval2.getDimensionRangeSet("dim1"));
   }
 
