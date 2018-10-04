@@ -22,18 +22,22 @@ package org.apache.druid.benchmark.query;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
+import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -114,8 +118,15 @@ public class SqlBenchmark
         .createQueryRunnerFactoryConglomerate();
     final QueryRunnerFactoryConglomerate conglomerate = conglomerateCloserPair.lhs;
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
-
+    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+        EasyMock.createMock(HttpClient.class),
+        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
+        "nodetype",
+        "/simple/leader",
+        new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
+    )
+    {
+    };
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
     plannerFactory = new PlannerFactory(
         CalciteTests.createMockSchema(conglomerate, walker, plannerConfig),
