@@ -93,6 +93,7 @@ public class TaskStorageQueryAdapter
    * @param taskid task ID
    * @return set of segments created by the specified task
    */
+  @Deprecated
   public Set<DataSegment> getInsertedSegments(final String taskid)
   {
     final Set<DataSegment> segments = Sets.newHashSet();

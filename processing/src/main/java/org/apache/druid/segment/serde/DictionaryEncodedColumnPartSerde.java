@@ -319,7 +319,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             rMultiValuedColumn,
             columnConfig.columnCacheSizeBytes()
         );
-        builder.setHasMultipleValues(hasMultipleValues).setDictionaryEncodedColumn(dictionaryEncodedColumnSupplier);
+        builder
+            .setHasMultipleValues(hasMultipleValues)
+            .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
 
         if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
           GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(

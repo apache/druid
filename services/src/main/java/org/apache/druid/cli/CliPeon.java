@@ -63,14 +63,15 @@ import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
@@ -199,6 +200,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
+            JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
             JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
             configureTaskActionClient(binder);

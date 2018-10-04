@@ -2,7 +2,6 @@
 
 export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
 
-
 # Generate a client cert with an incorrect hostname for testing
 cat <<EOT > invalid_hostname_csr.conf
 [req]

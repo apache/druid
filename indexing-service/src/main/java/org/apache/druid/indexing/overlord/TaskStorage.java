@@ -106,6 +106,7 @@ public interface TaskStorage
    *
    * @param <T> task action return type
    */
+  @Deprecated
   <T> void addAuditLog(Task task, TaskAction<T> taskAction);
 
   /**
@@ -114,6 +115,7 @@ public interface TaskStorage
    * @param taskid task ID
    * @return list of task actions
    */
+  @Deprecated
   List<TaskAction> getAuditLogs(String taskid);
 
   /**
@@ -127,8 +129,6 @@ public interface TaskStorage
   /**
    * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No
    * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
-   *
-   * @param dataSource datasource
    *
    * @return list of {@link TaskInfo}
    */

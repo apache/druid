@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
-
 import org.apache.druid.query.aggregation.Aggregator;
 
 public class ArrayOfDoublesSketchNoOpAggregator implements Aggregator

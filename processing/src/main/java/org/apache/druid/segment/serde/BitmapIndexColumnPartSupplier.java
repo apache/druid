@@ -25,6 +25,8 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.data.GenericIndexed;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
@@ -74,7 +76,7 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       }
 
       @Override
-      public int getIndex(String value)
+      public int getIndex(@Nullable String value)
       {
         // GenericIndexed.indexOf satisfies contract needed by BitmapIndex.indexOf
         return dictionary.indexOf(value);

@@ -27,7 +27,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,7 +50,7 @@ public class IntervalDimFilterTest
   public void testSerde() throws IOException
   {
     DimFilter intervalFilter = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -58,11 +58,11 @@ public class IntervalDimFilterTest
         null
     );
     String filterStr = mapper.writeValueAsString(intervalFilter);
-    IntervalDimFilter actualFilter = mapper.reader(DimFilter.class).readValue(filterStr);
+    IntervalDimFilter actualFilter = mapper.readerFor(DimFilter.class).readValue(filterStr);
     Assert.assertEquals(intervalFilter, actualFilter);
 
     intervalFilter = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -71,7 +71,7 @@ public class IntervalDimFilterTest
     );
 
     filterStr = mapper.writeValueAsString(intervalFilter);
-    actualFilter = mapper.reader(DimFilter.class).readValue(filterStr);
+    actualFilter = mapper.readerFor(DimFilter.class).readValue(filterStr);
     Assert.assertEquals(intervalFilter, actualFilter);
   }
 
@@ -79,7 +79,7 @@ public class IntervalDimFilterTest
   public void testGetCacheKey()
   {
     DimFilter intervalFilter1 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -88,7 +88,7 @@ public class IntervalDimFilterTest
     );
 
     DimFilter intervalFilter2 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -99,7 +99,7 @@ public class IntervalDimFilterTest
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     DimFilter intervalFilter3 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -107,7 +107,7 @@ public class IntervalDimFilterTest
         regexFn
     );
     DimFilter intervalFilter4 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1976-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -123,7 +123,7 @@ public class IntervalDimFilterTest
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
 
     DimFilter intervalFilter1 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -132,7 +132,7 @@ public class IntervalDimFilterTest
     );
 
     DimFilter intervalFilter2 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -141,7 +141,7 @@ public class IntervalDimFilterTest
     );
 
     DimFilter intervalFilter3 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1977-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -153,7 +153,7 @@ public class IntervalDimFilterTest
     Assert.assertNotEquals(intervalFilter1.hashCode(), intervalFilter3.hashCode());
 
     DimFilter intervalFilter4 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1977-01-01T00:00:00.004Z"),
@@ -181,7 +181,7 @@ public class IntervalDimFilterTest
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
 
     DimFilter intervalFilter1 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -190,7 +190,7 @@ public class IntervalDimFilterTest
     );
 
     DimFilter intervalFilter2 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -199,7 +199,7 @@ public class IntervalDimFilterTest
     );
 
     DimFilter intervalFilter3 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1977-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
@@ -211,7 +211,7 @@ public class IntervalDimFilterTest
     Assert.assertNotEquals(intervalFilter1, intervalFilter3);
 
     DimFilter intervalFilter4 = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1977-01-01T00:00:00.004Z"),
@@ -236,13 +236,13 @@ public class IntervalDimFilterTest
   public void testGetRequiredColumns()
   {
     DimFilter intervalFilter = new IntervalDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         Arrays.asList(
             Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
             Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
         ),
         null
     );
-    Assert.assertEquals(intervalFilter.getRequiredColumns(), Sets.newHashSet(Column.TIME_COLUMN_NAME));
+    Assert.assertEquals(intervalFilter.getRequiredColumns(), Sets.newHashSet(ColumnHolder.TIME_COLUMN_NAME));
   }
 }

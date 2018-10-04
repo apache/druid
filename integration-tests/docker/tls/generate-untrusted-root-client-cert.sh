@@ -27,6 +27,7 @@ basicConstraints=CA:FALSE,pathlen:0
 IP.1 = ${DOCKER_HOST_IP}
 IP.2 = 127.0.0.1
 IP.3 = 172.172.172.1
+IP.4 = ${DOCKER_MACHINE_IP:=127.0.0.1}
 DNS.1 = ${HOSTNAME}
 DNS.2 = localhost
 EOT

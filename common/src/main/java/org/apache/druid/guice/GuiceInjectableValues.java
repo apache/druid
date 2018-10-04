@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-
 import org.apache.druid.java.util.common.IAE;
 
 /**

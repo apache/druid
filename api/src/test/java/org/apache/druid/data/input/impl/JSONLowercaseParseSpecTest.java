@@ -20,8 +20,8 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.parsers.Parser;
 import junit.framework.Assert;
+import org.apache.druid.java.util.common.parsers.Parser;
 import org.junit.Test;
 
 import java.util.Arrays;

@@ -35,10 +35,15 @@ public class JvmThreadsMonitor extends FeedDefiningMonitor
   private int lastLiveThreads = 0;
   private long lastStartedThreads = 0;
 
+  public JvmThreadsMonitor(Map<String, String[]> dimensions)
+  {
+    this(dimensions, DEFAULT_METRICS_FEED);
+  }
+
   public JvmThreadsMonitor(Map<String, String[]> dimensions, String feed)
   {
     super(feed);
-    Preconditions.checkNotNull(dimensions);
+    Preconditions.checkNotNull(dimensions, "dimensions");
     this.dimensions = ImmutableMap.copyOf(dimensions);
   }
 

@@ -21,8 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.quantiles.DoublesSketch;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.java.util.common.ISE;
 
 import java.nio.charset.StandardCharsets;
 

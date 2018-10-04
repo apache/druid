@@ -66,6 +66,14 @@
             <artifactId>commons-validator</artifactId>
             <version>1.4.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.ircclouds.irc</groupId>
+            <artifactId>irc-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.maxmind.geoip2</groupId>
+            <artifactId>geoip2</artifactId>
+        </dependency>
 
         <!-- For tests! -->
         <dependency>

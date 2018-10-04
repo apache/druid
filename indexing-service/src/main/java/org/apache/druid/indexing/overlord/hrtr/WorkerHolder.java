@@ -22,12 +22,11 @@ package org.apache.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
+import org.apache.druid.indexing.overlord.TaskRunnerUtils;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
@@ -35,7 +34,6 @@ import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -47,7 +45,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -116,7 +113,7 @@ public class WorkerHolder
         smileMapper,
         httpClient,
         workersSyncExec,
-        makeWorkerURL(worker, "/"),
+        TaskRunnerUtils.makeWorkerURL(worker, "/"),
         "/druid-internal/v1/worker",
         WORKER_SYNC_RESP_TYPE_REF,
         config.getSyncRequestTimeout().toStandardDuration().getMillis(),
@@ -211,18 +208,6 @@ public class WorkerHolder
     this.continuouslyFailedTasksCount.incrementAndGet();
   }
 
-  public static URL makeWorkerURL(Worker worker, String path)
-  {
-    Preconditions.checkArgument(path.startsWith("/"), "path must start with '/': %s", path);
-
-    try {
-      return new URL(StringUtils.format("%s://%s%s", worker.getScheme(), worker.getHost(), path));
-    }
-    catch (MalformedURLException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
   public boolean assignTask(Task task)
   {
     if (disabled.get()) {
@@ -234,7 +219,7 @@ public class WorkerHolder
       return false;
     }
 
-    URL url = makeWorkerURL(worker, "/druid-internal/v1/worker/assignTask");
+    URL url = TaskRunnerUtils.makeWorkerURL(worker, "/druid-internal/v1/worker/assignTask");
     int numTries = config.getAssignRequestMaxRetries();
 
     try {
@@ -282,7 +267,7 @@ public class WorkerHolder
 
   public void shutdownTask(String taskId)
   {
-    URL url = makeWorkerURL(worker, StringUtils.format("/druid/worker/v1/task/%s/shutdown", taskId));
+    final URL url = TaskRunnerUtils.makeWorkerURL(worker, "/druid/worker/v1/task/%s/shutdown", taskId);
 
     try {
       RetryUtils.retry(

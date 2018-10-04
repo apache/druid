@@ -18,7 +18,6 @@
  */
 package org.apache.druid.query.scan;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -34,11 +33,10 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -49,6 +47,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
@@ -95,7 +94,7 @@ public class ScanQueryEngine
     } else {
       final Set<String> availableColumns = Sets.newLinkedHashSet(
           Iterables.concat(
-              Collections.singleton(legacy ? LEGACY_TIMESTAMP_KEY : Column.TIME_COLUMN_NAME),
+              Collections.singleton(legacy ? LEGACY_TIMESTAMP_KEY : ColumnHolder.TIME_COLUMN_NAME),
               Iterables.transform(
                   Arrays.asList(query.getVirtualColumns().getVirtualColumns()),
                   VirtualColumn::getOutputName
@@ -108,7 +107,7 @@ public class ScanQueryEngine
       allColumns.addAll(availableColumns);
 
       if (legacy) {
-        allColumns.remove(Column.TIME_COLUMN_NAME);
+        allColumns.remove(ColumnHolder.TIME_COLUMN_NAME);
       }
     }
 
@@ -124,21 +123,16 @@ public class ScanQueryEngine
     }
     final long limit = query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
     return Sequences.concat(
-        Sequences.map(
-            adapter.makeCursors(
-                filter,
-                intervals.get(0),
-                query.getVirtualColumns(),
-                Granularities.ALL,
-                query.isDescending(),
-                null
-            ),
-            new Function<Cursor, Sequence<ScanResultValue>>()
-            {
-              @Override
-              public Sequence<ScanResultValue> apply(final Cursor cursor)
-              {
-                return new BaseSequence<>(
+            adapter
+                .makeCursors(
+                    filter,
+                    intervals.get(0),
+                    query.getVirtualColumns(),
+                    Granularities.ALL,
+                    query.isDescending(),
+                    null
+                )
+                .map(cursor -> new BaseSequence<>(
                     new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
                     {
                       @Override
@@ -151,7 +145,7 @@ public class ScanQueryEngine
 
                           if (legacy && LEGACY_TIMESTAMP_KEY.equals(column)) {
                             selector = cursor.getColumnSelectorFactory()
-                                             .makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+                                             .makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
                           } else {
                             selector = cursor.getColumnSelectorFactory().makeColumnValueSelector(column);
                           }
@@ -173,6 +167,9 @@ public class ScanQueryEngine
                           @Override
                           public ScanResultValue next()
                           {
+                            if (!hasNext()) {
+                              throw new NoSuchElementException();
+                            }
                             if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
                               throw new QueryInterruptedException(new TimeoutException());
                             }
@@ -208,9 +205,8 @@ public class ScanQueryEngine
                           private List<Object> rowsToCompactedList()
                           {
                             final List<Object> events = new ArrayList<>(batchSize);
-                            for (int i = 0; !cursor.isDone()
-                                            && i < batchSize
-                                            && offset < limit; cursor.advance(), i++, offset++) {
+                            final long iterLimit = Math.min(limit, offset + batchSize);
+                            for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
                               final List<Object> theEvent = new ArrayList<>(allColumns.size());
                               for (int j = 0; j < allColumns.size(); j++) {
                                 theEvent.add(getColumnValue(j));
@@ -223,9 +219,8 @@ public class ScanQueryEngine
                           private List<Map<String, Object>> rowsToList()
                           {
                             List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
-                            for (int i = 0; !cursor.isDone()
-                                            && i < batchSize
-                                            && offset < limit; cursor.advance(), i++, offset++) {
+                            final long iterLimit = Math.min(limit, offset + batchSize);
+                            for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
                               final Map<String, Object> theEvent = new LinkedHashMap<>();
                               for (int j = 0; j < allColumns.size(); j++) {
                                 theEvent.put(allColumns.get(j), getColumnValue(j));
@@ -256,10 +251,7 @@ public class ScanQueryEngine
                       {
                       }
                     }
-                );
-              }
-            }
-        )
+            ))
     );
   }
 }

@@ -23,10 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.net.HostAndPort;
-
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.FunctionalIterable;
-import org.apache.druid.java.util.common.logger.Logger;
 import kafka.api.FetchRequest;
 import kafka.api.FetchRequestBuilder;
 import kafka.api.PartitionOffsetRequestInfo;
@@ -42,6 +38,9 @@ import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.FunctionalIterable;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

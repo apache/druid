@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -40,8 +40,7 @@ public class ConciseBitmapIndexMergerV9Test extends IndexMergerTestBase
         new ConciseBitmapSerdeFactory(),
         compressionStrategy,
         dimCompressionStrategy,
-        longEncodingStrategy,
-        segmentWriteOutMediumFactory
+        longEncodingStrategy
     );
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   }

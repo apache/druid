@@ -29,7 +29,7 @@ public class SettableLongColumnValueSelector implements SettableColumnValueSelec
   private long value;
 
   @Override
-  public void setValueFrom(ColumnValueSelector selector)
+  public void setValueFrom(ColumnValueSelector<?> selector)
   {
     isNull = selector.isNull();
     if (!isNull) {

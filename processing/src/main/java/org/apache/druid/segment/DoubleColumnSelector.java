@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 public interface DoubleColumnSelector extends ColumnValueSelector<Double>
 {
   /**
-   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -43,7 +43,7 @@ public interface DoubleColumnSelector extends ColumnValueSelector<Double>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -55,7 +55,7 @@ public interface DoubleColumnSelector extends ColumnValueSelector<Double>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -71,7 +71,7 @@ public interface DoubleColumnSelector extends ColumnValueSelector<Double>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */

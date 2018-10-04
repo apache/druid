@@ -19,18 +19,18 @@
 
 package org.apache.druid.java.util.common.io;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.sun.jna.LastErrorException;
+import com.sun.jna.Native;
+import com.sun.jna.Platform;
+import org.apache.druid.java.util.common.logger.Logger;
+
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.sun.jna.LastErrorException;
-import com.sun.jna.Native;
-import com.sun.jna.Platform;
-import org.apache.druid.java.util.common.logger.Logger;
 
 /**
  * Native I/O operations in order to minimize cache impact.

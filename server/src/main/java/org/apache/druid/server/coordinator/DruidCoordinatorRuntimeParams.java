@@ -21,9 +21,9 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;

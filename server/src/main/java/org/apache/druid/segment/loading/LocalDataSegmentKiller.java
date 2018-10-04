@@ -20,10 +20,10 @@
 package org.apache.druid.segment.loading;
 
 import com.google.inject.Inject;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;

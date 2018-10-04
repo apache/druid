@@ -32,6 +32,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.guava.ThreadRenamingRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
@@ -55,7 +56,6 @@ import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -286,7 +286,7 @@ public class IndexGeneratorJob implements Jobby
 
     IncrementalIndex newIndex = new IncrementalIndex.Builder()
         .setIndexSchema(indexSchema)
-        .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows())
+        .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows()) // only used by OffHeapIncrementalIndex
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())
         .setMaxBytesInMemory(TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()))
         .buildOnheap();
@@ -334,8 +334,7 @@ public class IndexGeneratorJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Context context,
-        boolean reportParseExceptions
+        Context context
     ) throws IOException, InterruptedException
     {
       // Group by bucket, sort by timestamp

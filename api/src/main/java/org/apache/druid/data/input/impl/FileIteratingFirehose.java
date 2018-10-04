@@ -19,10 +19,10 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.utils.Runnables;
-import org.apache.commons.io.LineIterator;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -101,24 +101,9 @@ public class FileIteratingFirehose implements Firehose
   @Override
   public void close() throws IOException
   {
-    try {
-      if (lineIterator != null) {
-        lineIterator.close();
-      }
-    }
-    catch (Throwable t) {
-      try {
-        if (closer != null) {
-          closer.close();
-        }
-      }
-      catch (Exception e) {
-        t.addSuppressed(e);
-      }
-      throw t;
-    }
-    if (closer != null) {
-      closer.close();
+    try (Closeable ignore = closer;
+         Closeable ignore2 = lineIterator != null ? lineIterator::close : null) {
+      // close both via try-with-resources
     }
   }
 }

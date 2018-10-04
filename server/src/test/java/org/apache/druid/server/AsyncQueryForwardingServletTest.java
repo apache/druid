@@ -348,13 +348,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           )
           {
             @Override
-            protected URI rewriteURI(HttpServletRequest request, String scheme, String host)
+            protected String rewriteURI(HttpServletRequest request, String scheme, String host)
             {
               String uri = super.rewriteURI(request, scheme, host).toString();
               if (uri.contains("/druid/v2")) {
-                return URI.create(uri.replace("/druid/v2", "/default"));
+                return URI.create(uri.replace("/druid/v2", "/default")).toString();
               }
-              return URI.create(uri.replace("/proxy", ""));
+              return URI.create(uri.replace("/proxy", "")).toString();
             }
           });
       //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
@@ -378,7 +378,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     // test params
     Assert.assertEquals(
-        new URI("http://localhost:1234/some/path?param=1"),
+        "http://localhost:1234/some/path?param=1",
         AsyncQueryForwardingServlet.makeURI("http", "localhost:1234", "/some/path", "param=1")
     );
 
@@ -391,20 +391,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             HostAndPort.fromParts("2a00:1450:4007:805::1007", 1234).toString(),
             "/some/path",
             "param=1&param2=%E2%82%AC"
-        ).toASCIIString()
+        )
     );
 
     // test null query
     Assert.assertEquals(
-        new URI("http://localhost/"),
+        "http://localhost/",
         AsyncQueryForwardingServlet.makeURI("http", "localhost", "/", null)
     );
 
     // Test reWrite Encoded interval with timezone info
     // decoded parameters 1900-01-01T00:00:00.000+01.00 -> 1900-01-01T00:00:00.000+01:00
     Assert.assertEquals(
-        new URI(
-            "http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"),
+        "http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00",
         AsyncQueryForwardingServlet.makeURI(
             "http",
             "localhost:1234",

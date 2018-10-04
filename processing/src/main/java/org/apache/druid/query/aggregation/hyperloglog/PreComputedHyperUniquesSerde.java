@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.aggregation.hyperloglog;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
-import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
 

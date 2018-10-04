@@ -19,10 +19,10 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
 import org.joda.time.Interval;
@@ -277,6 +277,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Registers "time to first byte" metric.
    */
   QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs);
+
+  /**
+   * Registers "time that channel is unreadable (backpressure)" metric.
+   */
+  QueryMetrics<QueryType> reportBackPressureTime(long timeNs);
 
   /**
    * Registers "node time" metric.

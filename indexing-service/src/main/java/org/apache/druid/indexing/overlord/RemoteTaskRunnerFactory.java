@@ -22,7 +22,7 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
@@ -30,8 +30,8 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfi
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
-import org.apache.curator.framework.CuratorFramework;
 
 /**
  */

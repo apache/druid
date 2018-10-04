@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
@@ -38,6 +37,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.druid.sql.calcite.planner.Calcites;
 
 import java.util.ArrayList;
 import java.util.List;

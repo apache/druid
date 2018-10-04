@@ -20,9 +20,7 @@
 package org.apache.druid.collections.bitmap;
 
 import com.google.common.collect.Sets;
-
 import org.apache.druid.collections.IntSetTestUtility;
-
 import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;

@@ -135,4 +135,10 @@ public class DruidTypeSystem implements RelDataTypeSystem
   {
     return RelDataTypeSystem.DEFAULT.isSchemaCaseSensitive();
   }
+
+  @Override
+  public boolean shouldConvertRaggedUnionTypesToVarying()
+  {
+    return true;
+  }
 }

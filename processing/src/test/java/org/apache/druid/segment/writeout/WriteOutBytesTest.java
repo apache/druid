@@ -21,8 +21,8 @@ package org.apache.druid.segment.writeout;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

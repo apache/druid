@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.search;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
@@ -206,6 +206,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportNodeTimeToFirstByte(long timeNs)
   {
     return delegateQueryMetrics.reportNodeTimeToFirstByte(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportBackPressureTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportBackPressureTime(timeNs);
   }
 
   @Override

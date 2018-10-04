@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
@@ -138,7 +139,7 @@ public class TestIndex
 
   private static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
@@ -315,15 +316,16 @@ public class TestIndex
         ),
         "utf8"
     );
-    return loadIncrementalIndex(retVal, source, parser);
+    return loadIncrementalIndex(() -> retVal, source, parser);
   }
 
   public static IncrementalIndex loadIncrementalIndex(
-      final IncrementalIndex retVal,
+      final Supplier<IncrementalIndex> indexSupplier,
       final CharSource source,
       final StringInputRowParser parser
   ) throws IOException
   {
+    final IncrementalIndex retVal = indexSupplier.get();
     final AtomicLong startTime = new AtomicLong();
     int lineCount = source.readLines(
         new LineProcessor<Integer>()

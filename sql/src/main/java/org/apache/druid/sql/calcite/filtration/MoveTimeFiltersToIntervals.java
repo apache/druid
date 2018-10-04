@@ -31,7 +31,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.List;
 
@@ -39,7 +39,7 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
 {
   private static final MoveTimeFiltersToIntervals INSTANCE = new MoveTimeFiltersToIntervals();
   private static final BoundRefKey TIME_BOUND_REF_KEY = new BoundRefKey(
-      Column.TIME_COLUMN_NAME,
+      ColumnHolder.TIME_COLUMN_NAME,
       null,
       StringComparators.NUMERIC
   );

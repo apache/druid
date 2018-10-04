@@ -23,9 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-
 import org.apache.druid.java.util.common.logger.Logger;
-
 import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.Map;

@@ -19,8 +19,8 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;

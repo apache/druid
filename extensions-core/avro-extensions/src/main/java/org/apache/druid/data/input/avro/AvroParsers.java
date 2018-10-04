@@ -19,13 +19,13 @@
 
 package org.apache.druid.data.input.avro;
 
+import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
-import org.apache.avro.generic.GenericRecord;
 
 import java.util.List;
 

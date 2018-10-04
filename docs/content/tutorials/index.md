@@ -137,7 +137,7 @@ The sample data has the following columns, and an example event is shown below:
 {
   "timestamp":"2015-09-12T20:03:45.018Z",
   "channel":"#en.wikipedia",
-  "namespace":"Main"
+  "namespace":"Main",
   "page":"Spider-Man's powers and equipment",
   "user":"foobar",
   "comment":"/* Artificial web-shooters */",

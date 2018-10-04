@@ -46,7 +46,7 @@ public class ColumnSelectorPlus<ColumnSelectorStrategyClass extends ColumnSelect
   private final String outputName;
 
   /**
-   * Column value selector for this dimension, e.g. a DimensionSelector for String dimensions.
+   * ColumnValueSelector for this dimension, e.g. a DimensionSelector for String dimensions.
    */
   private final ColumnValueSelector selector;
 

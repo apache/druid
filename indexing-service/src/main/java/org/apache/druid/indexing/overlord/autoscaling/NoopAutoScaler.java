@@ -19,9 +19,8 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
-import org.apache.druid.java.util.emitter.EmittingLogger;
-
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.util.List;
 

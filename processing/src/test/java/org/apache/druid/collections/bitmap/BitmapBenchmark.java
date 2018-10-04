@@ -73,7 +73,7 @@ public class BitmapBenchmark
     conciseCount++;
     final ByteBuffer buf = ByteBuffer.allocateDirect(bytes.length).put(bytes);
     buf.rewind();
-    return new ImmutableConciseSet(buf);
+    return new ImmutableConciseSet(buf.asIntBuffer());
   }
 
   protected static ImmutableRoaringBitmap writeImmutable(MutableRoaringBitmap r, ByteBuffer buf) throws IOException

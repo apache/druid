@@ -23,10 +23,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.cache.polling.OnHeapPollingCache;

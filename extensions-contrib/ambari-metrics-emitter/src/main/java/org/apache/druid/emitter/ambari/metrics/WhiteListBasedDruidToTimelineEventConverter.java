@@ -33,8 +33,8 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 
 import java.io.File;
@@ -218,7 +218,7 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
       } else {
         fileContent = Files.asCharSource(new File(mapPath), StandardCharsets.UTF_8).read();
       }
-      return mapper.reader(new TypeReference<ImmutableSortedMap<String, ImmutableList<String>>>()
+      return mapper.readerFor(new TypeReference<ImmutableSortedMap<String, ImmutableList<String>>>()
       {
       }).readValue(fileContent);
     }

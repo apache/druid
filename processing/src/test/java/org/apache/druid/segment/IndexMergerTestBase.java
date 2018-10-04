@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -44,10 +45,10 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.SimpleDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -58,7 +59,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -142,8 +142,7 @@ public class IndexMergerTestBase
       @Nullable BitmapSerdeFactory bitmapSerdeFactory,
       CompressionStrategy compressionStrategy,
       CompressionStrategy dimCompressionStrategy,
-      CompressionFactory.LongEncodingStrategy longEncodingStrategy,
-      SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      CompressionFactory.LongEncodingStrategy longEncodingStrategy
   )
   {
     this.indexSpec = makeIndexSpec(
@@ -152,7 +151,7 @@ public class IndexMergerTestBase
         dimCompressionStrategy,
         longEncodingStrategy
     );
-    this.indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    this.indexIO = TestHelper.getTestIndexIO();
     this.useBitmapIndexes = bitmapSerdeFactory != null;
   }
 
@@ -169,7 +168,7 @@ public class IndexMergerTestBase
         indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))
     );
 
-    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
@@ -210,7 +209,7 @@ public class IndexMergerTestBase
         indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))
     );
 
-    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
     assertDimCompression(index, indexSpec.getDimensionCompression());
@@ -246,7 +245,7 @@ public class IndexMergerTestBase
         indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))
     );
 
-    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
@@ -300,7 +299,7 @@ public class IndexMergerTestBase
         indexIO.loadIndex(indexMerger.persist(toPersist1, tempDir1, indexSpec, null))
     );
 
-    Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
@@ -308,7 +307,7 @@ public class IndexMergerTestBase
         indexIO.loadIndex(indexMerger.persist(toPersist2, tempDir2, indexSpec, null))
     );
 
-    Assert.assertEquals(2, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index2.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
     Assert.assertEquals(3, index2.getColumnNames().size());
 
@@ -328,7 +327,7 @@ public class IndexMergerTestBase
         )
     );
 
-    Assert.assertEquals(3, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(3, merged.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
     assertDimCompression(index2, indexSpec.getDimensionCompression());
@@ -393,13 +392,13 @@ public class IndexMergerTestBase
         )
     );
 
-    Assert.assertEquals(1, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(1, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(index1.getAvailableDimensions()));
 
-    Assert.assertEquals(1, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(1, index2.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(index2.getAvailableDimensions()));
 
-    Assert.assertEquals(2, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, merged.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(merged.getAvailableDimensions()));
 
     assertDimCompression(index1, indexSpec.getDimensionCompression());
@@ -432,7 +431,7 @@ public class IndexMergerTestBase
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
-    Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
@@ -450,7 +449,7 @@ public class IndexMergerTestBase
         )
     );
 
-    Assert.assertEquals(2, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, merged.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
@@ -483,7 +482,7 @@ public class IndexMergerTestBase
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
-    Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
@@ -506,7 +505,7 @@ public class IndexMergerTestBase
         )
     );
 
-    Assert.assertEquals(2, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, merged.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
@@ -546,7 +545,7 @@ public class IndexMergerTestBase
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
-    Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
@@ -577,7 +576,7 @@ public class IndexMergerTestBase
         )
     );
 
-    Assert.assertEquals(2, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, merged.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
@@ -620,7 +619,7 @@ public class IndexMergerTestBase
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
-    Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(4, index1.getColumnNames().size());
 
@@ -629,7 +628,7 @@ public class IndexMergerTestBase
         indexIO.loadIndex(indexMerger.convert(tempDir1, convertDir, indexSpec))
     );
 
-    Assert.assertEquals(2, converted.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, converted.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(converted.getAvailableDimensions()));
     Assert.assertEquals(4, converted.getColumnNames().size());
 
@@ -678,7 +677,7 @@ public class IndexMergerTestBase
 
     indexIO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
-    Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index1.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(4, index1.getColumnNames().size());
 
@@ -700,7 +699,7 @@ public class IndexMergerTestBase
         indexIO.loadIndex(indexMerger.convert(tempDir1, convertDir, newSpec))
     );
 
-    Assert.assertEquals(2, converted.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, converted.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(converted.getAvailableDimensions()));
     Assert.assertEquals(4, converted.getColumnNames().size());
 
@@ -723,15 +722,15 @@ public class IndexMergerTestBase
       return;
     }
 
-    DictionaryEncodedColumn encodedColumn = index.getColumn("dim2").getDictionaryEncoding();
+    DictionaryEncodedColumn encodedColumn = (DictionaryEncodedColumn) index.getColumnHolder("dim2").getColumn();
     Object obj;
     if (encodedColumn.hasMultipleValues()) {
-      Field field = SimpleDictionaryEncodedColumn.class.getDeclaredField("multiValueColumn");
+      Field field = StringDictionaryEncodedColumn.class.getDeclaredField("multiValueColumn");
       field.setAccessible(true);
 
       obj = field.get(encodedColumn);
     } else {
-      Field field = SimpleDictionaryEncodedColumn.class.getDeclaredField("column");
+      Field field = StringDictionaryEncodedColumn.class.getDeclaredField("column");
       field.setAccessible(true);
 
       obj = field.get(encodedColumn);
@@ -2071,7 +2070,7 @@ public class IndexMergerTestBase
     adapter = new QueryableIndexIndexableAdapter(index);
     rowList = RowIteratorHelper.toList(adapter.getRows());
 
-    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
@@ -2103,7 +2102,7 @@ public class IndexMergerTestBase
     schema = makeDimensionSchemas(Arrays.asList("dim1", "dim2"), MultiValueHandling.SORTED_SET);
     index = persistAndLoad(schema, rows);
 
-    Assert.assertEquals(1, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(1, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
@@ -2134,7 +2133,7 @@ public class IndexMergerTestBase
     schema = makeDimensionSchemas(Arrays.asList("dim1", "dim2"), MultiValueHandling.ARRAY);
     index = persistAndLoad(schema, rows);
 
-    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
@@ -2191,7 +2190,7 @@ public class IndexMergerTestBase
         )
     );
 
-    Assert.assertEquals(3, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(3, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(
         Arrays.asList("dim1", "dim2"),
         Lists.newArrayList(index.getAvailableDimensions())

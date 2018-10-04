@@ -20,7 +20,6 @@
 package org.apache.druid.testing.utils;
 
 import com.google.common.base.Throwables;
-
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 

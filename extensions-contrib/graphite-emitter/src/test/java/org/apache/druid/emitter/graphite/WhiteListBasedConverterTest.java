@@ -20,13 +20,13 @@
 package org.apache.druid.emitter.graphite;
 
 import com.google.common.collect.Maps;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
