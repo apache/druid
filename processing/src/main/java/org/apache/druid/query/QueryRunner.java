@@ -31,4 +31,9 @@ public interface QueryRunner<T>
    * Runs the given query and returns results in a time-ordered sequence.
    */
   Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext);
+
+  @SuppressWarnings("unchecked")
+  static <T> QueryRunner<T> of(Sequence<? extends T> s) {
+    return (ignored0, ignored1) -> (Sequence<T>) s;
+  }
 }

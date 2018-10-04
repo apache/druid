@@ -168,11 +168,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    return runAndMergeWithTimelineChange(
-        query,
-        // No change, but Function.identity() doesn't work here for some reason
-        identity -> identity
-    );
+    return runAndMergeWithTimelineChange(query, UnaryOperator.identity());
   }
 
   /**
@@ -186,7 +182,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
-    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+    return new SpecificQueryRunnable<>(queryPlus, responseContext).runByServer(timelineConverter);
   }
 
   private <T> QueryRunner<T> runAndMergeWithTimelineChange(
@@ -203,16 +199,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final Stream<? extends Sequence<T>> sequences = run(queryPlus, responseContext, timelineConverter);
         return MergeWorkTask.parallelMerge(
             sequences.parallel(),
-            sequenceStream ->
+            (Stream<? extends Sequence<? extends T>> sequenceStream) ->
                 new FluentQueryRunnerBuilder<>(toolChest)
                     .create(
                         queryRunnerFactory.mergeRunners(
                             mergeFjp,
-                            sequenceStream.map(
-                                s -> (QueryRunner<T>) (ignored0, ignored1) -> (Sequence<T>) s
-                            ).collect(
-                                Collectors.toList()
-                            )
+                            sequenceStream.map(QueryRunner::<T>of).collect(Collectors.toList())
                         )
                     )
                     .mergeResults()
@@ -302,7 +294,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return Collections.unmodifiableMap(contextBuilder);
     }
 
-    Stream<Sequence<T>> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
+    /**
+     * This is the main workflow for the query setup. The sequences are created but not accumulated here.
+     *
+     * @param timelineConverter Any manipulations to the timeline that need done
+     *
+     * @return A stream of the sequences. Each sequence is either a server result or the total cache result. A
+     * spliterator on the returned stream should be sized and subsized.
+     */
+    Stream<Sequence<T>> runByServer(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
       @Nullable
       TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
@@ -354,43 +354,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
           // Otherwise the stream's spliterator is of a hash map entry spliterator from the group-by-server operation
           // This also causes eager initialization of the **sequences**, aka forking off the direct druid client requests
           // Sequence result accumulation should still be lazy
+          //
+          // See https://github.com/apache/incubator-druid/issues/6421
           .collect(Collectors.toList())
           .stream();
-    }
-
-    /**
-     * Create a stream of the partition chunks which are useful in this query
-     *
-     * @param holder The holder of the shard to server component of the timeline
-     *
-     * @return Chunks and the segment descriptors corresponding to the chunk
-     */
-    private Stream<ServerToSegment> extractServerAndSegment(TimelineObjectHolder<String, ServerSelector> holder)
-    {
-      return DimFilterUtils
-          .filterShards(
-              query.getFilter(),
-              holder.getObject(),
-              partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
-              Maps.newHashMap()
-          )
-          .stream()
-          .map(chunk -> new ServerToSegment(
-              chunk.getObject(),
-              new SegmentDescriptor(holder.getInterval(), holder.getVersion(), chunk.getChunkNumber())
-          ));
-    }
-
-    private Stream<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
-    {
-      return toolChest
-          .filterSegments(
-              query,
-              query.getIntervals().stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
-          )
-          .stream()
-          .flatMap(this::extractServerAndSegment)
-          .distinct();
     }
 
     private void computeUncoveredIntervals(TimelineLookup<String, ServerSelector> timeline)
@@ -432,6 +399,41 @@ public class CachingClusteredClient implements QuerySegmentWalker
         responseContext.put("uncoveredIntervals", uncoveredIntervals);
         responseContext.put("uncoveredIntervalsOverflowed", uncoveredIntervalsOverflowed);
       }
+    }
+
+    /**
+     * Create a stream of the partition chunks which are relevant to this query
+     *
+     * @param holder The holder of the shard to server component of the timeline
+     *
+     * @return Chunks and the segment descriptors corresponding to the chunk
+     */
+    private Stream<ServerToSegment> extractServerAndSegment(TimelineObjectHolder<String, ServerSelector> holder)
+    {
+      return DimFilterUtils
+          .filterShards(
+              query.getFilter(),
+              holder.getObject(),
+              partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
+              Maps.newHashMap()
+          )
+          .stream()
+          .map(chunk -> new ServerToSegment(
+              chunk.getObject(),
+              new SegmentDescriptor(holder.getInterval(), holder.getVersion(), chunk.getChunkNumber())
+          ));
+    }
+
+    private Stream<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
+    {
+      return toolChest
+          .filterSegments(
+              query,
+              query.getIntervals().stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
+          )
+          .stream()
+          .flatMap(this::extractServerAndSegment)
+          .distinct();
     }
 
     @Nullable
