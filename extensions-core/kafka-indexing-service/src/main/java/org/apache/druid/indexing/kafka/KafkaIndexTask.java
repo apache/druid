@@ -206,7 +206,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   }
 
 
-
   @Override
   public TaskStatus run(final TaskToolbox toolbox)
   {
@@ -291,30 +290,30 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-      final Map<String, Object> configs = new HashMap<>();
+      final Properties props = new Properties();
 
       // Extract passwords before SSL connection to Kafka
-      for (Map.Entry<String, Object> entry : ioConfig.getConsumerProperties().entrySet()) {
+      for (Map.Entry<String, Object> entry: ioConfig.getConsumerProperties().entrySet()) {
         String propertyKey = entry.getKey();
         if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
             || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
             || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
-          PasswordProvider configPasswordProvider = configMapper.readValue(
-              configMapper.writeValueAsString(entry.getValue()),
+          PasswordProvider configPasswordProvider = configMapper.convertValue(
+              entry.getValue(),
               PasswordProvider.class
           );
-          configs.put(propertyKey, (configPasswordProvider.getPassword()));
+          props.setProperty(propertyKey, (configPasswordProvider.getPassword()));
         } else {
-          configs.put(propertyKey, entry.getValue());
+          props.setProperty(propertyKey, String.valueOf(entry.getValue()));
         }
       }
 
-      configs.put("enable.auto.commit", "false");
-      configs.put("auto.offset.reset", "none");
-      configs.put("key.deserializer", ByteArrayDeserializer.class.getName());
-      configs.put("value.deserializer", ByteArrayDeserializer.class.getName());
+      props.setProperty("enable.auto.commit", "false");
+      props.setProperty("auto.offset.reset", "none");
+      props.setProperty("key.deserializer", ByteArrayDeserializer.class.getName());
+      props.setProperty("value.deserializer", ByteArrayDeserializer.class.getName());
 
-      return new KafkaConsumer<>(configs);
+      return new KafkaConsumer<>(props);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
