@@ -280,11 +280,11 @@ public class SystemSchema extends AbstractSchema
                   val.getSize(),
                   val.getVersion(),
                   val.getShardSpec().getPartitionNum(),
-                  0l,
-                  -1l,
-                  1l,
-                  0l,
-                  0l,
+                  0L,
+                  -1L,
+                  1L,
+                  0L,
+                  0L,
                   jsonMapper.writeValueAsString(val)
               };
             }
