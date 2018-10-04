@@ -22,6 +22,13 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
+
 /**
  */
 public class MetadataStorageConnectorConfig
@@ -43,6 +50,9 @@ public class MetadataStorageConnectorConfig
 
   @JsonProperty("password")
   private PasswordProvider passwordProvider;
+
+  @JsonProperty("dbcpPropertiesFile")
+  private String dbcpPropertiesFile;
 
   public boolean isCreateTables()
   {
@@ -78,6 +88,22 @@ public class MetadataStorageConnectorConfig
     return passwordProvider == null ? null : passwordProvider.getPassword();
   }
 
+  public Properties getProperties() throws IOException
+  {
+    if (dbcpPropertiesFile == null) {
+      return null;
+    } else {
+      //no reason to save properties file as it is only used on startup
+      File propertiesFile = new File(dbcpPropertiesFile);
+      Properties properties = new Properties();
+      try (FileInputStream stream = new FileInputStream(propertiesFile);
+           InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+        properties.load(reader);
+      }
+      return properties;
+    }
+  }
+
   @Override
   public String toString()
   {
@@ -86,7 +112,18 @@ public class MetadataStorageConnectorConfig
            ", connectURI='" + getConnectURI() + '\'' +
            ", user='" + user + '\'' +
            ", passwordProvider=" + passwordProvider +
+           ", dbcpPropertiesFile=" + dbcpPropertiesFile +
            '}';
+  }
+
+  String getDbcpPropertiesFile()
+  {
+    return dbcpPropertiesFile;
+  }
+
+  void setDbcpPropertiesFile(String dbcpPropertiesFile)
+  {
+    this.dbcpPropertiesFile = dbcpPropertiesFile;
   }
 
   @Override
@@ -116,6 +153,11 @@ public class MetadataStorageConnectorConfig
     if (getUser() != null ? !getUser().equals(that.getUser()) : that.getUser() != null) {
       return false;
     }
+    if (dbcpPropertiesFile == null
+        ? that.dbcpPropertiesFile != null
+        : !dbcpPropertiesFile.equals(that.dbcpPropertiesFile)) {
+      return false;
+    }
     return passwordProvider != null ? passwordProvider.equals(that.passwordProvider) : that.passwordProvider == null;
 
   }
@@ -129,6 +171,7 @@ public class MetadataStorageConnectorConfig
     result = 31 * result + (getConnectURI() != null ? getConnectURI().hashCode() : 0);
     result = 31 * result + (getUser() != null ? getUser().hashCode() : 0);
     result = 31 * result + (passwordProvider != null ? passwordProvider.hashCode() : 0);
+    result = 31 * result + (dbcpPropertiesFile != null ? dbcpPropertiesFile.hashCode() : 0);
     return result;
   }
 }

@@ -24,6 +24,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Properties;
 
 public class MetadataStorageConnectorConfigTest
 {
@@ -34,7 +35,8 @@ public class MetadataStorageConnectorConfigTest
       int port,
       String connectURI,
       String user,
-      String pwdString
+      String pwdString,
+      String dbcpPropertiesFile
   )
       throws IOException
   {
@@ -45,7 +47,8 @@ public class MetadataStorageConnectorConfigTest
         "\"port\": \"" + port + "\"," +
         "\"connectURI\": \"" + connectURI + "\"," +
         "\"user\": \"" + user + "\"," +
-        "\"password\": " + pwdString +
+        "\"password\": " + pwdString + "," +
+        "\"dbcpPropertiesFile\": \"" + dbcpPropertiesFile + "\"" +
         "}",
         MetadataStorageConnectorConfig.class
     );
@@ -60,7 +63,8 @@ public class MetadataStorageConnectorConfigTest
         4000,
         "url",
         "user",
-        "\"nothing\""
+        "\"nothing\"",
+        "abc"
     );
     MetadataStorageConnectorConfig metadataStorageConnectorConfig2 = createMetadataStorageConfig(
         true,
@@ -68,9 +72,11 @@ public class MetadataStorageConnectorConfigTest
         4000,
         "url",
         "user",
-        "\"nothing\""
+        "\"nothing\"",
+        "abc"
     );
     Assert.assertTrue(metadataStorageConnectorConfig.equals(metadataStorageConnectorConfig2));
+    Assert.assertTrue(metadataStorageConnectorConfig.hashCode() == metadataStorageConnectorConfig2.hashCode());
   }
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
@@ -85,7 +91,9 @@ public class MetadataStorageConnectorConfigTest
         "connectURI",
         "user",
         "\"nothing\"",
-        "nothing"
+        "nothing",
+        null
+
     );
   }
 
@@ -99,7 +107,8 @@ public class MetadataStorageConnectorConfigTest
         "connectURI",
         "user",
         "{\"type\":\"default\",\"password\":\"nothing\"}",
-        "nothing"
+        "nothing",
+        null
     );
   }
 
@@ -110,7 +119,8 @@ public class MetadataStorageConnectorConfigTest
       String connectURI,
       String user,
       String pwdString,
-      String pwd
+      String pwd,
+      String dbcpPropertiesFile
   ) throws Exception
   {
     MetadataStorageConnectorConfig config = jsonMapper.readValue(
@@ -120,7 +130,8 @@ public class MetadataStorageConnectorConfigTest
         "\"port\": \"" + port + "\"," +
         "\"connectURI\": \"" + connectURI + "\"," +
         "\"user\": \"" + user + "\"," +
-        "\"password\": " + pwdString +
+        "\"password\": " + pwdString + "," +
+        "\"dbcpPropertiesFile\": " + dbcpPropertiesFile +
         "}",
         MetadataStorageConnectorConfig.class
     );
@@ -130,5 +141,55 @@ public class MetadataStorageConnectorConfigTest
     Assert.assertEquals(connectURI, config.getConnectURI());
     Assert.assertEquals(user, config.getUser());
     Assert.assertEquals(pwd, config.getPassword());
+    Assert.assertEquals(dbcpPropertiesFile, config.getDbcpPropertiesFile());
+  }
+
+  @Test
+  public void testDbcpProperties() throws Exception
+  {
+    testDbcpPropertiesFile(
+        true,
+        "host",
+        1234,
+        "connectURI",
+        "user",
+        "{\"type\":\"default\",\"password\":\"nothing\"}",
+        "nothing",
+        "src/test/resources/dbcp.properties"
+    );
+  }
+  private void testDbcpPropertiesFile(
+          boolean createTables,
+          String host,
+          int port,
+          String connectURI,
+          String user,
+          String pwdString,
+          String pwd,
+          String dbcpPropertiesFile
+  ) throws Exception
+  {
+    MetadataStorageConnectorConfig config = jsonMapper.readValue(
+            "{" +
+                    "\"createTables\": \"" + createTables + "\"," +
+                    "\"host\": \"" + host + "\"," +
+                    "\"port\": \"" + port + "\"," +
+                    "\"connectURI\": \"" + connectURI + "\"," +
+                    "\"user\": \"" + user + "\"," +
+                    "\"password\": " + pwdString + "," +
+                    "\"dbcpPropertiesFile\": \"" + dbcpPropertiesFile + "\"" +
+                    "}",
+            MetadataStorageConnectorConfig.class
+    );
+
+    Assert.assertEquals(host, config.getHost());
+    Assert.assertEquals(port, config.getPort());
+    Assert.assertEquals(connectURI, config.getConnectURI());
+    Assert.assertEquals(user, config.getUser());
+    Assert.assertEquals(pwd, config.getPassword());
+    Assert.assertEquals(dbcpPropertiesFile, config.getDbcpPropertiesFile());
+    Properties dbcpProperties = config.getProperties();
+    Assert.assertEquals(dbcpProperties.getProperty("maxConnLifetimeMillis"), "1200000");
+    Assert.assertEquals(dbcpProperties.getProperty("defaultQueryTimeout"), "30000");
   }
 }

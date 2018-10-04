@@ -18,11 +18,15 @@
  */
 package org.apache.druid.metadata;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -33,7 +37,7 @@ import java.util.List;
 public class SQLMetadataConnectorTest
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule("src/test/resources/dbcp.properties");
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
@@ -139,5 +143,64 @@ public class SQLMetadataConnectorTest
           }
         }
     );
+  }
+
+  static class TestSQLMetadataConnector extends SQLMetadataConnector
+  {
+    public TestSQLMetadataConnector(
+        Supplier<MetadataStorageConnectorConfig> config,
+        Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
+    )
+    {
+      super(config, tablesConfigSupplier);
+    }
+
+    @Override
+    protected String getSerialType()
+    {
+      return null;
+    }
+
+    @Override
+    protected int getStreamingFetchSize()
+    {
+      return 0;
+    }
+
+    @Override
+    public String getQuoteString()
+    {
+      return null;
+    }
+
+    @Override
+    public boolean tableExists(Handle handle, String tableName)
+    {
+      return false;
+    }
+
+    @Override
+    public DBI getDBI()
+    {
+      return null;
+    }
+
+    @Override
+    protected BasicDataSource getDatasource()
+    {
+      return super.getDatasource();
+    }
+  }
+
+  @Test
+  public void testBasicDataSourceCreation()
+  {
+    TestSQLMetadataConnector testSQLMetadataConnector = new TestSQLMetadataConnector(
+        Suppliers.ofInstance(connector.getConfig()),
+        Suppliers.ofInstance(tablesConfig)
+    );
+    BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();
+    Assert.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
+    Assert.assertEquals((long) dataSource.getDefaultQueryTimeout(), 30000);
   }
 }

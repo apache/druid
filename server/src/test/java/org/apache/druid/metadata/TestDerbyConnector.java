@@ -30,6 +30,8 @@ import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
 import java.sql.SQLException;
 import java.util.UUID;
+import java.io.IOException;
+import java.util.Properties;
 
 public class TestDerbyConnector extends DerbyConnector
 {
@@ -83,18 +85,24 @@ public class TestDerbyConnector extends DerbyConnector
 
     public DerbyConnectorRule()
     {
-      this("druidTest" + dbSafeUUID());
+      this("druidTest" + dbSafeUUID(), null);
     }
 
+    public DerbyConnectorRule(String dbcpPropertiesFile)
+    {
+      this("druidTest" + dbSafeUUID(), dbcpPropertiesFile);
+    }
     private DerbyConnectorRule(
-        final String defaultBase
+        final String defaultBase,
+        final String dbcpPropertiesFile
     )
     {
-      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(defaultBase)));
+      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(defaultBase)), dbcpPropertiesFile);
     }
 
     public DerbyConnectorRule(
-        Supplier<MetadataStorageTablesConfig> dbTables
+        Supplier<MetadataStorageTablesConfig> dbTables,
+        String dbcpPropertiesFile
     )
     {
       this.dbTables = dbTables;
@@ -104,6 +112,13 @@ public class TestDerbyConnector extends DerbyConnector
         public String getConnectURI()
         {
           return connector.getJdbcUri();
+        }
+
+        @Override
+        public Properties getProperties() throws IOException
+        {
+          setDbcpPropertiesFile(dbcpPropertiesFile);
+          return super.getProperties();
         }
       };
     }
