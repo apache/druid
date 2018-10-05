@@ -535,7 +535,7 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"__time", "TIMESTAMP", "NO"},
-            new Object[]{"cnt", "BIGINT", "YES"},
+            new Object[]{"cnt", "BIGINT", "NO"},
             new Object[]{"dim1", "VARCHAR", "YES"},
             new Object[]{"dim2", "VARCHAR", "YES"},
             new Object[]{"m1", "FLOAT", "NO"},
@@ -565,7 +565,7 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"__time", "TIMESTAMP", "NO"},
-            new Object[]{"cnt", "BIGINT", "YES"},
+            new Object[]{"cnt", "BIGINT", "NO"},
             new Object[]{"dim1", "VARCHAR", "YES"},
             new Object[]{"dim2", "VARCHAR", "YES"},
             new Object[]{"m1", "FLOAT", "NO"},

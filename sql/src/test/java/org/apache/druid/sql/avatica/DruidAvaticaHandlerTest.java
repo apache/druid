@@ -449,7 +449,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", "YES")
+                Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -532,7 +532,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", "YES")
+                Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),

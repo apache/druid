@@ -159,7 +159,7 @@ public class RowSignature
             type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
             break;
           case LONG:
-            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, true);
+            type = Calcites.createSqlType(typeFactory, SqlTypeName.BIGINT);
             break;
           case FLOAT:
             type = Calcites.createSqlType(typeFactory, SqlTypeName.FLOAT);
