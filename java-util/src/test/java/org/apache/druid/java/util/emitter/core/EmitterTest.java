@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
@@ -53,6 +52,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /**
  */
@@ -60,25 +60,33 @@ public class EmitterTest
 {
   private static final ObjectMapper jsonMapper = new ObjectMapper();
   public static String TARGET_URL = "http://metrics.foo.bar/";
-  public static final Response OK_RESPONSE = responseBuilder(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED)
-      .accumulate(new EagerResponseBodyPart(Unpooled.wrappedBuffer("Yay".getBytes(StandardCharsets.UTF_8)), true))
-      .build();
+  public static final Response OK_RESPONSE = Stream
+      .of(responseBuilder(HttpVersion.HTTP_1_1, HttpResponseStatus.CREATED))
+      .map(b -> {
+        b.accumulate(new EagerResponseBodyPart(Unpooled.wrappedBuffer("Yay".getBytes(StandardCharsets.UTF_8)), true));
+        return b.build();
+      }).findFirst().get();
 
-  public static final Response BAD_RESPONSE = responseBuilder(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN)
-      .accumulate(new EagerResponseBodyPart(Unpooled.wrappedBuffer("Not yay".getBytes(StandardCharsets.UTF_8)), true))
-      .build();
+  public static final Response BAD_RESPONSE = Stream
+      .of(responseBuilder(HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN))
+      .map(b -> {
+        b.accumulate(new EagerResponseBodyPart(
+            Unpooled.wrappedBuffer("Not yay".getBytes(StandardCharsets.UTF_8)),
+            true
+        ));
+        return b.build();
+      }).findFirst().get();
 
   private static Response.ResponseBuilder responseBuilder(HttpVersion version, HttpResponseStatus status)
   {
-    return new Response.ResponseBuilder()
-        .accumulate(
-            new NettyResponseStatus(
-                Uri.create(TARGET_URL),
-                new DefaultAsyncHttpClientConfig.Builder().build(),
-                new DefaultHttpResponse(version, status),
-                null
-            )
-        );
+    final Response.ResponseBuilder builder = new Response.ResponseBuilder();
+    builder.accumulate(
+        new NettyResponseStatus(
+            Uri.create(TARGET_URL),
+            new DefaultHttpResponse(version, status),
+            null
+        ));
+    return builder;
   }
 
 
