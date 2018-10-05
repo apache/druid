@@ -113,6 +113,14 @@ import java.util.stream.Stream;
  * <p>
  * incremental handoff & checkpointing are not yet supported by Kinesis, but the logic is left in here
  * so in the future it's easier to implement
+ * <p>
+ * Supervisor responsible for managing the SeekableStreamIndexTasks (Kafka/Kinesis) for a single dataSource. At a high level, the class accepts a
+ * {@link SeekableStreamSupervisorSpec} which includes the stream name (topic / stream) and configuration as well as an ingestion spec which will
+ * be used to generate the indexing tasks. The run loop periodically refreshes its view of the stream's partitions
+ * and the list of running indexing tasks and ensures that all partitions are being read from and that there are enough
+ * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
+ * stream sequences.
+ * <p>
  *
  * @param <T1> partition id type
  * @param <T2> sequence number type
@@ -127,11 +135,325 @@ public abstract class SeekableStreamSupervisor<T1, T2>
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
   private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
-  protected final List<T1> partitionIds = new CopyOnWriteArrayList<>();
-  protected final Set<T1> subsequentlyDiscoveredPartitions = new HashSet<>();
+
+  // Internal data structures
+  // --------------------------------------------------------
+
+  /**
+   * A TaskGroup is the main data structure used by SeekableStreamSupervisor to organize and monitor stream partitions and
+   * indexing tasks. All the tasks in a TaskGroup should always be doing the same thing (reading the same partitions and
+   * starting from the same sequences) and if [replicas] is configured to be 1, a TaskGroup will contain a single task (the
+   * exception being if the supervisor started up and discovered and adopted some already running tasks). At any given
+   * time, there should only be up to a maximum of [taskCount] actively-reading task groups (tracked in the [taskGroups]
+   * map) + zero or more pending-completion task groups (tracked in [pendingCompletionTaskGroups]).
+   */
+  private class TaskGroup
+  {
+    final int groupId;
+
+    // This specifies the partitions and starting offsets for this task group. It is set on group creation from the data
+    // in [partitionGroups] and never changes during the lifetime of this task group, which will live until a task in
+    // this task group has completed successfully, at which point this will be destroyed and a new task group will be
+    // created with new starting offsets. This allows us to create replacement tasks for failed tasks that process the
+    // same offsets, even if the values in [partitionGroups] has been changed.
+    final ImmutableMap<T1, T2> startingSequences;
+
+    final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
+    final Optional<DateTime> minimumMessageTime;
+    final Optional<DateTime> maximumMessageTime;
+    final Set<T1> exclusiveStartSequenceNumberPartitions;
+    final TreeMap<Integer, Map<T1, T2>> checkpointSequences = new TreeMap<>();
+    final String baseSequenceName;
+    DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
+
+    TaskGroup(
+        int groupId,
+        ImmutableMap<T1, T2> startingSequences,
+        Optional<DateTime> minimumMessageTime,
+        Optional<DateTime> maximumMessageTime,
+        Set<T1> exclusiveStartSequenceNumberPartitions
+    )
+    {
+      this.groupId = groupId;
+      this.startingSequences = startingSequences;
+      this.minimumMessageTime = minimumMessageTime;
+      this.maximumMessageTime = maximumMessageTime;
+      this.checkpointSequences.put(0, startingSequences);
+      this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions != null
+                                                    ? exclusiveStartSequenceNumberPartitions
+                                                    : new HashSet<>();
+      this.baseSequenceName = generateSequenceName(startingSequences, minimumMessageTime, maximumMessageTime);
+    }
+
+    int addNewCheckpoint(Map<T1, T2> checkpoint)
+    {
+      checkpointSequences.put(checkpointSequences.lastKey() + 1, checkpoint);
+      return checkpointSequences.lastKey();
+    }
+
+    Set<String> taskIds()
+    {
+      return tasks.keySet();
+    }
+
+  }
+
+  private class TaskData
+  {
+    volatile TaskStatus status;
+    volatile DateTime startTime;
+    volatile Map<T1, T2> currentSequences = new HashMap<>();
+
+    @Override
+    public String toString()
+    {
+      return "TaskData{" +
+             "status=" + status +
+             ", startTime=" + startTime +
+             ", checkpointSequences=" + currentSequences +
+             '}';
+    }
+  }
+
+  /**
+   * Notice is used to queue tasks that are internal to the supervisor
+   */
+  private interface Notice
+  {
+    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException;
+  }
+
+  private static class StatsFromTaskResult
+  {
+    private final String groupId;
+    private final String taskId;
+    private final Map<String, Object> stats;
+
+    public StatsFromTaskResult(
+        int groupId,
+        String taskId,
+        Map<String, Object> stats
+    )
+    {
+      this.groupId = String.valueOf(groupId);
+      this.taskId = taskId;
+      this.stats = stats;
+    }
+
+    public String getGroupId()
+    {
+      return groupId;
+    }
+
+    public String getTaskId()
+    {
+      return taskId;
+    }
+
+    public Map<String, Object> getStats()
+    {
+      return stats;
+    }
+  }
+
+
+  private class RunNotice implements Notice
+  {
+    @Override
+    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+    {
+      long nowTime = System.currentTimeMillis();
+      if (nowTime - lastRunTime < MAX_RUN_FREQUENCY_MILLIS) {
+        return;
+      }
+      lastRunTime = nowTime;
+
+      runInternal();
+    }
+  }
+
+  private class GracefulShutdownNotice extends ShutdownNotice
+  {
+    @Override
+    public void handle() throws InterruptedException, ExecutionException, TimeoutException
+    {
+      gracefulShutdownInternal();
+      super.handle();
+    }
+  }
+
+  private class ShutdownNotice implements Notice
+  {
+    @Override
+    public void handle() throws InterruptedException, ExecutionException, TimeoutException
+    {
+      recordSupplier.close();
+
+      synchronized (stopLock) {
+        stopped = true;
+        stopLock.notifyAll();
+      }
+    }
+  }
+
+  private class ResetNotice implements Notice
+  {
+    final DataSourceMetadata dataSourceMetadata;
+
+    ResetNotice(DataSourceMetadata dataSourceMetadata)
+    {
+      this.dataSourceMetadata = dataSourceMetadata;
+    }
+
+    @Override
+    public void handle()
+    {
+      resetInternal(dataSourceMetadata);
+    }
+  }
+
+  protected class CheckpointNotice implements Notice
+  {
+    @Nullable
+    private final Integer nullableTaskGroupId;
+    @Deprecated
+    private final String baseSequenceName;
+    private final SeekableStreamDataSourceMetadata<T1, T2> previousCheckpoint;
+    private final SeekableStreamDataSourceMetadata<T1, T2> currentCheckpoint;
+
+    public CheckpointNotice(
+        @Nullable Integer nullableTaskGroupId,
+        @Deprecated String baseSequenceName,
+        SeekableStreamDataSourceMetadata<T1, T2> previousCheckpoint,
+        SeekableStreamDataSourceMetadata<T1, T2> currentCheckpoint
+    )
+    {
+      this.baseSequenceName = baseSequenceName;
+      this.nullableTaskGroupId = nullableTaskGroupId;
+      this.previousCheckpoint = previousCheckpoint;
+      this.currentCheckpoint = currentCheckpoint;
+    }
+
+    @Override
+    public void handle() throws ExecutionException, InterruptedException
+    {
+      // Find taskGroupId using taskId if it's null. It can be null while rolling update.
+      final int taskGroupId;
+      if (nullableTaskGroupId == null) {
+        // We search taskId in taskGroups and pendingCompletionTaskGroups sequentially. This should be fine because
+        // 1) a taskGroup can be moved from taskGroups to pendingCompletionTaskGroups in RunNotice
+        //    (see checkTaskDuration()).
+        // 2) Notices are proceesed by a single thread. So, CheckpointNotice and RunNotice cannot be processed at the
+        //    same time.
+        final java.util.Optional<Integer> maybeGroupId = taskGroups
+            .entrySet()
+            .stream()
+            .filter(entry -> {
+              final TaskGroup taskGroup = entry.getValue();
+              return taskGroup.baseSequenceName.equals(baseSequenceName);
+            })
+            .findAny()
+            .map(Entry::getKey);
+        taskGroupId = maybeGroupId.orElse(
+            pendingCompletionTaskGroups
+                .entrySet()
+                .stream()
+                .filter(entry -> {
+                  final List<TaskGroup> taskGroups = entry.getValue();
+                  return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
+                })
+                .findAny()
+                .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
+                .getKey()
+        );
+      } else {
+        taskGroupId = nullableTaskGroupId;
+      }
+
+      // check for consistency
+      // if already received request for this sequenceName and dataSourceMetadata combination then return
+      final TaskGroup taskGroup = taskGroups.get(taskGroupId);
+
+      if (isValidTaskGroup(taskGroupId, taskGroup)) {
+        final TreeMap<Integer, Map<T1, T2>> checkpoints = taskGroup.checkpointSequences;
+
+        // check validity of previousCheckpoint
+        int index = checkpoints.size();
+        for (int sequenceId : checkpoints.descendingKeySet()) {
+          Map<T1, T2> checkpoint = checkpoints.get(sequenceId);
+          // We have already verified the topic of the current checkpoint is same with that in ioConfig.
+          // See checkpoint().
+          if (checkpoint.equals(previousCheckpoint.getSeekableStreamPartitions()
+                                                  .getMap()
+          )) {
+            break;
+          }
+          index--;
+        }
+        if (index == 0) {
+          throw new ISE("No such previous checkpoint [%s] found", previousCheckpoint);
+        } else if (index < checkpoints.size()) {
+          // if the found checkpoint is not the latest one then already checkpointed by a replica
+          Preconditions.checkState(index == checkpoints.size() - 1, "checkpoint consistency failure");
+          log.info("Already checkpointed with offsets [%s]", checkpoints.lastEntry().getValue());
+          return;
+        }
+        final Map<T1, T2> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
+        taskGroup.addNewCheckpoint(newCheckpoint);
+        log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
+      }
+    }
+
+    protected boolean isValidTaskGroup(int taskGroupId, @Nullable TaskGroup taskGroup)
+    {
+      if (taskGroup == null) {
+        // taskGroup might be in pendingCompletionTaskGroups or partitionGroups
+        if (pendingCompletionTaskGroups.containsKey(taskGroupId)) {
+          log.warn(
+              "Ignoring checkpoint request because taskGroup[%d] has already stopped indexing and is waiting for "
+              + "publishing segments",
+              taskGroupId
+          );
+          return false;
+        } else if (partitionGroups.containsKey(taskGroupId)) {
+          log.warn("Ignoring checkpoint request because taskGroup[%d] is inactive", taskGroupId);
+          return false;
+        } else {
+          throw new ISE("WTH?! cannot find taskGroup [%s] among all taskGroups [%s]", taskGroupId, taskGroups);
+        }
+      }
+
+      return true;
+    }
+  }
+
+
+  // Map<{group ID}, {actively reading task group}>; see documentation for TaskGroup class
   private final ConcurrentHashMap<Integer, TaskGroup> taskGroups = new ConcurrentHashMap<>();
+
+  // After telling a taskGroup to stop reading and begin publishing a segment, it is moved from [taskGroups] to here so
+  // we can monitor its status while we queue new tasks to read the next range of offsets. This is a list since we could
+  // have multiple sets of tasks publishing at once if time-to-publish > taskDuration.
+  // Map<{group ID}, List<{pending completion task groups}>>
   private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
+
+  // The starting offset for a new partition in [partitionGroups] is initially set to NOT_SET. When a new task group
+  // is created and is assigned partitions, if the offset in [partitionGroups] is NOT_SET it will take the starting
+  // offset value from the metadata store, and if it can't find it there, from stream. Once a task begins
+  // publishing, the offset in partitionGroups will be updated to the ending offset of the publishing-but-not-yet-
+  // completed task, which will cause the next set of tasks to begin reading from where the previous task left
+  // off. If that previous task now fails, we will set the offset in [partitionGroups] back to NOT_SET which will
+  // cause successive tasks to again grab their starting offset from metadata store. This mechanism allows us to
+  // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
+  // failures during publishing.
+  // Map<{group ID}, Map<{partition ID}, {startingOffset}>>
   private final ConcurrentHashMap<Integer, ConcurrentHashMap<T1, T2>> partitionGroups = new ConcurrentHashMap<>();
+
+  protected final List<T1> partitionIds = new CopyOnWriteArrayList<>();
+  protected volatile Map<T1, T2> latestSequenceFromStream;
+  protected volatile DateTime sequenceLastUpdated;
+
+  private final Set<T1> subsequentlyDiscoveredPartitions = new HashSet<>();
   private final TaskStorage taskStorage;
   private final TaskMaster taskMaster;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
@@ -156,8 +478,6 @@ public abstract class SeekableStreamSupervisor<T1, T2>
   private final Object recordSupplierLock = new Object();
   private final T2 NOT_SET;
   private final boolean useExclusiveStartingSequence;
-  protected volatile Map<T1, T2> latestSequenceFromStream;
-  protected volatile DateTime sequenceLastUpdated;
   private boolean listenerRegistered = false;
   private long lastRunTime;
   private int initRetryCounter = 0;
@@ -271,80 +591,6 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     return suffix.toString();
   }
 
-  @VisibleForTesting
-  protected void tryInit()
-  {
-    synchronized (stateChangeLock) {
-      if (started) {
-        log.warn("SUpervisor was already started, skipping init");
-        return;
-      }
-
-      if (stopped) {
-        log.warn("Supervisor was already stopped, skipping init.");
-        return;
-      }
-
-      try {
-        recordSupplier = setupRecordSupplier();
-
-        exec.submit(
-            () -> {
-              try {
-                long pollTimeout = Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS);
-                while (!Thread.currentThread().isInterrupted() && !stopped) {
-                  final Notice notice = notices.poll(pollTimeout, TimeUnit.MILLISECONDS);
-                  if (notice == null) {
-                    continue;
-                  }
-
-                  try {
-                    notice.handle();
-                  }
-                  catch (Throwable e) {
-                    log.makeAlert(e, "KafkaSupervisor[%s] failed to handle notice", dataSource)
-                       .addData("noticeClass", notice.getClass().getSimpleName())
-                       .emit();
-                  }
-                }
-              }
-              catch (InterruptedException e) {
-                log.info("KafkaSupervisor[%s] interrupted, exiting", dataSource);
-              }
-            }
-        );
-        firstRunTime = DateTimes.nowUtc().plus(ioConfig.getStartDelay());
-        scheduledExec.scheduleAtFixedRate(
-            buildRunTask(),
-            ioConfig.getStartDelay().getMillis(),
-            Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
-            TimeUnit.MILLISECONDS
-        );
-
-        // not yet implemented in kinesis, will remove once implemented
-        scheduleReporting(reportingExec);
-
-        started = true;
-        log.info(
-            "Started KafkaSupervisor[%s], first run in [%s], with spec: [%s]",
-            dataSource,
-            ioConfig.getStartDelay(),
-            spec.toString()
-        );
-      }
-      catch (Exception e) {
-        if (recordSupplier != null) {
-          recordSupplier.close();
-        }
-        initRetryCounter++;
-        log.makeAlert(e, "Exception starting KafkaSupervisor[%s]", dataSource)
-           .emit();
-
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
 
   @Override
   public void start()
@@ -359,7 +605,10 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       }
       catch (Exception e) {
         if (!started) {
-          log.warn("First initialization attempt failed for KafkaSupervisor[%s], starting retries...", dataSource);
+          log.warn(
+              "First initialization attempt failed for SeekableStreamSupervisor[%s], starting retries...",
+              dataSource
+          );
 
           exec.submit(
               () -> {
@@ -391,15 +640,6 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       lifecycleStarted = true;
     }
   }
-
-  protected abstract RecordSupplier<T1, T2> setupRecordSupplier();
-
-  private Runnable buildRunTask()
-  {
-    return () -> notices.add(new RunNotice());
-  }
-
-  protected abstract void scheduleReporting(ScheduledExecutorService reportingExec);
 
   @Override
   public void stop(boolean stopGracefully)
@@ -467,6 +707,86 @@ public abstract class SeekableStreamSupervisor<T1, T2>
   {
     log.info("Posting ResetNotice");
     notices.add(new ResetNotice(dataSourceMetadata));
+  }
+
+
+  @VisibleForTesting
+  protected void tryInit()
+  {
+    synchronized (stateChangeLock) {
+      if (started) {
+        log.warn("SUpervisor was already started, skipping init");
+        return;
+      }
+
+      if (stopped) {
+        log.warn("Supervisor was already stopped, skipping init.");
+        return;
+      }
+
+      try {
+        recordSupplier = setupRecordSupplier();
+
+        exec.submit(
+            () -> {
+              try {
+                long pollTimeout = Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS);
+                while (!Thread.currentThread().isInterrupted() && !stopped) {
+                  final Notice notice = notices.poll(pollTimeout, TimeUnit.MILLISECONDS);
+                  if (notice == null) {
+                    continue;
+                  }
+
+                  try {
+                    notice.handle();
+                  }
+                  catch (Throwable e) {
+                    log.makeAlert(e, "SeekableStreamSupervisor[%s] failed to handle notice", dataSource)
+                       .addData("noticeClass", notice.getClass().getSimpleName())
+                       .emit();
+                  }
+                }
+              }
+              catch (InterruptedException e) {
+                log.info("SeekableStreamSupervisor[%s] interrupted, exiting", dataSource);
+              }
+            }
+        );
+        firstRunTime = DateTimes.nowUtc().plus(ioConfig.getStartDelay());
+        scheduledExec.scheduleAtFixedRate(
+            buildRunTask(),
+            ioConfig.getStartDelay().getMillis(),
+            Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
+            TimeUnit.MILLISECONDS
+        );
+
+        // not yet implemented in kinesis, will remove once implemented
+        scheduleReporting(reportingExec);
+
+        started = true;
+        log.info(
+            "Started SeekableStreamSupervisor[%s], first run in [%s], with spec: [%s]",
+            dataSource,
+            ioConfig.getStartDelay(),
+            spec.toString()
+        );
+      }
+      catch (Exception e) {
+        if (recordSupplier != null) {
+          recordSupplier.close();
+        }
+        initRetryCounter++;
+        log.makeAlert(e, "Exception starting SeekableStreamSupervisor[%s]", dataSource)
+           .emit();
+
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  private Runnable buildRunTask()
+  {
+    return () -> notices.add(new RunNotice());
   }
 
   @Override
@@ -556,13 +876,6 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     return report;
   }
 
-  protected abstract SeekableStreamSupervisorReportPayload<T1, T2> createReportPayload(
-      int numPartitions,
-      boolean includeOffsets
-  );
-
-  protected abstract Map<T1, T2> getLagPerPartition(Map<T1, T2> currentOffsets);
-
 
   @Override
   public Map<String, Map<String, Object>> getStats()
@@ -645,14 +958,6 @@ public abstract class SeekableStreamSupervisor<T1, T2>
 
     return allStats;
   }
-
-  @Override
-  public abstract void checkpoint(
-      @Nullable Integer taskGroupId,
-      String baseSequenceName,
-      DataSourceMetadata previousCheckPoint,
-      DataSourceMetadata currentCheckPoint
-  );
 
   @VisibleForTesting
   protected void runInternal()
@@ -1977,9 +2282,6 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     return builder.build();
   }
 
-  protected abstract boolean checkSequenceAvailability(@NotNull T1 partition, @NotNull T2 sequenceFromMetadata)
-      throws TimeoutException;
-
   /**
    * Queries the dataSource metadata table to see if there is a previous ending offset for this partition. If it doesn't
    * find any data, it will retrieve the latest or earliest Kafka/Kinesis offset depending on the useEarliestOffset config.
@@ -2202,6 +2504,48 @@ public abstract class SeekableStreamSupervisor<T1, T2>
         ));
   }
 
+  private SequenceNumber<T2> makeSequenceNumber(T2 seq)
+  {
+    return makeSequenceNumber(seq, false, false);
+  }
+
+
+  // exposed for testing for visibility into initialization state
+  @VisibleForTesting
+  public boolean isStarted()
+  {
+    return started;
+  }
+
+  // exposed for testing for visibility into initialization state
+  @VisibleForTesting
+  public boolean isLifecycleStarted()
+  {
+    return lifecycleStarted;
+  }
+
+  // exposed for testing for visibility into initialization state
+  @VisibleForTesting
+  public int getInitRetryCounter()
+  {
+    return initRetryCounter;
+  }
+
+  // exposed for testing to allow "bootstrap.servers" to be changed after supervisor is created
+  @VisibleForTesting
+  public SeekableStreamSupervisorIOConfig getIoConfig()
+  {
+    return ioConfig;
+  }
+
+  @Override
+  public abstract void checkpoint(
+      @Nullable Integer taskGroupId,
+      String baseSequenceName,
+      DataSourceMetadata previousCheckPoint,
+      DataSourceMetadata currentCheckPoint
+  );
+
   protected abstract SeekableStreamIOConfig createIoConfig(
       int groupId,
       Map<T1, T2> startPartitions,
@@ -2236,312 +2580,19 @@ public abstract class SeekableStreamSupervisor<T1, T2>
 
   protected abstract Map<T1, T2> createNewTaskEndPartitions(Set<T1> startPartitions);
 
-  /**
-   * Notice is used to queue tasks that are internal to the supervisor
-   */
-  private interface Notice
-  {
-    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException;
-  }
-
-  private static class StatsFromTaskResult
-  {
-    private final String groupId;
-    private final String taskId;
-    private final Map<String, Object> stats;
-
-    public StatsFromTaskResult(
-        int groupId,
-        String taskId,
-        Map<String, Object> stats
-    )
-    {
-      this.groupId = String.valueOf(groupId);
-      this.taskId = taskId;
-      this.stats = stats;
-    }
-
-    public String getGroupId()
-    {
-      return groupId;
-    }
-
-    public String getTaskId()
-    {
-      return taskId;
-    }
-
-    public Map<String, Object> getStats()
-    {
-      return stats;
-    }
-  }
-
-  private class TaskGroup
-  {
-    final int groupId;
-
-    final ImmutableMap<T1, T2> startingSequences;
-    final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
-    final Optional<DateTime> minimumMessageTime;
-    final Optional<DateTime> maximumMessageTime;
-    final Set<T1> exclusiveStartSequenceNumberPartitions;
-    final TreeMap<Integer, Map<T1, T2>> checkpointSequences = new TreeMap<>();
-    final String baseSequenceName;
-    DateTime completionTimeout;
-
-    public TaskGroup(
-        int groupId,
-        ImmutableMap<T1, T2> startingSequences,
-        Optional<DateTime> minimumMessageTime,
-        Optional<DateTime> maximumMessageTime,
-        Set<T1> exclusiveStartSequenceNumberPartitions
-    )
-    {
-      this.groupId = groupId;
-      this.startingSequences = startingSequences;
-      this.minimumMessageTime = minimumMessageTime;
-      this.maximumMessageTime = maximumMessageTime;
-      this.checkpointSequences.put(0, startingSequences);
-      this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions != null
-                                                    ? exclusiveStartSequenceNumberPartitions
-                                                    : new HashSet<>();
-      this.baseSequenceName = generateSequenceName(startingSequences, minimumMessageTime, maximumMessageTime);
-    }
-
-    int addNewCheckpoint(Map<T1, T2> checkpoint)
-    {
-      checkpointSequences.put(checkpointSequences.lastKey() + 1, checkpoint);
-      return checkpointSequences.lastKey();
-    }
-
-    public Set<String> taskIds()
-    {
-      return tasks.keySet();
-    }
-
-  }
-
-  private class TaskData
-  {
-    volatile TaskStatus status;
-    volatile DateTime startTime;
-    volatile Map<T1, T2> currentSequences = new HashMap<>();
-
-    @Override
-    public String toString()
-    {
-      return "TaskData{" +
-             "status=" + status +
-             ", startTime=" + startTime +
-             ", checkpointSequences=" + currentSequences +
-             '}';
-    }
-  }
-
-  private class RunNotice implements Notice
-  {
-    @Override
-    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
-    {
-      long nowTime = System.currentTimeMillis();
-      if (nowTime - lastRunTime < MAX_RUN_FREQUENCY_MILLIS) {
-        return;
-      }
-      lastRunTime = nowTime;
-
-      runInternal();
-    }
-  }
-
-  private class GracefulShutdownNotice extends ShutdownNotice
-  {
-    @Override
-    public void handle() throws InterruptedException, ExecutionException, TimeoutException
-    {
-      gracefulShutdownInternal();
-      super.handle();
-    }
-  }
-
-  private class ShutdownNotice implements Notice
-  {
-    @Override
-    public void handle() throws InterruptedException, ExecutionException, TimeoutException
-    {
-      recordSupplier.close();
-
-      synchronized (stopLock) {
-        stopped = true;
-        stopLock.notifyAll();
-      }
-    }
-  }
-
-  private class ResetNotice implements Notice
-  {
-    final DataSourceMetadata dataSourceMetadata;
-
-    ResetNotice(DataSourceMetadata dataSourceMetadata)
-    {
-      this.dataSourceMetadata = dataSourceMetadata;
-    }
-
-    @Override
-    public void handle()
-    {
-      resetInternal(dataSourceMetadata);
-    }
-  }
-
-  protected class CheckpointNotice implements Notice
-  {
-    @Nullable
-    private final Integer nullableTaskGroupId;
-    @Deprecated
-    private final String baseSequenceName;
-    private final SeekableStreamDataSourceMetadata<T1, T2> previousCheckpoint;
-    private final SeekableStreamDataSourceMetadata<T1, T2> currentCheckpoint;
-
-    public CheckpointNotice(
-        @Nullable Integer nullableTaskGroupId,
-        @Deprecated String baseSequenceName,
-        SeekableStreamDataSourceMetadata<T1, T2> previousCheckpoint,
-        SeekableStreamDataSourceMetadata<T1, T2> currentCheckpoint
-    )
-    {
-      this.baseSequenceName = baseSequenceName;
-      this.nullableTaskGroupId = nullableTaskGroupId;
-      this.previousCheckpoint = previousCheckpoint;
-      this.currentCheckpoint = currentCheckpoint;
-    }
-
-    @Override
-    public void handle() throws ExecutionException, InterruptedException
-    {
-      // Find taskGroupId using taskId if it's null. It can be null while rolling update.
-      final int taskGroupId;
-      if (nullableTaskGroupId == null) {
-        // We search taskId in taskGroups and pendingCompletionTaskGroups sequentially. This should be fine because
-        // 1) a taskGroup can be moved from taskGroups to pendingCompletionTaskGroups in RunNotice
-        //    (see checkTaskDuration()).
-        // 2) Notices are proceesed by a single thread. So, CheckpointNotice and RunNotice cannot be processed at the
-        //    same time.
-        final java.util.Optional<Integer> maybeGroupId = taskGroups
-            .entrySet()
-            .stream()
-            .filter(entry -> {
-              final TaskGroup taskGroup = entry.getValue();
-              return taskGroup.baseSequenceName.equals(baseSequenceName);
-            })
-            .findAny()
-            .map(Entry::getKey);
-        taskGroupId = maybeGroupId.orElse(
-            pendingCompletionTaskGroups
-                .entrySet()
-                .stream()
-                .filter(entry -> {
-                  final List<TaskGroup> taskGroups = entry.getValue();
-                  return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
-                })
-                .findAny()
-                .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
-                .getKey()
-        );
-      } else {
-        taskGroupId = nullableTaskGroupId;
-      }
-
-      // check for consistency
-      // if already received request for this sequenceName and dataSourceMetadata combination then return
-      final TaskGroup taskGroup = taskGroups.get(taskGroupId);
-
-      if (isValidTaskGroup(taskGroupId, taskGroup)) {
-        final TreeMap<Integer, Map<T1, T2>> checkpoints = taskGroup.checkpointSequences;
-
-        // check validity of previousCheckpoint
-        int index = checkpoints.size();
-        for (int sequenceId : checkpoints.descendingKeySet()) {
-          Map<T1, T2> checkpoint = checkpoints.get(sequenceId);
-          // We have already verified the topic of the current checkpoint is same with that in ioConfig.
-          // See checkpoint().
-          if (checkpoint.equals(previousCheckpoint.getSeekableStreamPartitions()
-                                                  .getMap()
-          )) {
-            break;
-          }
-          index--;
-        }
-        if (index == 0) {
-          throw new ISE("No such previous checkpoint [%s] found", previousCheckpoint);
-        } else if (index < checkpoints.size()) {
-          // if the found checkpoint is not the latest one then already checkpointed by a replica
-          Preconditions.checkState(index == checkpoints.size() - 1, "checkpoint consistency failure");
-          log.info("Already checkpointed with offsets [%s]", checkpoints.lastEntry().getValue());
-          return;
-        }
-        final Map<T1, T2> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
-        taskGroup.addNewCheckpoint(newCheckpoint);
-        log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
-      }
-    }
-
-    protected boolean isValidTaskGroup(int taskGroupId, @Nullable TaskGroup taskGroup)
-    {
-      if (taskGroup == null) {
-        // taskGroup might be in pendingCompletionTaskGroups or partitionGroups
-        if (pendingCompletionTaskGroups.containsKey(taskGroupId)) {
-          log.warn(
-              "Ignoring checkpoint request because taskGroup[%d] has already stopped indexing and is waiting for "
-              + "publishing segments",
-              taskGroupId
-          );
-          return false;
-        } else if (partitionGroups.containsKey(taskGroupId)) {
-          log.warn("Ignoring checkpoint request because taskGroup[%d] is inactive", taskGroupId);
-          return false;
-        } else {
-          throw new ISE("WTH?! cannot find taskGroup [%s] among all taskGroups [%s]", taskGroupId, taskGroups);
-        }
-      }
-
-      return true;
-    }
-  }
-
-  private SequenceNumber<T2> makeSequenceNumber(T2 seq)
-  {
-    return makeSequenceNumber(seq, false, false);
-  }
-
   protected abstract SequenceNumber<T2> makeSequenceNumber(T2 seq, boolean useExclusive, boolean isExclusive);
 
-  // exposed for testing for visibility into initialization state
-  @VisibleForTesting
-  public boolean isStarted()
-  {
-    return started;
-  }
+  protected abstract void scheduleReporting(ScheduledExecutorService reportingExec);
 
-  // exposed for testing for visibility into initialization state
-  @VisibleForTesting
-  public boolean isLifecycleStarted()
-  {
-    return lifecycleStarted;
-  }
+  protected abstract Map<T1, T2> getLagPerPartition(Map<T1, T2> currentOffsets);
 
-  // exposed for testing for visibility into initialization state
-  @VisibleForTesting
-  public int getInitRetryCounter()
-  {
-    return initRetryCounter;
-  }
+  protected abstract RecordSupplier<T1, T2> setupRecordSupplier();
 
-  // exposed for testing to allow "bootstrap.servers" to be changed after supervisor is created
-  @VisibleForTesting
-  public SeekableStreamSupervisorIOConfig getIoConfig()
-  {
-    return ioConfig;
-  }
+  protected abstract SeekableStreamSupervisorReportPayload<T1, T2> createReportPayload(
+      int numPartitions,
+      boolean includeOffsets
+  );
 
+  protected abstract boolean checkSequenceAvailability(@NotNull T1 partition, @NotNull T2 sequenceFromMetadata)
+      throws TimeoutException;
 }
