@@ -18,6 +18,7 @@
  */
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -37,10 +38,11 @@ import java.util.List;
 public class SQLMetadataConnectorTest
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule("src/test/resources/dbcp.properties");
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
+  private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   @Before
   public void setUp()
@@ -192,11 +194,46 @@ public class SQLMetadataConnectorTest
     }
   }
 
-  @Test
-  public void testBasicDataSourceCreation()
+  private MetadataStorageConnectorConfig getDbcpPropertiesFile(
+      boolean createTables,
+      String host,
+      int port,
+      String connectURI,
+      String user,
+      String pwdString,
+      String pwd,
+      String dbcpPropertiesFile
+  ) throws Exception
   {
+    return jsonMapper.readValue(
+        "{" +
+        "\"createTables\": \"" + createTables + "\"," +
+        "\"host\": \"" + host + "\"," +
+        "\"port\": \"" + port + "\"," +
+        "\"connectURI\": \"" + connectURI + "\"," +
+        "\"user\": \"" + user + "\"," +
+        "\"password\": " + pwdString + "," +
+        "\"dbcpPropertiesFile\": \"" + dbcpPropertiesFile + "\"" +
+        "}",
+        MetadataStorageConnectorConfig.class
+    );
+  }
+
+  @Test
+  public void testBasicDataSourceCreation() throws Exception
+  {
+    MetadataStorageConnectorConfig config = getDbcpPropertiesFile(
+        true,
+        "host",
+        1234,
+        "connectURI",
+        "user",
+        "{\"type\":\"default\",\"password\":\"nothing\"}",
+        "nothing",
+        "src/test/resources/dbcp.properties"
+    );
     TestSQLMetadataConnector testSQLMetadataConnector = new TestSQLMetadataConnector(
-        Suppliers.ofInstance(connector.getConfig()),
+        Suppliers.ofInstance(config),
         Suppliers.ofInstance(tablesConfig)
     );
     BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();

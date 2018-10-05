@@ -121,11 +121,6 @@ public class MetadataStorageConnectorConfig
     return dbcpPropertiesFile;
   }
 
-  void setDbcpPropertiesFile(String dbcpPropertiesFile)
-  {
-    this.dbcpPropertiesFile = dbcpPropertiesFile;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -153,9 +148,9 @@ public class MetadataStorageConnectorConfig
     if (getUser() != null ? !getUser().equals(that.getUser()) : that.getUser() != null) {
       return false;
     }
-    if (dbcpPropertiesFile == null
-        ? that.dbcpPropertiesFile != null
-        : !dbcpPropertiesFile.equals(that.dbcpPropertiesFile)) {
+    if (getDbcpPropertiesFile() == null
+        ? that.getDbcpPropertiesFile() != null
+        : !getDbcpPropertiesFile().equals(that.getDbcpPropertiesFile())) {
       return false;
     }
     return passwordProvider != null ? passwordProvider.equals(that.passwordProvider) : that.passwordProvider == null;
