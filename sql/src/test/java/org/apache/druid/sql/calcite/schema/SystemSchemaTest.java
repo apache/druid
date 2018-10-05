@@ -464,16 +464,16 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(true, enumerator.moveNext());
     Object[] row2 = enumerator.current();
     //segment 2 is published and has 2 replicas
-    Assert.assertEquals(1l, row2[9]);
-    Assert.assertEquals(2l, row2[7]);
+    Assert.assertEquals(1L, row2[9]);
+    Assert.assertEquals(2L, row2[7]);
     Assert.assertEquals(true, enumerator.moveNext());
     Assert.assertEquals(true, enumerator.moveNext());
     Assert.assertEquals(true, enumerator.moveNext());
     Assert.assertEquals(true, enumerator.moveNext());
     Object[] row6 = enumerator.current();
     //segment 6 is published and unavailable, num_replicas is 0
-    Assert.assertEquals(1l, row6[9]);
-    Assert.assertEquals(0l, row6[7]);
+    Assert.assertEquals(1L, row6[9]);
+    Assert.assertEquals(0L, row6[7]);
     Assert.assertEquals(false, enumerator.moveNext());
 
   }
