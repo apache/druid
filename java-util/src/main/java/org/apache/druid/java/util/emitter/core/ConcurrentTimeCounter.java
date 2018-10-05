@@ -79,7 +79,6 @@ public class ConcurrentTimeCounter
   public Integer getAndResetMaxTime()
   {
     long max = this.max.getAndSet(-1);
-    // If max < 0, means no times added yet, then return 0
     if (max >= 0) {
       return (int) max;
     } else {
@@ -95,7 +94,6 @@ public class ConcurrentTimeCounter
   public Integer getAndResetMinTime()
   {
     long min = this.min.getAndSet(-1);
-    // If min < 0, means no times added yet, then return 0
     if (min >= 0) {
       return (int) min;
     } else {
