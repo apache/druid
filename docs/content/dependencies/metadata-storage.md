@@ -32,6 +32,14 @@ See [mysql-metadata-storage extension documentation](../development/extensions-c
 
 See [postgresql-metadata-storage](../development/extensions-core/postgresql.html). 
 
+## Adding custom dbcp properties
+
+```properties
+druid.metadata.storage.connector.dbcpPropertiesFile=/full/path/to/dbcp.properties
+```
+
+See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-dbcp/configuration.html).
+
 ## Metadata Storage Tables
 
 ### Segments Table
