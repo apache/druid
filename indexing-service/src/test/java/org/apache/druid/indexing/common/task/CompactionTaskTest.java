@@ -273,6 +273,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -423,6 +424,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -481,6 +483,7 @@ public class CompactionTaskTest
         500000,
         1000000L,
         5L,
+        null,
         null,
         null,
         new IndexSpec(
@@ -543,6 +546,7 @@ public class CompactionTaskTest
         null,
         null,
         3,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -758,6 +762,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -847,6 +852,7 @@ public class CompactionTaskTest
             41943040, // automatically computed targetPartitionSize
             500000,
             1000000L,
+            null,
             null,
             null,
             null,

@@ -692,6 +692,7 @@ public class TaskLifecycleTest
                 null,
                 null,
                 null,
+                null,
                 indexSpec,
                 3,
                 true,
@@ -768,6 +769,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -1155,6 +1157,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
