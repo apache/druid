@@ -20,14 +20,14 @@
 package org.apache.druid.query.aggregation.bloom.types;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.FloatColumnSelector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.hive.common.util.BloomKFilter;
 
 public class FloatBloomFilterAggregatorColumnSelectorStrategy
-    implements BloomFilterAggregatorColumnSelectorStrategy<FloatColumnSelector>
+    implements BloomFilterAggregatorColumnSelectorStrategy<BaseFloatColumnValueSelector>
 {
   @Override
-  public void add(FloatColumnSelector selector, BloomKFilter bloomFilter)
+  public void add(BaseFloatColumnValueSelector selector, BloomKFilter bloomFilter)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
       bloomFilter.addFloat(selector.getFloat());

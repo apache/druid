@@ -37,6 +37,8 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.hive.common.util.BloomKFilter;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -45,6 +47,7 @@ import java.util.Objects;
 
 public class BloomFilterAggregatorFactory extends AggregatorFactory
 {
+  private static final int DEFAULT_NUM_ENTRIES = 1500;
   protected static final BloomFilterAggregatorColumnSelectorStrategyFactory STRATEGY_FACTORY =
       new BloomFilterAggregatorColumnSelectorStrategyFactory();
 
@@ -56,12 +59,12 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   public BloomFilterAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("field") final DimensionSpec field,
-      @JsonProperty("maxNumEntries") Integer maxNumEntries
+      @Nullable @JsonProperty("maxNumEntries") Integer maxNumEntries
   )
   {
     this.name = name;
     this.field = field;
-    this.maxNumEntries = maxNumEntries != null ? maxNumEntries : 1500;
+    this.maxNumEntries = maxNumEntries != null ? maxNumEntries : DEFAULT_NUM_ENTRIES;
   }
 
   @Override
@@ -98,7 +101,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
     if (rhs == null) {
       return lhs;
@@ -142,7 +145,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     try {
       return BloomKFilter.deserialize(byteBufferInputStream);
     }
-    catch (Exception ex) {
+    catch (IOException ex) {
       throw new RuntimeException("Failed to deserialize bloomK filter", ex);
     }
   }

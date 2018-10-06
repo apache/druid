@@ -36,13 +36,9 @@ import java.util.List;
 
 public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFactory
 {
-  private String fieldName;
+  private final String fieldName;
 
-  BloomFilterMergeAggregatorFactory(
-      String name,
-      String field,
-      Integer maxNumEntries
-  )
+  BloomFilterMergeAggregatorFactory(String name, String field, Integer maxNumEntries)
   {
     super(name, null, maxNumEntries);
     this.fieldName = field;

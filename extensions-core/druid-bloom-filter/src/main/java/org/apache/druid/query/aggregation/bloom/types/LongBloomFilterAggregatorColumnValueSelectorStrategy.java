@@ -20,14 +20,14 @@
 package org.apache.druid.query.aggregation.bloom.types;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.hive.common.util.BloomKFilter;
 
 public class LongBloomFilterAggregatorColumnValueSelectorStrategy
-    implements BloomFilterAggregatorColumnSelectorStrategy<LongColumnSelector>
+    implements BloomFilterAggregatorColumnSelectorStrategy<BaseLongColumnValueSelector>
 {
   @Override
-  public void add(LongColumnSelector selector, BloomKFilter bloomFilter)
+  public void add(BaseLongColumnValueSelector selector, BloomKFilter bloomFilter)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
       bloomFilter.addLong(selector.getLong());

@@ -30,7 +30,8 @@ public class BloomFilterAggregatorColumnSelectorStrategyFactory
 {
   @Override
   public BloomFilterAggregatorColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities, ColumnValueSelector selector
+      ColumnCapabilities capabilities,
+      ColumnValueSelector selector
   )
   {
     ValueType type = capabilities.getType();

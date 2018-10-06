@@ -27,13 +27,14 @@ import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColum
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.hive.common.util.BloomKFilter;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 
 public class BloomFilterBufferAggregator implements BufferAggregator
 {
-  private ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus;
-  private int maxNumEntries;
+  private final ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus;
+  private final int maxNumEntries;
 
   public BloomFilterBufferAggregator(
       ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus,
@@ -50,11 +51,11 @@ public class BloomFilterBufferAggregator implements BufferAggregator
     final ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
     BloomKFilter filter = new BloomKFilter(maxNumEntries);
-    ByteBufferBackedOutputStream wat = new ByteBufferBackedOutputStream(mutationBuffer);
+    ByteBufferBackedOutputStream outputStream = new ByteBufferBackedOutputStream(mutationBuffer);
     try {
-      BloomKFilter.serialize(wat, filter);
+      BloomKFilter.serialize(outputStream, filter);
     }
-    catch (Exception ex) {
+    catch (IOException ex) {
       throw new RuntimeException("Failed to initialize bloomK filter", ex);
     }
   }
@@ -72,7 +73,7 @@ public class BloomFilterBufferAggregator implements BufferAggregator
       ByteBufferBackedOutputStream out = new ByteBufferBackedOutputStream(buf);
       BloomKFilter.serialize(out, collector);
     }
-    catch (Exception ex) {
+    catch (IOException ex) {
       throw new RuntimeException("Failed to merge bloomK filters", ex);
     }
     finally {
@@ -87,10 +88,9 @@ public class BloomFilterBufferAggregator implements BufferAggregator
     try {
       ByteBuffer mutationBuffer = buf.duplicate();
       mutationBuffer.position(position);
-      BloomKFilter collector = BloomKFilter.deserialize(new ByteBufferInputStream(mutationBuffer));
-      return collector;
+      return BloomKFilter.deserialize(new ByteBufferInputStream(mutationBuffer));
     }
-    catch (Exception ex) {
+    catch (IOException ex) {
       throw new RuntimeException("Failed to deserialize bloomK filter", ex);
     }
   }
@@ -116,7 +116,7 @@ public class BloomFilterBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-
+    // nothing to close
   }
 
   @Override

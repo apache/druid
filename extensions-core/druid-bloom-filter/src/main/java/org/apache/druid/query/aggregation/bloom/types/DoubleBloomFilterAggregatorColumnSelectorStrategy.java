@@ -20,14 +20,14 @@
 package org.apache.druid.query.aggregation.bloom.types;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.DoubleColumnSelector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.hive.common.util.BloomKFilter;
 
 public class DoubleBloomFilterAggregatorColumnSelectorStrategy
-    implements BloomFilterAggregatorColumnSelectorStrategy<DoubleColumnSelector>
+    implements BloomFilterAggregatorColumnSelectorStrategy<BaseDoubleColumnValueSelector>
 {
   @Override
-  public void add(DoubleColumnSelector selector, BloomKFilter bloomFilter)
+  public void add(BaseDoubleColumnValueSelector selector, BloomKFilter bloomFilter)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
       bloomFilter.addDouble(selector.getDouble());

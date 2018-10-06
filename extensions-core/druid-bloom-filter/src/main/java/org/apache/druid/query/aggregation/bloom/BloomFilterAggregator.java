@@ -28,8 +28,8 @@ import javax.annotation.Nullable;
 
 public class BloomFilterAggregator implements Aggregator
 {
-  private ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus;
-  private BloomKFilter collector;
+  private final ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus;
+  private final BloomKFilter collector;
 
   public BloomFilterAggregator(
       ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus,
@@ -74,6 +74,6 @@ public class BloomFilterAggregator implements Aggregator
   @Override
   public void close()
   {
-
+    // nothing to close
   }
 }

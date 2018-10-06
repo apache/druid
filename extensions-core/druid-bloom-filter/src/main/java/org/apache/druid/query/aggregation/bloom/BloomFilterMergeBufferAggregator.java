@@ -26,17 +26,15 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.hive.common.util.BloomKFilter;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class BloomFilterMergeBufferAggregator implements BufferAggregator
 {
-  private ColumnValueSelector<BloomKFilter> selector;
-  private int maxNumEntries;
+  private final ColumnValueSelector<BloomKFilter> selector;
+  private final int maxNumEntries;
 
-  public BloomFilterMergeBufferAggregator(
-      ColumnValueSelector<BloomKFilter> selector,
-      int maxNumEntries
-  )
+  public BloomFilterMergeBufferAggregator(ColumnValueSelector<BloomKFilter> selector, int maxNumEntries)
   {
     this.selector = selector;
     this.maxNumEntries = maxNumEntries;
@@ -52,7 +50,7 @@ public class BloomFilterMergeBufferAggregator implements BufferAggregator
     try {
       BloomKFilter.serialize(outputStream, filter);
     }
-    catch (Exception ex) {
+    catch (IOException ex) {
       throw new RuntimeException("Failed to initialize bloomK filter", ex);
     }
   }
@@ -73,7 +71,7 @@ public class BloomFilterMergeBufferAggregator implements BufferAggregator
         BloomKFilter.serialize(out, collector);
       }
     }
-    catch (Exception ex) {
+    catch (IOException ex) {
       throw new RuntimeException("Failed to merge bloomK filters", ex);
     }
     finally {
@@ -88,10 +86,9 @@ public class BloomFilterMergeBufferAggregator implements BufferAggregator
     try {
       ByteBuffer mutationBuffer = buf.duplicate();
       mutationBuffer.position(position);
-      BloomKFilter collector = BloomKFilter.deserialize(new ByteBufferInputStream(mutationBuffer));
-      return collector;
+      return BloomKFilter.deserialize(new ByteBufferInputStream(mutationBuffer));
     }
-    catch (Exception ex) {
+    catch (IOException ex) {
       throw new RuntimeException("Failed to deserialize bloomK filter", ex);
     }
   }
@@ -117,7 +114,7 @@ public class BloomFilterMergeBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-
+    // nothing to close
   }
 
   @Override

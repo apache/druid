@@ -29,14 +29,14 @@ public class StringBloomFilterAggregatorColumnSelectorStrategy
   public void add(DimensionSelector selector, BloomKFilter bloomFilter)
   {
     if (selector.getRow().size() > 1) {
-      String[] strings = (String[]) selector.getObject();
-      for (String value : strings) {
+      selector.getRow().forEach(v -> {
+        String value = selector.lookupName(v);
         if (value == null) {
           bloomFilter.addBytes(null, 0, 0);
         } else {
           bloomFilter.addString(value);
         }
-      }
+      });
     } else {
       String value = (String) selector.getObject();
       if (value == null) {

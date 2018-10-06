@@ -27,13 +27,10 @@ import javax.annotation.Nullable;
 
 public class BloomFilterMergeAggregator implements Aggregator
 {
-  private ColumnValueSelector<BloomKFilter> selector;
-  private BloomKFilter collector;
+  private final ColumnValueSelector<BloomKFilter> selector;
+  private final BloomKFilter collector;
 
-  public BloomFilterMergeAggregator(
-      ColumnValueSelector<BloomKFilter> selector,
-      int maxNumEntries
-  )
+  public BloomFilterMergeAggregator(ColumnValueSelector<BloomKFilter> selector, int maxNumEntries)
   {
     this.selector = selector;
     this.collector = new BloomKFilter(maxNumEntries);
@@ -77,6 +74,6 @@ public class BloomFilterMergeAggregator implements Aggregator
   @Override
   public void close()
   {
-
+    // nothing to close
   }
 }
