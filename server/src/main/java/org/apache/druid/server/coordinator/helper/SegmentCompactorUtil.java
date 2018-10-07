@@ -40,12 +40,6 @@ class SegmentCompactorUtil
     return numCurrentSegments + numAdditionalSegments <= numTargetSegments;
   }
 
-  static boolean isProperCompactionSize(long targetCompactionSizeBytes, long totalBytesOfSegmentsToCompact)
-  {
-    return targetCompactionSizeBytes * (1 - ALLOWED_MARGIN_OF_COMPACTION_SIZE) <= totalBytesOfSegmentsToCompact &&
-           targetCompactionSizeBytes * (1 + ALLOWED_MARGIN_OF_COMPACTION_SIZE) >= totalBytesOfSegmentsToCompact;
-  }
-
   /**
    * Removes {@code smallInterval} from {@code largeInterval}.  The end of both intervals should be same.
    *

@@ -168,7 +168,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         config
     );
 
-    if (segmentsToCompact.size() > 1) {
+    if (segmentsToCompact.getSize() > 1) {
       queue.add(new QueueEntry(segmentsToCompact.segments));
     }
   }
@@ -280,7 +280,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             final DataSegment segment = chunks.get(0).getObject();
             log.warn(
                 "shardSize[%d] for dataSource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
-                + " Contitnue to the next shard.",
+                + " Continue to the next shard.",
                 timeChunkSizeBytes,
                 segment.getDataSource(),
                 segment.getInterval(),
@@ -292,7 +292,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                 "The number of segments[%d] for dataSource[%s] and interval[%s] is larger than "
                 + "numTargetCompactSegments[%d]. If you see lots of shards are being skipped due to too many "
                 + "segments, consider increasing 'numTargetCompactionSegments' and "
-                + "'druid.indexer.runner.maxZnodeBytes'. Contitnue to the next shard.",
+                + "'druid.indexer.runner.maxZnodeBytes'. Continue to the next shard.",
                 chunks.size(),
                 segment.getDataSource(),
                 segment.getInterval(),
@@ -375,7 +375,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     private final Interval interval; // whole interval for all segments
     private final List<DataSegment> segments;
 
-    QueueEntry(List<DataSegment> segments)
+    private QueueEntry(List<DataSegment> segments)
     {
       Preconditions.checkArgument(segments != null && !segments.isEmpty());
       Collections.sort(segments);
@@ -386,7 +386,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       this.segments = segments;
     }
 
-    String getDataSource()
+    private String getDataSource()
     {
       return segments.get(0).getDataSource();
     }
@@ -396,17 +396,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     private final List<DataSegment> segments;
 
-    SegmentsToCompact(List<DataSegment> segments)
+    private SegmentsToCompact(List<DataSegment> segments)
     {
       this.segments = segments;
     }
 
-    List<DataSegment> getSegments()
-    {
-      return segments;
-    }
-
-    int size()
+    private int getSize()
     {
       return segments.size();
     }
