@@ -263,6 +263,7 @@ public class CompactionTask extends AbstractTask
     } else {
       log.info("Generated [%d] compaction task specs", indexTaskSpecs.size());
 
+      int failCnt = 0;
       for (IndexTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         log.info("Running indexSpec: " + json);
@@ -270,15 +271,17 @@ public class CompactionTask extends AbstractTask
         try {
           final TaskStatus eachResult = eachSpec.run(toolbox);
           if (!eachResult.isSuccess()) {
+            failCnt++;
             log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
           }
         }
         catch (Exception e) {
+          failCnt++;
           log.warn(e, "Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
         }
       }
 
-      return TaskStatus.success(getId());
+      return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
   }
 
