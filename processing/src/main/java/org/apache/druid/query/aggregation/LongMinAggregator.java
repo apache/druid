@@ -71,12 +71,6 @@ public class LongMinAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new LongMinAggregator(selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

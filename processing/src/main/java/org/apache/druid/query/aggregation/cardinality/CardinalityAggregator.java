@@ -127,12 +127,6 @@ public class CardinalityAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new CardinalityAggregator(name, selectorPluses, byRow);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup
