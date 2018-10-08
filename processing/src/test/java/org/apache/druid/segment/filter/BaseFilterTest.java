@@ -180,62 +180,20 @@ public abstract class BaseFilterTest
     );
 
     final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers = ImmutableMap.of(
-        "incremental", new Function<IndexBuilder, Pair<StorageAdapter, Closeable>>()
-        {
-          @Override
-          public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
-          {
-            final IncrementalIndex index = input.buildIncrementalIndex();
-            return Pair.of(
-                new IncrementalIndexStorageAdapter(index),
-                new Closeable()
-                {
-                  @Override
-                  public void close()
-                  {
-                    index.close();
-                  }
-                }
-            );
-          }
+        "incremental",
+        input -> {
+          final IncrementalIndex index = input.buildIncrementalIndex();
+          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
         },
-        "mmapped", new Function<IndexBuilder, Pair<StorageAdapter, Closeable>>()
-        {
-          @Override
-          public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
-          {
-            final QueryableIndex index = input.buildMMappedIndex();
-            return Pair.of(
-                new QueryableIndexStorageAdapter(index),
-                new Closeable()
-                {
-                  @Override
-                  public void close()
-                  {
-                    index.close();
-                  }
-                }
-            );
-          }
+        "mmapped",
+        input -> {
+          final QueryableIndex index = input.buildMMappedIndex();
+          return Pair.of(new QueryableIndexStorageAdapter(index), index);
         },
-        "mmappedMerged", new Function<IndexBuilder, Pair<StorageAdapter, Closeable>>()
-        {
-          @Override
-          public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
-          {
-            final QueryableIndex index = input.buildMMappedMergedIndex();
-            return Pair.of(
-                new QueryableIndexStorageAdapter(index),
-                new Closeable()
-                {
-                  @Override
-                  public void close()
-                  {
-                    index.close();
-                  }
-                }
-            );
-          }
+        "mmappedMerged",
+        input -> {
+          final QueryableIndex index = input.buildMMappedMergedIndex();
+          return Pair.of(new QueryableIndexStorageAdapter(index), index);
         }
     );
 

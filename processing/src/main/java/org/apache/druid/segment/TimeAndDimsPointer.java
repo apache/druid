@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * TimeAndDimsPointer is used in conjunction with {@link TimeAndDimsIterator}, it's an _immutable_ object that points to
@@ -178,9 +179,9 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
     throw new UnsupportedOperationException("Should not compute hashCode() on TimeAndDimsPointer");
   }
 
-  Object[] getDimensionValuesForDebug()
+  List<Object> getDimensionValuesForDebug()
   {
-    return Arrays.stream(dimensionSelectors).map(ColumnValueSelector::getObject).toArray();
+    return Arrays.stream(dimensionSelectors).map(ColumnValueSelector::getObject).collect(Collectors.toList());
   }
 
   @Override
@@ -198,9 +199,6 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
     LinkedHashMap<String, Object> result = new LinkedHashMap<>();
     for (int i = 0; i < getNumDimensions(); i++) {
       Object value = dimensionSelectors[i].getObject();
-      if (value instanceof Object[]) {
-        value = Arrays.asList((Object[]) value);
-      }
       result.put(dimensionHandlers.get(i).getDimensionName(), value);
     }
     return result;

@@ -21,11 +21,11 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
-import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;

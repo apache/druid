@@ -132,7 +132,7 @@ public class OverlordResourceTestClient
           {
           }
       );
-      return taskStatusResponse.getStatus().getState();
+      return taskStatusResponse.getStatus().getStatusCode();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

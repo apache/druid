@@ -26,13 +26,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Query;
-import static org.apache.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
-import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
-import static org.apache.druid.query.QueryRunnerTestHelper.commonDoubleAggregators;
-import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
-import static org.apache.druid.query.QueryRunnerTestHelper.fullOnInterval;
-import static org.apache.druid.query.QueryRunnerTestHelper.indexMetric;
-import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -47,6 +40,14 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Collections;
+
+import static org.apache.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
+import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
+import static org.apache.druid.query.QueryRunnerTestHelper.commonDoubleAggregators;
+import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
+import static org.apache.druid.query.QueryRunnerTestHelper.fullOnInterval;
+import static org.apache.druid.query.QueryRunnerTestHelper.indexMetric;
+import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
 
 public class MaterializedViewQueryTest 
 {

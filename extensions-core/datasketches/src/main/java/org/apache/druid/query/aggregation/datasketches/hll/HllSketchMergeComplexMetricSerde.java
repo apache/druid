@@ -19,14 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-
-import org.apache.commons.codec.binary.Base64;
-
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.hll.HllSketch;
-
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.GenericColumnSerializer;
@@ -38,6 +33,9 @@ import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
 {
@@ -80,7 +78,7 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(final ByteBuffer buf, final ColumnBuilder columnBuilder)
   {
-    columnBuilder.setComplexColumn(
+    columnBuilder.setComplexColumnSupplier(
         new ComplexColumnPartSupplier(
             getTypeName(),
             GenericIndexed.read(buf, HllSketchObjectStrategy.STRATEGY, columnBuilder.getFileMapper())

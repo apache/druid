@@ -20,9 +20,9 @@
 package org.apache.druid.emitter.statsd;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.StatsDClient;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Test;
 
 import static org.easymock.EasyMock.createMock;

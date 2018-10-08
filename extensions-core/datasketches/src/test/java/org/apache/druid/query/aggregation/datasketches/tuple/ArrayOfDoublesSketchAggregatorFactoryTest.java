@@ -19,16 +19,14 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
-
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class ArrayOfDoublesSketchAggregatorFactoryTest
 {

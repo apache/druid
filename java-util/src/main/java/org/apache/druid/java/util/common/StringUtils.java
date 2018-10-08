@@ -24,9 +24,11 @@ import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.IllegalFormatException;
 import java.util.Locale;
 
@@ -161,6 +163,16 @@ public class StringUtils
     return s;
   }
 
+  public static String urlEncode(String s)
+  {
+    try {
+      return URLEncoder.encode(s, "UTF-8");
+    }
+    catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private static String removeChar(String s, char c, int firstOccurranceIndex)
   {
     StringBuilder sb = new StringBuilder(s.length() - 1);
@@ -180,6 +192,7 @@ public class StringUtils
    * irrelevant to null handling of the data.
    *
    * @param string the string to test and possibly return
+   *
    * @return {@code string} itself if it is non-null; {@code ""} if it is null
    */
   public static String nullToEmptyNonDruidDataString(@Nullable String string)
@@ -195,8 +208,9 @@ public class StringUtils
    * irrelevant to null handling of the data.
    *
    * @param string the string to test and possibly return
+   *
    * @return {@code string} itself if it is nonempty; {@code null} if it is
-   *     empty or null
+   * empty or null
    */
   @Nullable
   public static String emptyToNullNonDruidDataString(@Nullable String string)
@@ -204,5 +218,17 @@ public class StringUtils
     //CHECKSTYLE.OFF: Regexp
     return Strings.emptyToNull(string);
     //CHECKSTYLE.ON: Regexp
+  }
+
+  /**
+   * Convert an input to base 64 and return the utf8 string of that byte array
+   *
+   * @param input The string to convert to base64
+   *
+   * @return the base64 of the input in string form
+   */
+  public static String utf8Base64(String input)
+  {
+    return fromUtf8(Base64.getEncoder().encode(toUtf8(input)));
   }
 }

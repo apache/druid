@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -30,6 +31,7 @@ public class ComplexMetrics
 {
   private static final Map<String, ComplexMetricSerde> complexSerializers = Maps.newHashMap();
 
+  @Nullable
   public static ComplexMetricSerde getSerdeForType(String type)
   {
     return complexSerializers.get(type);

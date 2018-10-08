@@ -62,7 +62,7 @@ public class ITTLSTest
 
   private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
 
-  private static final int MAX_BROKEN_PIPE_RETRIES = 30;
+  private static final int MAX_CONNECTION_EXCEPTION_RETRIES = 30;
 
   @Inject
   IntegrationTestingConfig config;
@@ -396,10 +396,11 @@ public class ITTLSTest
       catch (RuntimeException re) {
         Throwable rootCause = Throwables.getRootCause(re);
 
-        if (rootCause instanceof IOException && "Broken pipe".equals(rootCause.getMessage())) {
-          if (retries > MAX_BROKEN_PIPE_RETRIES) {
+        if (rootCause instanceof IOException && ("Broken pipe".equals(rootCause.getMessage())
+                                                 || "Connection reset by peer".contains(rootCause.getMessage()))) {
+          if (retries > MAX_CONNECTION_EXCEPTION_RETRIES) {
             Assert.fail(StringUtils.format(
-                "Broken pipe retries exhausted, test failed, did not get %s.",
+                "Broken pipe / connection reset retries exhausted, test failed, did not get %s.",
                 expectedException
             ));
           } else {

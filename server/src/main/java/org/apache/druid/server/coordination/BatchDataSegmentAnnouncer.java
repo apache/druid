@@ -29,6 +29,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,7 +39,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.curator.utils.ZKPaths;
 
 import javax.annotation.Nullable;
 import java.io.IOException;

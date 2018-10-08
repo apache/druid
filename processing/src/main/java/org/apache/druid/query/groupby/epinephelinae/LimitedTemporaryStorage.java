@@ -21,10 +21,10 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.commons.io.FileUtils;
 
 import java.io.Closeable;
 import java.io.File;

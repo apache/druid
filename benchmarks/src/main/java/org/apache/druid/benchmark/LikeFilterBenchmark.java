@@ -35,8 +35,8 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -155,7 +155,7 @@ public class LikeFilterBenchmark
     selector = new BitmapIndexSelector()
     {
       @Override
-      public Indexed<String> getDimensionValues(String dimension)
+      public CloseableIndexed<String> getDimensionValues(String dimension)
       {
         return dictionary;
       }

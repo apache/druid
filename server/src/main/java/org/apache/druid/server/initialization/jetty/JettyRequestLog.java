@@ -19,12 +19,11 @@
 
 package org.apache.druid.server.initialization.jetty;
 
+import org.apache.druid.java.util.common.logger.Logger;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
-
-import org.apache.druid.java.util.common.logger.Logger;
 
 
 public class JettyRequestLog extends AbstractLifeCycle implements RequestLog

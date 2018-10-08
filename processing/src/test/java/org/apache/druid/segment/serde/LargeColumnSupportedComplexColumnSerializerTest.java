@@ -28,8 +28,8 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ObjectColumnSelector;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
@@ -119,8 +119,8 @@ public class LargeColumnSupportedComplexColumnSerializerTest
             .setFileMapper(mapper);
         serde.deserializeColumn(mapper.mapFile("test"), builder);
 
-        Column column = builder.build();
-        ComplexColumn complexColumn = column.getComplexColumn();
+        ColumnHolder columnHolder = builder.build();
+        ComplexColumn complexColumn = (ComplexColumn) columnHolder.getColumn();
         HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
         for (int i = 0; i < aCase; i++) {

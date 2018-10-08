@@ -29,7 +29,6 @@ import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
-import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
@@ -133,31 +132,19 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
   @Override
   public Node implement(InterpreterImplementor implementor)
   {
-    final Sink sink = implementor.interpreter.sink(this);
-    return new Node()
-    {
-      @Override
-      public void run()
-      {
-        runQuery().accumulate(
-            sink,
-            new Accumulator<Sink, Object[]>()
-            {
-              @Override
-              public Sink accumulate(final Sink theSink, final Object[] in)
-              {
-                try {
-                  theSink.send(Row.of(in));
-                }
-                catch (InterruptedException e) {
-                  throw Throwables.propagate(e);
-                }
-                return theSink;
-              }
-            }
-        );
-      }
-    };
+    final Sink sink = implementor.compiler.sink(this);
+    return () -> runQuery().accumulate(
+        sink,
+        (Sink theSink, Object[] in) -> {
+          try {
+            theSink.send(Row.of(in));
+          }
+          catch (InterruptedException e) {
+            throw Throwables.propagate(e);
+          }
+          return theSink;
+        }
+    );
   }
 
   @Override

@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import java.nio.ByteBuffer;
-
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+
+import java.nio.ByteBuffer;
 
 public class DoublesSketchNoOpBufferAggregator implements BufferAggregator
 {

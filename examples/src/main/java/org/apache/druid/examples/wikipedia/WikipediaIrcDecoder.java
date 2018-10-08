@@ -27,12 +27,10 @@ import com.google.common.collect.Maps;
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.Omni;
-
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.logger.Logger;
-
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 
 import java.io.File;

@@ -71,13 +71,11 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleQueryableIndex;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ComplexColumn;
-import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.GenericColumn;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -171,7 +169,7 @@ public class CompactionTaskTest
     DIMENSIONS = new HashMap<>();
     AGGREGATORS = new HashMap<>();
 
-    DIMENSIONS.put(Column.TIME_COLUMN_NAME, new LongDimensionSchema(Column.TIME_COLUMN_NAME));
+    DIMENSIONS.put(ColumnHolder.TIME_COLUMN_NAME, new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME));
     DIMENSIONS.put(TIMESTAMP_COLUMN, new LongDimensionSchema(TIMESTAMP_COLUMN));
     for (int i = 0; i < 5; i++) {
       final StringDimensionSchema schema = new StringDimensionSchema(
@@ -272,6 +270,7 @@ public class CompactionTaskTest
         null, // null to compute targetPartitionSize automatically
         500000,
         1000000L,
+        null,
         null,
         null,
         null,
@@ -425,6 +424,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -483,6 +483,7 @@ public class CompactionTaskTest
         500000,
         1000000L,
         5L,
+        null,
         null,
         null,
         new IndexSpec(
@@ -545,6 +546,7 @@ public class CompactionTaskTest
         null,
         null,
         3,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -760,6 +762,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -849,6 +852,7 @@ public class CompactionTaskTest
             41943040, // automatically computed targetPartitionSize
             500000,
             1000000L,
+            null,
             null,
             null,
             null,
@@ -1024,16 +1028,16 @@ public class CompactionTaskTest
         Map<DataSegment, File> segmentFileMap
     )
     {
-      super(mapper, OffHeapMemorySegmentWriteOutMediumFactory.instance(), () -> 0);
+      super(mapper, () -> 0);
 
       queryableIndexMap = new HashMap<>(segmentFileMap.size());
       for (Entry<DataSegment, File> entry : segmentFileMap.entrySet()) {
         final DataSegment segment = entry.getKey();
         final List<String> columnNames = new ArrayList<>(segment.getDimensions().size() + segment.getMetrics().size());
-        columnNames.add(Column.TIME_COLUMN_NAME);
+        columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         columnNames.addAll(segment.getDimensions());
         columnNames.addAll(segment.getMetrics());
-        final Map<String, Column> columnMap = new HashMap<>(columnNames.size());
+        final Map<String, ColumnHolder> columnMap = new HashMap<>(columnNames.size());
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
@@ -1059,7 +1063,7 @@ public class CompactionTaskTest
             entry.getValue(),
             new SimpleQueryableIndex(
                 segment.getInterval(),
-                new ListIndexed<>(segment.getDimensions(), String.class),
+                new ListIndexed<>(segment.getDimensions()),
                 null,
                 columnMap,
                 null,
@@ -1101,17 +1105,17 @@ public class CompactionTaskTest
     }
   }
 
-  private static Column createColumn(DimensionSchema dimensionSchema)
+  private static ColumnHolder createColumn(DimensionSchema dimensionSchema)
   {
     return new TestColumn(IncrementalIndex.TYPE_MAP.get(dimensionSchema.getValueType()));
   }
 
-  private static Column createColumn(AggregatorFactory aggregatorFactory)
+  private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
     return new TestColumn(ValueType.fromString(aggregatorFactory.getTypeName()));
   }
 
-  private static class TestColumn implements Column
+  private static class TestColumn implements ColumnHolder
   {
     private final ColumnCapabilities columnCapabilities;
 
@@ -1138,19 +1142,13 @@ public class CompactionTaskTest
     }
 
     @Override
-    public DictionaryEncodedColumn getDictionaryEncoding()
+    public BaseColumn getColumn()
     {
       return null;
     }
 
     @Override
-    public GenericColumn getGenericColumn()
-    {
-      return null;
-    }
-
-    @Override
-    public ComplexColumn getComplexColumn()
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
     {
       return null;
     }
@@ -1163,12 +1161,6 @@ public class CompactionTaskTest
 
     @Override
     public SpatialIndex getSpatialIndex()
-    {
-      return null;
-    }
-
-    @Override
-    public SettableColumnValueSelector makeSettableColumnValueSelector()
     {
       return null;
     }

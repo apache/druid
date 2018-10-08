@@ -39,7 +39,7 @@ class DoublesColumnWithNulls extends DoublesColumn
   }
 
   @Override
-  public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return column.makeColumnValueSelector(offset, nullValueBitmap);
   }

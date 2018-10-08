@@ -29,6 +29,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.HttpServerInventoryViewResource;
@@ -66,7 +67,6 @@ import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
@@ -86,7 +86,6 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.apache.druid.server.router.TieredBrokerConfig;
-import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 
 import java.util.ArrayList;
@@ -208,10 +207,6 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.merge.on",
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentMerger.class
-            ).addConditionBinding(
-                "druid.coordinator.conversion.on",
-                Predicates.equalTo("true"),
-                DruidCoordinatorVersionConverter.class
             ).addConditionBinding(
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),

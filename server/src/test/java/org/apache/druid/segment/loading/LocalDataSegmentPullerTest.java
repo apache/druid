@@ -20,8 +20,8 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.io.Files;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.CompressionUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

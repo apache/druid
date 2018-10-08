@@ -21,13 +21,13 @@ package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Key;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigTesterBase;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.curator.utils.ZKPaths;
 import org.junit.Assert;
 import org.junit.Test;
 

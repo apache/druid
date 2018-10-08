@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -86,7 +85,7 @@ public class DimensionConverter
         log.info("Using metric dimensions at types at [%s]", dimensionMapPath);
         is = new FileInputStream(new File(dimensionMapPath));
       }
-      return mapper.reader(new TypeReference<Map<String, StatsDMetric>>()
+      return mapper.readerFor(new TypeReference<Map<String, StatsDMetric>>()
       {
       }).readValue(is);
     }

@@ -19,10 +19,9 @@
 
 package org.apache.druid.curator;
 
+import org.apache.druid.guice.JsonConfigTesterBase;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.apache.druid.guice.JsonConfigTesterBase;
 
 public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
 {

@@ -203,6 +203,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       {
         private final AtomicLong totalByteCount = new AtomicLong(0);
         private final AtomicLong queuedByteCount = new AtomicLong(0);
+        private final AtomicLong channelSuspendedTime = new AtomicLong(0);
         private final BlockingQueue<InputStreamHolder> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
@@ -244,8 +245,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           final long currentQueuedByteCount = queuedByteCount.addAndGet(-holder.getLength());
           if (usingBackpressure && currentQueuedByteCount < maxQueuedBytes) {
-            Preconditions.checkNotNull(trafficCopRef.get(), "No TrafficCop, how can this be?")
-                         .resume(holder.getChunkNum());
+            long backPressureTime = Preconditions.checkNotNull(trafficCopRef.get(), "No TrafficCop, how can this be?")
+                                                 .resume(holder.getChunkNum());
+            channelSuspendedTime.addAndGet(backPressureTime);
           }
 
           return holder.getStream();
@@ -382,6 +384,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
           responseMetrics.reportNodeTime(nodeTimeNs);
           responseMetrics.reportNodeBytes(totalByteCount.get());
+
+          if (usingBackpressure) {
+            responseMetrics.reportBackPressureTime(channelSuspendedTime.get());
+          }
+
           responseMetrics.emit(emitter);
           synchronized (done) {
             try {

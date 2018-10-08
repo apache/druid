@@ -22,7 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
@@ -160,7 +160,7 @@ public interface DimensionIndexer
    *
    * @return Sorted index of actual values
    */
-  Indexed<ActualType> getSortedIndexedValues();
+  CloseableIndexed<ActualType> getSortedIndexedValues();
 
 
   /**
@@ -268,22 +268,16 @@ public interface DimensionIndexer
    */
   int getUnsortedEncodedKeyComponentHashCode(@Nullable EncodedKeyComponentType key);
 
-  boolean LIST = true;
-  boolean ARRAY = false;
-
   /**
    * Given a row value array from a Row key, as described in the documentation for
-   * compareUnsortedEncodedKeyComponents(), convert the unsorted encoded values to a list or array of actual values.
+   * {@link #compareUnsortedEncodedKeyComponents}, convert the unsorted encoded values to a list of actual values.
    *
-   * If the key has one element, this method should return a single Object instead of an array or list, ignoring
-   * the asList parameter.
+   * If the key has one element, this method should return a single Object instead of a list.
    *
    * @param key dimension value array from a Row key
-   * @param asList if true, return an array; if false, return a list
-   * @return single value, array, or list containing the actual values corresponding to the encoded values
-   *         in the input array
+   * @return single value or list containing the actual values corresponding to the encoded values in the input array
    */
-  Object convertUnsortedEncodedKeyComponentToActualArrayOrList(EncodedKeyComponentType key, boolean asList);
+  Object convertUnsortedEncodedKeyComponentToActualList(EncodedKeyComponentType key);
 
   /**
    * Converts dictionary-encoded row values from unspecified (random) encoding order, to sorted encoding. This step

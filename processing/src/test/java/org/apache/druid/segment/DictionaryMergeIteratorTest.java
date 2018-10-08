@@ -20,8 +20,8 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.Iterators;
-import org.apache.druid.segment.data.ArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.data.ListIndexed;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,11 +39,11 @@ public class DictionaryMergeIteratorTest
     String[] s3 = {"a", "d", "f"};        // 0 3 5
     String[] s4 = {"a", "b", "c"};
     String[] s5 = {"a", "b", "c", "d", "e", "f"};
-    Indexed<String> i1 = new ArrayIndexed<String>(s1, String.class);
-    Indexed<String> i2 = new ArrayIndexed<String>(s2, String.class);
-    Indexed<String> i3 = new ArrayIndexed<String>(s3, String.class);
-    Indexed<String> i4 = new ArrayIndexed<String>(s4, String.class);
-    Indexed<String> i5 = new ArrayIndexed<String>(s5, String.class);
+    Indexed<String> i1 = new ListIndexed<String>(s1);
+    Indexed<String> i2 = new ListIndexed<String>(s2);
+    Indexed<String> i3 = new ListIndexed<String>(s3);
+    Indexed<String> i4 = new ListIndexed<String>(s4);
+    Indexed<String> i5 = new ListIndexed<String>(s5);
 
     IndexMerger.DictionaryMergeIterator iterator = new IndexMerger.DictionaryMergeIterator(new Indexed[]{i1, i2, i3, i4, i5}, false);
 

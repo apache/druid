@@ -112,7 +112,7 @@ public class IngestSegmentFirehoseTest
 
   public IngestSegmentFirehoseTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexIO = TestHelper.getTestIndexIO();
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   }
 

@@ -22,9 +22,9 @@ package org.apache.druid.emitter.opentsdb;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -104,7 +104,7 @@ public class EventConverter
         log.info("Using default metric map located at [%s]", metricMapPath);
         is = new FileInputStream(new File(metricMapPath));
       }
-      return mapper.reader(new TypeReference<Map<String, Set<String>>>()
+      return mapper.readerFor(new TypeReference<Map<String, Set<String>>>()
       {
       }).readValue(is);
     }

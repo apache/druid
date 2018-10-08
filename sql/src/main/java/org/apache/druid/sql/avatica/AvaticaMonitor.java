@@ -19,16 +19,16 @@
 
 package org.apache.druid.sql.avatica;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.calcite.avatica.metrics.Counter;
 import org.apache.calcite.avatica.metrics.Gauge;
 import org.apache.calcite.avatica.metrics.Histogram;
 import org.apache.calcite.avatica.metrics.Meter;
 import org.apache.calcite.avatica.metrics.MetricsSystem;
 import org.apache.calcite.avatica.metrics.Timer;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.AbstractMonitor;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

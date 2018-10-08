@@ -31,17 +31,20 @@ public class SqlQuery
 {
   private final String query;
   private final ResultFormat resultFormat;
+  private final boolean header;
   private final Map<String, Object> context;
 
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
       @JsonProperty("resultFormat") final ResultFormat resultFormat,
+      @JsonProperty("header") final boolean header,
       @JsonProperty("context") final Map<String, Object> context
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.resultFormat = resultFormat == null ? ResultFormat.OBJECT : resultFormat;
+    this.header = header;
     this.context = context == null ? ImmutableMap.of() : context;
   }
 
@@ -55,6 +58,12 @@ public class SqlQuery
   public ResultFormat getResultFormat()
   {
     return resultFormat;
+  }
+
+  @JsonProperty("header")
+  public boolean includeHeader()
+  {
+    return header;
   }
 
   @JsonProperty
@@ -73,7 +82,8 @@ public class SqlQuery
       return false;
     }
     final SqlQuery sqlQuery = (SqlQuery) o;
-    return Objects.equals(query, sqlQuery.query) &&
+    return header == sqlQuery.header &&
+           Objects.equals(query, sqlQuery.query) &&
            resultFormat == sqlQuery.resultFormat &&
            Objects.equals(context, sqlQuery.context);
   }
@@ -81,7 +91,7 @@ public class SqlQuery
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, resultFormat, context);
+    return Objects.hash(query, resultFormat, header, context);
   }
 
   @Override
@@ -90,6 +100,7 @@ public class SqlQuery
     return "SqlQuery{" +
            "query='" + query + '\'' +
            ", resultFormat=" + resultFormat +
+           ", header=" + header +
            ", context=" + context +
            '}';
   }

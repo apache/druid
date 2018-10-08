@@ -31,33 +31,38 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-public class LargeColumnSupportedComplexColumnSerializer implements GenericColumnSerializer
+public class LargeColumnSupportedComplexColumnSerializer<T> implements GenericColumnSerializer<T>
 {
   @PublicApi
-  public static LargeColumnSupportedComplexColumnSerializer create(
+  public static <T> LargeColumnSupportedComplexColumnSerializer<T> create(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ObjectStrategy strategy
   )
   {
-    return new LargeColumnSupportedComplexColumnSerializer(segmentWriteOutMedium, filenameBase, strategy);
+    return new LargeColumnSupportedComplexColumnSerializer<>(segmentWriteOutMedium, filenameBase, strategy);
   }
 
-  public static LargeColumnSupportedComplexColumnSerializer createWithColumnSize(
+  public static <T> LargeColumnSupportedComplexColumnSerializer<T> createWithColumnSize(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ObjectStrategy strategy,
       int columnSize
   )
   {
-    return new LargeColumnSupportedComplexColumnSerializer(segmentWriteOutMedium, filenameBase, strategy, columnSize);
+    return new LargeColumnSupportedComplexColumnSerializer<>(
+        segmentWriteOutMedium,
+        filenameBase,
+        strategy,
+        columnSize
+    );
   }
 
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ObjectStrategy strategy;
   private final int columnSize;
-  private GenericIndexedWriter writer;
+  private GenericIndexedWriter<T> writer;
 
   private LargeColumnSupportedComplexColumnSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -95,7 +100,7 @@ public class LargeColumnSupportedComplexColumnSerializer implements GenericColum
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<? extends T> selector) throws IOException
   {
     writer.write(selector.getObject());
   }

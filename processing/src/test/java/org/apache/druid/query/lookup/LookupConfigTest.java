@@ -41,7 +41,7 @@ public class LookupConfigTest
     LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
     Assert.assertEquals(
         lookupConfig,
-        mapper.reader(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig))
+        mapper.readerFor(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig))
     );
   }
 

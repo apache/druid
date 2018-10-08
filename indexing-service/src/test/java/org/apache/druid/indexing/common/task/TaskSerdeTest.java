@@ -40,9 +40,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.CompressionFactory;
-import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
@@ -52,7 +49,6 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Plumber;
 import org.apache.druid.segment.realtime.plumber.PlumberSchool;
-import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -64,7 +60,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 public class TaskSerdeTest
@@ -198,6 +193,7 @@ public class TaskSerdeTest
                 null,
                 9999,
                 null,
+                null,
                 indexSpec,
                 3,
                 true,
@@ -279,6 +275,7 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -452,61 +449,6 @@ public class TaskSerdeTest
 
     Assert.assertEquals("foo", task3.getDataSource());
     Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task3.getInterval());
-  }
-
-  @Test
-  public void testVersionConverterTaskSerde() throws Exception
-  {
-    final ConvertSegmentTask task = ConvertSegmentTask.create(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2010-01-01/P1D")).version("1234").build(),
-        null,
-        false,
-        true,
-        TmpFileSegmentWriteOutMediumFactory.instance(),
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final ConvertSegmentTask task2 = (ConvertSegmentTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getSegment(), task2.getSegment());
-    Assert.assertEquals(task.getSegmentWriteOutMediumFactory(), task2.getSegmentWriteOutMediumFactory());
-  }
-
-  @Test
-  public void testVersionConverterSubTaskSerde() throws Exception
-  {
-    final ConvertSegmentTask.SubTask task = new ConvertSegmentTask.SubTask(
-        "myGroupId",
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2010-01-01/P1D")).version("1234").build(),
-        indexSpec,
-        false,
-        true,
-        null,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final ConvertSegmentTask.SubTask task2 = (ConvertSegmentTask.SubTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals("myGroupId", task.getGroupId());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getSegment(), task2.getSegment());
   }
 
   @Test
@@ -700,85 +642,6 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
-  }
-
-  @Test
-  public void testSegmentConvetSerdeReflection() throws IOException
-  {
-    final ConvertSegmentTask task = ConvertSegmentTask.create(
-        new DataSegment(
-            "dataSource",
-            Intervals.of("1990-01-01/1999-12-31"),
-            "version",
-            ImmutableMap.of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("metric1", "metric2"),
-            NoneShardSpec.instance(),
-            0,
-            12345L
-        ),
-        indexSpec,
-        false,
-        true,
-        TmpFileSegmentWriteOutMediumFactory.instance(),
-        null
-    );
-    final String json = jsonMapper.writeValueAsString(task);
-    final ConvertSegmentTask taskFromJson = jsonMapper.readValue(json, ConvertSegmentTask.class);
-    Assert.assertEquals(json, jsonMapper.writeValueAsString(taskFromJson));
-  }
-
-  @Test
-  public void testSegmentConvertSerde() throws IOException
-  {
-    final DataSegment segment = new DataSegment(
-        "dataSource",
-        Intervals.of("1990-01-01/1999-12-31"),
-        "version",
-        ImmutableMap.of(),
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        0,
-        12345L
-    );
-    final ConvertSegmentTask originalTask = ConvertSegmentTask.create(
-        segment,
-        new IndexSpec(
-            new RoaringBitmapSerdeFactory(null),
-            CompressionStrategy.LZF,
-            CompressionStrategy.UNCOMPRESSED,
-            CompressionFactory.LongEncodingStrategy.LONGS
-        ),
-        false,
-        true,
-        TmpFileSegmentWriteOutMediumFactory.instance(),
-        null
-    );
-    final String json = jsonMapper.writeValueAsString(originalTask);
-    final Task task = jsonMapper.readValue(json, Task.class);
-    Assert.assertTrue(task instanceof ConvertSegmentTask);
-    final ConvertSegmentTask convertSegmentTask = (ConvertSegmentTask) task;
-    Assert.assertEquals(originalTask.getDataSource(), convertSegmentTask.getDataSource());
-    Assert.assertEquals(originalTask.getInterval(), convertSegmentTask.getInterval());
-    Assert.assertEquals(
-        originalTask.getIndexSpec().getBitmapSerdeFactory().getClass().getCanonicalName(),
-        convertSegmentTask.getIndexSpec()
-                          .getBitmapSerdeFactory()
-                          .getClass()
-                          .getCanonicalName()
-    );
-    Assert.assertEquals(
-        originalTask.getIndexSpec().getDimensionCompression(),
-        convertSegmentTask.getIndexSpec().getDimensionCompression()
-    );
-    Assert.assertEquals(
-        originalTask.getIndexSpec().getMetricCompression(),
-        convertSegmentTask.getIndexSpec().getMetricCompression()
-    );
-    Assert.assertEquals(false, convertSegmentTask.isForce());
-    Assert.assertEquals(segment, convertSegmentTask.getSegment());
-    Assert.assertEquals(originalTask.getSegmentWriteOutMediumFactory(), convertSegmentTask.getSegmentWriteOutMediumFactory());
   }
 
   @Test

@@ -27,7 +27,7 @@ import org.apache.druid.segment.serde.ComplexMetricExtractor;
 public class SketchBuildComplexMetricSerde extends SketchMergeComplexMetricSerde
 {
   @Override
-  public ComplexMetricExtractor getExtractor()
+  public ComplexMetricExtractor<?> getExtractor()
   {
     return RawInputValueExtractor.getInstance();
   }

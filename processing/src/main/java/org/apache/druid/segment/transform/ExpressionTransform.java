@@ -27,7 +27,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.Objects;
 
@@ -87,7 +87,7 @@ public class ExpressionTransform implements Transform
 
   private static Object getValueFromRow(final Row row, final String column)
   {
-    if (column.equals(Column.TIME_COLUMN_NAME)) {
+    if (column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       return row.getTimestampFromEpoch();
     } else {
       return row.getRaw(column);

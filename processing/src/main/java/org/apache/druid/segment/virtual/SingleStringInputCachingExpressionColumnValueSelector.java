@@ -21,6 +21,7 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -29,7 +30,6 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 
 import javax.annotation.Nullable;
 
@@ -44,7 +44,9 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
   private final DimensionSelector selector;
   private final Expr expression;
   private final Expr.ObjectBinding bindings;
+  @Nullable
   private final ExprEval[] arrayEvalCache;
+  @Nullable
   private final LruEvalCache lruEvalCache;
 
   public SingleStringInputCachingExpressionColumnValueSelector(

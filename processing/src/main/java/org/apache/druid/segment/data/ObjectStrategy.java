@@ -68,7 +68,7 @@ public interface ObjectStrategy<T> extends Comparator<T>
   {
     byte[] bytes = toBytes(val);
     if (bytes != null) {
-      out.write(toBytes(val));
+      out.write(bytes);
     }
   }
 }

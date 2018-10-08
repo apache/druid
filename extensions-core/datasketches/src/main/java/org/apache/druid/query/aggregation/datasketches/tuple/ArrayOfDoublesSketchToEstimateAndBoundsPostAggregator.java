@@ -19,20 +19,18 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Objects;
-
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+
+import javax.annotation.Nullable;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Returns a distinct count estimate and error bounds from a given {@link ArrayOfDoublesSketch}."

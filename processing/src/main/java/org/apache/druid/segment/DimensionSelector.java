@@ -27,11 +27,12 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 
 /**
  */
 @PublicApi
-public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
+public interface DimensionSelector extends ColumnValueSelector<Object>, HotLoopCallee
 {
   int CARDINALITY_UNKNOWN = -1;
 
@@ -125,6 +126,11 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   @Nullable
   IdLookup idLookup();
 
+  /**
+   * @deprecated This method is marked as deprecated in DimensionSelector to minimize the probability of accidental
+   * calling. "Polymorphism" of DimensionSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
   @Deprecated
   @Override
   default float getFloat()
@@ -133,6 +139,11 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
     return 0.0f;
   }
 
+  /**
+   * @deprecated This method is marked as deprecated in DimensionSelector to minimize the probability of accidental
+   * calling. "Polymorphism" of DimensionSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
   @Deprecated
   @Override
   default double getDouble()
@@ -141,6 +152,11 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
     return 0.0;
   }
 
+  /**
+   * @deprecated This method is marked as deprecated in DimensionSelector to minimize the probability of accidental
+   * calling. "Polymorphism" of DimensionSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
   @Deprecated
   @Override
   default long getLong()
@@ -177,7 +193,7 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
       for (int i = 0; i < rowSize; i++) {
         strings[i] = lookupName(row.get(i));
       }
-      return strings;
+      return Arrays.asList(strings);
     }
   }
 }

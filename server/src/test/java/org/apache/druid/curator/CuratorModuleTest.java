@@ -25,12 +25,12 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
-import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.guice.LifecycleModule;
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LifecycleModule;
 import org.junit.Assert;
 import org.junit.Test;
 

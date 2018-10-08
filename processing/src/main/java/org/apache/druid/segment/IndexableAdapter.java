@@ -19,9 +19,10 @@
 
 package org.apache.druid.segment;
 
+import com.google.errorprone.annotations.MustBeClosed;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.BitmapValues;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -40,8 +41,9 @@ public interface IndexableAdapter
 
   List<String> getMetricNames();
 
+  @MustBeClosed
   @Nullable
-  <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension);
+  <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension);
 
   TransformableRowIterator getRows();
 

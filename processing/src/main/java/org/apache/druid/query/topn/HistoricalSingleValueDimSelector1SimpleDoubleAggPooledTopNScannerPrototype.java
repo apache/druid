@@ -21,8 +21,8 @@ package org.apache.druid.query.topn;
 
 import org.apache.druid.query.aggregation.SimpleDoubleBufferAggregator;
 import org.apache.druid.segment.data.Offset;
-import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.historical.HistoricalColumnSelector;
+import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import java.nio.ByteBuffer;

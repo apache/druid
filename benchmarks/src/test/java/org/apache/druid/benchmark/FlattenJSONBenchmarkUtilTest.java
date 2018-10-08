@@ -19,10 +19,9 @@
 
 package org.apache.druid.benchmark;
 
+import org.apache.druid.java.util.common.parsers.Parser;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.util.Map;
 

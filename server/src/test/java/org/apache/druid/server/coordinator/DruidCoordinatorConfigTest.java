@@ -55,7 +55,6 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.period", "PT1s");
     props.setProperty("druid.coordinator.period.indexingPeriod", "PT1s");
     props.setProperty("druid.coordinator.merge.on", "true");
-    props.setProperty("druid.coordinator.conversion.on", "true");
     props.setProperty("druid.coordinator.kill.on", "true");
     props.setProperty("druid.coordinator.kill.period", "PT1s");
     props.setProperty("druid.coordinator.kill.durationToRetain", "PT1s");

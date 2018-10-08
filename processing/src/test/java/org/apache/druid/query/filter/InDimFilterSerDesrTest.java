@@ -48,7 +48,7 @@ public class InDimFilterSerDesrTest
   @Test
   public void testDeserialization() throws IOException
   {
-    final InDimFilter actualInDimFilter = mapper.reader(DimFilter.class).readValue(actualInFilter);
+    final InDimFilter actualInDimFilter = mapper.readerFor(DimFilter.class).readValue(actualInFilter);
     final InDimFilter expectedInDimFilter = new InDimFilter("dimTest", Arrays.asList("good", "bad"), null);
     Assert.assertEquals(expectedInDimFilter, actualInDimFilter);
   }

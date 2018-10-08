@@ -31,6 +31,7 @@ public class ClientCompactQuery
   private final String dataSource;
   private final List<DataSegment> segments;
   private final boolean keepSegmentGranularity;
+  private final Long targetCompactionSizeBytes;
   private final ClientCompactQueryTuningConfig tuningConfig;
   private final Map<String, Object> context;
 
@@ -39,6 +40,7 @@ public class ClientCompactQuery
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,
+      @JsonProperty("targetCompactionSizeBytes") Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -46,6 +48,7 @@ public class ClientCompactQuery
     this.dataSource = dataSource;
     this.segments = segments;
     this.keepSegmentGranularity = keepSegmentGranularity;
+    this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.context = context;
   }
@@ -75,6 +78,12 @@ public class ClientCompactQuery
   }
 
   @JsonProperty
+  public Long getTargetCompactionSizeBytes()
+  {
+    return targetCompactionSizeBytes;
+  }
+
+  @JsonProperty
   public ClientCompactQueryTuningConfig getTuningConfig()
   {
     return tuningConfig;
@@ -90,10 +99,12 @@ public class ClientCompactQuery
   public String toString()
   {
     return "ClientCompactQuery{" +
-           "dataSource=" + dataSource + "'" +
+           "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
+           ", keepSegmentGranularity=" + keepSegmentGranularity +
+           ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
            ", tuningConfig=" + tuningConfig +
-           ", contexts=" + context +
-           "}";
+           ", context=" + context +
+           '}';
   }
 }

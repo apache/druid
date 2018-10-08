@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -31,16 +32,17 @@ import java.nio.ByteBuffer;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "complex", value = ComplexColumnPartSerde.class),
-    @JsonSubTypes.Type(name = "float", value = FloatGenericColumnPartSerde.class),
-    @JsonSubTypes.Type(name = "long", value = LongGenericColumnPartSerde.class),
-    @JsonSubTypes.Type(name = "double", value = DoubleGenericColumnPartSerde.class),
+    @JsonSubTypes.Type(name = "float", value = FloatNumericColumnPartSerde.class),
+    @JsonSubTypes.Type(name = "long", value = LongNumericColumnPartSerde.class),
+    @JsonSubTypes.Type(name = "double", value = DoubleNumericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "stringDictionary", value = DictionaryEncodedColumnPartSerde.class),
-    @JsonSubTypes.Type(name = "floatV2", value = FloatGenericColumnPartSerdeV2.class),
-    @JsonSubTypes.Type(name = "longV2", value = LongGenericColumnPartSerdeV2.class),
-    @JsonSubTypes.Type(name = "doubleV2", value = DoubleGenericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "floatV2", value = FloatNumericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "longV2", value = LongNumericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "doubleV2", value = DoubleNumericColumnPartSerdeV2.class),
 })
 public interface ColumnPartSerde
 {
+  @Nullable
   Serializer getSerializer();
 
   Deserializer getDeserializer();

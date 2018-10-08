@@ -38,7 +38,7 @@ public class DecompressingByteBufferObjectStrategy implements ObjectStrategy<Res
 
   @Override
   @SuppressWarnings("unchecked")
-  public Class<? extends ResourceHolder<ByteBuffer>> getClazz()
+  public Class<ResourceHolder<ByteBuffer>> getClazz()
   {
     return (Class) ResourceHolder.class;
   }

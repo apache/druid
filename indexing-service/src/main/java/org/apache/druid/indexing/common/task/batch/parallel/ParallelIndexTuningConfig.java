@@ -105,6 +105,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxTotalRows,
         null,
         numShards,
+        null,
         indexSpec,
         maxPendingPersists,
         null,

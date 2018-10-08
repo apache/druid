@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.first;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -35,7 +34,7 @@ import org.apache.druid.query.aggregation.NullableAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -47,10 +46,8 @@ import java.util.Map;
 
 public class LongFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
-  public static final Comparator VALUE_COMPARATOR = (o1, o2) -> Longs.compare(
-      ((SerializablePair<Long, Long>) o1).rhs,
-      ((SerializablePair<Long, Long>) o2).rhs
-  );
+  public static final Comparator<SerializablePair<Long, Long>> VALUE_COMPARATOR =
+      Comparator.comparingLong(o -> o.rhs);
 
   private final String fieldName;
   private final String name;
@@ -77,17 +74,14 @@ public class LongFirstAggregatorFactory extends NullableAggregatorFactory<Column
   @Override
   protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    return new LongFirstAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        selector
-    );
+    return new LongFirstAggregator(metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME), selector);
   }
 
   @Override
   protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     return new LongFirstBufferAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
         selector
     );
   }
@@ -108,7 +102,13 @@ public class LongFirstAggregatorFactory extends NullableAggregatorFactory<Column
     if (rhs == null) {
       return lhs;
     }
-    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) <= 0 ? lhs : rhs;
+    Long leftTime = ((SerializablePair<Long, Long>) lhs).lhs;
+    Long rightTime = ((SerializablePair<Long, Long>) rhs).lhs;
+    if (leftTime <= rightTime) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   @Override
@@ -201,7 +201,7 @@ public class LongFirstAggregatorFactory extends NullableAggregatorFactory<Column
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(Column.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
   }
 
   @Override
