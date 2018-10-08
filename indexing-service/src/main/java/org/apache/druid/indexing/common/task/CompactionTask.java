@@ -261,7 +261,8 @@ public class CompactionTask extends AbstractTask
       log.warn("Interval[%s] has no segments, nothing to do.", interval);
       return TaskStatus.failure(getId());
     } else {
-      log.info("Generated [%d] compaction task specs", indexTaskSpecs.size());
+      final int totalNumSpecs = indexTaskSpecs.size();
+      log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
       int failCnt = 0;
       for (IndexTask eachSpec : indexTaskSpecs) {
@@ -281,6 +282,7 @@ public class CompactionTask extends AbstractTask
         }
       }
 
+      log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
       return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
   }
