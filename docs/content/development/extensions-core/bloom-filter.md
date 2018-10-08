@@ -38,7 +38,7 @@ present in bloom filter construction, but `test()` says true)
  decrease. 
 - Lower the false positive probability greater is the space requirement.
 - Bloom filters are sensitive to number of elements that will be inserted in the bloom filter.
-- During the creation of bloom filter expected number of entries must be specified.If the number of insertions exceed
+- During the creation of bloom filter expected number of entries must be specified. If the number of insertions exceed
  the specified initial number of entries then false positive probability will increase accordingly.
 
 This extension is built on top of `org.apache.hive.common.util.BloomKFilter`. Internally, this implementation of bloom 
@@ -87,7 +87,7 @@ Input for a `bloomKFilter` can also be created from a druid query with the `bloo
 ### JSON Specification of Bloom Filter Aggregator
 ```json
 {
-      "type": "bloomFilter",
+      "type": "bloom",
       "name": <output_field_name>,
       "maxNumEntries": <maximum_number_of_elements_for_BloomKFilter>
       "field": <dimension_spec>
