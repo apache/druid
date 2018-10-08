@@ -154,7 +154,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         // find segments to be compacted.
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
-            false,
+            config.isKeepSegmentGranularity(),
+            config.getTargetCompactionSizeBytes(),
             config.getTaskPriority(),
             config.getTuningConfig(),
             config.getTaskContext()

@@ -28,6 +28,7 @@ import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.IllegalFormatException;
 import java.util.Locale;
 
@@ -217,5 +218,17 @@ public class StringUtils
     //CHECKSTYLE.OFF: Regexp
     return Strings.emptyToNull(string);
     //CHECKSTYLE.ON: Regexp
+  }
+
+  /**
+   * Convert an input to base 64 and return the utf8 string of that byte array
+   *
+   * @param input The string to convert to base64
+   *
+   * @return the base64 of the input in string form
+   */
+  public static String utf8Base64(String input)
+  {
+    return fromUtf8(Base64.getEncoder().encode(toUtf8(input)));
   }
 }
