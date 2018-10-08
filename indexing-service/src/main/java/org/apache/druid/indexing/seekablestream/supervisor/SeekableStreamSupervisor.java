@@ -101,6 +101,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -130,7 +131,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
 {
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
-  private static final Random RANDOM = new Random();
+  private static final Random RANDOM = ThreadLocalRandom.current();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
@@ -404,7 +405,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       }
     }
 
-    protected boolean isValidTaskGroup(int taskGroupId, @Nullable TaskGroup taskGroup)
+    boolean isValidTaskGroup(int taskGroupId, @Nullable TaskGroup taskGroup)
     {
       if (taskGroup == null) {
         // taskGroup might be in pendingCompletionTaskGroups or partitionGroups
@@ -476,6 +477,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
   private final Object recordSupplierLock = new Object();
+  private final T2 END_OF_PARTITION;
   private final T2 NOT_SET;
   private final boolean useExclusiveStartingSequence;
   private boolean listenerRegistered = false;
@@ -498,6 +500,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       final SeekableStreamSupervisorSpec spec,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
       final T2 NOT_SET,
+      final T2 END_OF_PARTITION,
       final boolean useExclusiveStartingSequence
   )
   {
@@ -508,6 +511,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
     this.spec = spec;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.NOT_SET = NOT_SET;
+    this.END_OF_PARTITION = END_OF_PARTITION;
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
 
     this.dataSource = spec.getDataSchema().getDataSource();
@@ -760,7 +764,8 @@ public abstract class SeekableStreamSupervisor<T1, T2>
             TimeUnit.MILLISECONDS
         );
 
-        // not yet implemented in kinesis, will remove once implemented
+        // different in kafka and kinesis as emitLag and checkpointing
+        // are not yet implemented in Kinesis
         scheduleReporting(reportingExec);
 
         started = true;
@@ -1031,7 +1036,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
         if (taskInfoProvider.getTaskLocation(entry.getKey()).equals(TaskLocation.unknown())) {
           killTask(entry.getKey());
         } else {
-          entry.getValue().startTime = new DateTime(0);
+          entry.getValue().startTime = DateTimes.EPOCH;
         }
       }
     }
@@ -1051,7 +1056,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       partitionGroups.clear();
     } else {
 
-      if (!checkSourceMetaDataMatch(dataSourceMetadata)) {
+      if (!checkSourceMetadataMatch(dataSourceMetadata)) {
         throw new IAE(
             "Datasource metadata instance does not match required, found instance of [%s]",
             dataSourceMetadata.getClass()
@@ -1064,7 +1069,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       if (resetMetadata.getSeekableStreamPartitions().getStream().equals(ioConfig.getId())) {
         // metadata can be null
         final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
-        if (metadata != null && !checkSourceMetaDataMatch(metadata)) {
+        if (metadata != null && !checkSourceMetadataMatch(metadata)) {
           throw new IAE(
               "Datasource metadata instance does not match required, found instance of [%s]",
               metadata.getClass()
@@ -1421,7 +1426,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
 
     final DataSourceMetadata rawDataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
 
-    if (rawDataSourceMetadata != null && !checkSourceMetaDataMatch(rawDataSourceMetadata)) {
+    if (rawDataSourceMetadata != null && !checkSourceMetadataMatch(rawDataSourceMetadata)) {
       throw new IAE(
           "Datasource metadata instance does not match required, found instance of [%s]",
           rawDataSourceMetadata.getClass()
@@ -2339,7 +2344,7 @@ public abstract class SeekableStreamSupervisor<T1, T2>
   {
     final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
-        && checkSourceMetaDataMatch(dataSourceMetadata)) {
+        && checkSourceMetadataMatch(dataSourceMetadata)) {
       @SuppressWarnings("unchecked")
       SeekableStreamPartitions<T1, T2> partitions = ((SeekableStreamDataSourceMetadata) dataSourceMetadata).getSeekableStreamPartitions();
       if (partitions != null) {
@@ -2377,7 +2382,10 @@ public abstract class SeekableStreamSupervisor<T1, T2>
   {
     TaskGroup group = taskGroups.get(groupId);
     Map<T1, T2> startPartitions = group.startingSequences;
-    Map<T1, T2> endPartitions = createNewTaskEndPartitions(startPartitions.keySet());
+    Map<T1, T2> endPartitions = new HashMap<>();
+    for (T1 partition : startPartitions.keySet()) {
+      endPartitions.put(partition, END_OF_PARTITION);
+    }
     Set<T1> exclusiveStartSequenceNumberPartitions = taskGroups.get(groupId).exclusiveStartSequenceNumberPartitions;
 
     DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
@@ -2546,6 +2554,11 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       DataSourceMetadata currentCheckPoint
   );
 
+  /**
+   * creates a specific task IOConfig instance for Kafka/Kinesis*
+   *
+   * @return specific instance of Kafka/Kinesis IOConfig
+   */
   protected abstract SeekableStreamIOConfig createIoConfig(
       int groupId,
       Map<T1, T2> startPartitions,
@@ -2557,6 +2570,14 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       SeekableStreamSupervisorIOConfig ioConfig
   );
 
+  /**
+   * creates a list of specific kafka/kinesis index tasks using
+   * the given replicas count
+   *
+   * @return list of specific kafka/kinesis index taksks
+   *
+   * @throws JsonProcessingException
+   */
   protected abstract List<SeekableStreamIndexTask<T1, T2>> createIndexTasks(
       int replicas,
       String baseSequenceName,
@@ -2567,32 +2588,95 @@ public abstract class SeekableStreamSupervisor<T1, T2>
       RowIngestionMetersFactory rowIngestionMetersFactory
   ) throws JsonProcessingException;
 
+  /**
+   * calculates the taskgroup id that the given partition belongs to.
+   * different between Kafka/Kinesis since Kinesis uses String as partition id
+   *
+   * @param partition paritition id
+   *
+   * @return taskgroup id
+   */
   protected abstract int getTaskGroupIdForPartition(T1 partition);
 
-  protected abstract boolean checkSourceMetaDataMatch(DataSourceMetadata metadata);
+  /**
+   * checks if the passed in DataSourceMetadata is a specific instance
+   * of [kafka/kinesis]DataSourceMetadata
+   *
+   * @param metadata datasource metadata
+   *
+   * @return true if isInstance else false
+   */
+  protected abstract boolean checkSourceMetadataMatch(DataSourceMetadata metadata);
 
+  /**
+   * checks if the passed in Task is a specific instance of
+   * [Kafka/Kinesis]IndexTask
+   *
+   * @param task task
+   *
+   * @return true if isInstance else false
+   */
   protected abstract boolean checkTaskInstance(Task task);
 
+  /**
+   * creates a specific instance of kafka/kinesis datasource metadata
+   *
+   * @param stream stream name
+   * @param map    partitionId -> sequence
+   *
+   * @return specific instance of datasource metadata
+   */
   protected abstract SeekableStreamDataSourceMetadata<T1, T2> createDataSourceMetaData(
       String
           stream, Map<T1, T2> map
   );
 
-  protected abstract Map<T1, T2> createNewTaskEndPartitions(Set<T1> startPartitions);
-
+  /**
+   * wraps the passed in T2 sequence number into a {@link SequenceNumber} object
+   * to facilitate comparison and accomodate exclusive starting sequennce in kinesis
+   *
+   * @return specific instance of [Kafka/Kinesis]SequenceNumber
+   */
   protected abstract SequenceNumber<T2> makeSequenceNumber(T2 seq, boolean useExclusive, boolean isExclusive);
 
+  /**
+   * schedules periodic emitLag() reporting for Kafka, not yet implemented in Kinesis,
+   * but will be in the future
+   */
   protected abstract void scheduleReporting(ScheduledExecutorService reportingExec);
 
+  /**
+   * calculate lag per partition for kafka, kinesis implementation returns an empty
+   * map
+   *
+   * @return map of partition id -> lag
+   */
   protected abstract Map<T1, T2> getLagPerPartition(Map<T1, T2> currentOffsets);
 
+  /**
+   * returns an instance of a specific Kinesis/Kafka recordSupplier
+   *
+   * @return specific instance of Kafka/Kinesis RecordSupplier
+   */
   protected abstract RecordSupplier<T1, T2> setupRecordSupplier();
 
+  /**
+   * creates a specific instance of Kafka/Kinesis Supervisor Report Payload
+   *
+   * @return specific instance of Kafka/Kinesis Supervisor Report Payload
+   */
   protected abstract SeekableStreamSupervisorReportPayload<T1, T2> createReportPayload(
       int numPartitions,
       boolean includeOffsets
   );
 
+  /**
+   * checks if sequence from metadata storage is still valid
+   *
+   * @return true if still valid else false
+   *
+   * @throws TimeoutException
+   */
   protected abstract boolean checkSequenceAvailability(@NotNull T1 partition, @NotNull T2 sequenceFromMetadata)
       throws TimeoutException;
 }

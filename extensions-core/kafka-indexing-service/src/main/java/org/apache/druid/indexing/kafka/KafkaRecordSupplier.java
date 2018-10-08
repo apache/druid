@@ -43,13 +43,14 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 {
   private static final EmittingLogger log = new EmittingLogger(KafkaRecordSupplier.class);
-  private static final Random RANDOM = new Random();
+  private static final Random RANDOM = ThreadLocalRandom.current();
 
   private final KafkaConsumer<byte[], byte[]> consumer;
   private final KafkaSupervisorIOConfig ioConfig;

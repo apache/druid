@@ -54,7 +54,6 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,7 +74,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
-  private static final String NOT_SET = "";
+  private static final String NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;
 
   public KinesisSupervisor(
@@ -98,6 +97,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         spec,
         rowIngestionMetersFactory,
         NOT_SET,
+        SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER,
         true
     );
 
@@ -227,7 +227,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected boolean checkSourceMetaDataMatch(DataSourceMetadata metadata)
+  protected boolean checkSourceMetadataMatch(DataSourceMetadata metadata)
   {
     return metadata instanceof KinesisDataSourceMetadata;
   }
@@ -269,16 +269,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return new KinesisDataSourceMetadata(
         new SeekableStreamPartitions<>(stream, map)
     );
-  }
-
-  @Override
-  protected Map<String, String> createNewTaskEndPartitions(Set<String> startPartitions)
-  {
-    Map<String, String> endPartitions = new HashMap<>();
-    for (String partition : startPartitions) {
-      endPartitions.put(partition, SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER);
-    }
-    return endPartitions;
   }
 
   @Override

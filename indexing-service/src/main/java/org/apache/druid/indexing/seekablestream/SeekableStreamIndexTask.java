@@ -45,12 +45,13 @@ import org.apache.druid.utils.CircularBuffer;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 
 public abstract class SeekableStreamIndexTask<T1, T2> extends AbstractTask
     implements ChatHandler
 {
-  private static final Random RANDOM = new Random();
+  private static final Random RANDOM = ThreadLocalRandom.current();
   protected final DataSchema dataSchema;
   protected final InputRowParser<ByteBuffer> parser;
   protected final SeekableStreamTuningConfig tuningConfig;

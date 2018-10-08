@@ -20,7 +20,9 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 /**
- * wrapper class for a Kinesis/Kafka partition with stream name and partitionId
+ * Reprents a Kinesis/Kafka partition with stream name and partitionId,
+ * mostly used by {@link RecordSupplier} and
+ * {@link org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor}
  *
  * @param <T1> partition id type
  */

@@ -61,11 +61,11 @@ public class SeekableStreamPartitions<T1, T2>
     for (Map.Entry<T1, T2> entry : map.entrySet()) {
       Preconditions.checkArgument(
           entry.getValue() != null,
-          String.format(
-              "partition stream[%s] sequence/offset number[%s] invalid",
-              entry.getKey(),
-              entry.getValue()
-          )
+          "partition stream["
+          + entry.getKey().toString()
+          + "] sequence/offset number[%"
+          + entry.getValue().toString()
+          + "] invalid"
       );
     }
   }

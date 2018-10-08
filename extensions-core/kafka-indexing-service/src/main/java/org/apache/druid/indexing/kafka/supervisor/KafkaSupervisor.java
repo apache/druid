@@ -60,7 +60,6 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -114,6 +113,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         spec,
         rowIngestionMetersFactory,
         NOT_SET,
+        Long.MAX_VALUE,
         false
     );
 
@@ -192,7 +192,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
-  protected boolean checkSourceMetaDataMatch(DataSourceMetadata metadata)
+  protected boolean checkSourceMetadataMatch(DataSourceMetadata metadata)
   {
     return metadata instanceof KafkaDataSourceMetadata;
   }
@@ -321,16 +321,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   )
   {
     return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, map));
-  }
-
-  @Override
-  protected Map<Integer, Long> createNewTaskEndPartitions(Set<Integer> startPartitions)
-  {
-    Map<Integer, Long> endPartitions = new HashMap<>();
-    for (int partition : startPartitions) {
-      endPartitions.put(partition, Long.MAX_VALUE);
-    }
-    return endPartitions;
   }
 
   @Override

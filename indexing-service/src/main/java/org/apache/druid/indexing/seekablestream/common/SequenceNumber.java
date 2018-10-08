@@ -23,8 +23,8 @@ package org.apache.druid.indexing.seekablestream.common;
 import java.util.Objects;
 
 /**
- * Wrapper class for Kafka and Kinesis stream sequence numbers. Mainly used to do
- * comparison and indicate whether the sequence number should be excluded
+ * Represents a Kafka/Kinesis stream sequence number. Mainly used to do
+ * comparison and indicate whether the sequence number is exclusive
  *
  * @param <T> type of sequence number
  */

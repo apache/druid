@@ -233,25 +233,6 @@ public class KinesisIOConfigTest
     mapper.readValue(jsonStr, IOConfig.class);
   }
 
-  /*
-    @Test
-    public void testEndOffsetGreaterThanStart() throws Exception
-    {
-      String jsonStr = "{\n"
-                       + "  \"type\": \"kinesis\",\n"
-                       + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                       + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                       + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                       + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"9\"}}\n"
-                       + "}";
-
-      exception.expect(JsonMappingException.class);
-      exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-      exception.expectMessage(CoreMatchers.containsString("end offset must be >= start offset"));
-      mapper.readValue(jsonStr, IOConfig.class);
-    }
-  */
-
   @Test
   public void testEndPointRequired() throws Exception
   {

@@ -21,6 +21,13 @@ package org.apache.druid.indexing.seekablestream.common;
 
 import java.util.List;
 
+/**
+ * Represents a generic record with a T1 (partition id) and T2 (sequence number) and data
+ * from a Kafka/Kinesis stream
+ *
+ * @param <T1> partition id
+ * @param <T2> sequence number
+ */
 public class Record<T1, T2>
 {
   public static final String END_OF_SHARD_MARKER = "EOS";
