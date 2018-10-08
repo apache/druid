@@ -557,8 +557,8 @@ Segments table provides details on all Druid segments, whether they are publishe
 |num_replicas|Number of replicas of this segment currently being served|
 |num_rows|Number of rows in current segment, this value could be null if unkown to broker at query time|
 |is_published|True if this segment has been published to the metadata store|
-|is_available|True if this segment is currently being served by any server|
-|is_realtime|True if this segment is being served on a realtime server|
+|is_available|True if this segment is currently being served by any server(historical or realtime)|
+|is_realtime|True if this segment is being served on any type of realtime tasks|
 |payload|JSON-serialized data segment payload|
 
 ### SERVERS table
@@ -570,7 +570,7 @@ Servers table lists all data servers(any server that hosts a segment). It includ
 |host|Hostname of the server|
 |plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
 |tls_port|TLS port of the server, or -1 if TLS is disabled|
-|server_type|Type of Druid service. Possible values include: historical, realtime and indexer_executor.|
+|server_type|Type of Druid service. Possible values include: historical, realtime and indexer_executor(peon).|
 |tier|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
 |current_size|Current size of segments in bytes on this server|
 |max_size|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|

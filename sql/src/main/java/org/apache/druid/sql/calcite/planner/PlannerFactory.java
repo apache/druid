@@ -35,16 +35,13 @@ import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
-import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 
 import java.util.Map;
 import java.util.Properties;
@@ -61,51 +58,42 @@ public class PlannerFactory
       .build();
 
   private final DruidSchema druidSchema;
-  private final TimelineServerView serverView;
+  private final SystemSchema systemSchema;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
-  private final DruidLeaderClient coordinatorDruidLeaderClient;
-  private final DruidLeaderClient overlordDruidLeaderClient;
 
   @Inject
   public PlannerFactory(
       final DruidSchema druidSchema,
-      final TimelineServerView serverView,
+      final SystemSchema systemSchema,
       final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper,
-      final @Json ObjectMapper jsonMapper,
-      final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
-      final @IndexingService DruidLeaderClient overlordDruidLeaderClient
+      final @Json ObjectMapper jsonMapper
   )
   {
     this.druidSchema = druidSchema;
-    this.serverView = serverView;
+    this.systemSchema = systemSchema;
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = plannerConfig;
     this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
-    this.coordinatorDruidLeaderClient = coordinatorDruidLeaderClient;
-    this.overlordDruidLeaderClient = overlordDruidLeaderClient;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
     final SchemaPlus rootSchema = Calcites.createRootSchema(
-        serverView,
         druidSchema,
-        authorizerMapper,
-        coordinatorDruidLeaderClient,
-        overlordDruidLeaderClient,
-        jsonMapper
+        systemSchema,
+        authorizerMapper
     );
     final PlannerContext plannerContext = PlannerContext.create(
         operatorTable,

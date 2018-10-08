@@ -23,108 +23,107 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import javax.annotation.Nullable;
 
 /**
- * Object of this class hold the RowSignature and other segment attributes needed by {@link SystemSchema.SegmentsTable}
- * To gaurantee safety all members are protected by a lock since the object can be updated by DruidSchema and read by SystemSchema
+ * Immutable representation of RowSignature and other segment attributes needed by {@link SystemSchema.SegmentsTable}
  */
 public class SegmentMetadataHolder
 {
-  private final Object lock = new Object();
 
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-
+  private final long numReplicas;
   @Nullable
-  private RowSignature rowSignature;
-  private long numReplicas;
+  private final RowSignature rowSignature;
   @Nullable
-  private Long numRows;
+  private final Long numRows;
 
-
-  public SegmentMetadataHolder(
-      @Nullable RowSignature rowSignature,
-      long isPublished,
-      long isAvailable,
-      long isRealtime,
-      long numReplicas,
-      @Nullable Long numRows
-  )
+  private SegmentMetadataHolder(Builder builder)
   {
-    this.rowSignature = rowSignature;
-    this.isPublished = isPublished;
-    this.isAvailable = isAvailable;
-    this.isRealtime = isRealtime;
-    this.numReplicas = numReplicas;
-    this.numRows = numRows;
+    this.rowSignature = builder.rowSignature;
+    this.isPublished = builder.isPublished;
+    this.isAvailable = builder.isAvailable;
+    this.isRealtime = builder.isRealtime;
+    this.numReplicas = builder.numReplicas;
+    this.numRows = builder.numRows;
   }
-
 
   public long isPublished()
   {
-    synchronized (lock) {
-      return isPublished;
-    }
+    return isPublished;
   }
 
   public long isAvailable()
   {
-    synchronized (lock) {
-      return isAvailable;
-    }
+    return isAvailable;
   }
 
   public long isRealtime()
   {
-    synchronized (lock) {
-      return isRealtime;
-    }
+    return isRealtime;
   }
 
   public long getNumReplicas()
   {
-    synchronized (lock) {
-      return numReplicas;
-    }
+    return numReplicas;
   }
 
   @Nullable
   public Long getNumRows()
   {
-    synchronized (lock) {
-      return numRows;
-    }
+    return numRows;
   }
 
   @Nullable
   public RowSignature getRowSignature()
   {
-    synchronized (lock) {
-      return rowSignature;
-    }
+    return rowSignature;
   }
 
-  public void setRowSignature(RowSignature rowSignature)
+  public static class Builder
   {
-    synchronized (lock) {
+    private final long isPublished;
+    private final long isAvailable;
+    private final long isRealtime;
+    private long numReplicas;
+    @Nullable
+    private RowSignature rowSignature;
+    @Nullable
+    private Long numRows;
+
+    public Builder(
+        long isPublished,
+        long isAvailable,
+        long isRealtime,
+        long numReplicas
+    )
+    {
+      this.isPublished = isPublished;
+      this.isAvailable = isAvailable;
+      this.isRealtime = isRealtime;
+      this.numReplicas = numReplicas;
+    }
+
+    public Builder withRowSignature(RowSignature rowSignature)
+    {
       this.rowSignature = rowSignature;
-      lock.notifyAll();
+      return this;
     }
-  }
 
-  public void setNumRows(Long rows)
-  {
-    synchronized (lock) {
-      this.numRows = rows;
-      lock.notifyAll();
+    public Builder withNumRows(Long numRows)
+    {
+      this.numRows = numRows;
+      return this;
     }
-  }
 
+    public Builder withNumReplicas(long numReplicas)
+    {
+      this.numReplicas = numReplicas;
+      return this;
+    }
 
-  public void setNumReplicas(long replicas)
-  {
-    synchronized (lock) {
-      this.numReplicas = replicas;
-      lock.notifyAll();
+    public SegmentMetadataHolder build()
+    {
+      return new SegmentMetadataHolder(this);
     }
   }
 

@@ -47,7 +47,6 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -71,7 +70,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -82,7 +80,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 public class SystemSchema extends AbstractSchema
 {
@@ -255,8 +252,10 @@ public class SystemSchema extends AbstractSchema
               };
             }
             catch (JsonProcessingException e) {
-              log.error(e, "Error getting segment payload for segment %s", val.getKey().getIdentifier());
-              throw new RuntimeException(e);
+              throw new RuntimeException(StringUtils.format(
+                  "Error getting segment payload for segment %s",
+                  val.getKey().getIdentifier()
+              ), e);
             }
           });
 
@@ -289,10 +288,18 @@ public class SystemSchema extends AbstractSchema
               };
             }
             catch (JsonProcessingException e) {
-              log.error(e, "Error getting segment payload for segment %s", val.getIdentifier());
-              throw new RuntimeException(e);
+              throw new RuntimeException(StringUtils.format(
+                  "Error getting segment payload for segment %s",
+                  val.getIdentifier()
+              ), e);
             }
           });
+      try {
+        authorizedPublishedSegments.close();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
 
       final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
           Iterables.concat(availableSegments, publishedSegments));
@@ -358,19 +365,6 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
-    try {
-      future.get();
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException(e);
-    }
-    if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-      throw new ISE(
-          "Error while fetching metadata segments status[%s] description[%s]",
-          responseHandler.status,
-          responseHandler.description
-      );
-    }
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
     {
     });
@@ -624,19 +618,6 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
-    try {
-      future.get();
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException(e);
-    }
-    if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-      throw new ISE(
-          "Error while fetching tasks status[%s] description[%s]",
-          responseHandler.status,
-          responseHandler.description
-      );
-    }
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
     {
     });

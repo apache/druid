@@ -136,6 +136,7 @@ public class DruidLeaderClient
 
   /**
    * Executes the request object aimed at the leader and process the response with given handler
+   * Note: this method doesn't do retrying on errors or handle leader changes occurred during communication
    */
   public <Intermediate, Final> ListenableFuture<Final> goAsync(
       final Request request,

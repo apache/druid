@@ -326,7 +326,7 @@ public class DruidSchema extends AbstractSchema
       if (knownSegments == null || !knownSegments.containsKey(segment)) {
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
         final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
-        SegmentMetadataHolder holder = new SegmentMetadataHolder(null, isPublished, 1, isRealtime, 1, null);
+        SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(isPublished, 1, isRealtime, 1).build();
         // Unknown segment.
         setSegmentSignature(segment, holder);
         segmentsNeedingRefresh.add(segment);
@@ -339,7 +339,13 @@ public class DruidSchema extends AbstractSchema
       } else {
         if (knownSegments.containsKey(segment)) {
           SegmentMetadataHolder holder = knownSegments.get(segment);
-          holder.setNumReplicas(holder.getNumReplicas() + 1);
+          SegmentMetadataHolder holderWithNumReplicas = new SegmentMetadataHolder.Builder(
+              holder.isPublished(),
+              holder.isAvailable(),
+              holder.isRealtime(),
+              holder.getNumReplicas()
+          ).withNumReplicas(holder.getNumReplicas() + 1).build();
+          knownSegments.put(segment, holderWithNumReplicas);
         }
         if (server.segmentReplicatable()) {
           // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
@@ -445,9 +451,13 @@ public class DruidSchema extends AbstractSchema
           final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
           SegmentMetadataHolder holder = dataSourceSegments.get(segment);
           dataSourceSegments.put(segment, holder);
-          holder.setRowSignature(rowSignature);
-          holder.setNumRows(analysis.getNumRows());
-          setSegmentSignature(segment, holder);
+          SegmentMetadataHolder updatedHolder = new SegmentMetadataHolder.Builder(
+              holder.isPublished(),
+              holder.isAvailable(),
+              holder.isRealtime(),
+              holder.getNumReplicas()
+          ).withRowSignature(rowSignature).withNumRows(analysis.getNumRows()).build();
+          setSegmentSignature(segment, updatedHolder);
           retVal.add(segment);
         }
 
@@ -556,7 +566,6 @@ public class DruidSchema extends AbstractSchema
     return rowSignatureBuilder.build();
   }
 
-  // note this is a mutable map accessed only by SystemSchema
   public Map<DataSegment, SegmentMetadataHolder> getSegmentMetadata()
   {
     final Map<DataSegment, SegmentMetadataHolder> segmentMetadata = new HashMap<>();
