@@ -67,12 +67,10 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 
 public class DruidPlanner implements Closeable
 {
@@ -314,51 +312,50 @@ public class DruidPlanner implements Closeable
     } else {
       final BindableRel theRel = bindableRel;
       final DataContext dataContext = plannerContext.createDataContext((JavaTypeFactory) planner.getTypeFactory());
-
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Object[], CloseableEnumerableIterator>()
-          {
-            @Override
-            public CloseableEnumerableIterator make()
+      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+        final Enumerable enumerable = theRel.bind(dataContext);
+        final Enumerator enumerator = enumerable.enumerator();
+        return Sequences.withBaggage(new BaseSequence<>(
+            new BaseSequence.IteratorMaker<Object[], EnumeratorIterator<Object[]>>()
             {
-              final Enumerable enumerable = theRel.bind(dataContext);
-              final Enumerator enumerator = enumerable.enumerator();
-              return new CloseableEnumerableIterator(new Iterator<Object[]>()
+              @Override
+              public EnumeratorIterator make()
               {
-                @Override
-                public boolean hasNext()
+                return new EnumeratorIterator(new Iterator<Object[]>()
                 {
-                  return enumerator.moveNext();
-                }
+                  @Override
+                  public boolean hasNext()
+                  {
+                    return enumerator.moveNext();
+                  }
 
-                @Override
-                public Object[] next()
-                {
-                  return (Object[]) enumerator.current();
-                }
-              }, () -> enumerator.close());
-            }
+                  @Override
+                  public Object[] next()
+                  {
+                    return (Object[]) enumerator.current();
+                  }
+                });
+              }
 
-            @Override
-            public void cleanup(CloseableEnumerableIterator iterFromMake)
-            {
-              iterFromMake.close();
+              @Override
+              public void cleanup(EnumeratorIterator iterFromMake)
+              {
+
+              }
             }
-          }
-      );
+        ), () -> enumerator.close());
+      };
       return new PlannerResult(resultsSupplier, root.validatedRowType);
     }
   }
 
-  static class CloseableEnumerableIterator implements Iterator<Object[]>
+  private static class EnumeratorIterator<T> implements Iterator<T>
   {
-    private final Iterator<Object[]> it;
-    private final Closeable closeable;
+    private final Iterator<T> it;
 
-    public CloseableEnumerableIterator(Iterator<Object[]> it, Closeable closeable)
+    public EnumeratorIterator(Iterator<T> it)
     {
       this.it = it;
-      this.closeable = closeable;
     }
 
     @Override
@@ -368,31 +365,9 @@ public class DruidPlanner implements Closeable
     }
 
     @Override
-    public Object[] next()
+    public T next()
     {
       return it.next();
-    }
-
-    @Override
-    public void remove()
-    {
-      it.remove();
-    }
-
-    @Override
-    public void forEachRemaining(Consumer<? super Object[]> action)
-    {
-      it.forEachRemaining(action);
-    }
-
-    public void close()
-    {
-      try {
-        closeable.close();
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
     }
   }
 
