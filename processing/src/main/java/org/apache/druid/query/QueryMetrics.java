@@ -63,13 +63,15 @@ import java.util.List;
  * ----------------------------------
  *  1. Methods, pulling some dimensions from the query object. These methods are used to populate the metric before the
  *  query is run. These methods accept a single `QueryType query` parameter. {@link #query(Query)} calls all methods
- *  of this type, hence pulling all available information from the query object as dimensions.
+ *  of this type, hence pulling all available information from the query object as dimensions.  Once a value for a
+ *  dimension is set, it's illegal to change its value later.
  *
  *  2. Methods for setting dimensions, which become known in the process of the query execution or after the query is
- *  completed.
+ *  completed. Once a value for a dimension is set, it's illegal to change its value later.
  *
  *  3. Methods to register metrics to be emitted later in bulk via {@link #emit(ServiceEmitter)}. These methods
- *  return this QueryMetrics object back for chaining. Names of these methods start with "report" prefix.
+ *  return this QueryMetrics object back for chaining. Names of these methods start with "report" prefix. Once a metric
+ *  is registered, it's illegal to register the same metric again.
  *
  *
  * Implementors expectations
@@ -92,7 +94,7 @@ import java.util.List;
  * 100% guarantee of compatibility, because methods could not only be added to QueryMetrics, existing methods could also
  * be changed or removed.
  *
- * <p><b>All implementations of QueryMetrics should be thread-safety.</b>
+ * <p><b>All implementations of QueryMetrics should be Thread-safe.</b>
  *
  *
  * Adding new methods to QueryMetrics
@@ -307,11 +309,10 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
+   *
+   * Although it's ok to record dimensions and report metrics from multiple threads, emit() should only be invoked
+   * from a single thread. Implementations should throw {@link IllegalStateException} if more than one thread calls
+   * this method.
    */
   void emit(ServiceEmitter emitter);
-
-  /**
-   * Make a deep copy of this instance.
-   */
-  QueryMetrics<QueryType> makeCopy();
 }

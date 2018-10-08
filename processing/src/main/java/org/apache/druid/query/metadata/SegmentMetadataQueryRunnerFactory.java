@@ -211,7 +211,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                           @Override
                           public Sequence<SegmentAnalysis> call()
                           {
-                            return Sequences.simple(input.run(queryPlus.withQueryMetricsCopied(), responseContext).toList());
+                            return Sequences.simple(input.run(queryPlus.withoutQueryMetrics(), responseContext).toList());
                           }
                         }
                     );

@@ -124,7 +124,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     );
     final QueryPlus<Row> queryPlusForRunners = queryPlus.withQuery(
         query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
-    );
+    ).withoutQueryMetrics();
 
     if (QueryContexts.isBySegment(query) || forceChainedExecution) {
       ChainedExecutionQueryRunner<Row> runner = new ChainedExecutionQueryRunner<>(exec, queryWatcher, queryables);
@@ -238,7 +238,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                           Releaser grouperReleaser = grouperHolder.increment()
                                       ) {
                                         final AggregateResult retVal = input
-                                            .run(queryPlusForRunners.withQueryMetricsCopied(), responseContext)
+                                            .run(queryPlusForRunners, responseContext)
                                             .accumulate(
                                                 AggregateResult.ok(),
                                                 accumulator

@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.filter.Filter;
@@ -37,35 +37,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-/**
- * A basic thread-safe implementation of the {@link QueryMetrics} interface.
- *
- * <p><b>Note for inheritence:</b> Subclass should override {@link #makeCopy()} method to return
- * an instance of that subclass. See {@link org.apache.druid.query.groupby.DefaultGroupByQueryMetrics}
- * for an example.
- */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
-  private static final EmittingLogger log = new EmittingLogger(DefaultQueryMetrics.class);
-
   protected final ObjectMapper jsonMapper;
   protected final Object lock = new Object();
   @GuardedBy("lock") private final Map<String, String> singleValueDims = new HashMap<>();
   @GuardedBy("lock") private final Map<String, String[]> multiValueDims = new HashMap<>();
   @GuardedBy("lock") private final Map<String, Number> metrics = new HashMap<>();
+  @GuardedBy("lock") private Thread ownerThread;
+
 
   public DefaultQueryMetrics(ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
-  }
-
-  // copy constructor, used by makeCopy()
-  public DefaultQueryMetrics(DefaultQueryMetrics that)
-  {
-    this.jsonMapper = that.jsonMapper;
-    this.singleValueDims.putAll(that.singleValueDims);
-    this.multiValueDims.putAll(that.multiValueDims);
-    this.metrics.putAll(that.metrics);
   }
 
   protected void setDimension(String dimension, String value)
@@ -73,7 +57,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     synchronized (lock) {
       String oldValue = singleValueDims.put(dimension, value);
       if (oldValue != null && !oldValue.equals(value)) {
-        handleIllegalModification(singleValueDims.getOrDefault(DruidMetrics.ID, ""), dimension);
+        throw new ISE("Changing dimension values in QueryMetrics is not allowed: %s", dimension);
       }
     }
   }
@@ -83,7 +67,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     synchronized (lock) {
       String[] oldValues = multiValueDims.put(dimension, values);
       if (oldValues != null && !Arrays.equals(oldValues, values)) {
-        handleIllegalModification(singleValueDims.getOrDefault(DruidMetrics.ID, ""), dimension);
+        throw new ISE("Changing dimension values in QueryMetrics is not allowed: %s", dimension);
       }
     }
   }
@@ -91,22 +75,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
   {
     synchronized (lock) {
-      Number oldValue = metrics.put(metricName, value);
-      if (oldValue != null && !oldValue.equals(value)) {
-        handleIllegalModification(singleValueDims.getOrDefault(DruidMetrics.ID, ""), metricName);
+      if (metrics.put(metricName, value) != null) {
+        // to prevent misuse of this class such as multiple threads override metrics of each other
+        throw new ISE("Duplicate metric registration in QueryMetrics is not allowed: %s", metricName);
       }
       return this;
     }
-  }
-
-  private void handleIllegalModification(String queryId, String entryName)
-  {
-    Exception e = new Exception("stack trace");
-    log.makeAlert(e, "\"%s\" in QueryMetrics got modified to another value", entryName)
-       .addData("queryId", queryId)
-       .addData("entryName", entryName)
-       .addData("threadName", Thread.currentThread().getName())
-       .emit();
   }
 
   @Override
@@ -322,24 +296,20 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void emit(final ServiceEmitter emitter)
   {
+    final Thread currThread = Thread.currentThread();
     synchronized (lock) {
+      if (ownerThread == null) {
+        ownerThread = currThread;
+      } else if (!ownerThread.equals(currThread)) {
+        throw new ISE("emit() from multiple threads is not allowed. If it is needed to emit metrics from "
+                      + "multiple threads, create a separate QueryMetrics instance for each thread instead.");
+      }
+
       ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       singleValueDims.forEach(builder::setDimension);
       multiValueDims.forEach(builder::setDimension);
       metrics.forEach((metric, value) -> emitter.emit(builder.build(metric, value)));
       metrics.clear();
-    }
-  }
-
-  /**
-   * Subclasses should override this method and return an instance of that class.
-   * See {@link org.apache.druid.query.groupby.GroupByQueryMetrics} for an example.
-   */
-  @Override
-  public QueryMetrics<QueryType> makeCopy()
-  {
-    synchronized (lock) {
-      return new DefaultQueryMetrics<>(this);
     }
   }
 }

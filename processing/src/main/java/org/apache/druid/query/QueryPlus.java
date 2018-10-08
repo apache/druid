@@ -76,18 +76,6 @@ public final class QueryPlus<T>
   }
 
   /**
-   * TODO doc
-   * @return
-   */
-  public QueryPlus<T> withQueryMetricsCopied()
-  {
-    if (queryMetrics == null) {
-      return this;
-    }
-    return new QueryPlus<>(query, queryMetrics.makeCopy(), identity);
-  }
-
-  /**
    * Returns the same QueryPlus object, if it already has {@link QueryMetrics} ({@link #getQueryMetrics()} returns not
    * null), or returns a new QueryPlus object with {@link Query} from this QueryPlus and QueryMetrics created using the
    * given {@link QueryToolChest}, via {@link QueryToolChest#makeMetrics(Query)} method.
@@ -109,6 +97,19 @@ public final class QueryPlus<T>
       }
 
       return new QueryPlus<>(query, metrics, identity);
+    }
+  }
+
+  /**
+   * Returns the same QueryPlus object, if it doesn't have {@link QueryMetrics} ({@link #getQueryMetrics()} returns
+   * null), or returns a new QueryPlus object with {@link Query} from this QueryPlus and null as QueryMetrics.
+   */
+  public QueryPlus<T> withoutQueryMetrics()
+  {
+    if (queryMetrics == null) {
+      return this;
+    } else {
+      return new QueryPlus<>(query, null, identity);
     }
   }
 

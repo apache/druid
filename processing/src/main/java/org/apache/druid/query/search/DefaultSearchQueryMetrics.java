@@ -243,10 +243,4 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   {
     delegateQueryMetrics.emit(emitter);
   }
-
-  @Override
-  public QueryMetrics<SearchQuery> makeCopy()
-  {
-    return new DefaultSearchQueryMetrics(delegateQueryMetrics.makeCopy());
-  }
 }

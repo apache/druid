@@ -115,7 +115,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                 public Iterable<T> call()
                                 {
                                   try {
-                                    Sequence<T> result = input.run(queryPlus.withQueryMetricsCopied(), responseContext);
+                                    Sequence<T> result = input.run(queryPlus.withoutQueryMetrics(), responseContext);
                                     if (result == null) {
                                       throw new ISE("Got a null result! Segments are missing!");
                                     }
