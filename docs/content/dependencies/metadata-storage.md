@@ -34,8 +34,17 @@ See [postgresql-metadata-storage](../development/extensions-core/postgresql.html
 
 ## Adding custom dbcp properties
 
+NOTE: These properties would not be settable through the dbcp properties file: username, password, connectURI, validationQuery, testOnBorrow
+
 ```properties
 druid.metadata.storage.connector.dbcpPropertiesFile=/full/path/to/dbcp.properties
+```
+
+Here is an example dbcp.properties file:
+
+```
+maxConnLifetimeMillis=1200000
+defaultQueryTimeout=30000
 ```
 
 See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-dbcp/configuration.html).
