@@ -25,13 +25,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.curator.framework.CuratorFramework;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

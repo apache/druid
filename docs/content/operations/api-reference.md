@@ -368,6 +368,14 @@ Retrieve the status of a task.
 
 Retrieve information about the segments of a task.
 
+<div class="note caution">
+This API is deprecated and will be removed in future releases.
+</div>
+
+* `/druid/indexer/v1/task/{taskId}/reports`
+
+Retrieve a [task completion report](../ingestion/reports.html) for a task. Only works for completed tasks.
+
 #### POST
 
 * `/druid/indexer/v1/task` 
@@ -388,7 +396,16 @@ The MiddleManager does not have any API endpoints beyond the [common endpoints](
 
 ## Peon
 
-The Peon does not have any API endpoints beyond the [common endpoints](#common).
+#### GET
+
+* `/druid/worker/v1/chat/{taskId}/rowStats`
+
+Retrieve a live row stats report from a peon. See [task reports](../ingestion/reports.html) for more details.
+
+* `/druid/worker/v1/chat/{taskId}/unparseableEvents`
+
+Retrieve an unparseable events report from a peon. See [task reports](../ingestion/reports.html) for more details.
+
 
 ## Broker
 
@@ -412,9 +429,21 @@ druid.query.segmentMetadata.defaultHistory
 
 Returns the dimensions of the datasource.
 
+<div class="note caution">
+This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.html) instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.html#retrieving-metadata)
+if you're using SQL.
+</div>
+
 * `/druid/v2/datasources/{dataSourceName}/metrics`
 
 Returns the metrics of the datasource.
+
+<div class="note caution">
+This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.html) instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.html#retrieving-metadata)
+if you're using SQL.
+</div>
 
 * `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals-in-ISO8601-format}&numCandidates={numCandidates}`
 

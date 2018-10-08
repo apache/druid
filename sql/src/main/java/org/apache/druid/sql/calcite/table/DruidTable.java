@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.table;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.query.DataSource;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
@@ -33,6 +32,7 @@ import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.druid.query.DataSource;
 
 public class DruidTable implements TranslatableTable
 {

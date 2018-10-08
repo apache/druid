@@ -25,6 +25,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
+import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -37,9 +40,6 @@ import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.ISODateTimeFormat;
 
@@ -55,6 +55,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.List;
 
 @Path("/druid/v2/sql/")
@@ -102,14 +103,12 @@ public class SqlResource
       final boolean[] timeColumns = new boolean[fieldList.size()];
       final boolean[] dateColumns = new boolean[fieldList.size()];
       final String[] columnNames = new String[fieldList.size()];
-      final String[] columnTypes = new String[fieldList.size()];
 
       for (int i = 0; i < fieldList.size(); i++) {
         final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
         timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
         dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
         columnNames[i] = fieldList.get(i).getName();
-        columnTypes[i] = sqlTypeName.getName();
       }
 
       final Yielder<Object[]> yielder0 = Yielders.each(lifecycle.execute());
@@ -129,6 +128,10 @@ public class SqlResource
                     try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
                                                                     .createFormatter(os, jsonMapper)) {
                       writer.writeResponseStart();
+
+                      if (sqlQuery.includeHeader()) {
+                        writer.writeHeader(Arrays.asList(columnNames));
+                      }
 
                       while (!yielder.isDone()) {
                         final Object[] row = yielder.get();
@@ -170,8 +173,6 @@ public class SqlResource
             )
             .header("X-Druid-SQL-Query-Id", sqlQueryId)
             .header("X-Druid-Native-Query-Ids", joiner.join(plannerContext.getNativeQueryIds()))
-            .header("X-Druid-Column-Names", jsonMapper.writeValueAsString(columnNames))
-            .header("X-Druid-Column-Types", jsonMapper.writeValueAsString(columnTypes))
             .build();
       }
       catch (Throwable e) {

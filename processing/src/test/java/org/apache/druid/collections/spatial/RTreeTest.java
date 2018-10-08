@@ -19,11 +19,11 @@
 
 package org.apache.druid.collections.spatial;
 
+import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
-import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

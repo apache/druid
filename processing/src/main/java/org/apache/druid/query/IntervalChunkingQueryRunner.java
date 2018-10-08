@@ -21,12 +21,12 @@ package org.apache.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

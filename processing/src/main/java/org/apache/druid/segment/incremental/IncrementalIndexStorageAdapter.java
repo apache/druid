@@ -33,11 +33,12 @@ import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionIndexer;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
@@ -73,7 +74,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<>(index.getDimensionNames(), String.class);
+    return new ListIndexed<>(index.getDimensionNames());
   }
 
   @Override
@@ -85,7 +86,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       return Integer.MAX_VALUE;
     }
 
@@ -94,8 +95,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return 0;
     }
 
-    DimensionIndexer indexer = index.getDimension(dimension).getIndexer();
-    return indexer.getCardinality();
+    DimensionIndexer indexer = desc.getIndexer();
+    int cardinality = indexer.getCardinality();
+    return cardinality != DimensionSelector.CARDINALITY_UNKNOWN ? cardinality : Integer.MAX_VALUE;
   }
 
   @Override

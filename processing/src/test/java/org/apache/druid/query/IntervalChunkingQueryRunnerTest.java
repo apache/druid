@@ -20,8 +20,8 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Druids.TimeseriesQueryBuilder;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.easymock.EasyMock;

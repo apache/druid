@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.segment.DimensionIndexer;
@@ -28,8 +29,7 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.BitmapValues;
-import org.apache.druid.segment.data.Indexed;
-import it.unimi.dsi.fastutil.ints.IntIterator;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -143,7 +143,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
   @Nullable
   @Override
-  public <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension)
+  public <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension)
   {
     final DimensionAccessor accessor = accessors.get(dimension);
     if (accessor == null) {

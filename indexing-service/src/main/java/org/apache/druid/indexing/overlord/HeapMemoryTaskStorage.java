@@ -373,6 +373,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
+  @Deprecated
   @Override
   public <T> void addAuditLog(Task task, TaskAction<T> taskAction)
   {
@@ -386,6 +387,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
+  @Deprecated
   @Override
   public List<TaskAction> getAuditLogs(String taskid)
   {

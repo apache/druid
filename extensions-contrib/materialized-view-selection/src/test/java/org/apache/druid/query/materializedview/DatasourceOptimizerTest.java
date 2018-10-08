@@ -41,7 +41,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.Query;
-import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -68,6 +67,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
 
 public class DatasourceOptimizerTest extends CuratorTestBase 
 {

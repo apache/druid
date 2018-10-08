@@ -20,10 +20,9 @@
 package org.apache.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Predicate;
-
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -33,7 +32,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
-
 import java.util.concurrent.ExecutorService;
 
 /**

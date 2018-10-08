@@ -23,10 +23,10 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -65,7 +65,7 @@ public class GenericIndexedBenchmark
   static final ObjectStrategy<byte[]> byteArrayStrategy = new ObjectStrategy<byte[]>()
   {
     @Override
-    public Class<? extends byte[]> getClazz()
+    public Class<byte[]> getClazz()
     {
       return byte[].class;
     }

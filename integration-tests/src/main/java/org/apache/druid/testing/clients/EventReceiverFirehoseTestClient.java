@@ -71,7 +71,7 @@ public class EventReceiverFirehoseTestClient
   private String getURL()
   {
     return StringUtils.format(
-        "http://%s/druid/worker/v1/chat/%s/push-events/",
+        "https://%s/druid/worker/v1/chat/%s/push-events/",
         host,
         chatID
     );

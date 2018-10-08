@@ -19,11 +19,11 @@
 
 package org.apache.druid.curator.discovery;
 
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
 import org.junit.After;

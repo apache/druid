@@ -33,6 +33,7 @@ import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
@@ -40,8 +41,8 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.NullDimensionSelector;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -138,11 +139,11 @@ public class ExpressionSelectors
       final String column = Iterables.getOnlyElement(columns);
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
 
-      if (column.equals(Column.TIME_COLUMN_NAME)) {
+      if (column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
         // Optimization for expressions that hit the __time column and nothing else.
         // May be worth applying this optimization to all long columns?
         return new SingleLongInputCachingExpressionColumnValueSelector(
-            columnSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+            columnSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
             expression
         );
       } else if (capabilities != null

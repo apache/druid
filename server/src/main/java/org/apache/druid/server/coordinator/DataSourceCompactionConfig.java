@@ -31,18 +31,23 @@ import java.util.Objects;
 
 public class DataSourceCompactionConfig
 {
+  public static final long DEFAULT_TARGET_COMPACTION_SIZE_BYTES = 400 * 1024 * 1024; // 400MB
+
   // should be synchronized with Tasks.DEFAULT_MERGE_TASK_PRIORITY
   private static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
-  private static final long DEFAULT_TARGET_COMPACTION_SIZE_BYTES = 400 * 1024 * 1024; // 400MB
-  private static final int DEFAULT_NUM_TARGET_COMPACTION_SEGMENTS = 150;
+  private static final boolean DEFAULT_KEEP_SEGMENT_GRANULARITY = true;
+  private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
+  private static final int DEFAULT_NUM_INPUT_SEGMENTS = 150;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
+  private final boolean keepSegmentGranularity;
   private final int taskPriority;
+  private final long inputSegmentSizeBytes;
   private final long targetCompactionSizeBytes;
-  // The number of compaction segments is limited because the byte size of a serialized task spec is limited by
+  // The number of input segments is limited because the byte size of a serialized task spec is limited by
   // RemoteTaskRunnerConfig.maxZnodeBytes.
-  private final int numTargetCompactionSegments;
+  private final int maxNumSegmentsToCompact;
   private final Period skipOffsetFromLatest;
   private final ClientCompactQueryTuningConfig tuningConfig;
   private final Map<String, Object> taskContext;
@@ -50,30 +55,38 @@ public class DataSourceCompactionConfig
   @JsonCreator
   public DataSourceCompactionConfig(
       @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("keepSegmentGranularity") Boolean keepSegmentGranularity,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
+      @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
-      @JsonProperty("numTargetCompactionSegments") @Nullable Integer numTargetCompactionSegments,
+      @JsonProperty("maxNumSegmentsToCompact") @Nullable Integer maxNumSegmentsToCompact,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.taskPriority = taskPriority == null ?
-                        DEFAULT_COMPACTION_TASK_PRIORITY :
-                        taskPriority;
-    this.targetCompactionSizeBytes = targetCompactionSizeBytes == null ?
-                                     DEFAULT_TARGET_COMPACTION_SIZE_BYTES :
-                                     targetCompactionSizeBytes;
-    this.numTargetCompactionSegments = numTargetCompactionSegments == null ?
-                                       DEFAULT_NUM_TARGET_COMPACTION_SEGMENTS :
-                                       numTargetCompactionSegments;
+    this.keepSegmentGranularity = keepSegmentGranularity == null
+                                  ? DEFAULT_KEEP_SEGMENT_GRANULARITY
+                                  : keepSegmentGranularity;
+    this.taskPriority = taskPriority == null
+                        ? DEFAULT_COMPACTION_TASK_PRIORITY
+                        : taskPriority;
+    this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
+                                 ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
+                                 : inputSegmentSizeBytes;
+    this.targetCompactionSizeBytes = targetCompactionSizeBytes == null
+                                     ? DEFAULT_TARGET_COMPACTION_SIZE_BYTES
+                                     : targetCompactionSizeBytes;
+    this.maxNumSegmentsToCompact = maxNumSegmentsToCompact == null
+                                   ? DEFAULT_NUM_INPUT_SEGMENTS
+                                   : maxNumSegmentsToCompact;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
     this.taskContext = taskContext;
 
     Preconditions.checkArgument(
-        this.numTargetCompactionSegments > 1,
+        this.maxNumSegmentsToCompact > 1,
         "numTargetCompactionSegments should be larger than 1"
     );
   }
@@ -85,21 +98,33 @@ public class DataSourceCompactionConfig
   }
 
   @JsonProperty
+  public boolean isKeepSegmentGranularity()
+  {
+    return keepSegmentGranularity;
+  }
+
+  @JsonProperty
   public int getTaskPriority()
   {
     return taskPriority;
   }
 
   @JsonProperty
-  public long getTargetCompactionSizeBytes()
+  public long getInputSegmentSizeBytes()
   {
-    return targetCompactionSizeBytes;
+    return inputSegmentSizeBytes;
   }
 
   @JsonProperty
-  public int getNumTargetCompactionSegments()
+  public int getMaxNumSegmentsToCompact()
   {
-    return numTargetCompactionSegments;
+    return maxNumSegmentsToCompact;
+  }
+
+  @JsonProperty
+  public long getTargetCompactionSizeBytes()
+  {
+    return targetCompactionSizeBytes;
   }
 
   @JsonProperty
@@ -139,15 +164,23 @@ public class DataSourceCompactionConfig
       return false;
     }
 
+    if (keepSegmentGranularity != that.keepSegmentGranularity) {
+      return false;
+    }
+
     if (taskPriority != that.taskPriority) {
       return false;
     }
 
-    if (targetCompactionSizeBytes != that.targetCompactionSizeBytes) {
+    if (inputSegmentSizeBytes != that.inputSegmentSizeBytes) {
       return false;
     }
 
-    if (numTargetCompactionSegments != that.numTargetCompactionSegments) {
+    if (maxNumSegmentsToCompact != that.maxNumSegmentsToCompact) {
+      return false;
+    }
+
+    if (targetCompactionSizeBytes != that.targetCompactionSizeBytes) {
       return false;
     }
 
@@ -167,9 +200,11 @@ public class DataSourceCompactionConfig
   {
     return Objects.hash(
         dataSource,
+        keepSegmentGranularity,
         taskPriority,
+        inputSegmentSizeBytes,
+        maxNumSegmentsToCompact,
         targetCompactionSizeBytes,
-        numTargetCompactionSegments,
         skipOffsetFromLatest,
         tuningConfig,
         taskContext

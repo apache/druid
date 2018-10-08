@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
@@ -52,7 +53,6 @@ import org.apache.druid.segment.realtime.plumber.Plumber;
 import org.apache.druid.segment.realtime.plumber.PlumberSchool;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import java.io.File;

@@ -21,6 +21,8 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -31,8 +33,6 @@ import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongList;
 
 import javax.annotation.Nullable;
 import java.io.DataInput;
@@ -138,6 +138,7 @@ public class GenericIndexedWriter<T> implements Serializer
   private final int fileSizeLimit;
   private final byte[] fileNameByteArray;
   private boolean objectsSorted = true;
+  @Nullable
   private T prevObject = null;
   private WriteOutBytes headerOut = null;
   private WriteOutBytes valuesOut = null;
@@ -207,7 +208,7 @@ public class GenericIndexedWriter<T> implements Serializer
     objectsSorted = false;
   }
 
-  public void write(T objectToWrite) throws IOException
+  public void write(@Nullable T objectToWrite) throws IOException
   {
     if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
       objectsSorted = false;

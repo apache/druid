@@ -48,7 +48,7 @@ public class KafkaEmitterConfigTest
                                                                        .put("testKey", "testValue").build()
     );
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
-    KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.reader(KafkaEmitterConfig.class)
+    KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
                                                           .readValue(kafkaEmitterConfigString);
     Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
   }

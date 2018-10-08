@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.java.util.common.guava.Sequence;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;

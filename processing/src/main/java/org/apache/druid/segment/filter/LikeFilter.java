@@ -20,6 +20,8 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BitmapResultFactory;
@@ -31,10 +33,11 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
-import it.unimi.dsi.fastutil.ints.IntIterable;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.NoSuchElementException;
 
 public class LikeFilter implements Filter
@@ -106,14 +109,15 @@ public class LikeFilter implements Filter
       }
 
       // search for start, end indexes in the bitmaps; then include all matching bitmaps between those points
-      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
+      try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
 
-      // Union bitmaps for all matching dimension values in range.
-      // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
-      return Filters.bitmapsFromIndexes(
-          getDimValueIndexIterableForPrefixMatch(bitmapIndex, dimValues),
-          bitmapIndex
-      );
+        // Union bitmaps for all matching dimension values in range.
+        // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
+        return Filters.bitmapsFromIndexes(getDimValueIndexIterableForPrefixMatch(bitmapIndex, dimValues), bitmapIndex);
+      }
+      catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
     } else {
       // fallback
       return Filters.matchPredicateNoUnion(

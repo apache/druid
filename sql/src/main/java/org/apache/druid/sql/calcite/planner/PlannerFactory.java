@@ -21,13 +21,6 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -42,6 +35,13 @@ import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.sql.calcite.rel.QueryMaker;
+import org.apache.druid.sql.calcite.schema.DruidSchema;
 
 import java.util.Map;
 import java.util.Properties;

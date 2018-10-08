@@ -369,12 +369,7 @@ Metadata is available over the HTTP API by querying [system tables](#retrieving-
 
 #### Responses
 
-All Druid SQL HTTP responses include a "X-Druid-Column-Names" header with a JSON-encoded array of columns that
-will appear in the result rows and an "X-Druid-Column-Types" header with a JSON-encoded array of
-[types](#data-types-and-casts).
-
-For the result rows themselves, Druid SQL supports a variety of result formats. You can
-specify these by adding a "resultFormat" parameter, like:
+Druid SQL supports a variety of result formats. You can specify these by adding a "resultFormat" parameter, like:
 
 ```json
 {
@@ -392,6 +387,20 @@ The supported result formats are:
 |`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
 |`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
 |`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/csv|
+
+You can additionally request a header by setting "header" to true in your request, like:
+
+```json
+{
+  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
+  "resultFormat" : "arrayLines",
+  "header" : true
+}
+```
+
+In this case, the first result returned will be a header. For the `csv`, `array`, and `arrayLines` formats, the header
+will be a list of column names. For the `object` and `objectLines` formats, the header will be an object where the
+keys are column names, and the values are null.
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
 same format as [native Druid query errors](../querying/querying.html#query-errors). If an error occurs while the response body is

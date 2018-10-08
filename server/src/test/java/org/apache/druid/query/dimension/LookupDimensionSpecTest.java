@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -32,8 +34,6 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.segment.TestHelper;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -78,7 +78,7 @@ public class LookupDimensionSpecTest
         LOOKUP_REF_MANAGER
     );
     String serLookup = mapper.writeValueAsString(lookupDimSpec);
-    Assert.assertEquals(lookupDimSpec, mapper.reader(DimensionSpec.class).with(injectableValues).readValue(serLookup));
+    Assert.assertEquals(lookupDimSpec, mapper.readerFor(DimensionSpec.class).with(injectableValues).readValue(serLookup));
   }
 
   private Object[] parametersForTestSerDesr()

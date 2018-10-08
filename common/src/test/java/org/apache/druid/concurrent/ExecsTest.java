@@ -21,10 +21,8 @@ package org.apache.druid.concurrent;
 
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-
 import org.junit.Assert;
 import org.junit.Test;
 

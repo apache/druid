@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.DoublesUnion;
-
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 

@@ -20,11 +20,11 @@ package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.avro.AvroParsers;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
-import org.apache.avro.generic.GenericRecord;
 
 import java.util.List;
 

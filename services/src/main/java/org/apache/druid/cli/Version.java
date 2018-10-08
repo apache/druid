@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import io.airlift.airline.Command;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.StatusResource;
@@ -31,6 +32,7 @@ import org.apache.druid.server.StatusResource;
 public class Version implements Runnable
 {
   @Override
+  @SuppressForbidden(reason = "System#out")
   public void run()
   {
     System.out.println(new StatusResource.Status(Initialization.getLoadedImplementations(DruidModule.class)));

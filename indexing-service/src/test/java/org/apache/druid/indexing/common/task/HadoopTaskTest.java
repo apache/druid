@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexer.updater.HadoopDruidConverterConfig;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.updater.HadoopDruidConverterConfig;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;

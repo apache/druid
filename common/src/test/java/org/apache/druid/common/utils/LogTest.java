@@ -19,13 +19,12 @@
 
 package org.apache.druid.common.utils;
 
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.logger.Logger;
 
 // The issue here is that parameters to the logging system are evaluated eagerly
 // So CPU or resource heavy clauses in the log parameters get evaluated even if there is no debug logging

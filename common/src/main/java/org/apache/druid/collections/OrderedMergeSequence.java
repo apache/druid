@@ -22,7 +22,6 @@ package org.apache.druid.collections;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -30,6 +29,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingAccumulators;
+import org.apache.druid.java.util.common.io.Closer;
 
 import java.io.IOException;
 import java.util.PriorityQueue;

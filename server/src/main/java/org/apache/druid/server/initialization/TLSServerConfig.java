@@ -55,6 +55,27 @@ public class TLSServerConfig
   @JsonProperty
   private List<String> excludeProtocols;
 
+  @JsonProperty
+  private boolean requireClientCertificate = false;
+
+  @JsonProperty
+  private String trustStoreType;
+
+  @JsonProperty
+  private String trustStorePath;
+
+  @JsonProperty
+  private String trustStoreAlgorithm;
+
+  @JsonProperty("trustStorePassword")
+  private PasswordProvider trustStorePasswordProvider;
+
+  @JsonProperty
+  private boolean validateHostnames = true;
+
+  @JsonProperty
+  private String crlPath;
+
   public String getKeyStorePath()
   {
     return keyStorePath;
@@ -105,6 +126,41 @@ public class TLSServerConfig
     return excludeProtocols;
   }
 
+  public boolean isRequireClientCertificate()
+  {
+    return requireClientCertificate;
+  }
+
+  public String getTrustStoreType()
+  {
+    return trustStoreType;
+  }
+
+  public String getTrustStorePath()
+  {
+    return trustStorePath;
+  }
+
+  public String getTrustStoreAlgorithm()
+  {
+    return trustStoreAlgorithm;
+  }
+
+  public PasswordProvider getTrustStorePasswordProvider()
+  {
+    return trustStorePasswordProvider;
+  }
+
+  public boolean isValidateHostnames()
+  {
+    return validateHostnames;
+  }
+
+  public String getCrlPath()
+  {
+    return crlPath;
+  }
+
   @Override
   public String toString()
   {
@@ -117,6 +173,12 @@ public class TLSServerConfig
            ", excludeCipherSuites=" + excludeCipherSuites +
            ", includeProtocols=" + includeProtocols +
            ", excludeProtocols=" + excludeProtocols +
+           ", requireClientCertificate=" + requireClientCertificate +
+           ", trustStoreType='" + trustStoreType + '\'' +
+           ", trustStorePath='" + trustStorePath + '\'' +
+           ", trustStoreAlgorithm='" + trustStoreAlgorithm + '\'' +
+           ", validateHostnames='" + validateHostnames + '\'' +
+           ", crlPath='" + crlPath + '\'' +
            '}';
   }
 }

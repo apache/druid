@@ -19,13 +19,13 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.table.RowSignature;
 
 public class AliasedOperatorConversion implements SqlOperatorConversion
 {

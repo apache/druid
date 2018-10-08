@@ -132,7 +132,7 @@ public class OverlordResourceTestClient
           {
           }
       );
-      return taskStatusResponse.getStatus().getState();
+      return taskStatusResponse.getStatus().getStatusCode();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -175,7 +175,7 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskCompletes(final String taskID)
   {
-    waitUntilTaskCompletes(taskID, 60000, 10);
+    waitUntilTaskCompletes(taskID, 10000, 60);
   }
 
   public void waitUntilTaskCompletes(final String taskID, final int millisEach, final int numTimes)

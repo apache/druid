@@ -25,10 +25,10 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;

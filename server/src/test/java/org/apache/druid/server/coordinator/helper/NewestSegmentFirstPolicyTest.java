@@ -34,6 +34,8 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,13 +43,26 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class NewestSegmentFirstPolicyTest
 {
   private static final String DATA_SOURCE = "dataSource";
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
 
+  @Parameterized.Parameters(name = "keepSegmentGranularity = {0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return ImmutableList.of(new Object[]{false}, new Object[]{true});
+  }
+
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy();
+  private final boolean keepSegmentGranularity;
+
+  public NewestSegmentFirstPolicyTest(boolean keepSegmentGranularity)
+  {
+    this.keepSegmentGranularity = keepSegmentGranularity;
+  }
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -98,29 +113,54 @@ public class NewestSegmentFirstPolicyTest
 
     final List<DataSegment> segments = iterator.next();
     Assert.assertNotNull(segments);
-    Assert.assertEquals(8, segments.size());
 
-    final List<Interval> expectedIntervals = new ArrayList<>(segments.size());
-    for (int i = 0; i < 4; i++) {
-      expectedIntervals.add(Intervals.of("2017-11-16T06:00:00/2017-11-16T07:00:00"));
+    if (keepSegmentGranularity) {
+      // If keepSegmentGranularity = true, the iterator returns the segments of only the next time chunk.
+      Assert.assertEquals(4, segments.size());
+
+      final List<Interval> expectedIntervals = new ArrayList<>(segments.size());
+      for (int i = 0; i < 4; i++) {
+        expectedIntervals.add(Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"));
+      }
+
+      Assert.assertEquals(
+          expectedIntervals,
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
+      );
+
+      assertCompactSegmentIntervals(
+          iterator,
+          segmentPeriod,
+          Intervals.of("2017-11-16T06:00:00/2017-11-16T07:00:00"),
+          Intervals.of("2017-11-16T06:00:00/2017-11-16T07:00:00"),
+          false
+      );
+    } else {
+      // If keepSegmentGranularity = false, the returned segments can span over multiple time chunks.
+      Assert.assertEquals(8, segments.size());
+
+      final List<Interval> expectedIntervals = new ArrayList<>(segments.size());
+      for (int i = 0; i < 4; i++) {
+        expectedIntervals.add(Intervals.of("2017-11-16T06:00:00/2017-11-16T07:00:00"));
+      }
+      for (int i = 0; i < 4; i++) {
+        expectedIntervals.add(Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"));
+      }
+      expectedIntervals.sort(Comparators.intervalsByStartThenEnd());
+
+      Assert.assertEquals(
+          expectedIntervals,
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
+      );
+
+      assertCompactSegmentIntervals(
+          iterator,
+          segmentPeriod,
+          Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
+          Intervals.of("2017-11-16T05:00:00/2017-11-16T06:00:00"),
+          true
+      );
     }
-    for (int i = 0; i < 4; i++) {
-      expectedIntervals.add(Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"));
-    }
-    expectedIntervals.sort(Comparators.intervalsByStartThenEnd());
-
-    Assert.assertEquals(
-        expectedIntervals,
-        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
-    );
-
-    assertCompactSegmentIntervals(
-        iterator,
-        segmentPeriod,
-        Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
-        Intervals.of("2017-11-16T05:00:00/2017-11-16T06:00:00"),
-        true
-    );
   }
 
   @Test
@@ -176,9 +216,7 @@ public class NewestSegmentFirstPolicyTest
         iterator,
         segmentPeriod,
         Intervals.of("2017-11-16T20:00:00/2017-11-16T21:00:00"),
-        // The last interval is not "2017-11-17T01:00:00/2017-11-17T02:00:00". This is because more segments are
-        // expected to be added for that interval. See NewestSegmentFirstIterator.returnIfCompactibleSize().
-        Intervals.of("2017-11-17T00:00:00/2017-11-17T01:00:00"),
+        Intervals.of("2017-11-17T01:00:00/2017-11-17T02:00:00"),
         false
     );
 
@@ -358,6 +396,63 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertFalse(iterator.hasNext());
   }
 
+  @Test
+  public void testSkipUnknownDataSource()
+  {
+    final String unknownDataSource = "unknown";
+    final Period segmentPeriod = new Period("PT1H");
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(
+            unknownDataSource,
+            createCompactionConfig(10000, 100, new Period("P2D")),
+            DATA_SOURCE,
+            createCompactionConfig(10000, 100, new Period("P2D"))
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
+                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
+            )
+        )
+    );
+
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-14T00:00:00/2017-11-14T01:00:00"),
+        Intervals.of("2017-11-15T03:00:00/2017-11-15T04:00:00"),
+        true
+    );
+  }
+
+  @Test
+  public void testIgnoreSingleSegmentToCompact()
+  {
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, 100, new Period("P1D"))),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-02T00:00:00/2017-12-03T00:00:00"),
+                    new Period("P1D"),
+                    200,
+                    1
+                ),
+                new SegmentGenerateSpec(
+                    Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"),
+                    new Period("P1D"),
+                    200,
+                    1
+                )
+            )
+        )
+    );
+
+    Assert.assertFalse(iterator.hasNext());
+  }
+
   private static void assertCompactSegmentIntervals(
       CompactionSegmentIterator iterator,
       Period segmentPeriod,
@@ -447,7 +542,7 @@ public class NewestSegmentFirstPolicyTest
     return timeline;
   }
 
-  private static DataSourceCompactionConfig createCompactionConfig(
+  private DataSourceCompactionConfig createCompactionConfig(
       long targetCompactionSizeBytes,
       int numTargetCompactionSegments,
       Period skipOffsetFromLatest
@@ -455,7 +550,9 @@ public class NewestSegmentFirstPolicyTest
   {
     return new DataSourceCompactionConfig(
         DATA_SOURCE,
+        keepSegmentGranularity,
         0,
+        targetCompactionSizeBytes,
         targetCompactionSizeBytes,
         numTargetCompactionSegments,
         skipOffsetFromLatest,

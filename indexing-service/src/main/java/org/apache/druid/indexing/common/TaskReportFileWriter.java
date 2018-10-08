@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.util.Map;

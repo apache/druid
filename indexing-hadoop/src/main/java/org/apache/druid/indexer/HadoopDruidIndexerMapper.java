@@ -45,7 +45,6 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   protected HadoopDruidIndexerConfig config;
   private InputRowParser parser;
   protected GranularitySpec granularitySpec;
-  private boolean reportParseExceptions;
 
   @Override
   protected void setup(Context context)
@@ -54,7 +53,6 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     parser = config.getParser();
     granularitySpec = config.getGranularitySpec();
-    reportParseExceptions = !config.isIgnoreInvalidRows();
   }
 
   public HadoopDruidIndexerConfig getConfig()
@@ -88,7 +86,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
           if (!granularitySpec.bucketIntervals().isPresent()
               || granularitySpec.bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()))
                                 .isPresent()) {
-            innerMap(inputRow, context, reportParseExceptions);
+            innerMap(inputRow, context);
           } else {
             context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).increment(1);
           }
@@ -147,7 +145,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  protected abstract void innerMap(InputRow inputRow, Context context, boolean reportParseExceptions)
+  protected abstract void innerMap(InputRow inputRow, Context context)
       throws IOException, InterruptedException;
 
 }

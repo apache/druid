@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
@@ -61,8 +62,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
@@ -73,7 +74,6 @@ import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -132,7 +132,6 @@ public class FilterPartitionBenchmark
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -186,7 +185,7 @@ public class FilterPartitionBenchmark
 
     Interval interval = schemaInfo.getDataInterval();
     timeFilterNone = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(Long.MAX_VALUE),
         String.valueOf(Long.MAX_VALUE),
         true,
@@ -198,7 +197,7 @@ public class FilterPartitionBenchmark
 
     long halfEnd = (interval.getEndMillis() + interval.getStartMillis()) / 2;
     timeFilterHalf = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(halfEnd),
         true,
@@ -209,7 +208,7 @@ public class FilterPartitionBenchmark
     ));
 
     timeFilterAll = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(interval.getEndMillis()),
         true,

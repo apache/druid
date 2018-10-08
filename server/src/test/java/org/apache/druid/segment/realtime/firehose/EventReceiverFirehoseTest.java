@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
@@ -34,7 +35,6 @@ import org.apache.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
