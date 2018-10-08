@@ -218,7 +218,7 @@ public class WhiteListBasedDruidToTimelineEventConverter implements DruidToTimel
       } else {
         fileContent = Files.asCharSource(new File(mapPath), StandardCharsets.UTF_8).read();
       }
-      return mapper.reader(new TypeReference<ImmutableSortedMap<String, ImmutableList<String>>>()
+      return mapper.readerFor(new TypeReference<ImmutableSortedMap<String, ImmutableList<String>>>()
       {
       }).readValue(fileContent);
     }

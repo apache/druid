@@ -41,7 +41,7 @@ public class OpentsdbEmitterConfigTest
   {
     OpentsdbEmitterConfig opentsdbEmitterConfig = new OpentsdbEmitterConfig("localhost", 9999, 2000, 2000, 200, 2000, 10000L, null);
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
-    OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.reader(OpentsdbEmitterConfig.class)
+    OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
                                                                 .readValue(opentsdbEmitterConfigString);
     Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
   }

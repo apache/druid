@@ -47,7 +47,7 @@ public class OpentsdbEventTest
     tags.put("baz", 1);
     OpentsdbEvent opentsdbEvent = new OpentsdbEvent("foo.bar", 1000L, 20, tags);
     String opentsdbString = mapper.writeValueAsString(opentsdbEvent);
-    OpentsdbEvent expectedOpentsdbEvent = mapper.reader(OpentsdbEvent.class)
+    OpentsdbEvent expectedOpentsdbEvent = mapper.readerFor(OpentsdbEvent.class)
                                                 .readValue(opentsdbString);
     Assert.assertEquals(expectedOpentsdbEvent, opentsdbEvent);
   }

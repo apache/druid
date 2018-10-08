@@ -35,7 +35,7 @@ public class HdfsKerberosConfigTest
     HdfsKerberosConfig hdfsKerberosConfig = new HdfsKerberosConfig("principal", "keytab");
     Assert.assertEquals(
         hdfsKerberosConfig,
-        mapper.reader(HdfsKerberosConfig.class).readValue(mapper.writeValueAsString(hdfsKerberosConfig))
+        mapper.readerFor(HdfsKerberosConfig.class).readValue(mapper.writeValueAsString(hdfsKerberosConfig))
     );
   }
 

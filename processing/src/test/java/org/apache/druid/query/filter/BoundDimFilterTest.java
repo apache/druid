@@ -82,7 +82,7 @@ public class BoundDimFilterTest
     Injector defaultInjector = GuiceInjectors.makeStartupInjector();
     ObjectMapper mapper = defaultInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
     String serBetweenDimFilter = mapper.writeValueAsString(boundDimFilter);
-    BoundDimFilter actualBoundDimFilter = mapper.reader(DimFilter.class).readValue(serBetweenDimFilter);
+    BoundDimFilter actualBoundDimFilter = mapper.readerFor(DimFilter.class).readValue(serBetweenDimFilter);
     Assert.assertEquals(boundDimFilter, actualBoundDimFilter);
   }
 

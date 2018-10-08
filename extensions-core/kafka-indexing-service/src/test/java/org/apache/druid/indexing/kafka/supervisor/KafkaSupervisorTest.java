@@ -98,6 +98,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -2297,7 +2298,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testSuspendedNoRunningTasks() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false, true);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false, true, kafkaHost);
     addSomeEvents(1);
 
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2330,7 +2331,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false, true);
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false, true, kafkaHost);
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -2424,7 +2425,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
     replayAll();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false, true);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false, true, kafkaHost);
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
@@ -2436,6 +2437,98 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.resetInternal(null);
     verifyAll();
   }
+
+  @Test
+  public void testFailedInitializationAndRecovery() throws Exception
+  {
+    // Block the supervisor initialization with a bad hostname config, make sure this doesn't block the lifecycle
+    supervisor = getSupervisor(
+        1,
+        1,
+        true,
+        "PT1H",
+        null,
+        null,
+        false,
+        false,
+        StringUtils.format("badhostname:%d", kafkaServer.getPort())
+    );
+    addSomeEvents(1);
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+
+    Assert.assertTrue(supervisor.isLifecycleStarted());
+    Assert.assertFalse(supervisor.isStarted());
+
+    verifyAll();
+
+    while (supervisor.getInitRetryCounter() < 3) {
+      Thread.sleep(1000);
+    }
+
+    // Portion below is the same test as testNoInitialState(), testing the supervisor after the initialiation is fixed
+    resetAll();
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskQueue.add(capture(captured))).andReturn(true);
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    // Fix the bad hostname during the initialization retries and finish the supervisor start.
+    // This is equivalent to supervisor.start() in testNoInitialState().
+    // The test supervisor has a P1D period, so we need to manually trigger the initialization retry.
+    supervisor.getIoConfig().getConsumerProperties().put("bootstrap.servers", kafkaHost);
+    supervisor.tryInit();
+
+    Assert.assertTrue(supervisor.isLifecycleStarted());
+    Assert.assertTrue(supervisor.isStarted());
+
+    supervisor.runInternal();
+    verifyAll();
+
+    KafkaIndexTask task = captured.getValue();
+    Assert.assertEquals(dataSchema, task.getDataSchema());
+    Assert.assertEquals(KafkaTuningConfig.copyOf(tuningConfig), task.getTuningConfig());
+
+    KafkaIOConfig taskConfig = task.getIOConfig();
+    Assert.assertEquals(kafkaHost, taskConfig.getConsumerProperties().get("bootstrap.servers"));
+    Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
+    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+    Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
+    Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
+    Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
+    Assert.assertFalse("skipOffsetGaps", taskConfig.isSkipOffsetGaps());
+
+    Assert.assertEquals(topic, taskConfig.getStartPartitions().getTopic());
+    Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionOffsetMap().get(0));
+    Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionOffsetMap().get(1));
+    Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionOffsetMap().get(2));
+
+    Assert.assertEquals(topic, taskConfig.getEndPartitions().getTopic());
+    Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(0));
+    Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(1));
+    Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(2));
+  }
+
 
   private void addSomeEvents(int numEventsPerPartition) throws Exception
   {
@@ -2473,7 +2566,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         skipOffsetGaps,
-        false
+        false,
+        kafkaHost
     );
   }
 
@@ -2485,15 +2579,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean skipOffsetGaps,
-      boolean suspended
+      boolean suspended,
+      String kafkaHost
   )
   {
+    Map<String, String> consumerProperties = new HashMap<>();
+    consumerProperties.put("myCustomKey", "myCustomValue");
+    consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
         replicas,
         taskCount,
         new Period(duration),
-        ImmutableMap.of("myCustomKey", "myCustomValue", "bootstrap.servers", kafkaHost),
+        consumerProperties,
         new Period("P1D"),
         new Period("PT30S"),
         useEarliestOffset,

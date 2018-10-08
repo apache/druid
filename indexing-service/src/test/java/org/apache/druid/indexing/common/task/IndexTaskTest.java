@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -61,21 +62,35 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LocalDataSegmentPusher;
+import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -93,10 +108,10 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -131,6 +146,10 @@ public class IndexTaskTest
       0
   );
 
+  private DataSegmentPusher pusher;
+  private SegmentLoader segmentLoader;
+  private List<DataSegment> segments;
+
   private static final IndexSpec indexSpec = new IndexSpec();
   private final ObjectMapper jsonMapper;
   private IndexMergerV9 indexMergerV9;
@@ -143,6 +162,7 @@ public class IndexTaskTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
+
     indexMergerV9 = testUtils.getTestIndexMergerV9();
     indexIO = testUtils.getTestIndexIO();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
@@ -151,7 +171,50 @@ public class IndexTaskTest
   @Before
   public void setup() throws IOException
   {
-    reportsFile = File.createTempFile("IndexTaskTestReports-" + System.currentTimeMillis(), "json");
+    reportsFile = temporaryFolder.newFile(
+        StringUtils.format("IndexTaskTestReports-%s.json", System.currentTimeMillis())
+    );
+
+    final File deepStorageDir = temporaryFolder.newFolder();
+    final File cacheDir = temporaryFolder.newFolder();
+
+    pusher = new LocalDataSegmentPusher(
+        new LocalDataSegmentPusherConfig()
+        {
+          @Override
+          public File getStorageDirectory()
+          {
+            return deepStorageDir;
+          }
+        },
+        jsonMapper
+    )
+    {
+      @Override
+      public DataSegment push(final File dataSegmentFile, final DataSegment segment, final boolean useUniquePath)
+          throws IOException
+      {
+        final DataSegment returnSegment = super.push(dataSegmentFile, segment, useUniquePath);
+        segments.add(returnSegment);
+        return returnSegment;
+      }
+    };
+    segmentLoader = new SegmentLoaderLocalCacheManager(
+        indexIO,
+        new SegmentLoaderConfig()
+        {
+          @Override
+          public List<StorageLocationConfig> getLocations()
+          {
+            return Collections.singletonList(
+                new StorageLocationConfig().setPath(cacheDir)
+            );
+          }
+        },
+        jsonMapper
+    );
+    segments = new ArrayList<>();
+
   }
 
   @After
@@ -180,7 +243,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfig(2, null, false, true),
+            createTuningConfigWithTargetPartitionSize(2, false, true),
             false
         ),
         null,
@@ -226,7 +289,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfig(2, null, true, true),
+            createTuningConfigWithTargetPartitionSize(2, true, true),
             false
         ),
         null,
@@ -278,7 +341,7 @@ public class IndexTaskTest
                 )
             ),
             null,
-            createTuningConfig(2, null, true, false),
+            createTuningConfigWithTargetPartitionSize(2, true, false),
             false
         ),
         null,
@@ -322,7 +385,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
             ),
-            createTuningConfig(10, null, false, true),
+            createTuningConfigWithTargetPartitionSize(10, false, true),
             false
         ),
         null,
@@ -331,7 +394,7 @@ public class IndexTaskTest
         rowIngestionMetersFactory
     );
 
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runTask(indexTask).rhs;
 
     Assert.assertEquals(1, segments.size());
   }
@@ -359,7 +422,7 @@ public class IndexTaskTest
                 Granularities.HOUR,
                 Collections.singletonList(Intervals.of("2014-01-01T08:00:00Z/2014-01-01T09:00:00Z"))
             ),
-            createTuningConfig(50, null, false, true),
+            createTuningConfigWithTargetPartitionSize(50, false, true),
             false
         ),
         null,
@@ -392,7 +455,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfig(null, 1, false, true),
+            createTuningConfigWithNumShards(1, null, false, true),
             false
         ),
         null,
@@ -407,8 +470,82 @@ public class IndexTaskTest
 
     Assert.assertEquals("test", segments.get(0).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertTrue(segments.get(0).getShardSpec().getClass().equals(NoneShardSpec.class));
+    Assert.assertEquals(NoneShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+  }
+
+  @Test
+  public void testNumShardsAndPartitionDimensionsProvided() throws Exception
+  {
+    final File tmpDir = temporaryFolder.newFolder();
+    final File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    final IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            null,
+            null,
+            createTuningConfigWithNumShards(2, ImmutableList.of("dim"), false, true),
+            false
+        ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        rowIngestionMetersFactory
+    );
+
+    runTask(indexTask);
+
+    Assert.assertEquals(2, segments.size());
+
+    for (DataSegment segment : segments) {
+      Assert.assertEquals("test", segment.getDataSource());
+      Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
+      Assert.assertEquals(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+
+      final File segmentFile = segmentLoader.getSegmentFiles(segment);
+
+      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
+          new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
+          segment.getInterval()
+      );
+
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
+          null,
+          segment.getInterval(),
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      );
+      final List<Integer> hashes = cursorSequence
+          .map(cursor -> {
+            final DimensionSelector selector = cursor.getColumnSelectorFactory()
+                                                     .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+            try {
+              final int hash = HashBasedNumberedShardSpec.hash(
+                  jsonMapper,
+                  Collections.singletonList(selector.getObject())
+              );
+              cursor.advance();
+              return hash;
+            }
+            catch (JsonProcessingException e) {
+              throw new RuntimeException(e);
+            }
+          })
+          .toList();
+
+      Assert.assertTrue(hashes.stream().allMatch(h -> h.intValue() == hashes.get(0)));
+    }
   }
 
   @Test
@@ -431,7 +568,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfig(2, null, false, false),
+            createTuningConfigWithTargetPartitionSize(2, false, false),
             true
         ),
         null,
@@ -481,7 +618,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfig(2, null, false, true),
+            createTuningConfigWithTargetPartitionSize(2, false, true),
             false
         ),
         null,
@@ -544,7 +681,7 @@ public class IndexTaskTest
                 0
             ),
             null,
-            createTuningConfig(2, null, false, true),
+            createTuningConfigWithTargetPartitionSize(2, false, true),
             false
         ),
         null,
@@ -596,7 +733,7 @@ public class IndexTaskTest
                 0
             ),
             null,
-            createTuningConfig(2, null, false, true),
+            createTuningConfigWithTargetPartitionSize(2, false, true),
             false
         ),
         null,
@@ -643,7 +780,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfig(2, 2, null, 2L, null, false, false, true),
+            createTuningConfig(2, 2, null, 2L, null, null, false, false, true),
             false
         ),
         null,
@@ -688,7 +825,7 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, null, 2L, null, false, true, true),
+            createTuningConfig(3, 2, null, 2L, null, null, false, true, true),
             false
         ),
         null,
@@ -732,7 +869,7 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, null, 2L, null, false, false, true),
+            createTuningConfig(3, 2, null, 2L, null, null, false, false, true),
             false
         ),
         null,
@@ -805,7 +942,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, false, false, false), // ignore parse exception,
+        createTuningConfig(2, null, null, null, null, null, false, false, false), // ignore parse exception,
         false
     );
 
@@ -858,7 +995,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, false, false, true), // report parse exception
+        createTuningConfig(2, null, null, null, null, null, false, false, true), // report parse exception
         false
     );
 
@@ -907,6 +1044,7 @@ public class IndexTaskTest
 
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         2,
+        null,
         null,
         null,
         null,
@@ -1033,6 +1171,7 @@ public class IndexTaskTest
         null,
         null,
         null,
+        null,
         indexSpec,
         null,
         true,
@@ -1142,6 +1281,7 @@ public class IndexTaskTest
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         2,
+        null,
         null,
         null,
         null,
@@ -1283,7 +1423,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, 1, null, null, null, false, true, true), // report parse exception
+        createTuningConfig(2, 1, null, null, null, null, false, true, true), // report parse exception
         false
     );
 
@@ -1353,7 +1493,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, false, false, true), // report parse exception
+        createTuningConfig(2, null, null, null, null, null, false, false, true), // report parse exception
         false
     );
 
@@ -1392,8 +1532,6 @@ public class IndexTaskTest
 
   private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask indexTask) throws Exception
   {
-    final List<DataSegment> segments = Lists.newArrayList();
-
     final TaskActionClient actionClient = new TaskActionClient()
     {
       @Override
@@ -1450,35 +1588,6 @@ public class IndexTaskTest
       }
     };
 
-    final DataSegmentPusher pusher = new DataSegmentPusher()
-    {
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String dataSource)
-      {
-        return getPathForHadoop();
-      }
-
-      @Override
-      public String getPathForHadoop()
-      {
-        return null;
-      }
-
-      @Override
-      public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
-      {
-        segments.add(segment);
-        return segment;
-      }
-
-      @Override
-      public Map<String, Object> makeLoadSpec(URI uri)
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
-
     final DataSegmentKiller killer = new DataSegmentKiller()
     {
       @Override
@@ -1526,7 +1635,14 @@ public class IndexTaskTest
     indexTask.isReady(box.getTaskActionClient());
     TaskStatus status = indexTask.run(box);
 
-    Collections.sort(segments);
+    segments.sort((s1, s2) -> {
+      final int comp = Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval());
+      if (comp != 0) {
+        return comp;
+      }
+      //noinspection SubtractionInCompareTo
+      return s1.getShardSpec().getPartitionNum() - s2.getShardSpec().getPartitionNum();
+    });
 
     return Pair.of(status, segments);
   }
@@ -1584,9 +1700,8 @@ public class IndexTaskTest
     );
   }
 
-  private static IndexTuningConfig createTuningConfig(
-      Integer targetPartitionSize,
-      Integer numShards,
+  private static IndexTuningConfig createTuningConfigWithTargetPartitionSize(
+      int targetPartitionSize,
       boolean forceExtendableShardSpecs,
       boolean forceGuaranteedRollup
   )
@@ -1596,7 +1711,28 @@ public class IndexTaskTest
         1,
         null,
         null,
+        null,
+        null,
+        forceExtendableShardSpecs,
+        forceGuaranteedRollup,
+        true
+    );
+  }
+
+  private static IndexTuningConfig createTuningConfigWithNumShards(
+      int numShards,
+      @Nullable List<String> partitionDimensions,
+      boolean forceExtendableShardSpecs,
+      boolean forceGuaranteedRollup
+  )
+  {
+    return createTuningConfig(
+        null,
+        1,
+        null,
+        null,
         numShards,
+        partitionDimensions,
         forceExtendableShardSpecs,
         forceGuaranteedRollup,
         true
@@ -1604,11 +1740,12 @@ public class IndexTaskTest
   }
 
   private static IndexTuningConfig createTuningConfig(
-      Integer targetPartitionSize,
-      Integer maxRowsInMemory,
-      Long maxBytesInMemory,
-      Long maxTotalRows,
-      Integer numShards,
+      @Nullable Integer targetPartitionSize,
+      @Nullable Integer maxRowsInMemory,
+      @Nullable Long maxBytesInMemory,
+      @Nullable Long maxTotalRows,
+      @Nullable Integer numShards,
+      @Nullable List<String> partitionDimensions,
       boolean forceExtendableShardSpecs,
       boolean forceGuaranteedRollup,
       boolean reportParseException
@@ -1621,6 +1758,7 @@ public class IndexTaskTest
         maxTotalRows,
         null,
         numShards,
+        partitionDimensions,
         indexSpec,
         null,
         true,

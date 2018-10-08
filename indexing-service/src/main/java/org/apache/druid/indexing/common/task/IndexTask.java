@@ -111,6 +111,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -653,6 +654,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final int numShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
       final BiFunction<Integer, Integer, ShardSpec> shardSpecCreateFn = getShardSpecCreateFunction(
           numShards,
+          tuningConfig.getPartitionDimensions(),
           jsonMapper
       );
 
@@ -720,6 +722,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
         final BiFunction<Integer, Integer, ShardSpec> shardSpecCreateFn = getShardSpecCreateFunction(
             numShards,
+            tuningConfig.getPartitionDimensions(),
             jsonMapper
         );
 
@@ -838,6 +841,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
   private static BiFunction<Integer, Integer, ShardSpec> getShardSpecCreateFunction(
       Integer numShards,
+      List<String> partitionDimensions,
       ObjectMapper jsonMapper
   )
   {
@@ -846,7 +850,12 @@ public class IndexTask extends AbstractTask implements ChatHandler
     if (numShards == 1) {
       return (shardId, totalNumShards) -> NoneShardSpec.instance();
     } else {
-      return (shardId, totalNumShards) -> new HashBasedNumberedShardSpec(shardId, totalNumShards, null, jsonMapper);
+      return (shardId, totalNumShards) -> new HashBasedNumberedShardSpec(
+          shardId,
+          totalNumShards,
+          partitionDimensions,
+          jsonMapper
+      );
     }
   }
 
@@ -1339,6 +1348,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     private final Long maxTotalRows;
     @Nullable
     private final Integer numShards;
+    private final List<String> partitionDimensions;
     private final IndexSpec indexSpec;
     private final File basePersistDirectory;
     private final int maxPendingPersists;
@@ -1378,6 +1388,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
         @JsonProperty("rowFlushBoundary") @Nullable Integer rowFlushBoundary_forBackCompatibility, // DEPRECATED
         @JsonProperty("numShards") @Nullable Integer numShards,
+        @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
         // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
@@ -1400,6 +1411,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxBytesInMemory != null ? maxBytesInMemory : 0,
           maxTotalRows,
           numShards,
+          partitionDimensions,
           indexSpec,
           maxPendingPersists,
           forceExtendableShardSpecs,
@@ -1416,7 +1428,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1425,6 +1437,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @Nullable Long maxBytesInMemory,
         @Nullable Long maxTotalRows,
         @Nullable Integer numShards,
+        @Nullable List<String> partitionDimensions,
         @Nullable IndexSpec indexSpec,
         @Nullable Integer maxPendingPersists,
         @Nullable Boolean forceExtendableShardSpecs,
@@ -1452,6 +1465,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.maxTotalRows = maxTotalRows;
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
+      this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
       this.forceExtendableShardSpecs = forceExtendableShardSpecs == null
@@ -1490,6 +1504,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxBytesInMemory,
           maxTotalRows,
           numShards,
+          partitionDimensions,
           indexSpec,
           maxPendingPersists,
           forceExtendableShardSpecs,
@@ -1512,6 +1527,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxBytesInMemory,
           maxTotalRows,
           numShards,
+          partitionDimensions,
           indexSpec,
           maxPendingPersists,
           forceExtendableShardSpecs,
@@ -1567,6 +1583,12 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public Integer getNumShards()
     {
       return numShards;
+    }
+
+    @JsonProperty
+    public List<String> getPartitionDimensions()
+    {
+      return partitionDimensions;
     }
 
     @JsonProperty

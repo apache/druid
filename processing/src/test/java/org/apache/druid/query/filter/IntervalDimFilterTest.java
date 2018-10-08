@@ -58,7 +58,7 @@ public class IntervalDimFilterTest
         null
     );
     String filterStr = mapper.writeValueAsString(intervalFilter);
-    IntervalDimFilter actualFilter = mapper.reader(DimFilter.class).readValue(filterStr);
+    IntervalDimFilter actualFilter = mapper.readerFor(DimFilter.class).readValue(filterStr);
     Assert.assertEquals(intervalFilter, actualFilter);
 
     intervalFilter = new IntervalDimFilter(
@@ -71,7 +71,7 @@ public class IntervalDimFilterTest
     );
 
     filterStr = mapper.writeValueAsString(intervalFilter);
-    actualFilter = mapper.reader(DimFilter.class).readValue(filterStr);
+    actualFilter = mapper.readerFor(DimFilter.class).readValue(filterStr);
     Assert.assertEquals(intervalFilter, actualFilter);
   }
 

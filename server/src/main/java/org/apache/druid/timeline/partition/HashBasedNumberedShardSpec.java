@@ -75,7 +75,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   {
     final List<Object> groupKey = getGroupKey(timestamp, inputRow);
     try {
-      return hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asInt();
+      return hash(jsonMapper, groupKey);
     }
     catch (JsonProcessingException e) {
       throw Throwables.propagate(e);
@@ -90,6 +90,12 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     } else {
       return Lists.transform(partitionDimensions, inputRow::getDimension);
     }
+  }
+
+  @VisibleForTesting
+  public static int hash(ObjectMapper jsonMapper, List<Object> objects) throws JsonProcessingException
+  {
+    return hashFunction.hashBytes(jsonMapper.writeValueAsBytes(objects)).asInt();
   }
 
   @Override
