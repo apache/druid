@@ -21,6 +21,7 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.google.common.primitives.UnsignedInts;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -70,18 +71,34 @@ public class ConcurrentTimeCounter
     return timeSumAndCount.getAndSet(0L);
   }
 
-  public int getAndResetMaxTime()
+  /**
+   * Returns the max time {@link #add}ed since the previous call to this method or since the creation of this object,
+   * or null if no times were added.
+   */
+  @Nullable
+  public Integer getAndResetMaxTime()
   {
     long max = this.max.getAndSet(-1);
-    // If max < 0, means no times added yet, then return 0
-    return max >= 0 ? (int) max : 0;
+    if (max >= 0) {
+      return (int) max;
+    } else {
+      return null;
+    }
   }
 
-  public int getAndResetMinTime()
+  /**
+   * Returns the min time {@link #add}ed since the previous call to this method or since the creation of this object,
+   * or null if no times were added.
+   */
+  @Nullable
+  public Integer getAndResetMinTime()
   {
     long min = this.min.getAndSet(-1);
-    // If min < 0, means no times added yet, then return 0
-    return min >= 0 ? (int) min : 0;
+    if (min >= 0) {
+      return (int) min;
+    } else {
+      return null;
+    }
   }
 
   public static int timeSum(long timeSumAndCount)
