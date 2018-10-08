@@ -22,6 +22,7 @@ package org.apache.druid.query.dimension;
 import com.google.common.base.Predicate;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
@@ -30,7 +31,7 @@ import org.apache.druid.segment.data.IndexedInts;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-final class PredicateFilteredDimensionSelector implements DimensionSelector
+final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
 {
   private final DimensionSelector selector;
   private final Predicate<String> predicate;
@@ -150,13 +151,6 @@ final class PredicateFilteredDimensionSelector implements DimensionSelector
   public IdLookup idLookup()
   {
     return selector.idLookup();
-  }
-
-  @Nullable
-  @Override
-  public Object getObject()
-  {
-    return defaultGetObject();
   }
 
   @Override

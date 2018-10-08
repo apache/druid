@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.discovery.DruidLeaderSelector.Listener;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -49,6 +50,8 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class TaskMaster
 {
+  private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
+
   private final DruidLeaderSelector overlordLeaderSelector;
   private final DruidLeaderSelector.Listener leadershipListener;
 
@@ -61,7 +64,12 @@ public class TaskMaster
   private volatile TaskRunner taskRunner;
   private volatile TaskQueue taskQueue;
 
-  private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
+  /**
+   * This flag indicates that all services has been started and should be true before calling
+   * {@link ServiceAnnouncer#announce}. This is set to false immediately once {@link Listener#stopBeingLeader()} is
+   * called.
+   */
+  private volatile boolean initialized;
 
   @Inject
   public TaskMaster(
@@ -127,6 +135,7 @@ public class TaskMaster
                 @Override
                 public void start()
                 {
+                  initialized = true;
                   serviceAnnouncer.announce(node);
                 }
 
@@ -153,6 +162,7 @@ public class TaskMaster
       {
         giant.lock();
         try {
+          initialized = false;
           final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
           if (leaderLifecycle != null) {
             leaderLifecycle.stop();
@@ -198,9 +208,12 @@ public class TaskMaster
     }
   }
 
+  /**
+   * Returns true if it's the leader and its all services have been properly initialized.
+   */
   public boolean isLeader()
   {
-    return overlordLeaderSelector.isLeader();
+    return overlordLeaderSelector.isLeader() && initialized;
   }
 
   public String getCurrentLeader()
@@ -210,7 +223,7 @@ public class TaskMaster
 
   public Optional<TaskRunner> getTaskRunner()
   {
-    if (overlordLeaderSelector.isLeader()) {
+    if (isLeader()) {
       return Optional.of(taskRunner);
     } else {
       return Optional.absent();
@@ -219,7 +232,7 @@ public class TaskMaster
 
   public Optional<TaskQueue> getTaskQueue()
   {
-    if (overlordLeaderSelector.isLeader()) {
+    if (isLeader()) {
       return Optional.of(taskQueue);
     } else {
       return Optional.absent();
@@ -228,7 +241,7 @@ public class TaskMaster
 
   public Optional<TaskActionClient> getTaskActionClient(Task task)
   {
-    if (overlordLeaderSelector.isLeader()) {
+    if (isLeader()) {
       return Optional.of(taskActionClientFactory.create(task));
     } else {
       return Optional.absent();
@@ -237,7 +250,7 @@ public class TaskMaster
 
   public Optional<ScalingStats> getScalingStats()
   {
-    if (overlordLeaderSelector.isLeader()) {
+    if (isLeader()) {
       return taskRunner.getScalingStats();
     } else {
       return Optional.absent();
@@ -246,7 +259,7 @@ public class TaskMaster
 
   public Optional<SupervisorManager> getSupervisorManager()
   {
-    if (overlordLeaderSelector.isLeader()) {
+    if (isLeader()) {
       return Optional.of(supervisorManager);
     } else {
       return Optional.absent();

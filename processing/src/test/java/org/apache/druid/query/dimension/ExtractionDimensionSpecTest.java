@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.MatchingDimExtractionFn;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.extraction.StrlenExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -143,5 +144,18 @@ public class ExtractionDimensionSpecTest
         objectMapper.readValue(oldAndNewJson, DimensionSpec.class)
                     .getExtractionFn() instanceof MatchingDimExtractionFn
     );
+  }
+
+  @Test
+  public void testCacheKey()
+  {
+    final ExtractionDimensionSpec dimensionSpec = new ExtractionDimensionSpec(
+        "foo",
+        "len",
+        ValueType.LONG,
+        StrlenExtractionFn.instance()
+    );
+    final byte[] expected = new byte[]{1, 7, 102, 111, 111, 9, 14, 7, 76, 79, 78, 71};
+    Assert.assertArrayEquals(expected, dimensionSpec.getCacheKey());
   }
 }

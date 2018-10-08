@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -33,7 +34,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -88,9 +88,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -164,7 +164,7 @@ public class KerberosAuthenticator implements Authenticator
           Properties config = getConfiguration(configPrefix, filterConfig);
           String signatureSecret = config.getProperty(configPrefix + SIGNATURE_SECRET);
           if (signatureSecret == null) {
-            signatureSecret = Long.toString(new Random().nextLong());
+            signatureSecret = Long.toString(ThreadLocalRandom.current().nextLong());
             log.warn("'signature.secret' configuration not set, using a random value as secret");
           }
           final byte[] secretBytes = StringUtils.toUtf8(signatureSecret);

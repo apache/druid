@@ -22,9 +22,8 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.ISE;
-
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

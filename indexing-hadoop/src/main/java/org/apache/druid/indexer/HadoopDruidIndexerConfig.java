@@ -308,11 +308,6 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().isOverwriteFiles();
   }
 
-  public boolean isIgnoreInvalidRows()
-  {
-    return schema.getTuningConfig().isIgnoreInvalidRows();
-  }
-
   public void setShardSpecs(Map<Long, List<HadoopyShardSpec>> shardSpecs)
   {
     this.schema = schema.withTuningConfig(schema.getTuningConfig().withShardSpecs(shardSpecs));

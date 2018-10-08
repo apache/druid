@@ -20,10 +20,10 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.annotations.VisibleForTesting;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

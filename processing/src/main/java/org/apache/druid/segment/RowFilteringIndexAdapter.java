@@ -21,7 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.BitmapValues;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -65,7 +65,7 @@ public class RowFilteringIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension)
+  public <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension)
   {
     return baseAdapter.getDimValueLookup(dimension);
   }

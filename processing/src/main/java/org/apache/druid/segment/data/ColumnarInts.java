@@ -23,8 +23,8 @@ import java.io.Closeable;
 
 /**
  * Resource that provides random access to a packed array of primitive int values. Typically backs up dictionary-encoded
- * string columns (see {@link org.apache.druid.segment.column.DictionaryEncodedColumn}), either directly for single-valued
- * string columns, or indirectly as part of implementation of {@link ColumnarMultiInts}.
+ * columns (see {@link org.apache.druid.segment.column.DictionaryEncodedColumn}), either directly for single-valued
+ * columns, or indirectly as part of implementation of {@link ColumnarMultiInts}.
  */
 public interface ColumnarInts extends IndexedInts, Closeable
 {

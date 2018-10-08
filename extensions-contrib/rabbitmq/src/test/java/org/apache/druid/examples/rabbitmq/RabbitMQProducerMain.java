@@ -22,7 +22,6 @@ package org.apache.druid.examples.rabbitmq;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -30,6 +29,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  *
@@ -178,7 +179,7 @@ public class RabbitMQProducerMain
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ENGLISH);
     Date stop = sdf.parse(cmd.getOptionValue("stop", sdf.format(new Date())));
 
-    Random r = new Random();
+    Random r = ThreadLocalRandom.current();
     Calendar timer = Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale.ENGLISH);
     timer.setTime(sdf.parse(cmd.getOptionValue("start", "2010-01-01T00:00:00")));
 

@@ -32,8 +32,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -83,7 +83,7 @@ public class VirtualColumns implements Cacheable
         throw new IAE("Empty or null virtualColumn name");
       }
 
-      if (vc.getOutputName().equals(Column.TIME_COLUMN_NAME)) {
+      if (vc.getOutputName().equals(ColumnHolder.TIME_COLUMN_NAME)) {
         throw new IAE("virtualColumn name[%s] not allowed", vc.getOutputName());
       }
 

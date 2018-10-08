@@ -50,6 +50,6 @@ public class ClientBasedTaskInfoProvider implements TaskInfoProvider
     final TaskStatusResponse response = client.getTaskStatus(id);
     return response == null ?
            Optional.absent() :
-           Optional.of(TaskStatus.fromCode(id, response.getStatus().getState()));
+           Optional.of(TaskStatus.fromCode(id, response.getStatus().getStatusCode()));
   }
 }

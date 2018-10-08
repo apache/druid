@@ -87,7 +87,7 @@ public class TaskMonitorTest
       Assert.assertEquals("supervisorId", result.getSpec().getSupervisorTaskId());
       Assert.assertEquals("specId" + i, result.getSpec().getId());
       Assert.assertNotNull(result.getLastStatus());
-      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getState());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getStatusCode());
       Assert.assertEquals(TaskState.SUCCESS, result.getLastState());
     }
   }
@@ -113,7 +113,7 @@ public class TaskMonitorTest
       Assert.assertEquals("specId" + i, result.getSpec().getId());
 
       Assert.assertNotNull(result.getLastStatus());
-      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getState());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getStatusCode());
       Assert.assertEquals(TaskState.SUCCESS, result.getLastState());
 
       final TaskHistory<TestTask> taskHistory = monitor.getCompleteSubTaskSpecHistory(specs.get(i).getId());
@@ -122,8 +122,8 @@ public class TaskMonitorTest
       final List<TaskStatusPlus> attemptHistory = taskHistory.getAttemptHistory();
       Assert.assertNotNull(attemptHistory);
       Assert.assertEquals(3, attemptHistory.size());
-      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(0).getState());
-      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(1).getState());
+      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(0).getStatusCode());
+      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(1).getStatusCode());
     }
   }
 

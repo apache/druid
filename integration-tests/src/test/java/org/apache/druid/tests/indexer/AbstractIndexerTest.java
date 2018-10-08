@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
@@ -28,9 +29,9 @@ import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
-import org.apache.commons.io.IOUtils;
 import org.joda.time.Interval;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
@@ -53,6 +54,11 @@ public abstract class AbstractIndexerTest
   @Inject
   protected TestQueryHelper queryHelper;
 
+  protected Closeable unloader(final String dataSource)
+  {
+    return () -> unloadAndKillData(dataSource);
+  }
+
   protected void unloadAndKillData(final String dataSource)
   {
     List<String> intervals = coordinator.getSegmentIntervals(dataSource);
@@ -68,7 +74,7 @@ public abstract class AbstractIndexerTest
     unloadAndKillData(dataSource, first, last);
   }
 
-  protected void unloadAndKillData(final String dataSource, String start, String end)
+  private void unloadAndKillData(final String dataSource, String start, String end)
   {
     // Wait for any existing index tasks to complete before disabling the datasource otherwise
     // realtime tasks can get stuck waiting for handoff. https://github.com/apache/incubator-druid/issues/1729

@@ -31,7 +31,6 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorC
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.asynchttpclient.util.Base64;
 import org.easymock.EasyMock;
 import org.junit.Test;
 
@@ -82,9 +81,7 @@ public class BasicHTTPAuthenticatorTest
   @Test
   public void testGoodPassword() throws IOException, ServletException
   {
-    String header = Base64.encode(
-        StringUtils.toUtf8("userA:helloworld")
-    );
+    String header = StringUtils.utf8Base64("userA:helloworld");
     header = StringUtils.format("Basic %s", header);
 
     HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
@@ -113,9 +110,7 @@ public class BasicHTTPAuthenticatorTest
   @Test
   public void testBadPassword() throws IOException, ServletException
   {
-    String header = Base64.encode(
-        StringUtils.toUtf8("userA:badpassword")
-    );
+    String header = StringUtils.utf8Base64("userA:badpassword");
     header = StringUtils.format("Basic %s", header);
 
     HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
@@ -139,9 +134,7 @@ public class BasicHTTPAuthenticatorTest
   @Test
   public void testUnknownUser() throws IOException, ServletException
   {
-    String header = Base64.encode(
-        StringUtils.toUtf8("userB:helloworld")
-    );
+    String header = StringUtils.utf8Base64("userB:helloworld");
     header = StringUtils.format("Basic %s", header);
 
     HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
@@ -165,9 +158,7 @@ public class BasicHTTPAuthenticatorTest
   @Test
   public void testRecognizedButMalformedBasicAuthHeader() throws IOException, ServletException
   {
-    String header = Base64.encode(
-        StringUtils.toUtf8("malformed decoded header data")
-    );
+    String header = StringUtils.utf8Base64("malformed decoded header data");
     header = StringUtils.format("Basic %s", header);
 
     HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
@@ -214,9 +205,7 @@ public class BasicHTTPAuthenticatorTest
   @Test
   public void testUnrecognizedHeader() throws IOException, ServletException
   {
-    String header = Base64.encode(
-        StringUtils.toUtf8("userA:helloworld")
-    );
+    String header = StringUtils.utf8Base64("userA:helloworld");
     header = StringUtils.format("NotBasic %s", header);
 
     HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);

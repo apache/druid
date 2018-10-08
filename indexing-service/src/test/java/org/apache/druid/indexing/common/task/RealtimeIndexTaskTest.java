@@ -55,6 +55,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -268,7 +269,7 @@ public class RealtimeIndexTaskTest
   {
     Assert.assertEquals(
         "index_realtime_test_0_2015-01-02T00:00:00.000Z_abcdefgh",
-        RealtimeIndexTask.makeTaskId("test", 0, DateTimes.of("2015-01-02"), 0x76543210)
+        RealtimeIndexTask.makeTaskId("test", 0, DateTimes.of("2015-01-02"), "abcdefgh")
     );
   }
 
@@ -988,7 +989,8 @@ public class RealtimeIndexTaskTest
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
-        taskActionToolbox
+        taskActionToolbox,
+        new TaskAuditLogConfig(false)
     );
     IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
         null,

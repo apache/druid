@@ -20,13 +20,11 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
-
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
-
 import org.apache.zookeeper.ZooKeeper;
 import org.joda.time.Period;
 import org.junit.After;

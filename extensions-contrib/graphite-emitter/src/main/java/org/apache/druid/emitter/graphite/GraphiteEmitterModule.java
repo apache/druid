@@ -29,10 +29,10 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.emitter.core.Emitter;
 
 import java.util.Collections;
 import java.util.List;

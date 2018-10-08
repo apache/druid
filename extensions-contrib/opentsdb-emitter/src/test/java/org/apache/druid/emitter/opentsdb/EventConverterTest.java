@@ -54,15 +54,15 @@ public class EventConverterTest
   {
     DateTime dateTime = DateTimes.nowUtc();
     ServiceMetricEvent configuredEvent = new ServiceMetricEvent.Builder()
-        .setDimension("dataSource", "data-source")
+        .setDimension("dataSource", "foo:bar")
         .setDimension("type", "groupBy")
         .build(dateTime, "query/time", 10)
-        .build("broker", "brokerHost1");
+        .build("druid:broker", "127.0.0.1:8080");
 
     Map<String, Object> expectedTags = new HashMap<>();
-    expectedTags.put("service", "broker");
-    expectedTags.put("host", "brokerHost1");
-    expectedTags.put("dataSource", "data-source");
+    expectedTags.put("service", "druid_broker");
+    expectedTags.put("host", "127.0.0.1_8080");
+    expectedTags.put("dataSource", "foo_bar");
     expectedTags.put("type", "groupBy");
 
     OpentsdbEvent opentsdbEvent = converter.convert(configuredEvent);

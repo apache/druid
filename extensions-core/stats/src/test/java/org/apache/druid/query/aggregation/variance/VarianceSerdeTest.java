@@ -25,13 +25,14 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class VarianceSerdeTest
 {
   @Test
   public void testSerde()
   {
-    Random r = new Random();
+    Random r = ThreadLocalRandom.current();
     VarianceAggregatorCollector holder = new VarianceAggregatorCollector();
     ObjectStrategy strategy = new VarianceSerde().getObjectStrategy();
     Assert.assertEquals(VarianceAggregatorCollector.class, strategy.getClazz());

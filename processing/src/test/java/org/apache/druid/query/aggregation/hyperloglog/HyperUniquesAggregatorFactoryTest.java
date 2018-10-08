@@ -22,8 +22,8 @@ package org.apache.druid.query.aggregation.hyperloglog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import org.apache.druid.hll.HLLCV0;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.hll.VersionZeroHyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -47,7 +47,7 @@ public class HyperUniquesAggregatorFactoryTest
   public void testDeserializeV0()
   {
     Object v0 = aggregatorFactory.deserialize(V0_BASE64);
-    Assert.assertEquals("deserialized value is HLLCV0", HLLCV0.class, v0.getClass());
+    Assert.assertEquals("deserialized value is VersionZeroHyperLogLogCollector", VersionZeroHyperLogLogCollector.class, v0.getClass());
   }
 
   @Test

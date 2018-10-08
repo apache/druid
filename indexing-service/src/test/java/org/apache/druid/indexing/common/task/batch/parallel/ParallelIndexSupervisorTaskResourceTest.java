@@ -364,7 +364,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         .filter(entry -> {
           final TaskStatusPlus currentStatus = entry.getValue().getCurrentStatus();
           return currentStatus != null &&
-                 (currentStatus.getState() == TaskState.SUCCESS || currentStatus.getState() == TaskState.FAILED);
+                 (currentStatus.getStatusCode() == TaskState.SUCCESS || currentStatus.getStatusCode() == TaskState.FAILED);
         })
         .map(Entry::getKey)
         .findFirst()

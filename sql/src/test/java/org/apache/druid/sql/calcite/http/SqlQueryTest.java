@@ -34,7 +34,7 @@ public class SqlQueryTest extends CalciteTestBase
   public void testSerde() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final SqlQuery query = new SqlQuery("SELECT 1", ResultFormat.ARRAY, ImmutableMap.of("useCache", false));
+    final SqlQuery query = new SqlQuery("SELECT 1", ResultFormat.ARRAY, true, ImmutableMap.of("useCache", false));
     Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }
 }

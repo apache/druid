@@ -21,25 +21,27 @@ package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.SimpleDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.data.CachingIndexed;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.GenericIndexed;
 
+import javax.annotation.Nullable;
+
 /**
-*/
-public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn>
+ */
+public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
 {
   private final GenericIndexed<String> dictionary;
-  private final Supplier<ColumnarInts> singleValuedColumn;
-  private final Supplier<ColumnarMultiInts> multiValuedColumn;
+  private final @Nullable Supplier<ColumnarInts> singleValuedColumn;
+  private final @Nullable Supplier<ColumnarMultiInts> multiValuedColumn;
   private final int lookupCacheSize;
 
   public DictionaryEncodedColumnSupplier(
       GenericIndexed<String> dictionary,
-      Supplier<ColumnarInts> singleValuedColumn,
-      Supplier<ColumnarMultiInts> multiValuedColumn,
+      @Nullable Supplier<ColumnarInts> singleValuedColumn,
+      @Nullable Supplier<ColumnarMultiInts> multiValuedColumn,
       int lookupCacheSize
   )
   {
@@ -50,9 +52,9 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
   }
 
   @Override
-  public DictionaryEncodedColumn get()
+  public DictionaryEncodedColumn<?> get()
   {
-    return new SimpleDictionaryEncodedColumn(
+    return new StringDictionaryEncodedColumn(
         singleValuedColumn != null ? singleValuedColumn.get() : null,
         multiValuedColumn != null ? multiValuedColumn.get() : null,
         new CachingIndexed<>(dictionary, lookupCacheSize)

@@ -794,13 +794,6 @@ public class ImmutableConciseSet
     this.size = 0;
   }
 
-  public ImmutableConciseSet(ByteBuffer byteBuffer)
-  {
-    this.words = byteBuffer.asIntBuffer();
-    this.lastWordIndex = words.capacity() - 1;
-    this.size = calcSize();
-  }
-
   public ImmutableConciseSet(IntBuffer buffer)
   {
     this.words = buffer;

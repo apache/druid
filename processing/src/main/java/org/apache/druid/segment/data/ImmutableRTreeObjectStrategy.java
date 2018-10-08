@@ -57,7 +57,7 @@ public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTr
   }
 
   @Override
-  public Class<? extends ImmutableRTree> getClazz()
+  public Class<ImmutableRTree> getClazz()
   {
     return ImmutableRTree.class;
   }

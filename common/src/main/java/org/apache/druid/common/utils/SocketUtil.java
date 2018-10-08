@@ -23,18 +23,16 @@ import org.apache.druid.java.util.common.ISE;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
 public class SocketUtil
 {
 
-  private static final Random rnd = new Random(System.currentTimeMillis());
-
   public static int findOpenPort(int basePort)
   {
-    final int startPort = basePort < 0 ? -1 : rnd.nextInt(0x7fff) + basePort;
+    final int startPort = basePort < 0 ? -1 : ThreadLocalRandom.current().nextInt(0x7fff) + basePort;
     return findOpenPortFrom(startPort);
   }
 

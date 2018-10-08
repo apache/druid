@@ -22,21 +22,20 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
-public class ReservoirSegmentSampler
+final class ReservoirSegmentSampler
 {
 
-  public BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
+  static BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
   {
-    final Random rand = new Random();
     ServerHolder fromServerHolder = null;
     DataSegment proposalSegment = null;
     int numSoFar = 0;
 
     for (ServerHolder server : serverHolders) {
       for (DataSegment segment : server.getServer().getSegments().values()) {
-        int randNum = rand.nextInt(numSoFar + 1);
+        int randNum = ThreadLocalRandom.current().nextInt(numSoFar + 1);
         // w.p. 1 / (numSoFar+1), swap out the server and segment
         if (randNum == numSoFar) {
           fromServerHolder = server;
@@ -50,5 +49,9 @@ public class ReservoirSegmentSampler
     } else {
       return null;
     }
+  }
+
+  private ReservoirSegmentSampler()
+  {
   }
 }

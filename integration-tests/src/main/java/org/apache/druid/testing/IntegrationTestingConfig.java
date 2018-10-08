@@ -27,13 +27,31 @@ public interface IntegrationTestingConfig
 {
   String getCoordinatorUrl();
 
+  String getCoordinatorTLSUrl();
+
   String getIndexerUrl();
+
+  String getIndexerTLSUrl();
 
   String getRouterUrl();
 
+  String getRouterTLSUrl();
+
+  String getPermissiveRouterUrl();
+
+  String getPermissiveRouterTLSUrl();
+
+  String getNoClientAuthRouterUrl();
+
+  String getNoClientAuthRouterTLSUrl();
+
   String getBrokerUrl();
 
+  String getBrokerTLSUrl();
+
   String getHistoricalUrl();
+
+  String getHistoricalTLSUrl();
 
   String getMiddleManagerHost();
 

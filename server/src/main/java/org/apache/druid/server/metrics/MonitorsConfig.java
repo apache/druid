@@ -78,10 +78,7 @@ public class MonitorsConfig
            '}';
   }
 
-  public static Map<String, String[]> mapOfDatasourceAndTaskID(
-      final String datasource,
-      final String taskId
-  )
+  public static Map<String, String[]> mapOfDatasourceAndTaskID(final String datasource, final String taskId)
   {
     final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
     if (datasource != null) {

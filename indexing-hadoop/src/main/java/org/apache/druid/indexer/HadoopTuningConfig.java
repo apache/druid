@@ -85,7 +85,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean leaveIntermediate;
   private final Boolean cleanupOnFailure;
   private final boolean overwriteFiles;
-  private final boolean ignoreInvalidRows;
+  private final Boolean ignoreInvalidRows;
   private final Map<String, String> jobProperties;
   private final boolean combineText;
   private final boolean useCombiner;
@@ -108,7 +108,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
-      final @Deprecated @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
+      final @Deprecated @JsonProperty("ignoreInvalidRows") Boolean ignoreInvalidRows,
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
       final @JsonProperty("useCombiner") Boolean useCombiner,
@@ -138,7 +138,6 @@ public class HadoopTuningConfig implements TuningConfig
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
-    this.ignoreInvalidRows = ignoreInvalidRows;
     this.jobProperties = (jobProperties == null
                           ? ImmutableMap.of()
                           : ImmutableMap.copyOf(jobProperties));
@@ -152,10 +151,16 @@ public class HadoopTuningConfig implements TuningConfig
     this.useExplicitVersion = useExplicitVersion;
     this.allowedHadoopPrefix = allowedHadoopPrefix == null ? ImmutableList.of() : allowedHadoopPrefix;
 
-    if (!this.ignoreInvalidRows) {
-      this.maxParseExceptions = 0;
+
+    this.ignoreInvalidRows = ignoreInvalidRows == null ? false : ignoreInvalidRows;
+    if (maxParseExceptions != null) {
+      this.maxParseExceptions = maxParseExceptions;
     } else {
-      this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+      if (!this.ignoreInvalidRows) {
+        this.maxParseExceptions = 0;
+      } else {
+        this.maxParseExceptions = TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS;
+      }
     }
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
   }
@@ -221,7 +226,7 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public boolean isIgnoreInvalidRows()
+  public Boolean isIgnoreInvalidRows()
   {
     return ignoreInvalidRows;
   }

@@ -22,12 +22,10 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -42,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -65,7 +64,7 @@ public class MergeSequenceBenchmark
   @Setup
   public void setup()
   {
-    Random rand = new Random(0);
+    Random rand = ThreadLocalRandom.current();
     sequences = Lists.newArrayList();
     for (int i = 0; i < count; i++) {
       int[] sequence = new int[sequenceLength];

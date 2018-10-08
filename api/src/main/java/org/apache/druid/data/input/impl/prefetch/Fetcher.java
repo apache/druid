@@ -28,6 +28,8 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -62,7 +64,7 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
   // This is updated when a file is successfully fetched, a fetched file is deleted, or a fetched file is
   // cached.
   private final AtomicLong fetchedBytes = new AtomicLong(0);
-  private Future<Void> fetchFuture;
+  private final Deque<Future<Void>> fetchFutures = new ArrayDeque<>();
   private PrefetchConfig prefetchConfig;
 
   // nextFetchIndex indicates which object should be downloaded when fetch is triggered.
@@ -103,12 +105,13 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
    */
   private void fetchIfNeeded(long remainingBytes)
   {
-    if ((fetchFuture == null || fetchFuture.isDone())
+    if ((fetchFutures.isEmpty() || fetchFutures.peekLast().isDone())
         && remainingBytes <= prefetchConfig.getPrefetchTriggerBytes()) {
-      fetchFuture = fetchExecutor.submit(() -> {
+      Future<Void> fetchFuture = fetchExecutor.submit(() -> {
         fetch();
         return null;
       });
+      fetchFutures.add(fetchFuture);
     }
   }
 
@@ -180,12 +183,17 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
   private void checkFetchException(boolean wait)
   {
     try {
-      if (wait) {
-        fetchFuture.get(prefetchConfig.getFetchTimeout(), TimeUnit.MILLISECONDS);
-        fetchFuture = null;
-      } else if (fetchFuture != null && fetchFuture.isDone()) {
-        fetchFuture.get();
-        fetchFuture = null;
+      for (Future<Void> fetchFuture; (fetchFuture = fetchFutures.poll()) != null; ) {
+        if (wait) {
+          fetchFuture.get(prefetchConfig.getFetchTimeout(), TimeUnit.MILLISECONDS);
+        } else {
+          if (fetchFuture.isDone()) {
+            fetchFuture.get();
+          } else {
+            fetchFutures.addFirst(fetchFuture);
+            break;
+          }
+        }
       }
     }
     catch (InterruptedException | ExecutionException e) {

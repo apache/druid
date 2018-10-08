@@ -19,11 +19,11 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
+import org.apache.druid.sql.calcite.rel.DruidRel;
 
 public class DruidRelToBindableRule extends ConverterRule
 {

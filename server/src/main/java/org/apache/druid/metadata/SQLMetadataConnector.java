@@ -23,11 +23,11 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -216,6 +216,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  UNIQUE (sequence_name_prev_id_sha1)\n"
                 + ")",
                 tableName, getPayloadType(), getQuoteString()
+            ),
+            StringUtils.format(
+                "CREATE INDEX idx_%1$s_datasource_end ON %1$s(dataSource, %2$send%2$s)",
+                tableName,
+                getQuoteString()
+            ),
+            StringUtils.format(
+                "CREATE INDEX idx_%1$s_datasource_sequence ON %1$s(dataSource, sequence_name)",
+                tableName
             )
         )
     );
@@ -260,7 +269,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getPayloadType(), getQuoteString()
             ),
-            StringUtils.format("CREATE INDEX idx_%1$s_datasource_used_end ON %1$s(dataSource, used, %2$send%2$s)", tableName, getQuoteString())
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
+            StringUtils.format(
+                "CREATE INDEX idx_%1$s_datasource_used_end ON %1$s(dataSource, used, %2$send%2$s)",
+                tableName,
+                getQuoteString()
+            )
         )
     );
   }

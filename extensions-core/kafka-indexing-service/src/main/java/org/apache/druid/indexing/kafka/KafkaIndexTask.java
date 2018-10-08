@@ -37,6 +37,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
@@ -63,7 +64,6 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -83,7 +83,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTask.class);
   private static final String TYPE = "index_kafka";
-  private static final Random RANDOM = new Random();
   static final long POLL_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(100);
   static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
 
@@ -111,7 +110,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   )
   {
     super(
-        id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt()) : id,
+        id == null ? makeTaskId(dataSchema.getDataSource()) : id,
         StringUtils.format("%s_%s", TYPE, dataSchema.getDataSource()),
         taskResource,
         dataSchema.getDataSource(),
@@ -157,13 +156,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return pollRetryMs;
   }
 
-  private static String makeTaskId(String dataSource, int randomBits)
+  private static String makeTaskId(String dataSource)
   {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
-    }
-    return Joiner.on("_").join(TYPE, dataSource, suffix);
+    return Joiner.on("_").join(TYPE, dataSource, RealtimeIndexTask.makeRandomId());
   }
 
   @Override

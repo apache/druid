@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -54,7 +54,11 @@ public class TaskLogAutoCleanerConfig
     }
 
     this.enabled = enabled;
-    this.initialDelay = initialDelay == null ? 60000 + new Random().nextInt(4 * 60000) : initialDelay.longValue();
+    if (initialDelay == null) {
+      this.initialDelay = 60000 + ThreadLocalRandom.current().nextInt(4 * 60000);
+    } else {
+      this.initialDelay = initialDelay.longValue();
+    }
     this.delay = delay == null ? 6 * 60 * 60 * 1000 : delay.longValue();
     this.durationToRetain = durationToRetain == null ? Long.MAX_VALUE : durationToRetain.longValue();
 

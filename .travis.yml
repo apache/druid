@@ -16,6 +16,12 @@ cache:
 
 matrix:
   include:
+      # license checks
+    - env:
+       - NAME="license checks"
+      install: true
+      script: MAVEN_OPTS='-Xmx3000m' mvn clean verify -Prat -DskipTests -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+
       # strict compilation
     - env:
         - NAME="strict compilation"
@@ -93,13 +99,34 @@ matrix:
       services:
         - docker
       env:
-        - NAME="integration test"
-        - DOCKER_IP=172.17.0.1
+        - NAME="integration test part 1"
+        - DOCKER_IP=127.0.0.1
       install:
         # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
         - mvn install -q -ff -DskipTests -B
       script:
         - $TRAVIS_BUILD_DIR/ci/travis_script_integration.sh
+      after_failure:
+        - for v in ~/shared/logs/*.log ; do
+          echo $v logtail ======================== ; tail -100 $v ;
+          done
+        - for v in broker middlemanager overlord router coordinator historical ; do
+          echo $v dmesg ======================== ;
+          docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
+          done
+
+      # run integration tests
+    - sudo: required
+      services:
+        - docker
+      env:
+        - NAME="integration test part 2"
+        - DOCKER_IP=127.0.0.1
+      install:
+        # Only errors will be shown with the -q option. This is to avoid generating too many logs which make travis build failed.
+        - mvn install -q -ff -DskipTests -B
+      script:
+        - $TRAVIS_BUILD_DIR/ci/travis_script_integration_part2.sh
       after_failure:
         - for v in ~/shared/logs/*.log ; do
           echo $v logtail ======================== ; tail -100 $v ;

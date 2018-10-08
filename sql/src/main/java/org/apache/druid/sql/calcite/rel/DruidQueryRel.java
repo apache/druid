@@ -21,8 +21,6 @@ package org.apache.druid.sql.calcite.rel;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -34,6 +32,8 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nonnull;
 import java.util.List;

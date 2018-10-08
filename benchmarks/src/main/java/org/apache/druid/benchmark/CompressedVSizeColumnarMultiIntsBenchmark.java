@@ -48,6 +48,7 @@ import java.nio.channels.WritableByteChannel;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -71,7 +72,7 @@ public class CompressedVSizeColumnarMultiIntsBenchmark
   @Setup
   public void setup() throws IOException
   {
-    Random rand = new Random(0);
+    Random rand = ThreadLocalRandom.current();
     List<int[]> rows = Lists.newArrayList();
     final int bound = 1 << bytes;
     for (int i = 0; i < 0x100000; i++) {

@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.coordinator.helper;
 
-import org.apache.druid.timeline.DataSegment;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
 import java.util.List;

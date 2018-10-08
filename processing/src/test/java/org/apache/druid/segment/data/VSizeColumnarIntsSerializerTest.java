@@ -20,10 +20,10 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.primitives.Ints;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
-import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

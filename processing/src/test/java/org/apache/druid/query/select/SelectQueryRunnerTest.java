@@ -53,7 +53,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -688,12 +688,12 @@ public class SelectQueryRunnerTest
   {
     List<DimensionSpec> dimSpecs = Arrays.asList(
         new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", ValueType.FLOAT),
-        new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", ValueType.LONG)
+        new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "longTime", ValueType.LONG)
     );
 
     SelectQuery query = newTestQuery()
         .dimensionSpecs(dimSpecs)
-        .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
+        .metrics(Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, "index"))
         .intervals(I_0112_0114)
         .build();
 
@@ -716,7 +716,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     ),
                     new EventHolder(
@@ -727,7 +727,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     ),
                     new EventHolder(
@@ -738,7 +738,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     )
                 )
@@ -762,7 +762,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 1564.6177f)
                             .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     ),
                     new EventHolder(
@@ -773,7 +773,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 826.0602f)
                             .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     ),
                     new EventHolder(
@@ -784,7 +784,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 1689.0128f)
                             .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     )
                 )
@@ -803,12 +803,12 @@ public class SelectQueryRunnerTest
 
     List<DimensionSpec> dimSpecs = Arrays.asList(
         new ExtractionDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", jsExtractionFn),
-        new ExtractionDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", jsExtractionFn)
+        new ExtractionDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "longTime", jsExtractionFn)
     );
 
     SelectQuery query = newTestQuery()
         .dimensionSpecs(dimSpecs)
-        .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
+        .metrics(Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, "index"))
         .intervals(I_0112_0114)
         .build();
 
@@ -831,7 +831,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     ),
                     new EventHolder(
@@ -842,7 +842,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     ),
                     new EventHolder(
@@ -853,7 +853,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     )
                 )
@@ -877,7 +877,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-1564.617729")
                             .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     ),
                     new EventHolder(
@@ -888,7 +888,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-826.060182")
                             .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     ),
                     new EventHolder(
@@ -899,7 +899,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-1689.012875")
                             .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     )
                 )

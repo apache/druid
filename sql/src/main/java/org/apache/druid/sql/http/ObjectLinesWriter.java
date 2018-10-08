@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 
 public class ObjectLinesWriter implements ResultFormat.Writer
 {
@@ -40,7 +41,7 @@ public class ObjectLinesWriter implements ResultFormat.Writer
   }
 
   @Override
-  public void writeResponseStart() throws IOException
+  public void writeResponseStart()
   {
     // Do nothing.
   }
@@ -53,6 +54,18 @@ public class ObjectLinesWriter implements ResultFormat.Writer
     // Terminate the last output line, then write an extra blank line, so users can tell the response was not cut off.
     outputStream.write(new byte[]{'\n', '\n'});
     outputStream.flush();
+  }
+
+  @Override
+  public void writeHeader(final List<String> columnNames) throws IOException
+  {
+    jsonGenerator.writeStartObject();
+
+    for (String columnName : columnNames) {
+      jsonGenerator.writeNullField(columnName);
+    }
+
+    jsonGenerator.writeEndObject();
   }
 
   @Override

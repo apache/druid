@@ -61,14 +61,13 @@ public class CachingCostBalancerStrategyBenchmark
   private final DateTime referenceTime = DateTimes.of("2014-01-01T00:00:00");
   private final Set<DataSegment> segments = new HashSet<>();
   private final Set<DataSegment> segmentQueries = new HashSet<>();
-  private final int seed = ThreadLocalRandom.current().nextInt();
 
   private SegmentsCostCache segmentsCostCache;
 
   @Setup
   public void createSegments()
   {
-    Random random = new Random(seed);
+    Random random = ThreadLocalRandom.current();
     SegmentsCostCache.Builder prototype = SegmentsCostCache.builder();
     for (int i = 0; i < NUMBER_OF_SEGMENTS; ++i) {
       DataSegment segment = createSegment(random.nextInt((int) TimeUnit.DAYS.toHours(DAYS_IN_MONTH)));

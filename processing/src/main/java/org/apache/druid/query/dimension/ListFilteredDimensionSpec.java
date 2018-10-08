@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

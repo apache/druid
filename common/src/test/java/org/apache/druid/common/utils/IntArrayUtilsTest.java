@@ -25,6 +25,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -34,7 +35,7 @@ public class IntArrayUtilsTest
   public void testInverse()
   {
     final int numVals = 10000;
-    final Random random = new Random(System.currentTimeMillis());
+    final Random random = ThreadLocalRandom.current();
     final int[] inverted = new int[numVals];
     final int[] original = new int[numVals];
 

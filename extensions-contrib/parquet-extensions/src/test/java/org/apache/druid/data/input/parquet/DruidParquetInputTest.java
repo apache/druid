@@ -19,12 +19,12 @@
 package org.apache.druid.data.input.parquet;
 
 import com.google.common.collect.Lists;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.util.Utf8;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.path.StaticPathSpec;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.util.Utf8;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;

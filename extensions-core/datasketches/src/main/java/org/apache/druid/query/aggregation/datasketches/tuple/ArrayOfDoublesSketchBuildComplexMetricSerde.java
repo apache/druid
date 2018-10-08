@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import org.apache.druid.data.input.InputRow;
+import org.apache.druid.query.aggregation.datasketches.RawInputValueExtractor;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 
 public class ArrayOfDoublesSketchBuildComplexMetricSerde extends ArrayOfDoublesSketchMergeComplexMetricSerde
@@ -28,20 +28,7 @@ public class ArrayOfDoublesSketchBuildComplexMetricSerde extends ArrayOfDoublesS
   @Override
   public ComplexMetricExtractor getExtractor()
   {
-    return new ComplexMetricExtractor()
-    {
-      @Override
-      public Class<?> extractedClass()
-      {
-        return Object.class;
-      }
-
-      @Override
-      public Object extractValue(final InputRow inputRow, final String metricName)
-      {
-        return inputRow.getRaw(metricName);
-      }
-    };
+    return RawInputValueExtractor.getInstance();
   }
 
 }

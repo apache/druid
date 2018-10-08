@@ -19,10 +19,11 @@
 
 package org.apache.druid.server.coordinator.helper;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -32,7 +33,6 @@ import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
 import java.util.List;
 import java.util.stream.Collectors;

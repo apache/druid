@@ -19,6 +19,7 @@
 
 package org.apache.druid.benchmark;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
@@ -26,7 +27,6 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.WritableSupplier;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -43,6 +43,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.BitSet;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -63,7 +64,7 @@ public class CompressedColumnarIntsBenchmark
   @Setup
   public void setup() throws IOException
   {
-    Random rand = new Random(0);
+    Random rand = ThreadLocalRandom.current();
     int[] vals = new int[0x100000];
     final int bound = 1 << bytes;
     for (int i = 0; i < vals.length; ++i) {

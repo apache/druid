@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -84,7 +85,6 @@ import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CircularBuffer;
-import org.apache.commons.io.FileUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -98,7 +98,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -112,20 +111,15 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
-  private static final Random random = new Random();
 
   private static String makeTaskId(RealtimeAppenderatorIngestionSpec spec)
   {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((random.nextInt() >>> (i * 4)) & 0x0F)));
-    }
     return StringUtils.format(
         "index_realtime_%s_%d_%s_%s",
         spec.getDataSchema().getDataSource(),
         spec.getTuningConfig().getShardSpec().getPartitionNum(),
         DateTimes.nowUtc(),
-        suffix
+        RealtimeIndexTask.makeRandomId()
     );
   }
 

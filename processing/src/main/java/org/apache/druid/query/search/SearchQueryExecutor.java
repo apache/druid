@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.search;
 
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.Segment;
-import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 
 import java.util.List;
 

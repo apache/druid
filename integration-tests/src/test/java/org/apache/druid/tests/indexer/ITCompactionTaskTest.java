@@ -26,6 +26,7 @@ import org.apache.druid.testing.utils.RetryUtil;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.io.Closeable;
 import java.util.List;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -42,22 +43,22 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     loadData();
     final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(INDEX_DATASOURCE);
+    intervalsBeforeCompaction.sort(null);
     final String compactedInterval = "2013-08-31T00:00:00.000Z/2013-09-02T00:00:00.000Z";
     if (intervalsBeforeCompaction.contains(compactedInterval)) {
       throw new ISE("Containing a segment for the compacted interval[%s] before compaction", compactedInterval);
     }
-    try {
+    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
       queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
       compactData(false);
+
+      // 4 segments across 2 days, compacted into 1 new segment (5 total)
+      checkCompactionFinished(5);
       queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
 
-      final List<String> intervalsAfterCompaction = coordinator.getSegmentIntervals(INDEX_DATASOURCE);
-      if (!intervalsAfterCompaction.contains(compactedInterval)) {
-        throw new ISE("Compacted segment for interval[%s] does not exist", compactedInterval);
-      }
-    }
-    finally {
-      unloadAndKillData(INDEX_DATASOURCE);
+      intervalsBeforeCompaction.add(compactedInterval);
+      intervalsBeforeCompaction.sort(null);
+      checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
 
@@ -66,24 +67,16 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     loadData();
     final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(INDEX_DATASOURCE);
-    try {
+    intervalsBeforeCompaction.sort(null);
+    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
       queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
       compactData(true);
+
+      // 4 segments across 2 days, compacted into 2 new segments (6 total)
+      checkCompactionFinished(6);
       queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
 
-      final List<String> intervalsAfterCompaction = coordinator.getSegmentIntervals(INDEX_DATASOURCE);
-      intervalsBeforeCompaction.sort(null);
-      intervalsAfterCompaction.sort(null);
-      if (!intervalsBeforeCompaction.equals(intervalsAfterCompaction)) {
-        throw new ISE(
-            "Intervals before compaction[%s] should be same with those after compaction[%s]",
-            intervalsBeforeCompaction,
-            intervalsAfterCompaction
-        );
-      }
-    }
-    finally {
-      unloadAndKillData(INDEX_DATASOURCE);
+      checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
 
@@ -110,6 +103,32 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     RetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(INDEX_DATASOURCE),
         "Segment Compaction"
+    );
+  }
+
+  private void checkCompactionFinished(int numExpectedSegments)
+  {
+    RetryUtil.retryUntilTrue(
+        () -> {
+          int metadataSegmentCount = coordinator.getMetadataSegments(INDEX_DATASOURCE).size();
+          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
+          return metadataSegmentCount == numExpectedSegments;
+        },
+        "Compaction segment count check"
+    );
+  }
+
+  private void checkCompactionIntervals(List<String> expectedIntervals)
+  {
+    RetryUtil.retryUntilTrue(
+        () -> {
+          final List<String> intervalsAfterCompaction = coordinator.getSegmentIntervals(INDEX_DATASOURCE);
+          intervalsAfterCompaction.sort(null);
+          System.out.println("AFTER: " + intervalsAfterCompaction);
+          System.out.println("EXPECTED: " + expectedIntervals);
+          return intervalsAfterCompaction.equals(expectedIntervals);
+        },
+        "Compaction interval check"
     );
   }
 }

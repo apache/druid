@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SortProject
 {
@@ -44,26 +45,21 @@ public class SortProject
     this.postAggregators = Preconditions.checkNotNull(postAggregators, "postAggregators");
     this.outputRowSignature = Preconditions.checkNotNull(outputRowSignature, "outputRowSignature");
 
-    // Verify no collisions.
-    final Set<String> seen = new HashSet<>();
-    inputRowSignature.getRowOrder().forEach(field -> {
-      if (!seen.add(field)) {
-        throw new ISE("Duplicate field name: %s", field);
-      }
-    });
+    final Set<String> inputColumnNames = new HashSet<>(inputRowSignature.getRowOrder());
+    final Set<String> postAggregatorNames = postAggregators.stream()
+                                                           .map(PostAggregator::getName)
+                                                           .collect(Collectors.toSet());
 
-    for (PostAggregator postAggregator : postAggregators) {
-      if (postAggregator == null) {
-        throw new ISE("aggregation[%s] is not a postAggregator", postAggregator);
-      }
-      if (!seen.add(postAggregator.getName())) {
-        throw new ISE("Duplicate field name: %s", postAggregator.getName());
+    // Verify no collisions between inputs and outputs.
+    for (String postAggregatorName : postAggregatorNames) {
+      if (inputColumnNames.contains(postAggregatorName)) {
+        throw new ISE("Duplicate field name: %s", postAggregatorName);
       }
     }
 
     // Verify that items in the output signature exist.
     outputRowSignature.getRowOrder().forEach(field -> {
-      if (!seen.contains(field)) {
+      if (!inputColumnNames.contains(field) && !postAggregatorNames.contains(field)) {
         throw new ISE("Missing field in rowOrder: %s", field);
       }
     });

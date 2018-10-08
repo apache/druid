@@ -39,7 +39,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -65,7 +65,6 @@ public class LongCompressionBenchmark
   @Param({"lz4", "none"})
   private static String strategy;
 
-  private Random rand;
   private Supplier<ColumnarLongs> supplier;
 
   @Setup
@@ -73,7 +72,6 @@ public class LongCompressionBenchmark
   {
     File dir = new File(dirPath);
     File compFile = new File(dir, file + "-" + strategy + "-" + format);
-    rand = new Random();
     ByteBuffer buffer = Files.map(compFile);
     supplier = CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
   }
@@ -94,7 +92,7 @@ public class LongCompressionBenchmark
   {
     ColumnarLongs columnarLongs = supplier.get();
     int count = columnarLongs.size();
-    for (int i = 0; i < count; i += rand.nextInt(2000)) {
+    for (int i = 0; i < count; i += ThreadLocalRandom.current().nextInt(2000)) {
       bh.consume(columnarLongs.get(i));
     }
     columnarLongs.close();

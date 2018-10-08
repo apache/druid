@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -74,6 +75,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -88,9 +90,11 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
 
   private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
   private static final int DEFAULT_BUFFER_SIZE = 100_000;
+  private static final long DEFAULT_MAX_IDLE_TIME = Long.MAX_VALUE;
 
   private final String serviceName;
   private final int bufferSize;
+  private final long maxIdleTime;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -101,6 +105,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
+      @JsonProperty("maxIdleTime") Long maxIdleTime,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject @Json ObjectMapper jsonMapper,
       @JacksonInject @Smile ObjectMapper smileMapper,
@@ -112,6 +117,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
 
     this.serviceName = serviceName;
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
+    this.maxIdleTime = maxIdleTime == null || maxIdleTime <= 0 ?
+                       DEFAULT_MAX_IDLE_TIME : maxIdleTime;
     this.chatHandlerProvider = Optional.ofNullable(chatHandlerProvider);
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
@@ -155,9 +162,16 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     return bufferSize;
   }
 
+  @JsonProperty
+  public long getMaxIdleTime()
+  {
+    return maxIdleTime;
+  }
+
   public class EventReceiverFirehose implements ChatHandler, Firehose, EventReceiverFirehoseMetric
   {
     private final ScheduledExecutorService exec;
+    private final ExecutorService idleDetector;
     private final BlockingQueue<InputRow> buffer;
     private final InputRowParser<Map<String, Object>> parser;
 
@@ -168,12 +182,29 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     private final AtomicLong bytesReceived = new AtomicLong(0);
     private final AtomicLong lastBufferAddFailMsgTime = new AtomicLong(0);
     private final ConcurrentMap<String, Long> producerSequences = new ConcurrentHashMap<>();
+    private final Stopwatch idleWatch = Stopwatch.createUnstarted();
 
     public EventReceiverFirehose(InputRowParser<Map<String, Object>> parser)
     {
       this.buffer = new ArrayBlockingQueue<>(bufferSize);
       this.parser = parser;
       exec = Execs.scheduledSingleThreaded("event-receiver-firehose-%d");
+      idleDetector = Execs.singleThreaded("event-receiver-firehose-idle-detector-%d");
+      idleDetector.submit(() -> {
+        long idled;
+        try {
+          while ((idled = idleWatch.elapsed(TimeUnit.MILLISECONDS)) < maxIdleTime) {
+            Thread.sleep(maxIdleTime - idled);
+          }
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return;
+        }
+        log.info("Firehose has been idle for %d ms, closing.", idled);
+        close();
+      });
+      idleWatch.start();
     }
 
     @POST
@@ -185,6 +216,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         @Context final HttpServletRequest req
     )
     {
+      idleWatch.reset();
+      idleWatch.start();
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
           req,
           new ResourceAction(
@@ -328,6 +361,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
           chatHandlerProvider.get().unregister(serviceName);
         }
         exec.shutdown();
+        idleDetector.shutdown();
+        idleWatch.stop();
       }
     }
 

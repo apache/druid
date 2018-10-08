@@ -42,6 +42,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -52,7 +53,6 @@ public class IncrementalIndexRowTypeBenchmark
   private IncrementalIndex incStrIndex;
   private static AggregatorFactory[] aggs;
   static final int dimensionCount = 8;
-  private Random rng;
   static final int maxRows = 250000;
 
   private ArrayList<InputRow> longRows = new ArrayList<InputRow>();
@@ -82,6 +82,7 @@ public class IncrementalIndexRowTypeBenchmark
 
   private MapBasedInputRow getLongRow(long timestamp, int dimensionCount)
   {
+    Random rng = ThreadLocalRandom.current();
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
@@ -94,6 +95,7 @@ public class IncrementalIndexRowTypeBenchmark
 
   private MapBasedInputRow getFloatRow(long timestamp, int dimensionCount)
   {
+    Random rng = ThreadLocalRandom.current();
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
@@ -106,6 +108,7 @@ public class IncrementalIndexRowTypeBenchmark
 
   private MapBasedInputRow getStringRow(long timestamp, int dimensionCount)
   {
+    Random rng = ThreadLocalRandom.current();
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
@@ -129,8 +132,6 @@ public class IncrementalIndexRowTypeBenchmark
   @Setup
   public void setup()
   {
-    rng = new Random(9999);
-
     for (int i = 0; i < maxRows; i++) {
       longRows.add(getLongRow(0, dimensionCount));
     }

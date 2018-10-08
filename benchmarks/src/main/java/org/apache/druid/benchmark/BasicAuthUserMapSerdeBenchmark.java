@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -102,17 +103,10 @@ public class BasicAuthUserMapSerdeBenchmark
     byte[] salt = new byte[32];
     byte[] hash = new byte[64];
 
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     random.nextBytes(salt);
     random.nextBytes(hash);
-    return new BenchmarkUser(
-        UUID.randomUUID().toString(),
-        new BenchmarkCredentials(
-            salt,
-            hash,
-            10000
-        )
-    );
+    return new BenchmarkUser(UUID.randomUUID().toString(), new BenchmarkCredentials(salt, hash, 10000));
   }
 
   private static class BenchmarkUser

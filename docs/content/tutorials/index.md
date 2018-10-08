@@ -87,9 +87,21 @@ All persistent state such as the cluster metadata store and segments for the ser
 
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the Druid processes. 
 
+### Resetting cluster state
+
 If you want a clean start after stopping the services, delete the `var` directory and run the `bin/supervise` script again.
 
 Once every service has started, you are now ready to load data.
+
+#### Resetting Kafka
+
+If you completed [Tutorial: Loading stream data from Kafka](./tutorial-kafka.html) and wish to reset the cluster state, you should additionally clear out any Kafka state.
+
+Shut down the Kafka broker with CTRL-C before stopping Zookeeper and the Druid services, and then delete the Kafka log directory at `/tmp/kafka-logs`:
+
+```bash
+rm -rf /tmp/kafka-logs
+```
 
 ## Loading Data
 
@@ -125,7 +137,7 @@ The sample data has the following columns, and an example event is shown below:
 {
   "timestamp":"2015-09-12T20:03:45.018Z",
   "channel":"#en.wikipedia",
-  "namespace":"Main"
+  "namespace":"Main",
   "page":"Spider-Man's powers and equipment",
   "user":"foobar",
   "comment":"/* Artificial web-shooters */",
