@@ -51,10 +51,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
-import org.apache.druid.java.util.http.client.response.ClientResponse;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -68,7 +66,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -655,22 +652,4 @@ public class SystemSchema extends AbstractSchema
     };
   }
 
-  static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
-  {
-    private int status;
-    private String description;
-
-    @Override
-    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
-    {
-      status = response.getStatus().getCode();
-      description = response.getStatus().getReasonPhrase();
-      return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
-    }
-
-    protected int getStatus()
-    {
-      return status;
-    }
-  }
 }

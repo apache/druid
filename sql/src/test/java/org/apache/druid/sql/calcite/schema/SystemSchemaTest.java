@@ -63,6 +63,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Authorizer;
@@ -117,7 +118,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private TimelineServerView serverView;
   private ObjectMapper mapper;
   private FullResponseHolder responseHolder;
-  private SystemSchema.BytesAccumulatingResponseHandler responseHandler;
+  private BytesAccumulatingResponseHandler responseHandler;
   private Request request;
   private DruidSchema druidSchema;
   private AuthorizerMapper authMapper;
@@ -149,7 +150,7 @@ public class SystemSchemaTest extends CalciteTestBase
     client = EasyMock.createMock(DruidLeaderClient.class);
     mapper = TestHelper.makeJsonMapper();
     responseHolder = EasyMock.createMock(FullResponseHolder.class);
-    responseHandler = EasyMock.createMockBuilder(SystemSchema.BytesAccumulatingResponseHandler.class)
+    responseHandler = EasyMock.createMockBuilder(BytesAccumulatingResponseHandler.class)
                               .withConstructor()
                               .addMockedMethod(
                                       "handleResponse",

@@ -72,7 +72,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -105,9 +104,9 @@ public class DruidSchema extends AbstractSchema
   private final Object lock = new Object();
 
   // DataSource -> Segment -> SegmentMetadataHolder(contains RowSignature) for that segment.
-  // Use ConcurrentSkipListMap for segments so they are merged in deterministic order, from older to newer.
-  // This data structure need to be concurrent since SystemSchema accesses it
-  private final Map<String, ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder>> segmentMetadataInfo = new ConcurrentHashMap<>();
+  // Use TreeMap for segments so they are merged in deterministic order, from older to newer.
+  // This data structure need to be accessed in a thread-safe way since SystemSchema accesses it
+  private final Map<String, TreeMap<DataSegment, SegmentMetadataHolder>> segmentMetadataInfo = new HashMap<>();
 
   // All mutable segments.
   private final Set<DataSegment> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
@@ -446,19 +445,21 @@ public class DruidSchema extends AbstractSchema
         if (segment == null) {
           log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
-          final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
-          final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
-          SegmentMetadataHolder holder = dataSourceSegments.get(segment);
-          dataSourceSegments.put(segment, holder);
-          SegmentMetadataHolder updatedHolder = new SegmentMetadataHolder.Builder(
-              holder.isPublished(),
-              holder.isAvailable(),
-              holder.isRealtime(),
-              holder.getNumReplicas()
-          ).withRowSignature(rowSignature).withNumRows(analysis.getNumRows()).build();
-          setSegmentSignature(segment, updatedHolder);
-          retVal.add(segment);
+          synchronized (lock) {
+            final RowSignature rowSignature = analysisToRowSignature(analysis);
+            log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
+            final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
+            SegmentMetadataHolder holder = dataSourceSegments.get(segment);
+            SegmentMetadataHolder updatedHolder = new SegmentMetadataHolder.Builder(
+                holder.isPublished(),
+                holder.isAvailable(),
+                holder.isRealtime(),
+                holder.getNumReplicas()
+            ).withRowSignature(rowSignature).withNumRows(analysis.getNumRows()).build();
+            dataSourceSegments.put(segment, updatedHolder);
+            setSegmentSignature(segment, updatedHolder);
+            retVal.add(segment);
+          }
         }
 
         yielder = yielder.next(null);
@@ -482,7 +483,7 @@ public class DruidSchema extends AbstractSchema
   private void setSegmentSignature(final DataSegment segment, final SegmentMetadataHolder segmentMetadataHolder)
   {
     synchronized (lock) {
-      segmentMetadataInfo.computeIfAbsent(segment.getDataSource(), x -> new ConcurrentSkipListMap<>(SEGMENT_ORDER))
+      segmentMetadataInfo.computeIfAbsent(segment.getDataSource(), x -> new TreeMap<>(SEGMENT_ORDER))
                          .put(segment, segmentMetadataHolder);
     }
   }
@@ -490,7 +491,7 @@ public class DruidSchema extends AbstractSchema
   private DruidTable buildDruidTable(final String dataSource)
   {
     synchronized (lock) {
-      final ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder> segmentMap = segmentMetadataInfo.get(dataSource);
+      final TreeMap<DataSegment, SegmentMetadataHolder> segmentMap = segmentMetadataInfo.get(dataSource);
       final Map<String, ValueType> columnTypes = new TreeMap<>();
 
       if (segmentMap != null) {
@@ -570,7 +571,7 @@ public class DruidSchema extends AbstractSchema
   {
     final Map<DataSegment, SegmentMetadataHolder> segmentMetadata = new HashMap<>();
     synchronized (lock) {
-      for (ConcurrentSkipListMap<DataSegment, SegmentMetadataHolder> val : segmentMetadataInfo.values()) {
+      for (TreeMap<DataSegment, SegmentMetadataHolder> val : segmentMetadataInfo.values()) {
         segmentMetadata.putAll(val);
       }
     }
