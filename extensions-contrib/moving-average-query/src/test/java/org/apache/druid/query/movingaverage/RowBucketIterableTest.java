@@ -1,0 +1,672 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.druid.query.movingaverage;
+
+import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.Period;
+import org.joda.time.chrono.ISOChronology;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+public class RowBucketIterableTest
+{
+
+  private static final DateTime JAN_1 = new DateTime(2017, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+  private static final DateTime JAN_2 = new DateTime(2017, 1, 2, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+  private static final DateTime JAN_3 = new DateTime(2017, 1, 3, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+  private static final DateTime JAN_4 = new DateTime(2017, 1, 4, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+  private static final DateTime JAN_5 = new DateTime(2017, 1, 5, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+  private static final DateTime JAN_6 = new DateTime(2017, 1, 6, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+  private static final DateTime JAN_7 = new DateTime(2017, 1, 7, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+  private static final DateTime JAN_8 = new DateTime(2017, 1, 8, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+  private static final DateTime JAN_9 = new DateTime(2017, 1, 9, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
+
+  private static final Map<String, Object> EVENT_M_10 = new HashMap<>();
+  private static final Map<String, Object> EVENT_F_20 = new HashMap<>();
+  private static final Map<String, Object> EVENT_U_30 = new HashMap<>();
+
+  private static final Row JAN_1_M_10 = new MapBasedRow(new DateTime(2017, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_M_10);
+  private static final Row JAN_1_F_20 = new MapBasedRow(new DateTime(2017, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_F_20);
+  private static final Row JAN_1_U_30 = new MapBasedRow(new DateTime(2017, 1, 1, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_U_30);
+  private static final Row JAN_2_M_10 = new MapBasedRow(new DateTime(2017, 1, 2, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_M_10);
+  private static final Row JAN_3_M_10 = new MapBasedRow(new DateTime(2017, 1, 3, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_M_10);
+  private static final Row JAN_3_F_20 = new MapBasedRow(new DateTime(2017, 1, 3, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_F_20);
+  private static final Row JAN_4_M_10 = new MapBasedRow(new DateTime(2017, 1, 4, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_M_10);
+  private static final Row JAN_4_F_20 = new MapBasedRow(new DateTime(2017, 1, 4, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_F_20);
+  private static final Row JAN_4_U_30 = new MapBasedRow(new DateTime(2017, 1, 4, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_U_30);
+  private static final Row JAN_5_M_10 = new MapBasedRow(new DateTime(2017, 1, 5, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_M_10);
+  private static final Row JAN_6_M_10 = new MapBasedRow(new DateTime(2017, 1, 6, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_M_10);
+  private static final Row JAN_7_F_20 = new MapBasedRow(new DateTime(2017, 1, 7, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_F_20);
+  private static final Row JAN_8_U_30 = new MapBasedRow(new DateTime(2017, 1, 8, 0, 0, 0, 0, ISOChronology.getInstanceUTC()), EVENT_U_30);
+
+  private static final Interval INTERVAL_JAN_1_1 = new Interval(JAN_1, JAN_2);
+  private static final Interval INTERVAL_JAN_1_2 = new Interval(JAN_1, JAN_3);
+  private static final Interval INTERVAL_JAN_1_4 = new Interval(JAN_1, JAN_5);
+  private static final Interval INTERVAL_JAN_1_5 = new Interval(JAN_1, JAN_6);
+  private static final Interval INTERVAL_JAN_6_8 = new Interval(JAN_6, JAN_9);
+  private static final Period ONE_DAY = Period.days(1);
+
+  private List<Row> rows = null;
+  private List<Interval> intervals = new ArrayList<>();
+
+  @BeforeClass
+  public static void setupClass()
+  {
+    EVENT_M_10.put("gender", "m");
+    EVENT_M_10.put("pageViews", 10L);
+    EVENT_F_20.put("gender", "f");
+    EVENT_F_20.put("pageViews", 20L);
+    EVENT_U_30.put("gender", "u");
+    EVENT_U_30.put("pageViews", 30L);
+  }
+
+  // normal case. data for all the days present
+  @Test
+  public void testCompleteData()
+  {
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_3_M_10);
+    rows.add(JAN_4_M_10);
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10);
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Arrays.asList(JAN_3_M_10);
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(JAN_1, actual.getDateTime());
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_2, actual.getDateTime());
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_3, actual.getDateTime());
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_4, actual.getDateTime());
+    assertEquals(expected_day4, actual.getRows());
+  }
+
+  // all days present and last day only has one row
+  @Test
+  public void testApplyLastDaySingleRow()
+  {
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10, JAN_1_F_20);
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Arrays.asList(JAN_3_F_20);
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_1_F_20);
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_3_F_20);
+    rows.add(JAN_4_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day4, actual.getRows());
+  }
+
+  // all days present and last day has multiple rows
+  @Test
+  public void testApplyLastDayMultipleRows()
+  {
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10, JAN_1_F_20);
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Arrays.asList(JAN_3_F_20);
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10, JAN_4_F_20, JAN_4_U_30);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_1_F_20);
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_3_F_20);
+    rows.add(JAN_4_M_10);
+    rows.add(JAN_4_F_20);
+    rows.add(JAN_4_U_30);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day4, actual.getRows());
+  }
+
+  // test single day with single row
+  @Test
+  public void testSingleDaySingleRow()
+  {
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_1);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(expected_day1, actual.getRows());
+    assertEquals(JAN_1, actual.getDateTime());
+
+  }
+
+  // test single day with multiple rows
+  @Test
+  public void testSingleDayMultipleRow()
+  {
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_1);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_1_F_20);
+    rows.add(JAN_1_U_30);
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10, JAN_1_F_20, JAN_1_U_30);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(JAN_1, actual.getDateTime());
+    assertEquals(expected_day1, actual.getRows());
+
+  }
+
+  //  missing day at the beginning followed by single row
+  @Test
+  public void testMissingDaysAtBegining()
+  {
+
+    List<Row> expected_day1 = Collections.emptyList();
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_2);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_2_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(JAN_1, actual.getDateTime());
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_2, actual.getDateTime());
+    assertEquals(expected_day2, actual.getRows());
+
+  }
+
+  //  missing day at the beginning followed by multiple row
+  @Test
+  public void testMissingDaysAtBeginingFollowedByMultipleRow()
+  {
+
+    List<Row> expected_day1 = Collections.emptyList();
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Arrays.asList(JAN_3_M_10);
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10);
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_3_M_10);
+    rows.add(JAN_4_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(JAN_1, actual.getDateTime());
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_2, actual.getDateTime());
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_3, actual.getDateTime());
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_4, actual.getDateTime());
+    assertEquals(expected_day4, actual.getRows());
+  }
+
+  //  missing day at the beginning and at the end
+  @Test
+  public void testMissingDaysAtBeginingAndAtTheEnd()
+  {
+
+    List<Row> expected_day1 = Collections.emptyList();
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Arrays.asList(JAN_3_M_10);
+    List<Row> expected_day4 = Collections.emptyList();
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_3_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(JAN_1, actual.getDateTime());
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_2, actual.getDateTime());
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_3, actual.getDateTime());
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_4, actual.getDateTime());
+    assertEquals(expected_day4, actual.getRows());
+  }
+
+  //  multiple missing days in an interval
+  @Test
+  public void testMultipleMissingDays()
+  {
+
+    List<Row> expected_day1 = Collections.emptyList();
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Collections.emptyList();
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10);
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_4_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(JAN_1, actual.getDateTime());
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_2, actual.getDateTime());
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_3, actual.getDateTime());
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_4, actual.getDateTime());
+    assertEquals(expected_day4, actual.getRows());
+  }
+
+  //  multiple missing days in an interval followed by multiple row at the end
+  @Test
+  public void testMultipleMissingDaysMultipleRowAtTheEnd()
+  {
+
+    List<Row> expected_day1 = Collections.emptyList();
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Collections.emptyList();
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10);
+    List<Row> expected_day5 = Arrays.asList(JAN_5_M_10);
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_5);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_4_M_10);
+    rows.add(JAN_5_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(JAN_1, actual.getDateTime());
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_2, actual.getDateTime());
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_3, actual.getDateTime());
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_4, actual.getDateTime());
+    assertEquals(expected_day4, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_5, actual.getDateTime());
+    assertEquals(expected_day5, actual.getRows());
+  }
+
+
+  //  missing day in the middle followed by single row
+  @Test
+  public void testMissingDaysInMiddleOneRow()
+  {
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10);
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Collections.emptyList();
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_4_M_10);
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_3, actual.getDateTime());
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day4, actual.getRows());
+
+  }
+
+  //  missing day in the middle followed by multiple rows
+  @Test
+  public void testMissingDaysInMiddleMultipleRow()
+  {
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10);
+    List<Row> expected_day2 = Collections.emptyList();
+    List<Row> expected_day3 = Arrays.asList(JAN_3_M_10);
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10);
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_3_M_10);
+    rows.add(JAN_4_M_10);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(JAN_1, actual.getDateTime());
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_2, actual.getDateTime());
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_3, actual.getDateTime());
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_4, actual.getDateTime());
+    assertEquals(expected_day4, actual.getRows());
+
+  }
+
+  // data missing for last day .
+  @Test
+  public void testApplyLastDayNoRows()
+  {
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10, JAN_1_F_20);
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Arrays.asList(JAN_3_F_20);
+    List<Row> expected_day4 = Collections.emptyList();
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_1_F_20);
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_3_F_20);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_4, actual.getDateTime());
+    assertEquals(expected_day4, actual.getRows());
+  }
+
+  // data missing for last two days
+  @Test
+  public void testApplyLastTwoDayNoRows()
+  {
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10, JAN_1_F_20);
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Collections.emptyList();
+    List<Row> expected_day4 = Collections.emptyList();
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_1_F_20);
+    rows.add(JAN_2_M_10);
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_3, actual.getDateTime());
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(JAN_4, actual.getDateTime());
+    assertEquals(expected_day4, actual.getRows());
+  }
+
+
+  @Test
+  public void testApplyMultipleInterval()
+  {
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+    intervals.add(INTERVAL_JAN_6_8);
+
+    List<Row> expected_day1 = Arrays.asList(JAN_1_M_10, JAN_1_F_20);
+    List<Row> expected_day2 = Arrays.asList(JAN_2_M_10);
+    List<Row> expected_day3 = Arrays.asList(JAN_3_F_20);
+    List<Row> expected_day4 = Arrays.asList(JAN_4_M_10, JAN_4_F_20, JAN_4_U_30);
+    List<Row> expected_day6 = Arrays.asList(JAN_6_M_10);
+    List<Row> expected_day7 = Arrays.asList(JAN_7_F_20);
+    List<Row> expected_day8 = Arrays.asList(JAN_8_U_30);
+
+    rows = new ArrayList<Row>();
+    rows.add(JAN_1_M_10);
+    rows.add(JAN_1_F_20);
+    rows.add(JAN_2_M_10);
+    rows.add(JAN_3_F_20);
+    rows.add(JAN_4_M_10);
+    rows.add(JAN_4_F_20);
+    rows.add(JAN_4_U_30);
+    rows.add(JAN_6_M_10);
+    rows.add(JAN_7_F_20);
+    rows.add(JAN_8_U_30);
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    RowBucket actual = iter.next();
+    assertEquals(expected_day1, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day2, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day3, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day4, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day6, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day7, actual.getRows());
+
+    actual = iter.next();
+    assertEquals(expected_day8, actual.getRows());
+  }
+
+  @Test
+  public void testNodata()
+  {
+
+    intervals = new ArrayList<>();
+    intervals.add(INTERVAL_JAN_1_4);
+    intervals.add(INTERVAL_JAN_6_8);
+
+    rows = new ArrayList<Row>();
+
+    Sequence<Row> seq = Sequences.simple(rows);
+    RowBucketIterable rbi = new RowBucketIterable(seq, intervals, ONE_DAY);
+    Iterator<RowBucket> iter = rbi.iterator();
+
+    assertTrue(iter.hasNext());
+    RowBucket actual = iter.next();
+    assertEquals(Collections.emptyList(), actual.getRows());
+  }
+}

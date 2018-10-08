@@ -155,6 +155,7 @@
         <module>extensions-contrib/opentsdb-emitter</module>
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
+        <module>extensions-contrib/moving-average-query</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>

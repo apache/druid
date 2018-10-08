@@ -1,0 +1,70 @@
+query:
+  queryType: movingAverage
+  dataSource:
+    type: table
+    name: slice_pr_pc_pl_us_os
+  context: {
+  }
+  granularity:
+    type: period
+    period: P1D
+  intervals:
+  - 2017-01-01T00:00Z/2017-01-02T00:00Z
+  dimensions:
+  - gender
+  averagers:
+  - name: regBcookiesAvg
+    fieldName: regBcookies
+    size: 16384
+    buckets: 2
+    type: sketchUnion
+  aggregations:
+  - name: regBcookies
+    fieldName: bcookie_with_yuid_sketch
+    size: 16384
+    type: thetaSketch
+  postAveragers: [
+  ]
+  postAggregations: [
+  ]
+expectedOutput:
+- version: v1
+  timestamp: 2017-01-01T00:00Z
+  event:
+    gender: m
+    timespent_secs: 120
+    timeSpent: 2.0
+    regBcookies: 0.0
+    regBcookiesAvg: 0.0
+- version: v1
+  timestamp: 2017-01-01T00:00Z
+  event:
+    gender: f
+    timespent_secs: 120
+    timeSpent: 2.0
+    regBcookies: 0.0
+    regBcookiesAvg: 0.0
+intermediateResults:
+  groupBy:
+  - version: v1
+    timestamp: 2016-12-31T00:00Z
+    event:
+      gender: m
+      timespent_secs: 120
+      timeSpent: 2.0
+      regBcookies: AwEDAAAAAgAAAAAAAAAAAP////////9/
+  - version: v1
+    timestamp: 2017-01-01T00:00Z
+    event:
+      gender: m
+      timespent_secs: 120
+      timeSpent: 2.0
+      regBcookies: AwEDAAAAAgAAAAAAAAAAAP////////9/
+  - version: v1
+    timestamp: 2017-01-01T00:00Z
+    event:
+      gender: f
+      timespent_secs: 120
+      timeSpent: 2.0
+      regBcookies: AwEDAAAAAgAAAAAAAAAAAP////////9/
+
