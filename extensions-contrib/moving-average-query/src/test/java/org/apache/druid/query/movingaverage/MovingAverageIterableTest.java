@@ -106,7 +106,7 @@ public class MovingAverageIterableTest
             new MapBasedRow(JAN_1, dims1),
             new MapBasedRow(JAN_1, dims2)
         )),
-        new RowBucket(JAN_2, Arrays.asList(
+        new RowBucket(JAN_2, Collections.singletonList(
             new MapBasedRow(JAN_2, dims1)
         )),
         new RowBucket(JAN_3, Collections.emptyList()),
@@ -217,8 +217,8 @@ public class MovingAverageIterableTest
         new LongMeanAveragerFactory("movingAvgPageViews", 7, 1, "pageViews")
     ),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(new LongSumAggregatorFactory("pageViews",
-                                                                                                                             "pageViews"
+                                                   Collections.singletonList(new LongSumAggregatorFactory("pageViews",
+                                                                                                          "pageViews"
                                                    ))
     ).iterator();
 
@@ -281,11 +281,11 @@ public class MovingAverageIterableTest
         new RowBucket(JAN_2, Arrays.asList(jan_2_row1, jan_2_row2, jan_2_row3))
     ));
 
-    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Arrays.asList(
+    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
         new LongMeanAveragerFactory("movingAvgPageViews", 2, 1, "pageViews")),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(new LongSumAggregatorFactory("pageViews",
-                                                                                                                             "pageViews"
+                                                   Collections.singletonList(new LongSumAggregatorFactory("pageViews",
+                                                                                                          "pageViews"
                                                    ))
     ).iterator();
 
@@ -349,15 +349,15 @@ public class MovingAverageIterableTest
     Row jan_2_row3 = new MapBasedRow(JAN_2, event3);
 
     Sequence<RowBucket> seq = Sequences.simple(Arrays.asList(
-        new RowBucket(JAN_1, Arrays.asList(jan_1_row1)),
+        new RowBucket(JAN_1, Collections.singletonList(jan_1_row1)),
         new RowBucket(JAN_2, Arrays.asList(jan_2_row1, jan_2_row2, jan_2_row3))
     ));
 
-    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Arrays.asList(
+    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
         new LongMeanAveragerFactory("movingAvgPageViews", 2, 1, "pageViews")),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(new LongSumAggregatorFactory("pageViews",
-                                                                                                                             "pageViews"
+                                                   Collections.singletonList(new LongSumAggregatorFactory("pageViews",
+                                                                                                          "pageViews"
                                                    ))
     ).iterator();
 
@@ -410,14 +410,14 @@ public class MovingAverageIterableTest
 
     Sequence<RowBucket> seq = Sequences.simple(Arrays.asList(
         new RowBucket(JAN_1, Arrays.asList(jan_1_row1, jan_1_row2, jan_1_row3)),
-        new RowBucket(JAN_2, Arrays.asList(jan_2_row1))
+        new RowBucket(JAN_2, Collections.singletonList(jan_2_row1))
     ));
 
-    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Arrays.asList(
+    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
         new LongMeanAveragerFactory("movingAvgPageViews", 2, 1, "pageViews")),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(new LongSumAggregatorFactory("pageViews",
-                                                                                                                             "pageViews"
+                                                   Collections.singletonList(new LongSumAggregatorFactory("pageViews",
+                                                                                                          "pageViews"
                                                    ))
     ).iterator();
 
@@ -485,16 +485,16 @@ public class MovingAverageIterableTest
 
     Sequence<RowBucket> seq = Sequences.simple(Arrays.asList(
         new RowBucket(JAN_1, Arrays.asList(jan_1_row1, jan_1_row2, jan_1_row3)),
-        new RowBucket(JAN_2, Arrays.asList(jan_2_row1)),
+        new RowBucket(JAN_2, Collections.singletonList(jan_2_row1)),
         new RowBucket(JAN_3, Arrays.asList(jan_3_row1, jan_3_row2, jan_3_row3)),
-        new RowBucket(JAN_4, Arrays.asList(jan_4_row1))
+        new RowBucket(JAN_4, Collections.singletonList(jan_4_row1))
     ));
 
-    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Arrays.asList(
+    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
         new LongMeanAveragerFactory("movingAvgPageViews", 3, 1, "pageViews")),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(new LongSumAggregatorFactory("pageViews",
-                                                                                                                             "pageViews"
+                                                   Collections.singletonList(new LongSumAggregatorFactory("pageViews",
+                                                                                                          "pageViews"
                                                    ))
     ).iterator();
 
@@ -586,11 +586,11 @@ public class MovingAverageIterableTest
         new RowBucket(JAN_4, Collections.singletonList(row2))
     ));
 
-    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Arrays.asList(
+    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
         new LongMeanAveragerFactory("movingAvgPageViews", 4, 1, "pageViews")),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(new LongSumAggregatorFactory("pageViews",
-                                                                                                                             "pageViews"
+                                                   Collections.singletonList(new LongSumAggregatorFactory("pageViews",
+                                                                                                          "pageViews"
                                                    ))
     ).iterator();
 
@@ -632,11 +632,11 @@ public class MovingAverageIterableTest
         new RowBucket(JAN_4, Collections.singletonList(row2))
     ));
 
-    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Arrays.asList(
+    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
         new LongMeanAveragerFactory("movingAvgPageViews", 4, 1, "pageViews")),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(new LongSumAggregatorFactory("pageViews",
-                                                                                                                             "pageViews"
+                                                   Collections.singletonList(new LongSumAggregatorFactory("pageViews",
+                                                                                                          "pageViews"
                                                    ))
     ).iterator();
 
@@ -693,10 +693,10 @@ public class MovingAverageIterableTest
     DimFilter filter = new SelectorDimFilter("gender", "m", null);
     FilteredAggregatorFactory filteredAggregatorFactory = new FilteredAggregatorFactory(aggregatorFactory, filter);
 
-    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Arrays.asList(
+    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
         averagerfactory),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(
+                                                   Collections.singletonList(
                                                        filteredAggregatorFactory)
     ).iterator();
 
@@ -750,11 +750,11 @@ public class MovingAverageIterableTest
         new RowBucket(JAN_6, Collections.emptyList())
     ));
 
-    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Arrays.asList(
+    Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
         new LongMeanAveragerFactory("movingAvgPageViews", 4, 1, "pageViews")),
                                                    Collections.emptyList(),
-                                                   Collections.<AggregatorFactory>singletonList(new LongSumAggregatorFactory("pageViews",
-                                                                                                                             "pageViews"
+                                                   Collections.singletonList(new LongSumAggregatorFactory("pageViews",
+                                                                                                          "pageViews"
                                                    ))
     ).iterator();
 
