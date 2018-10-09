@@ -29,15 +29,15 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
+public abstract class SeekableStreamIOConfig<partitionType, sequenceType> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
 
   @Nullable
   private final Integer taskGroupId;
   private final String baseSequenceName;
-  private final SeekableStreamPartitions<T1, T2> startPartitions;
-  private final SeekableStreamPartitions<T1, T2> endPartitions;
+  private final SeekableStreamPartitions<partitionType, sequenceType> startPartitions;
+  private final SeekableStreamPartitions<partitionType, sequenceType> endPartitions;
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
@@ -46,8 +46,8 @@ public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
   public SeekableStreamIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
       @JsonProperty("baseSequenceName") String baseSequenceName,
-      @JsonProperty("startPartitions") SeekableStreamPartitions<T1, T2> startPartitions,
-      @JsonProperty("endPartitions") SeekableStreamPartitions<T1, T2> endPartitions,
+      @JsonProperty("startPartitions") SeekableStreamPartitions<partitionType, sequenceType> startPartitions,
+      @JsonProperty("endPartitions") SeekableStreamPartitions<partitionType, sequenceType> endPartitions,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime
@@ -62,7 +62,7 @@ public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
 
     Preconditions.checkArgument(
-        startPartitions.getStream().equals(endPartitions.getStream()),
+        startPartitions.getName().equals(endPartitions.getName()),
         "start topic/stream and end topic/stream must match"
     );
 
@@ -86,13 +86,13 @@ public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
   }
 
   @JsonProperty
-  public SeekableStreamPartitions<T1, T2> getStartPartitions()
+  public SeekableStreamPartitions<partitionType, sequenceType> getStartPartitions()
   {
     return startPartitions;
   }
 
   @JsonProperty
-  public SeekableStreamPartitions<T1, T2> getEndPartitions()
+  public SeekableStreamPartitions<partitionType, sequenceType> getEndPartitions()
   {
     return endPartitions;
   }
@@ -116,7 +116,7 @@ public abstract class SeekableStreamIOConfig<T1, T2> implements IOConfig
   }
 
   @JsonProperty
-  public abstract Set<T1> getExclusiveStartSequenceNumberPartitions();
+  public abstract Set<partitionType> getExclusiveStartSequenceNumberPartitions();
 
   @Override
   public abstract String toString();

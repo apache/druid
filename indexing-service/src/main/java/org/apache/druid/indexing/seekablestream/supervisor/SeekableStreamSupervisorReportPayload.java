@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
+public abstract class SeekableStreamSupervisorReportPayload<partitionType, sequenceType>
 {
   private final String dataSource;
   private final String id;
@@ -38,8 +38,8 @@ public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
   private final long durationSeconds;
   private final List<TaskReportData> activeTasks;
   private final List<TaskReportData> publishingTasks;
-  private final Map<T1, T2> latestOffsets;
-  private final Map<T1, T2> minimumLag;
+  private final Map<partitionType, sequenceType> latestOffsets;
+  private final Map<partitionType, sequenceType> minimumLag;
   private final Long aggregateLag;
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
@@ -50,8 +50,8 @@ public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
       int partitions,
       int replicas,
       long durationSeconds,
-      @Nullable Map<T1, T2> latestOffsets,
-      @Nullable Map<T1, T2> minimumLag,
+      @Nullable Map<partitionType, sequenceType> latestOffsets,
+      @Nullable Map<partitionType, sequenceType> minimumLag,
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended
@@ -131,14 +131,14 @@ public abstract class SeekableStreamSupervisorReportPayload<T1, T2>
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<T1, T2> getLatestOffsets()
+  public Map<partitionType, sequenceType> getLatestOffsets()
   {
     return latestOffsets;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<T1, T2> getMinimumLag()
+  public Map<partitionType, sequenceType> getMinimumLag()
   {
     return minimumLag;
   }

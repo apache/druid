@@ -306,7 +306,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
     Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
 
-    Assert.assertEquals(stream, taskConfig.getStartPartitions().getStream());
+    Assert.assertEquals(stream, taskConfig.getStartPartitions().getName());
     Assert.assertEquals(
         getSequenceNumber(res, shardId1, 0),
         taskConfig.getStartPartitions().getMap().get(shardId1)
@@ -316,7 +316,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskConfig.getStartPartitions().getMap().get(shardId0)
     );
 
-    Assert.assertEquals(stream, taskConfig.getEndPartitions().getStream());
+    Assert.assertEquals(stream, taskConfig.getEndPartitions().getName());
     Assert.assertEquals(
         SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER,
         taskConfig.getEndPartitions().getMap().get(shardId1)
@@ -1321,7 +1321,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
       Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
       Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
 
-      Assert.assertEquals(stream, taskConfig.getStartPartitions().getStream());
+      Assert.assertEquals(stream, taskConfig.getStartPartitions().getName());
       Assert.assertEquals(
           getSequenceNumber(res, shardId1, 3),
           taskConfig.getStartPartitions().getMap().get(shardId1)
@@ -1454,7 +1454,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
 
     // check that the new task was created with starting offsets matching where the publishing task finished
-    Assert.assertEquals(stream, capturedTaskConfig.getStartPartitions().getStream());
+    Assert.assertEquals(stream, capturedTaskConfig.getStartPartitions().getName());
     Assert.assertEquals(
         getSequenceNumber(res, shardId1, 2),
         capturedTaskConfig.getStartPartitions().getMap().get(shardId1)
@@ -1464,7 +1464,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         capturedTaskConfig.getStartPartitions().getMap().get(shardId0)
     );
 
-    Assert.assertEquals(stream, capturedTaskConfig.getEndPartitions().getStream());
+    Assert.assertEquals(stream, capturedTaskConfig.getEndPartitions().getName());
     Assert.assertEquals(
         SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER,
         capturedTaskConfig.getEndPartitions().getMap().get(shardId1)
@@ -1585,7 +1585,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
 
     // check that the new task was created with starting offsets matching where the publishing task finished
-    Assert.assertEquals(stream, capturedTaskConfig.getStartPartitions().getStream());
+    Assert.assertEquals(stream, capturedTaskConfig.getStartPartitions().getName());
     Assert.assertEquals(
         getSequenceNumber(res, shardId1, 2),
         capturedTaskConfig.getStartPartitions().getMap().get(shardId1)
@@ -1595,7 +1595,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         capturedTaskConfig.getStartPartitions().getMap().get(shardId0)
     );
 
-    Assert.assertEquals(stream, capturedTaskConfig.getEndPartitions().getStream());
+    Assert.assertEquals(stream, capturedTaskConfig.getEndPartitions().getName());
     Assert.assertEquals(
         SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER,
         capturedTaskConfig.getEndPartitions().getMap().get(shardId1)

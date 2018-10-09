@@ -44,7 +44,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
@@ -272,7 +272,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected SequenceNumber<String> makeSequenceNumber(
+  protected OrderedSequenceNumber<String> makeSequenceNumber(
       String seq, boolean useExclusive, boolean isExclusive
   )
   {
@@ -344,14 +344,14 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       {
         try {
           final Map<String, List<PartitionInfo>> topics = lagComputingConsumer.listTopics();
-          final List<PartitionInfo> partitionInfoList = topics.get(ioConfig.getStream());
+          final List<PartitionInfo> partitionInfoList = topics.get(ioConfig.getName());
           lagComputingConsumer.assign(
               Lists.transform(partitionInfoList, new Function<PartitionInfo, TopicPartition>()
               {
                 @Override
                 public TopicPartition apply(PartitionInfo input)
                 {
-                  return new TopicPartition(ioConfig.getStream(), input.partition());
+                  return new TopicPartition(ioConfig.getName(), input.partition());
                 }
               })
           );
@@ -401,7 +401,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           long lag = 0;
           for (PartitionInfo partitionInfo : partitionInfoList) {
             long diff;
-            final TopicPartition topicPartition = new TopicPartition(ioConfig.getStream(), partitionInfo.partition());
+            final TopicPartition topicPartition = new TopicPartition(ioConfig.getName(), partitionInfo.partition());
             lagComputingConsumer.seekToEnd(ImmutableList.of(topicPartition));
             if (offsetsResponse.get(topicPartition.partition()) != null) {
               diff = lagComputingConsumer.position(topicPartition) - offsetsResponse.get(topicPartition.partition());

@@ -24,30 +24,30 @@ package org.apache.druid.indexing.seekablestream.common;
  * mostly used by {@link RecordSupplier} and
  * {@link org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor}
  *
- * @param <T1> partition id type
+ * @param <partitionType> partition id type
  */
-public class StreamPartition<T1>
+public class StreamPartition<partitionType>
 {
-  private final String streamName;
-  private final T1 partitionId;
+  private final String stream;
+  private final partitionType partitionId;
 
-  public StreamPartition(String streamName, T1 partitionId)
+  public StreamPartition(String stream, partitionType partitionId)
   {
-    this.streamName = streamName;
+    this.stream = stream;
     this.partitionId = partitionId;
   }
 
-  public static <T1> StreamPartition<T1> of(String streamName, T1 partitionId)
+  public static <partitionType> StreamPartition<partitionType> of(String stream, partitionType partitionId)
   {
-    return new StreamPartition<>(streamName, partitionId);
+    return new StreamPartition<>(stream, partitionId);
   }
 
-  public String getStreamName()
+  public String getStream()
   {
-    return streamName;
+    return stream;
   }
 
-  public T1 getPartitionId()
+  public partitionType getPartitionId()
   {
     return partitionId;
   }
@@ -64,7 +64,7 @@ public class StreamPartition<T1>
 
     StreamPartition that = (StreamPartition) o;
 
-    if (streamName != null ? !streamName.equals(that.streamName) : that.streamName != null) {
+    if (stream != null ? !stream.equals(that.stream) : that.stream != null) {
       return false;
     }
     return !(partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null);
@@ -73,7 +73,7 @@ public class StreamPartition<T1>
   @Override
   public int hashCode()
   {
-    int result = streamName != null ? streamName.hashCode() : 0;
+    int result = stream != null ? stream.hashCode() : 0;
     result = 31 * result + (partitionId != null ? partitionId.hashCode() : 0);
     return result;
   }
@@ -82,7 +82,7 @@ public class StreamPartition<T1>
   public String toString()
   {
     return "StreamPartition{" +
-           "streamName='" + streamName + '\'' +
+           "stream='" + stream + '\'' +
            ", partitionId='" + partitionId + '\'' +
            '}';
   }

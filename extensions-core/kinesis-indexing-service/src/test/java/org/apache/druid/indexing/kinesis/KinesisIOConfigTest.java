@@ -67,12 +67,12 @@ public class KinesisIOConfigTest
     );
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mystream", config.getStartPartitions().getStream());
+    Assert.assertEquals("mystream", config.getStartPartitions().getName());
     Assert.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
         config.getStartPartitions().getMap()
     );
-    Assert.assertEquals("mystream", config.getEndPartitions().getStream());
+    Assert.assertEquals("mystream", config.getEndPartitions().getName());
     Assert.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
         config.getEndPartitions().getMap()
@@ -124,12 +124,12 @@ public class KinesisIOConfigTest
     );
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mystream", config.getStartPartitions().getStream());
+    Assert.assertEquals("mystream", config.getStartPartitions().getName());
     Assert.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
         config.getStartPartitions().getMap()
     );
-    Assert.assertEquals("mystream", config.getEndPartitions().getStream());
+    Assert.assertEquals("mystream", config.getEndPartitions().getName());
     Assert.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
         config.getEndPartitions().getMap()

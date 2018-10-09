@@ -56,7 +56,7 @@ import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.common.Record;
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
@@ -268,7 +268,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
       appenderator = appenderator0;
 
-      final String topic = ioConfig.getStartPartitions().getStream();
+      final String topic = ioConfig.getStartPartitions().getName();
 
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
@@ -291,11 +291,11 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         lastOffsets.putAll(restoredNextPartitions.getMap());
 
         // Sanity checks.
-        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartPartitions().getStream())) {
+        if (!restoredNextPartitions.getName().equals(ioConfig.getStartPartitions().getName())) {
           throw new ISE(
               "WTF?! Restored stream[%s] but expected stream[%s]",
-              restoredNextPartitions.getStream(),
-              ioConfig.getStartPartitions().getStream()
+              restoredNextPartitions.getName(),
+              ioConfig.getStartPartitions().getName()
           );
         }
 
@@ -311,7 +311,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       // Filter out partitions with END_OF_SHARD markers since these partitions have already been fully read. This
       // should have been done by the supervisor already so this is defensive.
       int numPreFilterPartitions = lastOffsets.size();
-      if (lastOffsets.entrySet().removeIf(x -> Record.END_OF_SHARD_MARKER.equals(x.getValue()))) {
+      if (lastOffsets.entrySet().removeIf(x -> OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(x.getValue()))) {
         log.info(
             "Removed [%d] partitions from assignment which have already been closed",
             numPreFilterPartitions - lastOffsets.size()
@@ -335,7 +335,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
           {
             return ImmutableMap.of(
                 METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
-                    ioConfig.getStartPartitions().getStream(),
+                    ioConfig.getStartPartitions().getName(),
                     snapshot
                 )
             );
@@ -375,7 +375,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
             break;
           }
 
-          Record<String, String> record = recordSupplier.poll(POLL_TIMEOUT);
+          OrderedPartitionableRecord<String, String> record = recordSupplier.poll(POLL_TIMEOUT);
 
           if (record == null) {
             continue;
@@ -415,13 +415,13 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
           if (log.isTraceEnabled()) {
             log.trace(
                 "Got topic[%s] partition[%s] offset[%s].",
-                record.getStreamName(),
+                record.getStream(),
                 record.getPartitionId(),
                 record.getSequenceNumber()
             );
           }
 
-          if (Record.END_OF_SHARD_MARKER.equals(record.getSequenceNumber())) {
+          if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(record.getSequenceNumber())) {
             lastOffsets.put(record.getPartitionId(), record.getSequenceNumber());
 
           } else if (SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffsets.get(record.getPartitionId()))
@@ -496,10 +496,10 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
           }
           if ((lastOffsets.get(record.getPartitionId()).equals(endOffsets.get(record.getPartitionId()))
-               || Record.END_OF_SHARD_MARKER.equals(lastOffsets.get(record.getPartitionId())))
+               || OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(lastOffsets.get(record.getPartitionId())))
               && assignment.remove(record.getPartitionId())) {
 
-            log.info("Finished reading stream[%s], partition[%s].", record.getStreamName(), record.getPartitionId());
+            log.info("Finished reading stream[%s], partition[%s].", record.getStream(), record.getPartitionId());
             assignPartitions(recordSupplier, topic, assignment);
             stillReading = !assignment.isEmpty();
           }
@@ -707,7 +707,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     final Set<String> assignment = Sets.newHashSet();
     for (Map.Entry<String, String> entry : lastOffsets.entrySet()) {
       final String endOffset = endOffsets.get(entry.getKey());
-      if (Record.END_OF_SHARD_MARKER.equals(endOffset)
+      if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(endOffset)
           || SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset)
           || KinesisSequenceNumber.of(entry.getValue()).compareTo(KinesisSequenceNumber.of(endOffset)) < 0) {
         assignment.add(entry.getKey());
@@ -876,7 +876,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 
-  private void handleParseException(ParseException pe, Record record)
+  private void handleParseException(ParseException pe, OrderedPartitionableRecord record)
   {
     if (pe.isFromPartiallyValidRow()) {
       rowIngestionMeters.incrementProcessedWithError();
@@ -944,7 +944,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
                 getDataSource(),
                 new KinesisDataSourceMetadata(
                     new SeekableStreamPartitions<>(
-                        ioConfig.getStartPartitions().getStream(),
+                        ioConfig.getStartPartitions().getName(),
                         partitionOffsetMap
                     )
                 )

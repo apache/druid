@@ -28,20 +28,20 @@ import org.apache.druid.java.util.common.IAE;
 import java.util.Map;
 import java.util.Objects;
 
-public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSourceMetadata
+public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceType> implements DataSourceMetadata
 {
-  private final SeekableStreamPartitions<T1, T2> seekableStreamPartitions;
+  private final SeekableStreamPartitions<partitionType, sequenceType> seekableStreamPartitions;
 
   @JsonCreator
   public SeekableStreamDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamPartitions<T1, T2> seekableStreamPartitions
+      @JsonProperty("partitions") SeekableStreamPartitions<partitionType, sequenceType> seekableStreamPartitions
   )
   {
     this.seekableStreamPartitions = seekableStreamPartitions;
   }
 
   @JsonProperty("partitions")
-  public SeekableStreamPartitions<T1, T2> getSeekableStreamPartitions()
+  public SeekableStreamPartitions<partitionType, sequenceType> getSeekableStreamPartitions()
   {
     return seekableStreamPartitions;
   }
@@ -75,21 +75,21 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
     }
 
     @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<T1, T2> that = (SeekableStreamDataSourceMetadata<T1, T2>) other;
+    final SeekableStreamDataSourceMetadata<partitionType, sequenceType> that = (SeekableStreamDataSourceMetadata<partitionType, sequenceType>) other;
 
-    if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
+    if (that.getSeekableStreamPartitions().getName().equals(seekableStreamPartitions.getName())) {
       // Same topic, merge offsets.
-      final Map<T1, T2> newMap = Maps.newHashMap();
+      final Map<partitionType, sequenceType> newMap = Maps.newHashMap();
 
-      for (Map.Entry<T1, T2> entry : seekableStreamPartitions.getMap().entrySet()) {
+      for (Map.Entry<partitionType, sequenceType> entry : seekableStreamPartitions.getMap().entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
       }
 
-      for (Map.Entry<T1, T2> entry : that.getSeekableStreamPartitions().getMap().entrySet()) {
+      for (Map.Entry<partitionType, sequenceType> entry : that.getSeekableStreamPartitions().getMap().entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
       }
 
-      return createConcretDataSourceMetaData(seekableStreamPartitions.getStream(), newMap);
+      return createConcretDataSourceMetaData(seekableStreamPartitions.getName(), newMap);
     } else {
       // Different topic, prefer "other".
       return other;
@@ -109,19 +109,19 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
     }
 
     @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<T1, T2> that = (SeekableStreamDataSourceMetadata<T1, T2>) other;
+    final SeekableStreamDataSourceMetadata<partitionType, sequenceType> that = (SeekableStreamDataSourceMetadata<partitionType, sequenceType>) other;
 
-    if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
+    if (that.getSeekableStreamPartitions().getName().equals(seekableStreamPartitions.getName())) {
       // Same stream, remove partitions present in "that" from "this"
-      final Map<T1, T2> newMap = Maps.newHashMap();
+      final Map<partitionType, sequenceType> newMap = Maps.newHashMap();
 
-      for (Map.Entry<T1, T2> entry : seekableStreamPartitions.getMap().entrySet()) {
+      for (Map.Entry<partitionType, sequenceType> entry : seekableStreamPartitions.getMap().entrySet()) {
         if (!that.getSeekableStreamPartitions().getMap().containsKey(entry.getKey())) {
           newMap.put(entry.getKey(), entry.getValue());
         }
       }
 
-      return createConcretDataSourceMetaData(seekableStreamPartitions.getStream(), newMap);
+      return createConcretDataSourceMetaData(seekableStreamPartitions.getName(), newMap);
     } else {
       // Different stream, prefer "this".
       return this;
@@ -155,8 +155,8 @@ public abstract class SeekableStreamDataSourceMetadata<T1, T2> implements DataSo
            '}';
   }
 
-  protected abstract SeekableStreamDataSourceMetadata<T1, T2> createConcretDataSourceMetaData(
+  protected abstract SeekableStreamDataSourceMetadata<partitionType, sequenceType> createConcretDataSourceMetaData(
       String streamId,
-      Map<T1, T2> newMap
+      Map<partitionType, sequenceType> newMap
   );
 }

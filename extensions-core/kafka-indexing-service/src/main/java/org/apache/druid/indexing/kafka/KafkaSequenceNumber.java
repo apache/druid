@@ -19,11 +19,11 @@
 
 package org.apache.druid.indexing.kafka;
 
-import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
 import javax.validation.constraints.NotNull;
 
-public class KafkaSequenceNumber extends SequenceNumber<Long>
+public class KafkaSequenceNumber extends OrderedSequenceNumber<Long>
 {
   private KafkaSequenceNumber(Long sequenceNumber, boolean useExclusive, boolean isExclusive)
   {
@@ -37,7 +37,7 @@ public class KafkaSequenceNumber extends SequenceNumber<Long>
 
   @Override
   public int compareTo(
-      @NotNull SequenceNumber<Long> o
+      @NotNull OrderedSequenceNumber<Long> o
   )
   {
     return this.get().compareTo(o.get());

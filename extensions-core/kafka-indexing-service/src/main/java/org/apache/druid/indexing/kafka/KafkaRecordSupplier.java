@@ -19,9 +19,10 @@
 
 package org.apache.druid.indexing.kafka;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
-import org.apache.druid.indexing.seekablestream.common.Record;
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
@@ -34,7 +35,6 @@ import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +55,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   private final KafkaConsumer<byte[], byte[]> consumer;
   private final KafkaSupervisorIOConfig ioConfig;
   private boolean closed;
-  private final BlockingQueue<Record<Integer, Long>> records;
+  private final BlockingQueue<OrderedPartitionableRecord<Integer, Long>> records;
 
 
   public KafkaRecordSupplier(
@@ -73,14 +73,14 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   {
     consumer.assign(streamPartitions
                         .stream()
-                        .map(x -> new TopicPartition(x.getStreamName(), x.getPartitionId()))
+                        .map(x -> new TopicPartition(x.getStream(), x.getPartitionId()))
                         .collect(Collectors.toSet()));
   }
 
   @Override
   public void seek(StreamPartition<Integer> partition, Long sequenceNumber)
   {
-    consumer.seek(new TopicPartition(partition.getStreamName(), partition.getPartitionId()), sequenceNumber);
+    consumer.seek(new TopicPartition(partition.getStream(), partition.getPartitionId()), sequenceNumber);
   }
 
   @Override
@@ -94,7 +94,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   {
     consumer.seekToBeginning(partitions
                                  .stream()
-                                 .map(e -> new TopicPartition(e.getStreamName(), e.getPartitionId()))
+                                 .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
                                  .collect(Collectors.toList()));
   }
 
@@ -103,7 +103,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   {
     consumer.seekToEnd(partitions
                            .stream()
-                           .map(e -> new TopicPartition(e.getStreamName(), e.getPartitionId()))
+                           .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
                            .collect(Collectors.toList()));
   }
 
@@ -118,16 +118,16 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   }
 
   @Override
-  public Record<Integer, Long> poll(long timeout)
+  public OrderedPartitionableRecord<Integer, Long> poll(long timeout)
   {
     if (records.isEmpty()) {
       ConsumerRecords<byte[], byte[]> polledRecords = consumer.poll(timeout);
       for (ConsumerRecord<byte[], byte[]> record : polledRecords) {
-        records.offer(new Record<>(
+        records.offer(new OrderedPartitionableRecord<>(
             record.topic(),
             record.partition(),
             record.offset(),
-            Arrays.asList(record.value())
+            ImmutableList.of(record.value())
         ));
       }
     }
@@ -145,32 +145,32 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   public Long getLatestSequenceNumber(StreamPartition<Integer> partition)
   {
     seekToLatest(Collections.singleton(partition));
-    return consumer.position(new TopicPartition(partition.getStreamName(), partition.getPartitionId()));
+    return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
   }
 
   @Override
   public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
   {
     seekToEarliest(Collections.singleton(partition));
-    return consumer.position(new TopicPartition(partition.getStreamName(), partition.getPartitionId()));
+    return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
   }
 
   @Override
   public Long position(StreamPartition<Integer> partition)
   {
-    return consumer.position(new TopicPartition(partition.getStreamName(), partition.getPartitionId()));
+    return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
   }
 
   @Override
-  public Set<Integer> getPartitionIds(String streamName)
+  public Set<Integer> getPartitionIds(String stream)
   {
     final Map<String, List<PartitionInfo>> topics = consumer.listTopics();
-    if (!topics.containsKey(streamName)) {
-      throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", streamName);
+    if (!topics.containsKey(stream)) {
+      throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", stream);
     }
     return topics == null
            ? ImmutableSet.of()
-           : topics.get(streamName).stream().map(PartitionInfo::partition).collect(Collectors.toSet());
+           : topics.get(stream).stream().map(PartitionInfo::partition).collect(Collectors.toSet());
   }
 
   @Override

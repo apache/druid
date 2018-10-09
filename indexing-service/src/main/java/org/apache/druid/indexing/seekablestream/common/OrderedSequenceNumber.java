@@ -28,13 +28,13 @@ import java.util.Objects;
  *
  * @param <T> type of sequence number
  */
-public abstract class SequenceNumber<T> implements Comparable<SequenceNumber<T>>
+public abstract class OrderedSequenceNumber<T> implements Comparable<OrderedSequenceNumber<T>>
 {
   private final T sequenceNumber;
   private final boolean isExclusive;
   private final boolean useExclusive;
 
-  protected SequenceNumber(T sequenceNumber, boolean useExclusive, boolean isExclusive)
+  protected OrderedSequenceNumber(T sequenceNumber, boolean useExclusive, boolean isExclusive)
   {
     this.sequenceNumber = sequenceNumber;
     this.useExclusive = useExclusive;
@@ -67,7 +67,7 @@ public abstract class SequenceNumber<T> implements Comparable<SequenceNumber<T>>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SequenceNumber<?> that = (SequenceNumber<?>) o;
+    OrderedSequenceNumber<?> that = (OrderedSequenceNumber<?>) o;
     return isExclusive == that.isExclusive &&
            useExclusive == that.useExclusive &&
            Objects.equals(sequenceNumber, that.sequenceNumber);

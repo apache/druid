@@ -20,13 +20,13 @@
 package org.apache.druid.indexing.kinesis;
 
 
-import org.apache.druid.indexing.seekablestream.common.SequenceNumber;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
 import javax.validation.constraints.NotNull;
 import java.math.BigInteger;
 import java.util.Objects;
 
-public class KinesisSequenceNumber extends SequenceNumber<String>
+public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
 {
 
   private final BigInteger intSequence;
@@ -63,7 +63,7 @@ public class KinesisSequenceNumber extends SequenceNumber<String>
 
 
   @Override
-  public int compareTo(@NotNull SequenceNumber<String> o)
+  public int compareTo(@NotNull OrderedSequenceNumber<String> o)
   {
     return this.intSequence.compareTo(new BigInteger(o.get()));
   }

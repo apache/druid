@@ -26,24 +26,24 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class TaskReportData<T1, T2>
+public class TaskReportData<partitionType, sequenceType>
 {
   private final String id;
-  private final Map<T1, T2> startingOffsets;
+  private final Map<partitionType, sequenceType> startingOffsets;
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
-  private Map<T1, T2> currentOffsets;
-  private final Map<T1, T2> lag;
+  private Map<partitionType, sequenceType> currentOffsets;
+  private final Map<partitionType, sequenceType> lag;
 
   public TaskReportData(
       String id,
-      @Nullable Map<T1, T2> startingOffsets,
-      @Nullable Map<T1, T2> currentOffsets,
+      @Nullable Map<partitionType, sequenceType> startingOffsets,
+      @Nullable Map<partitionType, sequenceType> currentOffsets,
       @Nullable DateTime startTime,
       Long remainingSeconds,
       TaskType type,
-      @Nullable Map<T1, T2> lag
+      @Nullable Map<partitionType, sequenceType> lag
   )
   {
     this.id = id;
@@ -63,14 +63,14 @@ public class TaskReportData<T1, T2>
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<T1, T2> getStartingOffsets()
+  public Map<partitionType, sequenceType> getStartingOffsets()
   {
     return startingOffsets;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<T1, T2> getCurrentOffsets()
+  public Map<partitionType, sequenceType> getCurrentOffsets()
   {
     return currentOffsets;
   }
@@ -95,12 +95,12 @@ public class TaskReportData<T1, T2>
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<T1, T2> getLag()
+  public Map<partitionType, sequenceType> getLag()
   {
     return lag;
   }
 
-  public void setCurrentSequenceNumbers(Map<T1, T2> currentOffsets)
+  public void setCurrentSequenceNumbers(Map<partitionType, sequenceType> currentOffsets)
   {
     this.currentOffsets = currentOffsets;
   }

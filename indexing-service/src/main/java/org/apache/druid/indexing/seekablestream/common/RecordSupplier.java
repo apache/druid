@@ -31,26 +31,21 @@ import java.util.concurrent.TimeoutException;
  * The RecordSupplier interface is a wrapper for the incoming seekable data stream
  * (i.e. Kafka consumer, Kinesis streams)
  *
- * @param <T1> Partition Number Type
- * @param <T2> Sequence Number Type
+ * @param <partitionType> Partition Number Type
+ * @param <sequenceType> Sequence Number Type
  */
 @Beta
-public interface RecordSupplier<T1, T2> extends Closeable
+public interface RecordSupplier<partitionType, sequenceType> extends Closeable
 {
-  /**
-   * assigns a set of partitions to this RecordSupplier
-   *
-   * @param partitions partitions to assign
-   */
-  void assign(Set<StreamPartition<T1>> partitions);
+  void assign(Set<StreamPartition<partitionType>> partitions);
 
   /**
-   * seek to specified sequence number
+   * seek to specified sequence number within a specific partition
    *
    * @param partition      partition to seek
    * @param sequenceNumber sequence number to seek to
    */
-  void seek(StreamPartition<T1> partition, T2 sequenceNumber);
+  void seek(StreamPartition<partitionType> partition, sequenceType sequenceNumber);
 
   /**
    * seek to the sequence number immediately following the given sequenceNumber
@@ -58,28 +53,28 @@ public interface RecordSupplier<T1, T2> extends Closeable
    * @param partition      partition to seek
    * @param sequenceNumber sequence number to seek
    */
-  void seekAfter(StreamPartition<T1> partition, T2 sequenceNumber);
+  void seekAfter(StreamPartition<partitionType> partition, sequenceType sequenceNumber);
 
   /**
    * seek a set of partitions to the earliest record position available in the stream
    *
    * @param partitions partitions to seek
    */
-  void seekToEarliest(Set<StreamPartition<T1>> partitions);
+  void seekToEarliest(Set<StreamPartition<partitionType>> partitions);
 
   /**
    * seek a set of partitions to the latest/newest record position available in the stream
    *
    * @param partitions partitions to seek
    */
-  void seekToLatest(Set<StreamPartition<T1>> partitions);
+  void seekToLatest(Set<StreamPartition<partitionType>> partitions);
 
   /**
    * get the current assignment
    *
    * @return set of assignments
    */
-  Collection<StreamPartition<T1>> getAssignment();
+  Collection<StreamPartition<partitionType>> getAssignment();
 
   /**
    * poll the record at the current seeked to sequence in stream
@@ -89,7 +84,7 @@ public interface RecordSupplier<T1, T2> extends Closeable
    * @return record
    */
   @Nullable
-  Record<T1, T2> poll(long timeout);
+  OrderedPartitionableRecord<partitionType, sequenceType> poll(long timeout);
 
   /**
    * get the latest sequence number in stream
@@ -100,7 +95,7 @@ public interface RecordSupplier<T1, T2> extends Closeable
    *
    * @throws TimeoutException TimeoutException
    */
-  T2 getLatestSequenceNumber(StreamPartition<T1> partition) throws TimeoutException;
+  sequenceType getLatestSequenceNumber(StreamPartition<partitionType> partition) throws TimeoutException;
 
   /**
    * get the earliest sequence number in stream
@@ -111,7 +106,7 @@ public interface RecordSupplier<T1, T2> extends Closeable
    *
    * @throws TimeoutException TimeoutException
    */
-  T2 getEarliestSequenceNumber(StreamPartition<T1> partition) throws TimeoutException;
+  sequenceType getEarliestSequenceNumber(StreamPartition<partitionType> partition) throws TimeoutException;
 
   /**
    * returns the sequence number that the given partition is currently at
@@ -120,16 +115,16 @@ public interface RecordSupplier<T1, T2> extends Closeable
    *
    * @return sequence number
    */
-  T2 position(StreamPartition<T1> partition);
+  sequenceType position(StreamPartition<partitionType> partition);
 
   /**
    * returns the set of partitions under the given stream
    *
-   * @param streamName name of stream
+   * @param stream name of stream
    *
    * @return set of partitions
    */
-  Set<T1> getPartitionIds(String streamName);
+  Set<partitionType> getPartitionIds(String stream);
 
   /**
    * close the RecordSupplier

@@ -22,40 +22,40 @@ package org.apache.druid.indexing.seekablestream.common;
 import java.util.List;
 
 /**
- * Represents a generic record with a T1 (partition id) and T2 (sequence number) and data
+ * Represents a generic record with a partitionType (partition id) and sequenceType (sequence number) and data
  * from a Kafka/Kinesis stream
  *
- * @param <T1> partition id
- * @param <T2> sequence number
+ * @param <partitionType> partition id
+ * @param <sequenceType> sequence number
  */
-public class Record<T1, T2>
+public class OrderedPartitionableRecord<partitionType, sequenceType>
 {
   public static final String END_OF_SHARD_MARKER = "EOS";
 
-  private final String streamName;
-  private final T1 partitionId;
-  private final T2 sequenceNumber;
+  private final String stream;
+  private final partitionType partitionId;
+  private final sequenceType sequenceNumber;
   private final List<byte[]> data;
 
-  public Record(String streamName, T1 partitionId, T2 sequenceNumber, List<byte[]> data)
+  public OrderedPartitionableRecord(String stream, partitionType partitionId, sequenceType sequenceNumber, List<byte[]> data)
   {
-    this.streamName = streamName;
+    this.stream = stream;
     this.partitionId = partitionId;
     this.sequenceNumber = sequenceNumber;
     this.data = data;
   }
 
-  public String getStreamName()
+  public String getStream()
   {
-    return streamName;
+    return stream;
   }
 
-  public T1 getPartitionId()
+  public partitionType getPartitionId()
   {
     return partitionId;
   }
 
-  public T2 getSequenceNumber()
+  public sequenceType getSequenceNumber()
   {
     return sequenceNumber;
   }
@@ -67,6 +67,6 @@ public class Record<T1, T2>
 
   public StreamPartition getStreamPartition()
   {
-    return StreamPartition.of(streamName, partitionId);
+    return StreamPartition.of(stream, partitionId);
   }
 }

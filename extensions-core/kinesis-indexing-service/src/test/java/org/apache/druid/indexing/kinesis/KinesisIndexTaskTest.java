@@ -87,7 +87,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.common.Record;
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
@@ -502,7 +502,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
-                Record.END_OF_SHARD_MARKER
+                OrderedPartitionableRecord.END_OF_SHARD_MARKER
             )),
             true,
             null,
@@ -553,7 +553,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId0,
-                    Record.END_OF_SHARD_MARKER
+                    OrderedPartitionableRecord.END_OF_SHARD_MARKER
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1617,7 +1617,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                Record.END_OF_SHARD_MARKER
+                OrderedPartitionableRecord.END_OF_SHARD_MARKER
             )),
             true,
             null,
@@ -1663,7 +1663,7 @@ public class KinesisIndexTaskTest
         new KinesisDataSourceMetadata(
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                Record.END_OF_SHARD_MARKER
+                OrderedPartitionableRecord.END_OF_SHARD_MARKER
             ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
