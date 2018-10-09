@@ -28,9 +28,13 @@ import javax.annotation.Nullable;
 public class SegmentMetadataHolder
 {
 
+  // Booleans represented as long type, where 1 = true and 0 = false
+  // to make it easy to count number of segments which are
+  // published, available or realtime etc.
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
+
   private final long numReplicas;
   @Nullable
   private final RowSignature rowSignature;

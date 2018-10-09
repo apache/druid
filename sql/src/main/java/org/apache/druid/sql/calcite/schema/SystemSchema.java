@@ -291,12 +291,6 @@ public class SystemSchema extends AbstractSchema
               ), e);
             }
           });
-      try {
-        authorizedPublishedSegments.close();
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
 
       final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
           Iterables.concat(availableSegments, publishedSegments));
