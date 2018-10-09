@@ -105,7 +105,6 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
         return StringUtils.fromUtf8(((ByteBuffer) field).array());
       } else {
         return ((ByteBuffer) field).array();
-
       }
     }
     if (field instanceof Utf8) {
