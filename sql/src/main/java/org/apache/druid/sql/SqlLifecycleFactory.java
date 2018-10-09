@@ -22,21 +22,21 @@ package org.apache.druid.sql;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.log.SqlRequestLogger;
 
 @LazySingleton
 public class SqlLifecycleFactory
 {
   private final PlannerFactory plannerFactory;
   private final ServiceEmitter emitter;
-  private final SqlRequestLogger requestLogger;
+  private final RequestLogger requestLogger;
 
   @Inject
   public SqlLifecycleFactory(
       PlannerFactory plannerFactory,
       ServiceEmitter emitter,
-      SqlRequestLogger requestLogger
+      RequestLogger requestLogger
   )
   {
     this.plannerFactory = plannerFactory;

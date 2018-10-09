@@ -47,6 +47,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -62,8 +64,6 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.sql.log.SqlRequestLogLine;
-import org.apache.druid.sql.log.TestSqlRequestLogger;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -151,7 +151,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   private DruidMeta druidMeta;
   private String url;
   private Injector injector;
-  private TestSqlRequestLogger testSqlRequestLogger;
+  private TestRequestLogger testRequestLogger;
 
   @Before
   public void setUp() throws Exception
@@ -181,7 +181,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         )
     );
 
-    testSqlRequestLogger = new TestSqlRequestLogger();
+    testRequestLogger = new TestRequestLogger();
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
@@ -195,7 +195,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         new SqlLifecycleFactory(
             plannerFactory,
             new NoopServiceEmitter(),
-            testSqlRequestLogger
+            testRequestLogger
         ),
         AVATICA_CONFIG,
         injector
@@ -843,8 +843,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     for (int i = 0; i < 3; i++) {
       client.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
     }
-    Assert.assertEquals(3, testSqlRequestLogger.getLogs().size());
-    for (SqlRequestLogLine logLine : testSqlRequestLogger.getLogs()) {
+    Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
+    for (RequestLogLine logLine : testRequestLogger.getSqlQueryLogs()) {
       final Map<String, Object> stats = logLine.getQueryStats().getStats();
       Assert.assertEquals(true, stats.get("success"));
       Assert.assertEquals("regularUser", stats.get("identity"));
@@ -853,28 +853,28 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     }
 
     // invalid sql
-    testSqlRequestLogger.clear();
+    testRequestLogger.clear();
     try {
       client.createStatement().executeQuery("SELECT notexist FROM druid.foo");
       Assert.fail("invalid sql should throw SQLException");
     }
     catch (SQLException e) {
     }
-    Assert.assertEquals(1, testSqlRequestLogger.getLogs().size());
-    final Map<String, Object> stats = testSqlRequestLogger.getLogs().get(0).getQueryStats().getStats();
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
     Assert.assertEquals(false, stats.get("success"));
     Assert.assertEquals("regularUser", stats.get("identity"));
     Assert.assertTrue(stats.containsKey("exception"));
 
     // unauthorized sql
-    testSqlRequestLogger.clear();
+    testRequestLogger.clear();
     try {
       client.createStatement().executeQuery("SELECT count(*) FROM druid.forbiddenDatasource");
       Assert.fail("unauthorzed sql should throw SQLException");
     }
     catch (SQLException e) {
     }
-    Assert.assertEquals(0, testSqlRequestLogger.getLogs().size());
+    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
   }
 
   private static List<Map<String, Object>> getRows(final ResultSet resultSet) throws SQLException

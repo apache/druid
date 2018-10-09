@@ -115,7 +115,6 @@ public interface Query<T>
   }
 
   @Nullable
-  @SuppressWarnings("unused") // for custom QueryMetrics impl to add sqlQueryId to metrics
   default String getSqlQueryId()
   {
     return null;

@@ -36,6 +36,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
@@ -52,7 +53,6 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
-import org.apache.druid.sql.log.TestSqlRequestLogger;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -87,7 +87,7 @@ public class SqlResourceTest extends CalciteTestBase
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
   private SpecificSegmentsQuerySegmentWalker walker = null;
-  private TestSqlRequestLogger testSqlRequestLogger;
+  private TestRequestLogger testRequestLogger;
   private SqlResource resource;
   private HttpServletRequest req;
 
@@ -134,7 +134,7 @@ public class SqlResourceTest extends CalciteTestBase
             .anyTimes();
     EasyMock.replay(req);
 
-    testSqlRequestLogger = new TestSqlRequestLogger();
+    testRequestLogger = new TestRequestLogger();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
@@ -151,7 +151,7 @@ public class SqlResourceTest extends CalciteTestBase
         new SqlLifecycleFactory(
             plannerFactory,
             new NoopServiceEmitter(),
-            testSqlRequestLogger
+            testRequestLogger
         )
     );
   }
@@ -192,7 +192,7 @@ public class SqlResourceTest extends CalciteTestBase
     catch (ForbiddenException e) {
       // expected
     }
-    Assert.assertEquals(0, testSqlRequestLogger.getLogs().size());
+    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
   }
 
   @Test
@@ -652,9 +652,9 @@ public class SqlResourceTest extends CalciteTestBase
   @SuppressWarnings("unchecked")
   private void checkSqlRequestLog(boolean success)
   {
-    Assert.assertEquals(1, testSqlRequestLogger.getLogs().size());
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
 
-    final Map<String, Object> stats = testSqlRequestLogger.getLogs().get(0).getQueryStats().getStats();
+    final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
     final Map<String, Object> queryContext = (Map<String, Object>) stats.get("context");
     Assert.assertEquals(success, stats.get("success"));
     Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));

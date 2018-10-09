@@ -286,7 +286,7 @@ Note that some sensitive information may be logged if these settings are enabled
 
 ### Request Logging
 
-All nodes that can serve queries can also log the query requests they see.
+All nodes that can serve queries can also log the query requests they see. Broker nodes can additionally log the SQL requests (both from HTTP and JDBC) they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -312,18 +312,19 @@ Every request is emitted to some external location.
 
 #### SLF4J Request Logging
 
-Every request is logged via SLF4J. Queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
+Every request is logged via SLF4J. Native queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.setMDC`|If MDC entries should be set in the log entry. Your logging setup still has to be configured to handle MDC to format this data|false|
 |`druid.request.logging.setContextMDC`|If the druid query `context` should be added to the MDC entries. Has no effect unless `setMDC` is `true`|false|
 
-MDC fields populated with `setMDC`:
+For native query, the following MDC fields are populated with `setMDC`:
 
 |MDC field|Description|
 |---------|-----------|
 |`queryId`   |The query ID|
+|`sqlQueryId`|The SQL query ID if this query is part of a SQL request|
 |`dataSource`|The datasource the query was against|
 |`queryType` |The type of the query|
 |`hasFilters`|If the query has any filters|
@@ -333,11 +334,13 @@ MDC fields populated with `setMDC`:
 |`descending`|If the query is a descending query|
 
 #### Filtered Request Logging
-Filtered Request Logger filters requests based on a configurable query/time threshold. Only request logs where query/time is above the threshold are emitted.
+Filtered Request Logger filters requests based on a configurable query/time threshold (for native query) and sqlQuery/time threshold (for SQL query).
+For native query, only request logs where query/time is above the threshold are emitted. For SQL query, only request logs where sqlQuery/time is above the threshold are emitted.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0 i.e no filtering|
+|`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composite Request Logging
@@ -346,37 +349,6 @@ Composite Request Logger emits request logs to multiple request loggers.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.loggerProviders`|List of request loggers for emitting request logs.|none|
-
-### SQL Request Logging
-
-Brokers can be configured to log the SQL request (both from HTTP and JDBC) they see.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.sql.request.logging.type`|Choices: noop, file, filtered, composing. How to log every SQL request.|noop|
-
-#### File SQL Request Logging
-
-Daily SQL request logs are stored on disk.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.sql.request.logging.dir`|the directory to store the SQL request logs in|none|
-
-#### Filtered SQL Request Logging
-Filtered SQL Request Logger filters requests based on a configurable sqlQuery/time threshold. Only request logs where sqlQuery/time is above the threshold are emitted.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.sql.request.logging.sqlTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
-|`druid.sql.request.logging.delegate.type`|Type of delegate SQL request logger to log requests.|none|
-
-#### Composite SQL Request Logging
-Composite SQL Request Logger emits SQL request logs to multiple SQL request loggers.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.sql.request.logging.loggerProviders`|List of SQL request loggers for emitting SQL request logs.|none|
 
 ### Enabling Metrics
 

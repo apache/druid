@@ -27,10 +27,11 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.query.Query;
-import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.QueryStats;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.Map;
 
 public class EmittingRequestLogger implements RequestLogger
@@ -45,9 +46,15 @@ public class EmittingRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(final RequestLogLine requestLogLine)
+  public void logNativeQuery(final RequestLogLine requestLogLine)
   {
     emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
+  }
+
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+  {
+    // TODO
   }
 
   @Override

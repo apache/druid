@@ -119,7 +119,6 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
-import org.apache.druid.sql.log.NoopSqlRequestLoggerProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
@@ -441,7 +440,7 @@ public class CalciteTests
     return new SqlLifecycleFactory(
         plannerFactory,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
-        new NoopSqlRequestLoggerProvider().get()
+        new NoopRequestLogger()
     );
   }
 

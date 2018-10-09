@@ -557,37 +557,6 @@ The Druid SQL server is configured through the following properties on the broke
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries wihout filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 
-## SQL Request Logging
-
-Brokers can be configured to log the SQL request (both from HTTP and JDBC) they see.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.sql.request.logging.type`|Choices: noop, file, filtered, composing. How to log every SQL request.|noop|
-
-### File SQL Request Logging
-
-Daily SQL request logs are stored on disk.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.sql.request.logging.dir`|the directory to store the SQL request logs in|none|
-
-### Filtered SQL Request Logging
-Filtered SQL Request Logger filters requests based on a configurable sqlQuery/time threshold. Only request logs where sqlQuery/time is above the threshold are emitted.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.sql.request.logging.sqlTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
-|`druid.sql.request.logging.delegate.type`|Type of delegate SQL request logger to log requests.|none|
-
-### Composite SQL Request Logging
-Composite SQL Request Logger emits SQL request logs to multiple SQL request loggers.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.sql.request.logging.loggerProviders`|List of SQL request loggers for emitting SQL request logs.|none|
-
 ## SQL Metrics
 
 Broker will emit the following metrics for SQL.

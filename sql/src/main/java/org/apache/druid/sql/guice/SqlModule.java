@@ -28,7 +28,6 @@ import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.sql.avatica.AvaticaMonitor;
@@ -42,8 +41,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlResource;
-import org.apache.druid.sql.log.SqlRequestLogger;
-import org.apache.druid.sql.log.SqlRequestLoggerProvider;
 
 import java.util.Properties;
 
@@ -86,9 +83,6 @@ public class SqlModule implements Module
         JettyBindings.addHandler(binder, DruidAvaticaHandler.class);
         MetricsModule.register(binder, AvaticaMonitor.class);
       }
-
-      binder.bind(SqlRequestLogger.class).toProvider(SqlRequestLoggerProvider.class).in(ManageLifecycle.class);
-      JsonConfigProvider.bind(binder, "druid.sql.request.logging", SqlRequestLoggerProvider.class);
     }
   }
 

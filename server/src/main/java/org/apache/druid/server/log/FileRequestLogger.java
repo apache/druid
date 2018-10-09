@@ -20,10 +20,17 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
+import com.google.common.base.Throwables;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.server.RequestLogLine;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+import org.joda.time.MutableDateTime;
+import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,29 +38,77 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class FileRequestLogger extends AbstractFileRequestLogger implements RequestLogger
+public class FileRequestLogger implements RequestLogger
 {
   private final ObjectMapper objectMapper;
+  private final ScheduledExecutorService exec;
+  private final File baseDir;
+
+  private final Object lock = new Object();
+
+  private DateTime currentDay;
+  private OutputStreamWriter fileWriter;
 
   public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
   {
-    super(exec, baseDir);
+    this.exec = exec;
     this.objectMapper = objectMapper;
+    this.baseDir = baseDir;
   }
 
   @LifecycleStart
   @Override
   public void start()
   {
-    super.start();
+    try {
+      baseDir.mkdirs();
+
+      MutableDateTime mutableDateTime = DateTimes.nowUtc().toMutableDateTime(ISOChronology.getInstanceUTC());
+      mutableDateTime.setMillisOfDay(0);
+      synchronized (lock) {
+        currentDay = mutableDateTime.toDateTime(ISOChronology.getInstanceUTC());
+
+        fileWriter = getFileWriter();
+      }
+      long nextDay = currentDay.plusDays(1).getMillis();
+      Duration initialDelay = new Duration(nextDay - System.currentTimeMillis());
+
+      ScheduledExecutors.scheduleWithFixedDelay(
+          exec,
+          initialDelay,
+          Duration.standardDays(1),
+          new Callable<ScheduledExecutors.Signal>()
+          {
+            @Override
+            public ScheduledExecutors.Signal call()
+            {
+              try {
+                synchronized (lock) {
+                  currentDay = currentDay.plusDays(1);
+                  CloseQuietly.close(fileWriter);
+                  fileWriter = getFileWriter();
+                }
+              }
+              catch (Exception e) {
+                Throwables.propagate(e);
+              }
+
+              return ScheduledExecutors.Signal.REPEAT;
+            }
+          }
+      );
+    }
+    catch (IOException e) {
+      Throwables.propagate(e);
+    }
   }
 
-  @Override
-  protected OutputStreamWriter getFileWriter() throws FileNotFoundException
+  private OutputStreamWriter getFileWriter() throws FileNotFoundException
   {
     return new OutputStreamWriter(
         new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
@@ -65,14 +120,30 @@ public class FileRequestLogger extends AbstractFileRequestLogger implements Requ
   @Override
   public void stop()
   {
-    super.stop();
+    synchronized (lock) {
+      CloseQuietly.close(fileWriter);
+    }
   }
 
   @Override
-  public void log(RequestLogLine requestLogLine) throws IOException
+  public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
   {
-    String message = StringUtils.format("%s%n", requestLogLine.getLine(objectMapper));
-    logToFile(message);
+    logToFile(requestLogLine.getNativeQueryLine(objectMapper));
+  }
+
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+  {
+    logToFile(requestLogLine.getSqlQueryLine(objectMapper));
+  }
+
+  private void logToFile(final String message) throws IOException
+  {
+    synchronized (lock) {
+      fileWriter.write(message);
+      fileWriter.write("\n");
+      fileWriter.flush();
+    }
   }
 
   @Override

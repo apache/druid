@@ -85,10 +85,10 @@ public class LoggingRequestLoggerTest
       }, false, queryContext
   );
   final QueryStats queryStats = new QueryStats(ImmutableMap.of());
-  final RequestLogLine logLine = new RequestLogLine(
+  final RequestLogLine logLine = RequestLogLine.forNative(
+      query,
       timestamp,
       remoteAddr,
-      query,
       queryStats
   );
 
@@ -126,14 +126,14 @@ public class LoggingRequestLoggerTest
   public void testSimpleLogging() throws Exception
   {
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), false, false);
-    requestLogger.log(logLine);
+    requestLogger.logNativeQuery(logLine);
   }
 
   @Test
   public void testLoggingMDC() throws Exception
   {
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
-    requestLogger.log(logLine);
+    requestLogger.logNativeQuery(logLine);
     final Map<String, Object> map = readContextMap(baos.toByteArray());
     Assert.assertEquals("datasource", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
@@ -148,7 +148,7 @@ public class LoggingRequestLoggerTest
   public void testLoggingMDCContext() throws Exception
   {
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, true);
-    requestLogger.log(logLine);
+    requestLogger.logNativeQuery(logLine);
     final Map<String, Object> map = readContextMap(baos.toByteArray());
     Assert.assertEquals("datasource", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));

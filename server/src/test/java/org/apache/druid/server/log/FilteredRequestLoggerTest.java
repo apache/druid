@@ -20,8 +20,8 @@
 package org.apache.druid.server.log;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.QueryStats;
 import org.easymock.EasyMock;
 import org.junit.Test;
 
@@ -33,41 +33,67 @@ public class FilteredRequestLoggerTest
   public void testFilterBelowThreshold() throws IOException
   {
     RequestLogger delegate = EasyMock.createStrictMock(RequestLogger.class);
-    delegate.log((RequestLogLine) EasyMock.anyObject());
+    delegate.logNativeQuery(EasyMock.anyObject());
     EasyMock.expectLastCall().andThrow(new IOException());
+    delegate.logSqlQuery(EasyMock.anyObject());
+    EasyMock.expectLastCall().andThrow(new IOException());
+
     FilteredRequestLoggerProvider.FilteredRequestLogger logger = new FilteredRequestLoggerProvider.FilteredRequestLogger(
         delegate,
-        1000
+        1000,
+        2000
     );
-    RequestLogLine requestLogLine = EasyMock.createMock(RequestLogLine.class);
-    EasyMock.expect(requestLogLine.getQueryStats())
+    RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
+    EasyMock.expect(nativeRequestLogLine.getQueryStats())
             .andReturn(new QueryStats(ImmutableMap.of("query/time", 100)))
             .once();
-    EasyMock.replay(requestLogLine, delegate);
-    logger.log(requestLogLine);
+    RequestLogLine sqlRequestLogLine = EasyMock.createMock(RequestLogLine.class);
+    EasyMock.expect(sqlRequestLogLine.getQueryStats())
+            .andReturn(new QueryStats(ImmutableMap.of("sqlQuery/time", 1000)));
+
+    EasyMock.replay(nativeRequestLogLine, sqlRequestLogLine, delegate);
+    logger.logNativeQuery(nativeRequestLogLine);
+    logger.logSqlQuery(sqlRequestLogLine);
   }
 
   @Test
   public void testNotFilterAboveThreshold() throws IOException
   {
     RequestLogger delegate = EasyMock.createStrictMock(RequestLogger.class);
-    delegate.log((RequestLogLine) EasyMock.anyObject());
+    delegate.logNativeQuery(EasyMock.anyObject());
     EasyMock.expectLastCall().times(2);
+    delegate.logSqlQuery(EasyMock.anyObject());
+    EasyMock.expectLastCall().times(2);
+
     FilteredRequestLoggerProvider.FilteredRequestLogger logger = new FilteredRequestLoggerProvider.FilteredRequestLogger(
         delegate,
-        1000
+        1000,
+        2000
     );
-    RequestLogLine requestLogLine = EasyMock.createMock(RequestLogLine.class);
-    EasyMock.expect(requestLogLine.getQueryStats())
+
+    RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
+    EasyMock.expect(nativeRequestLogLine.getQueryStats())
             .andReturn(new QueryStats(ImmutableMap.of("query/time", 10000)))
             .once();
-    EasyMock.expect(requestLogLine.getQueryStats())
+    EasyMock.expect(nativeRequestLogLine.getQueryStats())
             .andReturn(new QueryStats(ImmutableMap.of("query/time", 1000)))
             .once();
-    EasyMock.replay(requestLogLine, delegate);
-    logger.log(requestLogLine);
-    logger.log(requestLogLine);
 
-    EasyMock.verify(requestLogLine, delegate);
+    RequestLogLine sqlRequestLogLine = EasyMock.createMock(RequestLogLine.class);
+    EasyMock.expect(sqlRequestLogLine.getQueryStats())
+            .andReturn(new QueryStats(ImmutableMap.of("sqlQuery/time", 10000)))
+            .once();
+    EasyMock.expect(sqlRequestLogLine.getQueryStats())
+            .andReturn(new QueryStats(ImmutableMap.of("sqlQuery/time", 2000)))
+            .once();
+
+    EasyMock.replay(nativeRequestLogLine, sqlRequestLogLine, delegate);
+
+    logger.logNativeQuery(nativeRequestLogLine);
+    logger.logNativeQuery(nativeRequestLogLine);
+    logger.logSqlQuery(sqlRequestLogLine);
+    logger.logSqlQuery(sqlRequestLogLine);
+
+    EasyMock.verify(nativeRequestLogLine, sqlRequestLogLine, delegate);
   }
 }

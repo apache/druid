@@ -37,6 +37,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.QueryStats;
+import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -46,8 +48,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.log.SqlRequestLogLine;
-import org.apache.druid.sql.log.SqlRequestLogger;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -64,7 +64,7 @@ public class SqlLifecycle
 
   private final PlannerFactory plannerFactory;
   private final ServiceEmitter emitter;
-  private final SqlRequestLogger requestLogger;
+  private final RequestLogger requestLogger;
   private final long startMs;
   private final long startNs;
   private final Object lock = new Object();
@@ -82,7 +82,7 @@ public class SqlLifecycle
   public SqlLifecycle(
       PlannerFactory plannerFactory,
       ServiceEmitter emitter,
-      SqlRequestLogger requestLogger,
+      RequestLogger requestLogger,
       long startMs,
       long startNs
   )
@@ -323,11 +323,11 @@ public class SqlLifecycle
           }
         }
 
-        requestLogger.log(
-            new SqlRequestLogLine(
-                DateTimes.utc(startMs),
-                StringUtils.nullToEmptyNonDruidDataString(remoteAddress),
+        requestLogger.logSqlQuery(
+            RequestLogLine.forSql(
                 sql,
+                DateTimes.utc(startMs),
+                remoteAddress,
                 new QueryStats(statsMap)
             )
         );
