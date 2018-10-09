@@ -46,7 +46,7 @@ Runtime.properties:
 
 ```
 druid.host=#{IP_ADDR}:8080
-druid.port=8080
+druid.plaintextPort=8080
 druid.service=druid/router
 
 druid.router.defaultBrokerServiceName=druid:broker-cold
