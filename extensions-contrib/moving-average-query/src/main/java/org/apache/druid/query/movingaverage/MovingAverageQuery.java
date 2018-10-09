@@ -94,14 +94,14 @@ public class MovingAverageQuery extends BaseQuery<Row>
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;
-    this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
+    this.dimensions = dimensions == null ? ImmutableList.of() : dimensions;
     for (DimensionSpec spec : this.dimensions) {
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
     }
-    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
-    this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
-    this.averagerSpecs = averagerSpecs == null ? ImmutableList.<AveragerFactory<?, ?>>of() : averagerSpecs;
-    this.postAveragerSpecs = postAveragerSpecs == null ? ImmutableList.<PostAggregator>of() : postAveragerSpecs;
+    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
+    this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs;
+    this.averagerSpecs = averagerSpecs == null ? ImmutableList.of() : averagerSpecs;
+    this.postAveragerSpecs = postAveragerSpecs == null ? ImmutableList.of() : postAveragerSpecs;
     this.havingSpec = havingSpec;
     this.limitSpec = (limitSpec == null) ? NoopLimitSpec.INSTANCE : limitSpec;
 
@@ -232,12 +232,14 @@ public class MovingAverageQuery extends BaseQuery<Row>
     return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
   }
 
+  @Override
   @JsonProperty
   public DimFilter getFilter()
   {
     return dimFilter;
   }
 
+  @Override
   @JsonProperty
   public Granularity getGranularity()
   {

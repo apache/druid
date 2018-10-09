@@ -32,6 +32,7 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.guava.Accumulators;
+import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -131,7 +132,7 @@ public class MovingAverageQueryTest
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("queryTest");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(1);
-          binder.bind(QuerySegmentWalker.class).toProvider(Providers.<QuerySegmentWalker>of(null));
+          binder.bind(QuerySegmentWalker.class).toProvider(Providers.of(null));
         }
     );
 
@@ -420,7 +421,8 @@ public class MovingAverageQueryTest
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
         new ServiceEmitter("", "", null)
         {
-          public void emit(org.apache.druid.java.util.emitter.core.Event event) {}
+          @Override
+          public void emit(Event event) {}
         },
         baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
     );

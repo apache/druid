@@ -76,7 +76,7 @@ public class RowBucketIterable implements Iterable<RowBucket>
       this.intervals = intervals;
       expectedBucket = intervals.get(intervalIndex).getStart();
       endTime = intervals.get(intervals.size() - 1).getEnd();
-      yielder = rows.<RowBucket>toYielder(null, new BucketingAccumulator());
+      yielder = rows.toYielder(null, new BucketingAccumulator());
     }
 
     /* (non-Javadoc)

@@ -32,7 +32,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryToolChest;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class MovingAverageQueryModule implements DruidModule
@@ -53,8 +53,11 @@ public class MovingAverageQueryModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(new SimpleModule("MovingAverageQueryModule")
-                                     .registerSubtypes(new NamedType(MovingAverageQuery.class, "movingAverage")));
+    return Collections.<Module>singletonList(new SimpleModule("MovingAverageQueryModule")
+                                                 .registerSubtypes(new NamedType(
+                                                     MovingAverageQuery.class,
+                                                     "movingAverage"
+                                                 )));
   }
 
 }

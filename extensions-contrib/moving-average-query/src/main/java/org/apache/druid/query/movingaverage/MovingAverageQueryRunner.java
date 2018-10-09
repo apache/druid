@@ -141,7 +141,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
             "127.0.0.1",
             gbq,
             new QueryStats(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "query/time", 0,
                     "query/bytes", 0,
                     "success", true
@@ -179,7 +179,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
             "127.0.0.1",
             tsq,
             new QueryStats(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "query/time", 0,
                     "query/bytes", 0,
                     "success", true
@@ -228,6 +228,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
 
   static class TimeseriesResultToRow implements Function<Result<TimeseriesResultValue>, Row>
   {
+    @Override
     public Row apply(Result<TimeseriesResultValue> lookbackResult)
     {
       Map<String, Object> event = lookbackResult.getValue().getBaseObject();
