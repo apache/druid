@@ -75,10 +75,20 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
   private void emitTimeCounterMetrics(ServiceEmitter emitter, ConcurrentTimeCounter timeCounter, String metricNameBase)
   {
     long timeSumAndCount = timeCounter.getTimeSumAndCountAndReset();
-    emitter.emit(builder.build(metricNameBase + "timeMsSum", ConcurrentTimeCounter.timeSum(timeSumAndCount)));
-    emitter.emit(builder.build(metricNameBase + "count", ConcurrentTimeCounter.count(timeSumAndCount)));
-    emitter.emit(builder.build(metricNameBase + "maxTimeMs", timeCounter.getAndResetMaxTime()));
-    emitter.emit(builder.build(metricNameBase + "minTimeMs", timeCounter.getAndResetMinTime()));
+    int timeSum = ConcurrentTimeCounter.timeSum(timeSumAndCount);
+    int count = ConcurrentTimeCounter.count(timeSumAndCount);
+    if (count != 0) {
+      emitter.emit(builder.build(metricNameBase + "timeMsSum", timeSum));
+      emitter.emit(builder.build(metricNameBase + "count", count));
+    }
+    Integer maxTime = timeCounter.getAndResetMaxTime();
+    if (maxTime != null) {
+      emitter.emit(builder.build(metricNameBase + "maxTimeMs", maxTime));
+    }
+    Integer minTime = timeCounter.getAndResetMinTime();
+    if (minTime != null) {
+      emitter.emit(builder.build(metricNameBase + "minTimeMs", minTime));
+    }
   }
 
   @Override
