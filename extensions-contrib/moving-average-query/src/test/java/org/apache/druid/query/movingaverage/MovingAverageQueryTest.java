@@ -366,7 +366,7 @@ public class MovingAverageQueryTest
     Query<?> query = jsonMapper.readValue(getQueryString(), Query.class);
     assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
 
-    List expectedResults = jsonMapper.readValue(getExpectedResultString(), getExpectedResultType());
+    List<MapBasedRow> expectedResults = jsonMapper.readValue(getExpectedResultString(), getExpectedResultType());
     assertNotNull(expectedResults);
     assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
 
@@ -434,7 +434,7 @@ public class MovingAverageQueryTest
     final Sequence<?> res = query.getRunner(walker).run(queryPlus, responseContext);
 
     List actualResults = new ArrayList();
-    actualResults = (List) res.accumulate(actualResults, Accumulators.list());
+    actualResults = (List<MapBasedRow>) res.accumulate(actualResults, Accumulators.list());
 
     consistentTypeCasting(expectedResults);
     consistentTypeCasting(actualResults);
