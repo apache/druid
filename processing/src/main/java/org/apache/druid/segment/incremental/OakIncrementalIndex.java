@@ -160,7 +160,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
             continue;
           }
           final DimensionIndexer indexer = dimensionDesc.getIndexer();
-          Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
+          Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
           theVals.put(dimensionName, rowVals);
         }
 

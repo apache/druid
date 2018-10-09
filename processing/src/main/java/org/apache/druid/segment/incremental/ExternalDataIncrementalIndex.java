@@ -165,7 +165,7 @@ public abstract class ExternalDataIncrementalIndex<AggregatorType> extends Incre
                 continue;
               }
               final DimensionIndexer indexer = dimensionDesc.getIndexer();
-              Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
+              Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
               theVals.put(dimensionName, rowVals);
             }
 

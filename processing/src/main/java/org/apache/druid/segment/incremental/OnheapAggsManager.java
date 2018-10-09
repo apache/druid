@@ -123,7 +123,7 @@ public class OnheapAggsManager extends AggsManager<Aggregator>
     for (AggregatorFactory agg : metrics) {
       selectors.put(
               agg.getName(),
-              new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(
+              new OnheapIncrementalIndex.CachingColumnSelectorFactory(
                       makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
                       concurrentEventAdd
               )

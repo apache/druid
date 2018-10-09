@@ -83,7 +83,7 @@ public class OffheapAggsManager extends AggsManager<BufferAggregator>
 
       selectors.put(
               agg.getName(),
-              new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
+              new OnheapIncrementalIndex.CachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
       );
 
       if (i == 0) {
