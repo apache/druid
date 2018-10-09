@@ -83,7 +83,7 @@ public class AvroHadoopInputRowParserTest
         AvroHadoopInputRowParser.class
     );
     InputRow inputRow = parser2.parseBatch(record).get(0);
-    assertInputRowCorrect(inputRow, DIMENSIONS);
+    assertInputRowCorrect(inputRow, DIMENSIONS, fromPigAvroStorage);
   }
 
 
