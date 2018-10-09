@@ -20,8 +20,10 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -88,6 +90,7 @@ public class MetadataStorageConnectorConfig
     return passwordProvider == null ? null : passwordProvider.getPassword();
   }
 
+  @Nullable
   public Properties getProperties() throws IOException
   {
     if (dbcpPropertiesFile == null) {
@@ -116,6 +119,7 @@ public class MetadataStorageConnectorConfig
            '}';
   }
 
+  @VisibleForTesting
   String getDbcpPropertiesFile()
   {
     return dbcpPropertiesFile;
