@@ -181,7 +181,8 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * List of dataSources for which kill tasks are sent if property druid.coordinator.kill.on is true.
+   * List of dataSources for which kill tasks are sent in
+   * {@link org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller}.
    */
   @JsonProperty("killDataSourceWhitelist")
   public Set<String> getKillableDatasources()
@@ -197,7 +198,7 @@ public class CoordinatorDynamicConfig
 
   /**
    * List of dataSources for which pendingSegments are NOT cleaned up
-   * if property druid.coordinator.kill.pendingSegments.on is true.
+   * in {@link DruidCoordinatorCleanupPendingSegments}.
    */
   @JsonProperty
   public Set<String> getProtectedPendingSegmentDatasources()
