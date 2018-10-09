@@ -40,7 +40,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -392,7 +391,7 @@ class ParquetGroupConverter
             if (binaryAsString) {
               return StringUtils.fromUtf8(bytes);
             } else {
-              return Arrays.toString(bytes);
+              return bytes;
             }
           default:
             throw new RE("Unknown primitive conversion: %s", ot.name());

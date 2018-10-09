@@ -23,6 +23,7 @@ package org.apache.parquet.avro;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.druid.data.input.avro.AvroParseSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
