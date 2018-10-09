@@ -31,7 +31,6 @@ import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.QueryStats;
 import org.joda.time.DateTime;
 
-import java.io.IOException;
 import java.util.Map;
 
 public class EmittingRequestLogger implements RequestLogger
@@ -52,9 +51,9 @@ public class EmittingRequestLogger implements RequestLogger
   }
 
   @Override
-  public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+  public void logSqlQuery(RequestLogLine requestLogLine)
   {
-    // TODO
+    emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
   }
 
   @Override
@@ -118,6 +117,12 @@ public class EmittingRequestLogger implements RequestLogger
     public Query getQuery()
     {
       return request.getQuery();
+    }
+
+    @JsonProperty("sql")
+    public String getSql()
+    {
+      return request.getSql();
     }
 
     @JsonProperty("remoteAddr")

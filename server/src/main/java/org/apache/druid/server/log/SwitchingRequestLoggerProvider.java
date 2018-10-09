@@ -27,87 +27,71 @@ import org.apache.druid.server.RequestLogLine;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 
-/**
- */
-@JsonTypeName("filtered")
-public class FilteredRequestLoggerProvider implements RequestLoggerProvider
+@JsonTypeName("switching")
+public class SwitchingRequestLoggerProvider implements RequestLoggerProvider
 {
-  private static final Logger log = new Logger(FilteredRequestLoggerProvider.class);
+  private static final Logger log = new Logger(SwitchingRequestLoggerProvider.class);
 
   @JsonProperty
   @NotNull
-  private RequestLoggerProvider delegate = null;
+  private RequestLoggerProvider nativeQueryLogger;
 
   @JsonProperty
-  private long queryTimeThresholdMs = 0;
-
-  @JsonProperty
-  private long sqlQueryTimeThresholdMs = 0;
+  @NotNull
+  private RequestLoggerProvider sqlQueryLogger;
 
   @Override
   public RequestLogger get()
   {
-    FilteredRequestLogger logger = new FilteredRequestLogger(
-        delegate.get(),
-        queryTimeThresholdMs,
-        sqlQueryTimeThresholdMs
-    );
+    SwitchingRequestLogger logger = new SwitchingRequestLogger(nativeQueryLogger.get(), sqlQueryLogger.get());
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }
 
-  public static class FilteredRequestLogger implements RequestLogger
+  public static class SwitchingRequestLogger implements RequestLogger
   {
-    private final RequestLogger logger;
-    private final long queryTimeThresholdMs;
-    private final long sqlQueryTimeThresholdMs;
+    private final RequestLogger nativeQueryLogger;
+    private final RequestLogger sqlQueryLogger;
 
-    public FilteredRequestLogger(RequestLogger logger, long queryTimeThresholdMs, long sqlQueryTimeThresholdMs)
+    public SwitchingRequestLogger(RequestLogger nativeQueryLogger, RequestLogger sqlQueryLogger)
     {
-      this.logger = logger;
-      this.queryTimeThresholdMs = queryTimeThresholdMs;
-      this.sqlQueryTimeThresholdMs = sqlQueryTimeThresholdMs;
+      this.nativeQueryLogger = nativeQueryLogger;
+      this.sqlQueryLogger = sqlQueryLogger;
     }
 
     @Override
     public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
     {
-      Object queryTime = requestLogLine.getQueryStats().getStats().get("query/time");
-      if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThresholdMs) {
-        logger.logNativeQuery(requestLogLine);
-      }
+      nativeQueryLogger.logNativeQuery(requestLogLine);
     }
 
     @Override
     public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
     {
-      Object sqlQueryTime = requestLogLine.getQueryStats().getStats().get("sqlQuery/time");
-      if (sqlQueryTime != null && ((Number) sqlQueryTime).longValue() >= sqlQueryTimeThresholdMs) {
-        logger.logSqlQuery(requestLogLine);
-      }
+      sqlQueryLogger.logSqlQuery(requestLogLine);
     }
 
     @Override
     public void start() throws Exception
     {
-      logger.start();
+      nativeQueryLogger.start();
+      sqlQueryLogger.start();
     }
 
     @Override
     public void stop()
     {
-      logger.stop();
+      nativeQueryLogger.stop();
+      sqlQueryLogger.stop();
     }
 
     @Override
     public String toString()
     {
-      return "FilteredRequestLogger{" +
-             "logger=" + logger +
-             ", queryTimeThresholdMs=" + queryTimeThresholdMs +
-             ", sqlQueryTimeThresholdMs=" + sqlQueryTimeThresholdMs +
+      return "SwitchingRequestLogger{" +
+             "nativeQueryLogger=" + nativeQueryLogger +
+             ", sqlQueryLogger=" + sqlQueryLogger +
              '}';
     }
   }
-
 }

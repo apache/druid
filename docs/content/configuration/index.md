@@ -290,7 +290,7 @@ All nodes that can serve queries can also log the query requests they see. Broke
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing. How to log every query request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing, switching. How to log every query request.|noop|
 
 Note that, you can enable sending all the HTTP requests to log by setting  "org.apache.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
@@ -349,6 +349,14 @@ Composite Request Logger emits request logs to multiple request loggers.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.loggerProviders`|List of request loggers for emitting request logs.|none|
+
+#### Switching Request Logging
+Switching Request Logger routes native query's request logs to one request logger and SQL query's request logs to another request logger.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.logging.nativeQueryLogger`|request logger for emitting native query's request logs.|none|
+|`druid.request.logging.sqlQueryLogger`|request logger for emitting SQL query's request logs.|none|
 
 ### Enabling Metrics
 
