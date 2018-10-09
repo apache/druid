@@ -669,9 +669,6 @@ public class DruidCoordinatorBalancerTest
 
   private static ImmutableMap<String, DataSegment> segmentsToMap(DataSegment... segments)
   {
-    return ImmutableMap.copyOf(
-        Arrays.stream(segments)
-              .collect(Collectors.toMap(DataSegment::getIdentifier, Function.identity()))
-    );
+    return Maps.uniqueIndex(Arrays.asList(segments), DataSegment::getIdentifier);
   }
 }

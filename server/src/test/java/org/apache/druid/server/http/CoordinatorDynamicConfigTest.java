@@ -50,8 +50,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
-                     + "  \"maintenanceList\": [\"host1\", \"host2\"],\n"
-                     + "  \"maintenanceModeSegmentsPriority\": 9\n"
+                     + "  \"historicalNodesInMaintenance\": [\"host1\", \"host2\"],\n"
+                     + "  \"nodesInMaintenancePriority\": 9\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -254,7 +254,7 @@ public class CoordinatorDynamicConfigTest
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
       boolean expectedEmitingBalancingStats,
-      Set<String> expectedKillDataSourceWhitelist,
+      Set<String> expectedKillableDatasources,
       boolean expectedKillAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> maintenanceList,
@@ -269,7 +269,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
     Assert.assertEquals(expectedEmitingBalancingStats, config.emitBalancingStats());
-    Assert.assertEquals(expectedKillDataSourceWhitelist, config.getKillDataSourceWhitelist());
+    Assert.assertEquals(expectedKillableDatasources, config.getKillableDatasources());
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
     Assert.assertEquals(maintenanceList, config.getHistoricalNodesInMaintenance());

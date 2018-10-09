@@ -349,15 +349,15 @@ public class DruidCoordinatorRuntimeParams
     }
 
     @VisibleForTesting
-    public Builder withAvailableSegments(DataSegment... availableSegmentsCollection)
+    public Builder withAvailableSegments(DataSegment... availableSegments)
     {
-      availableSegments.addAll(Arrays.asList(availableSegmentsCollection));
+      this.availableSegments.addAll(Arrays.asList(availableSegments));
       return this;
     }
 
-    public Builder withAvailableSegments(Collection<DataSegment> availableSegmentsCollection)
+    public Builder withAvailableSegments(Collection<DataSegment> availableSegments)
     {
-      availableSegments.addAll(Collections.unmodifiableCollection(availableSegmentsCollection));
+      this.availableSegments.addAll(Collections.unmodifiableCollection(availableSegments));
       return this;
     }
 

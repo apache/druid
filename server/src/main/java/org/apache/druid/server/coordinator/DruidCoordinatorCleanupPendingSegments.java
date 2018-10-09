@@ -89,7 +89,7 @@ public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorH
     // (DateTimes.nowUtc() - KEEP_PENDING_SEGMENTS_OFFSET).
     final DateTime pendingSegmentsCleanupEndTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
     for (String dataSource : params.getDataSources().keySet()) {
-      if (!params.getCoordinatorDynamicConfig().getKillPendingSegmentsSkipList().contains(dataSource)) {
+      if (!params.getCoordinatorDynamicConfig().getProtectedPendingSegmentDatasources().contains(dataSource)) {
         log.info(
             "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",
             indexingServiceClient.killPendingSegments(dataSource, pendingSegmentsCleanupEndTime),

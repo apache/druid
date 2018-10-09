@@ -104,8 +104,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       return;
     }
 
-    Map<Boolean, List<ServerHolder>> partitions = servers.stream()
-                                                      .collect(Collectors.partitioningBy(ServerHolder::isInMaintenance));
+    Map<Boolean, List<ServerHolder>> partitions =
+        servers.stream().collect(Collectors.partitioningBy(ServerHolder::isInMaintenance));
     final List<ServerHolder> maintenance = partitions.get(true);
     final List<ServerHolder> general = partitions.get(false);
     log.info("Found %d servers in maintenance, %d general servers", maintenance.size(), general.size());
