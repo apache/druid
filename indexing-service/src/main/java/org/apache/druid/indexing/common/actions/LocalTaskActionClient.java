@@ -31,14 +31,21 @@ public class LocalTaskActionClient implements TaskActionClient
   private final Task task;
   private final TaskStorage storage;
   private final TaskActionToolbox toolbox;
+  private final TaskAuditLogConfig auditLogConfig;
 
   private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
 
-  public LocalTaskActionClient(Task task, TaskStorage storage, TaskActionToolbox toolbox)
+  public LocalTaskActionClient(
+      Task task,
+      TaskStorage storage,
+      TaskActionToolbox toolbox,
+      TaskAuditLogConfig auditLogConfig
+  )
   {
     this.task = task;
     this.storage = storage;
     this.toolbox = toolbox;
+    this.auditLogConfig = auditLogConfig;
   }
 
   @Override
@@ -46,7 +53,7 @@ public class LocalTaskActionClient implements TaskActionClient
   {
     log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
 
-    if (taskAction.isAudited()) {
+    if (auditLogConfig.isEnabled() && taskAction.isAudited()) {
       // Add audit log
       try {
         final long auditLogStartTime = System.currentTimeMillis();

@@ -22,12 +22,12 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;

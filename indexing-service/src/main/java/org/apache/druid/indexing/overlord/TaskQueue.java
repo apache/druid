@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -312,6 +313,10 @@ public class TaskQueue
    */
   public boolean add(final Task task) throws EntryExistsException
   {
+    if (taskStorage.getTask(task.getId()).isPresent()) {
+      throw new EntryExistsException(StringUtils.format("Task %s is already exists", task.getId()));
+    }
+
     giant.lock();
 
     try {

@@ -29,7 +29,6 @@ import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.FixedCountFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.HttpFirehoseFactory;
-import org.apache.druid.segment.realtime.firehose.IrcFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.SqlFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
@@ -54,7 +53,6 @@ public class FirehoseModule implements DruidModule
             .registerSubtypes(
                 new NamedType(ClippedFirehoseFactory.class, "clipped"),
                 new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                new NamedType(IrcFirehoseFactory.class, "irc"),
                 new NamedType(LocalFirehoseFactory.class, "local"),
                 new NamedType(HttpFirehoseFactory.class, "http"),
                 new NamedType(EventReceiverFirehoseFactory.class, "receiver"),

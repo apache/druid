@@ -40,9 +40,9 @@ import java.nio.channels.WritableByteChannel;
  * Column Serializer for float column.
  * The column is serialized in two parts, first a bitmap indicating the nullability of row values
  * and second the actual row values.
- * This class is Unsafe for concurrent use from multiple threads.
+ * This class is unsafe for concurrent use from multiple threads.
  */
-public class FloatColumnSerializerV2 implements GenericColumnSerializer
+public class FloatColumnSerializerV2 implements GenericColumnSerializer<Object>
 {
   public static FloatColumnSerializerV2 create(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -105,7 +105,7 @@ public class FloatColumnSerializerV2 implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<?> selector) throws IOException
   {
     if (selector.isNull()) {
       nullRowsBitmap.add(rowCount);

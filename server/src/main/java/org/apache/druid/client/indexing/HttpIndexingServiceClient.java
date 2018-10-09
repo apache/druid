@@ -88,15 +88,10 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void upgradeSegment(DataSegment dataSegment)
-  {
-    runTask(new ClientConversionQuery(dataSegment));
-  }
-
-  @Override
   public String compactSegments(
       List<DataSegment> segments,
       boolean keepSegmentGranularity,
+      long targetCompactionSizeBytes,
       int compactionTaskPriority,
       @Nullable ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
@@ -113,7 +108,16 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
-    return runTask(new ClientCompactQuery(dataSource, segments, keepSegmentGranularity, tuningConfig, context));
+    return runTask(
+        new ClientCompactQuery(
+            dataSource,
+            segments,
+            keepSegmentGranularity,
+            targetCompactionSizeBytes,
+            tuningConfig,
+            context
+        )
+    );
   }
 
   @Override

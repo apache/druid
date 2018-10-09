@@ -27,6 +27,21 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.RelFieldCollation;
+import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -58,7 +73,7 @@ import org.apache.druid.query.topn.TopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
@@ -69,21 +84,6 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.GroupByRules;
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.rel.RelFieldCollation;
-import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Filter;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.core.Sort;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.ImmutableBitSet;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -154,7 +154,7 @@ public class DruidQuery
       sortingInputRowSignature = sourceRowSignature;
     }
 
-    this.sortProject = computeSortProject(partialQuery, plannerContext, sortingInputRowSignature, grouping);
+    this.sortProject = computeSortProject(partialQuery, plannerContext, sortingInputRowSignature);
 
     // outputRowSignature is used only for scan and select query, and thus sort and grouping must be null
     this.outputRowSignature = sortProject == null ? sortingInputRowSignature : sortProject.getOutputRowSignature();
@@ -328,8 +328,7 @@ public class DruidQuery
   private SortProject computeSortProject(
       PartialDruidQuery partialQuery,
       PlannerContext plannerContext,
-      RowSignature sortingInputRowSignature,
-      Grouping grouping
+      RowSignature sortingInputRowSignature
   )
   {
     final Project sortProject = partialQuery.getSortProject();
@@ -995,7 +994,7 @@ public class DruidQuery
         descending = false;
       } else if (limitSpec.getColumns().size() == 1) {
         final OrderByColumnSpec orderBy = Iterables.getOnlyElement(limitSpec.getColumns());
-        if (!orderBy.getDimension().equals(Column.TIME_COLUMN_NAME)) {
+        if (!orderBy.getDimension().equals(ColumnHolder.TIME_COLUMN_NAME)) {
           // Select cannot handle sorting on anything other than __time.
           return null;
         }

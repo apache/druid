@@ -28,8 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.inject.Binder;
-import com.google.inject.Module;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -49,6 +47,7 @@ import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.CompactionTask.PartitionConfigurationManager;
 import org.apache.druid.indexing.common.task.CompactionTask.SegmentProvider;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
@@ -59,6 +58,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -71,8 +71,12 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleQueryableIndex;
-import org.apache.druid.segment.column.Column;
-import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -84,6 +88,7 @@ import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.transform.TransformingInputRowParser;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -120,6 +125,8 @@ import java.util.stream.IntStream;
 @RunWith(Parameterized.class)
 public class CompactionTaskTest
 {
+  private static final long SEGMENT_SIZE_BYTES = 100;
+  private static final int NUM_ROWS_PER_SEGMENT = 10;
   private static final String DATA_SOURCE = "dataSource";
   private static final String TIMESTAMP_COLUMN = "timestamp";
   private static final String MIXED_TYPE_COLUMN = "string_to_double";
@@ -162,7 +169,7 @@ public class CompactionTaskTest
     DIMENSIONS = new HashMap<>();
     AGGREGATORS = new HashMap<>();
 
-    DIMENSIONS.put(Column.TIME_COLUMN_NAME, new LongDimensionSchema(Column.TIME_COLUMN_NAME));
+    DIMENSIONS.put(ColumnHolder.TIME_COLUMN_NAME, new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME));
     DIMENSIONS.put(TIMESTAMP_COLUMN, new LongDimensionSchema(TIMESTAMP_COLUMN));
     for (int i = 0; i < 5; i++) {
       final StringDimensionSchema schema = new StringDimensionSchema(
@@ -204,7 +211,7 @@ public class CompactionTaskTest
               new ArrayList<>(AGGREGATORS.keySet()),
               new NumberedShardSpec(0, 1),
               0,
-              1
+              SEGMENT_SIZE_BYTES
           ),
           new File("file_" + i)
       );
@@ -225,16 +232,11 @@ public class CompactionTaskTest
     );
     GuiceInjectableValues injectableValues = new GuiceInjectableValues(
         GuiceInjectors.makeStartupInjectorWithModules(
-            ImmutableList.<Module>of(
-                new Module()
-                {
-                  @Override
-                  public void configure(Binder binder)
-                  {
-                    binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-                    binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
-                    binder.bind(RowIngestionMetersFactory.class).toInstance(rowIngestionMetersFactory);
-                  }
+            ImmutableList.of(
+                binder -> {
+                  binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+                  binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
+                  binder.bind(RowIngestionMetersFactory.class).toInstance(rowIngestionMetersFactory);
                 }
             )
         )
@@ -265,9 +267,10 @@ public class CompactionTaskTest
   private static IndexTuningConfig createTuningConfig()
   {
     return new IndexTuningConfig(
-        5000000,
+        null, // null to compute targetPartitionSize automatically
         500000,
         1000000L,
+        null,
         null,
         null,
         null,
@@ -329,6 +332,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
         objectMapper,
@@ -359,6 +363,7 @@ public class CompactionTaskTest
         SEGMENTS,
         null,
         null,
+        null,
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
         objectMapper,
@@ -373,19 +378,21 @@ public class CompactionTaskTest
     Assert.assertEquals(task.getInterval(), fromJson.getInterval());
     Assert.assertEquals(task.getSegments(), fromJson.getSegments());
     Assert.assertEquals(task.getDimensionsSpec(), fromJson.getDimensionsSpec());
+    Assert.assertEquals(task.isKeepSegmentGranularity(), fromJson.isKeepSegmentGranularity());
+    Assert.assertEquals(task.getTargetCompactionSizeBytes(), fromJson.getTargetCompactionSizeBytes());
     Assert.assertEquals(task.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(task.getContext(), fromJson.getContext());
   }
 
   @Test
-  public void testCreateIngestionSchemaWithKeepSegmentGranularity() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
   {
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         keepSegmentGranularity,
-        TUNING_CONFIG,
         objectMapper
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration(
@@ -393,6 +400,12 @@ public class CompactionTaskTest
     );
 
     if (keepSegmentGranularity) {
+      ingestionSpecs.sort(
+          (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+              s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+              s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+          )
+      );
       Assert.assertEquals(5, ingestionSpecs.size());
       assertIngestionSchema(ingestionSpecs, expectedDimensionsSpec, SEGMENT_INTERVALS);
     } else {
@@ -402,14 +415,40 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithIgnoreSegmentGranularity() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithTargetPartitionSize() throws IOException, SegmentLoadingException
   {
+    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        5,
+        500000,
+        1000000L,
+        null,
+        null,
+        null,
+        null,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        5000,
+        true,
+        false,
+        true,
+        false,
+        null,
+        100L,
+        null,
+        null,
+        null,
+        null
+    );
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new PartitionConfigurationManager(null, tuningConfig),
         null,
         keepSegmentGranularity,
-        TUNING_CONFIG,
         objectMapper
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration(
@@ -417,11 +456,144 @@ public class CompactionTaskTest
     );
 
     if (keepSegmentGranularity) {
+      ingestionSpecs.sort(
+          (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+              s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+              s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+          )
+      );
       Assert.assertEquals(5, ingestionSpecs.size());
-      assertIngestionSchema(ingestionSpecs, expectedDimensionsSpec, SEGMENT_INTERVALS);
+      assertIngestionSchema(ingestionSpecs, expectedDimensionsSpec, SEGMENT_INTERVALS, tuningConfig);
     } else {
       Assert.assertEquals(1, ingestionSpecs.size());
-      assertIngestionSchema(ingestionSpecs, expectedDimensionsSpec, Collections.singletonList(COMPACTION_INTERVAL));
+      assertIngestionSchema(
+          ingestionSpecs,
+          expectedDimensionsSpec,
+          Collections.singletonList(COMPACTION_INTERVAL),
+          tuningConfig
+      );
+    }
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithMaxTotalRows() throws IOException, SegmentLoadingException
+  {
+    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        null,
+        500000,
+        1000000L,
+        5L,
+        null,
+        null,
+        null,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        5000,
+        true,
+        false,
+        true,
+        false,
+        null,
+        100L,
+        null,
+        null,
+        null,
+        null
+    );
+    final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new PartitionConfigurationManager(null, tuningConfig),
+        null,
+        keepSegmentGranularity,
+        objectMapper
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration(
+        keepSegmentGranularity
+    );
+
+    if (keepSegmentGranularity) {
+      ingestionSpecs.sort(
+          (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+              s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+              s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+          )
+      );
+      Assert.assertEquals(5, ingestionSpecs.size());
+      assertIngestionSchema(ingestionSpecs, expectedDimensionsSpec, SEGMENT_INTERVALS, tuningConfig);
+    } else {
+      Assert.assertEquals(1, ingestionSpecs.size());
+      assertIngestionSchema(
+          ingestionSpecs,
+          expectedDimensionsSpec,
+          Collections.singletonList(COMPACTION_INTERVAL),
+          tuningConfig
+      );
+    }
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithNumShards() throws IOException, SegmentLoadingException
+  {
+    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        null,
+        500000,
+        1000000L,
+        null,
+        null,
+        3,
+        null,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        5000,
+        true,
+        false,
+        true,
+        false,
+        null,
+        100L,
+        null,
+        null,
+        null,
+        null
+    );
+    final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new PartitionConfigurationManager(null, tuningConfig),
+        null,
+        keepSegmentGranularity,
+        objectMapper
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration(
+        keepSegmentGranularity
+    );
+
+    if (keepSegmentGranularity) {
+      ingestionSpecs.sort(
+          (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+              s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+              s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+          )
+      );
+      Assert.assertEquals(5, ingestionSpecs.size());
+      assertIngestionSchema(ingestionSpecs, expectedDimensionsSpec, SEGMENT_INTERVALS, tuningConfig);
+    } else {
+      Assert.assertEquals(1, ingestionSpecs.size());
+      assertIngestionSchema(
+          ingestionSpecs,
+          expectedDimensionsSpec,
+          Collections.singletonList(COMPACTION_INTERVAL),
+          tuningConfig
+      );
     }
   }
 
@@ -458,13 +630,19 @@ public class CompactionTaskTest
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new PartitionConfigurationManager(null, TUNING_CONFIG),
         customSpec,
         keepSegmentGranularity,
-        TUNING_CONFIG,
         objectMapper
     );
 
     if (keepSegmentGranularity) {
+      ingestionSpecs.sort(
+          (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+              s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+              s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+          )
+      );
       Assert.assertEquals(5, ingestionSpecs.size());
       final List<DimensionsSpec> dimensionsSpecs = new ArrayList<>(5);
       IntStream.range(0, 5).forEach(i -> dimensionsSpecs.add(customSpec));
@@ -489,9 +667,9 @@ public class CompactionTaskTest
     final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(SEGMENTS),
+        new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         keepSegmentGranularity,
-        TUNING_CONFIG,
         objectMapper
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration(
@@ -499,6 +677,12 @@ public class CompactionTaskTest
     );
 
     if (keepSegmentGranularity) {
+      ingestionSpecs.sort(
+          (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+              s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+              s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+          )
+      );
       Assert.assertEquals(5, ingestionSpecs.size());
       assertIngestionSchema(ingestionSpecs, expectedDimensionsSpec, SEGMENT_INTERVALS);
     } else {
@@ -514,13 +698,15 @@ public class CompactionTaskTest
     expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
 
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    segments.remove(0);
+    Collections.sort(segments);
+    // Remove one segment in the middle
+    segments.remove(segments.size() / 2);
     CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(segments),
+        new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         keepSegmentGranularity,
-        TUNING_CONFIG,
         objectMapper
     );
   }
@@ -537,9 +723,9 @@ public class CompactionTaskTest
     CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(segments),
+        new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
         keepSegmentGranularity,
-        TUNING_CONFIG,
         objectMapper
     );
   }
@@ -560,10 +746,52 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         objectMapper,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new NoopChatHandlerProvider(),
         null
+    );
+  }
+
+  @Test
+  public void testTargetPartitionSizeWithPartitionConfig() throws IOException, SegmentLoadingException
+  {
+    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
+        5,
+        500000,
+        1000000L,
+        null,
+        null,
+        null,
+        null,
+        new IndexSpec(
+            new RoaringBitmapSerdeFactory(true),
+            CompressionStrategy.LZ4,
+            CompressionStrategy.LZF,
+            LongEncodingStrategy.LONGS
+        ),
+        5000,
+        true,
+        false,
+        true,
+        false,
+        null,
+        100L,
+        null,
+        null,
+        null,
+        null
+    );
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("targetCompactionSizeBytes[5] cannot be used with");
+    final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new PartitionConfigurationManager(5L, tuningConfig),
+        null,
+        keepSegmentGranularity,
+        objectMapper
     );
   }
 
@@ -616,6 +844,46 @@ public class CompactionTaskTest
       List<IndexIngestionSpec> ingestionSchemas,
       List<DimensionsSpec> expectedDimensionsSpecs,
       List<Interval> expectedSegmentIntervals
+  )
+  {
+    assertIngestionSchema(
+        ingestionSchemas,
+        expectedDimensionsSpecs,
+        expectedSegmentIntervals,
+        new IndexTuningConfig(
+            41943040, // automatically computed targetPartitionSize
+            500000,
+            1000000L,
+            null,
+            null,
+            null,
+            null,
+            new IndexSpec(
+                new RoaringBitmapSerdeFactory(true),
+                CompressionStrategy.LZ4,
+                CompressionStrategy.LZF,
+                LongEncodingStrategy.LONGS
+            ),
+            5000,
+            true,
+            false,
+            true,
+            false,
+            null,
+            100L,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+  }
+
+  private static void assertIngestionSchema(
+      List<IndexIngestionSpec> ingestionSchemas,
+      List<DimensionsSpec> expectedDimensionsSpecs,
+      List<Interval> expectedSegmentIntervals,
+      IndexTuningConfig expectedTuningConfig
   )
   {
     Preconditions.checkArgument(
@@ -677,7 +945,7 @@ public class CompactionTaskTest
       );
 
       // assert tuningConfig
-      Assert.assertEquals(createTuningConfig(), ingestionSchema.getTuningConfig());
+      Assert.assertEquals(expectedTuningConfig, ingestionSchema.getTuningConfig());
     }
   }
 
@@ -762,16 +1030,16 @@ public class CompactionTaskTest
         Map<DataSegment, File> segmentFileMap
     )
     {
-      super(mapper, OffHeapMemorySegmentWriteOutMediumFactory.instance(), () -> 0);
+      super(mapper, () -> 0);
 
       queryableIndexMap = new HashMap<>(segmentFileMap.size());
       for (Entry<DataSegment, File> entry : segmentFileMap.entrySet()) {
         final DataSegment segment = entry.getKey();
         final List<String> columnNames = new ArrayList<>(segment.getDimensions().size() + segment.getMetrics().size());
-        columnNames.add(Column.TIME_COLUMN_NAME);
+        columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         columnNames.addAll(segment.getDimensions());
         columnNames.addAll(segment.getMetrics());
-        final Map<String, Column> columnMap = new HashMap<>(columnNames.size());
+        final Map<String, ColumnHolder> columnMap = new HashMap<>(columnNames.size());
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
@@ -797,7 +1065,7 @@ public class CompactionTaskTest
             entry.getValue(),
             new SimpleQueryableIndex(
                 segment.getInterval(),
-                new ListIndexed<>(segment.getDimensions(), String.class),
+                new ListIndexed<>(segment.getDimensions()),
                 null,
                 columnMap,
                 null,
@@ -839,19 +1107,64 @@ public class CompactionTaskTest
     }
   }
 
-  private static Column createColumn(DimensionSchema dimensionSchema)
+  private static ColumnHolder createColumn(DimensionSchema dimensionSchema)
   {
-    return new ColumnBuilder()
-        .setType(IncrementalIndex.TYPE_MAP.get(dimensionSchema.getValueType()))
-        .setDictionaryEncodedColumn(() -> null)
-        .setBitmapIndex(() -> null)
-        .build();
+    return new TestColumn(IncrementalIndex.TYPE_MAP.get(dimensionSchema.getValueType()));
   }
 
-  private static Column createColumn(AggregatorFactory aggregatorFactory)
+  private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
-    return new ColumnBuilder()
-        .setType(ValueType.fromString(aggregatorFactory.getTypeName()))
-        .build();
+    return new TestColumn(ValueType.fromString(aggregatorFactory.getTypeName()));
+  }
+
+  private static class TestColumn implements ColumnHolder
+  {
+    private final ColumnCapabilities columnCapabilities;
+
+    TestColumn(ValueType type)
+    {
+      columnCapabilities = new ColumnCapabilitiesImpl()
+          .setType(type)
+          .setDictionaryEncoded(type == ValueType.STRING) // set a fake value to make string columns
+          .setHasBitmapIndexes(type == ValueType.STRING)
+          .setHasSpatialIndexes(false)
+          .setHasMultipleValues(false);
+    }
+
+    @Override
+    public ColumnCapabilities getCapabilities()
+    {
+      return columnCapabilities;
+    }
+
+    @Override
+    public int getLength()
+    {
+      return NUM_ROWS_PER_SEGMENT;
+    }
+
+    @Override
+    public BaseColumn getColumn()
+    {
+      return null;
+    }
+
+    @Override
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
+    {
+      return null;
+    }
+
+    @Override
+    public BitmapIndex getBitmapIndex()
+    {
+      return null;
+    }
+
+    @Override
+    public SpatialIndex getSpatialIndex()
+    {
+      return null;
+    }
   }
 }

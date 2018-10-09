@@ -36,7 +36,7 @@ import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -64,7 +64,7 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory<Colum
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
-    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
+    this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
   }
 
   @Override
@@ -76,17 +76,14 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory<Colum
   @Override
   protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    return new DoubleLastAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-        selector
-    );
+    return new DoubleLastAggregator(metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME), selector);
   }
 
   @Override
   protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     return new DoubleLastBufferAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
         selector
     );
   }
@@ -107,7 +104,13 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory<Colum
     if (lhs == null) {
       return rhs;
     }
-    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
+    Long leftTime = ((SerializablePair<Long, Double>) lhs).lhs;
+    Long rightTime = ((SerializablePair<Long, Double>) rhs).lhs;
+    if (leftTime >= rightTime) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
   @Override
@@ -200,7 +203,7 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory<Colum
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(Column.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
   }
 
   @Override

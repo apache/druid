@@ -30,7 +30,7 @@ package org.apache.druid.segment;
 public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
   /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -46,7 +46,7 @@ public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -62,7 +62,7 @@ public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */

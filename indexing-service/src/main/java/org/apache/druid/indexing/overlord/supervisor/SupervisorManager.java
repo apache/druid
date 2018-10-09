@@ -95,7 +95,7 @@ public class SupervisorManager
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
-    Preconditions.checkNotNull(pair.lhs, "spec");
+    Preconditions.checkNotNull(pair.rhs, "spec");
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
       SupervisorSpec nextState = suspend ? pair.rhs.createSuspendedSpec() : pair.rhs.createRunningSpec();

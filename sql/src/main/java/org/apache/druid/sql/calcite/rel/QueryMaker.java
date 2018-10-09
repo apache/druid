@@ -25,13 +25,21 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.runtime.Hook;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.NlsString;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -45,18 +53,12 @@ import org.apache.druid.query.topn.DimensionAndMetricValueExtractor;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.runtime.Hook;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.NlsString;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -98,6 +100,14 @@ public class QueryMaker
   {
     final Query query = druidQuery.getQuery();
 
+    final Query innerMostQuery = findInnerMostQuery(query);
+    if (plannerContext.getPlannerConfig().isRequireTimeCondition() &&
+        innerMostQuery.getIntervals().equals(Intervals.ONLY_ETERNITY)) {
+      throw new CannotBuildQueryException(
+          "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
+      );
+    }
+
     if (query instanceof TimeseriesQuery) {
       return executeTimeseries(druidQuery, (TimeseriesQuery) query);
     } else if (query instanceof TopNQuery) {
@@ -111,6 +121,15 @@ public class QueryMaker
     } else {
       throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
     }
+  }
+
+  private Query findInnerMostQuery(Query outerQuery)
+  {
+    Query query = outerQuery;
+    while (query.getDataSource() instanceof QueryDataSource) {
+      query = ((QueryDataSource) query.getDataSource()).getQuery();
+    }
+    return query;
   }
 
   private Sequence<Object[]> executeScan(
@@ -223,7 +242,7 @@ public class QueryMaker
                               final Object[] retVal = new Object[fieldList.size()];
                               for (RelDataTypeField field : fieldList) {
                                 final String outputName = outputRowSignature.getRowOrder().get(field.getIndex());
-                                if (outputName.equals(Column.TIME_COLUMN_NAME)) {
+                                if (outputName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
                                   retVal[field.getIndex()] = coerce(
                                       holder.getTimestamp().getMillis(),
                                       field.getType().getSqlTypeName()

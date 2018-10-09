@@ -123,11 +123,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
         final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
         if (strategySelector.strategize(groupByQuery).doMergeResults(groupByQuery)) {
-          return initAndMergeGroupByResults(
-              groupByQuery,
-              runner,
-              responseContext
-          );
+          return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
         }
         return runner.run(queryPlus, responseContext);
       }
@@ -143,16 +139,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     final GroupByStrategy groupByStrategy = strategySelector.strategize(query);
     final GroupByQueryResource resource = groupByStrategy.prepareResource(query, false);
 
-    return Sequences.withBaggage(
-        mergeGroupByResults(
-            groupByStrategy,
-            query,
-            resource,
-            runner,
-            context
-        ),
-        resource
-    );
+    return Sequences.withBaggage(mergeGroupByResults(groupByStrategy, query, resource, runner, context), resource);
   }
 
   private Sequence<Row> mergeGroupByResults(

@@ -20,10 +20,6 @@
 package org.apache.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
@@ -32,6 +28,10 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.util.Objects;
 

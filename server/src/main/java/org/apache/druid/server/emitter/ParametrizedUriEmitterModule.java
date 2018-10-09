@@ -25,13 +25,13 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.ParametrizedUriEmitter;
 import org.apache.druid.java.util.emitter.core.ParametrizedUriEmitterConfig;
-import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;

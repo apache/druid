@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
@@ -30,7 +31,6 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -154,7 +154,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         // find segments to be compacted.
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
-            false,
+            config.isKeepSegmentGranularity(),
+            config.getTargetCompactionSizeBytes(),
             config.getTaskPriority(),
             config.getTuningConfig(),
             config.getTaskContext()

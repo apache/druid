@@ -22,9 +22,7 @@ package org.apache.druid.segment.indexing.granularity;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
-
 import org.apache.druid.java.util.common.granularity.Granularity;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

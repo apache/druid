@@ -21,9 +21,9 @@ package org.apache.druid.query;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import junit.framework.Assert;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;

@@ -21,10 +21,10 @@ package org.apache.druid.collections.bitmap;
 
 import com.carrotsearch.junitbenchmarks.annotation.BenchmarkHistoryChart;
 import com.carrotsearch.junitbenchmarks.annotation.LabelType;
+import org.apache.druid.collections.test.annotation.Benchmark;
 import org.apache.druid.extendedset.intset.ConciseSet;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.collections.test.annotation.Benchmark;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;

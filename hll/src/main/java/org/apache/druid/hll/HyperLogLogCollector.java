@@ -93,7 +93,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   // Methods to build the latest HLLC
   public static HyperLogLogCollector makeLatestCollector()
   {
-    return new HLLCV1();
+    return new VersionOneHyperLogLogCollector();
   }
 
   /**
@@ -110,7 +110,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   public static HyperLogLogCollector makeCollector(ByteBuffer buffer)
   {
     int remaining = buffer.remaining();
-    return (remaining % 3 == 0 || remaining == 1027) ? new HLLCV0(buffer) : new HLLCV1(buffer);
+    if (remaining % 3 == 0 || remaining == 1027) {
+      return new VersionZeroHyperLogLogCollector(buffer);
+    } else {
+      return new VersionOneHyperLogLogCollector(buffer);
+    }
   }
 
   /**
@@ -126,13 +130,13 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   public static int getLatestNumBytesForDenseStorage()
   {
-    return HLLCV1.NUM_BYTES_FOR_DENSE_STORAGE;
+    return VersionOneHyperLogLogCollector.NUM_BYTES_FOR_DENSE_STORAGE;
   }
 
   public static byte[] makeEmptyVersionedByteArray()
   {
     byte[] arr = new byte[getLatestNumBytesForDenseStorage()];
-    arr[0] = HLLCV1.VERSION;
+    arr[0] = VersionOneHyperLogLogCollector.VERSION;
     return arr;
   }
 

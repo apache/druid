@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 public interface FloatColumnSelector extends ColumnValueSelector<Float>
 {
   /**
-   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -43,7 +43,7 @@ public interface FloatColumnSelector extends ColumnValueSelector<Float>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -55,7 +55,7 @@ public interface FloatColumnSelector extends ColumnValueSelector<Float>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -71,7 +71,7 @@ public interface FloatColumnSelector extends ColumnValueSelector<Float>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in FloatColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of FloatColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */

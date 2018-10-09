@@ -54,7 +54,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -597,7 +597,7 @@ public class SearchQueryRunnerTest
                                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                                     .query("Friday")
                                     .dimensions(new ExtractionDimensionSpec(
-                                        Column.TIME_COLUMN_NAME,
+                                        ColumnHolder.TIME_COLUMN_NAME,
                                         "__time2",
                                         new TimeFormatExtractionFn(
                                             "EEEE",
@@ -621,7 +621,7 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(
                                         new DefaultDimensionSpec(
-                                            Column.TIME_COLUMN_NAME, Column.TIME_COLUMN_NAME,
+                                            ColumnHolder.TIME_COLUMN_NAME, ColumnHolder.TIME_COLUMN_NAME,
                                             ValueType.LONG
                                         )
                                     )
@@ -632,7 +632,7 @@ public class SearchQueryRunnerTest
                                     .build();
 
     List<SearchHit> expectedHits = new ArrayList<>();
-    expectedHits.add(new SearchHit(Column.TIME_COLUMN_NAME, "1297123200000", 13));
+    expectedHits.add(new SearchHit(ColumnHolder.TIME_COLUMN_NAME, "1297123200000", 13));
     checkSearchQuery(searchQuery, expectedHits);
   }
 
@@ -645,7 +645,7 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(
                                         new ExtractionDimensionSpec(
-                                            Column.TIME_COLUMN_NAME, Column.TIME_COLUMN_NAME,
+                                            ColumnHolder.TIME_COLUMN_NAME, ColumnHolder.TIME_COLUMN_NAME,
                                             jsExtractionFn
                                         )
                                     )
@@ -656,7 +656,7 @@ public class SearchQueryRunnerTest
                                     .build();
 
     List<SearchHit> expectedHits = new ArrayList<>();
-    expectedHits.add(new SearchHit(Column.TIME_COLUMN_NAME, "super-1297123200000", 13));
+    expectedHits.add(new SearchHit(ColumnHolder.TIME_COLUMN_NAME, "super-1297123200000", 13));
     checkSearchQuery(searchQuery, expectedHits);
   }
 

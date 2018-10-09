@@ -20,13 +20,13 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.annotations.VisibleForTesting;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -161,12 +161,6 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
     {
       offsets.close();
       values.close();
-    }
-
-    @Override
-    public Class<? extends IndexedInts> getClazz()
-    {
-      return IndexedInts.class;
     }
 
     @Override

@@ -21,10 +21,10 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Longs;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
-import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

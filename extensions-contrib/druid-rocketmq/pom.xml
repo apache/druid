@@ -40,6 +40,13 @@
       <groupId>com.alibaba.rocketmq</groupId>
       <artifactId>rocketmq-client</artifactId>
       <version>${rocketmq.version}</version>
+      <exclusions>
+        <!-- Druid uses its own netty version -->
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-all</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>

@@ -61,15 +61,17 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -86,10 +88,12 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
 public class CompactionTask extends AbstractTask
 {
@@ -101,13 +105,15 @@ public class CompactionTask extends AbstractTask
   private final List<DataSegment> segments;
   private final DimensionsSpec dimensionsSpec;
   private final boolean keepSegmentGranularity;
+  @Nullable
+  private final Long targetCompactionSizeBytes;
+  @Nullable
   private final IndexTuningConfig tuningConfig;
   private final ObjectMapper jsonMapper;
   @JsonIgnore
   private final SegmentProvider segmentProvider;
-
   @JsonIgnore
-  private List<IndexTask> indexTaskSpecs;
+  private final PartitionConfigurationManager partitionConfigurationManager;
 
   @JsonIgnore
   private final AuthorizerMapper authorizerMapper;
@@ -118,6 +124,9 @@ public class CompactionTask extends AbstractTask
   @JsonIgnore
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
+  @JsonIgnore
+  private List<IndexTask> indexTaskSpecs;
+
   @JsonCreator
   public CompactionTask(
       @JsonProperty("id") final String id,
@@ -127,6 +136,7 @@ public class CompactionTask extends AbstractTask
       @Nullable @JsonProperty("segments") final List<DataSegment> segments,
       @Nullable @JsonProperty("dimensions") final DimensionsSpec dimensionsSpec,
       @Nullable @JsonProperty("keepSegmentGranularity") final Boolean keepSegmentGranularity,
+      @Nullable @JsonProperty("targetCompactionSizeBytes") final Long targetCompactionSizeBytes,
       @Nullable @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
       @Nullable @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject ObjectMapper jsonMapper,
@@ -149,9 +159,11 @@ public class CompactionTask extends AbstractTask
     this.keepSegmentGranularity = keepSegmentGranularity == null
                                   ? DEFAULT_KEEP_SEGMENT_GRANULARITY
                                   : keepSegmentGranularity;
+    this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.jsonMapper = jsonMapper;
     this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
+    this.partitionConfigurationManager = new PartitionConfigurationManager(this.targetCompactionSizeBytes, tuningConfig);
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
@@ -181,6 +193,14 @@ public class CompactionTask extends AbstractTask
     return keepSegmentGranularity;
   }
 
+  @Nullable
+  @JsonProperty
+  public Long getTargetCompactionSizeBytes()
+  {
+    return targetCompactionSizeBytes;
+  }
+
+  @Nullable
   @JsonProperty
   public IndexTuningConfig getTuningConfig()
   {
@@ -220,9 +240,9 @@ public class CompactionTask extends AbstractTask
       indexTaskSpecs = createIngestionSchema(
           toolbox,
           segmentProvider,
+          partitionConfigurationManager,
           dimensionsSpec,
           keepSegmentGranularity,
-          tuningConfig,
           jsonMapper
       ).stream()
       .map(spec -> new IndexTask(
@@ -243,8 +263,10 @@ public class CompactionTask extends AbstractTask
       log.warn("Interval[%s] has no segments, nothing to do.", interval);
       return TaskStatus.failure(getId());
     } else {
-      log.info("Generated [%d] compaction task specs", indexTaskSpecs.size());
+      final int totalNumSpecs = indexTaskSpecs.size();
+      log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
+      int failCnt = 0;
       for (IndexTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         log.info("Running indexSpec: " + json);
@@ -252,15 +274,18 @@ public class CompactionTask extends AbstractTask
         try {
           final TaskStatus eachResult = eachSpec.run(toolbox);
           if (!eachResult.isSuccess()) {
+            failCnt++;
             log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
           }
         }
         catch (Exception e) {
+          failCnt++;
           log.warn(e, "Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
         }
       }
 
-      return TaskStatus.success(getId());
+      log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
+      return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
   }
 
@@ -271,12 +296,12 @@ public class CompactionTask extends AbstractTask
    */
   @VisibleForTesting
   static List<IndexIngestionSpec> createIngestionSchema(
-      TaskToolbox toolbox,
-      SegmentProvider segmentProvider,
-      DimensionsSpec dimensionsSpec,
-      boolean keepSegmentGranularity,
-      IndexTuningConfig tuningConfig,
-      ObjectMapper jsonMapper
+      final TaskToolbox toolbox,
+      final SegmentProvider segmentProvider,
+      final PartitionConfigurationManager partitionConfigurationManager,
+      final DimensionsSpec dimensionsSpec,
+      final boolean keepSegmentGranularity,
+      final ObjectMapper jsonMapper
   ) throws IOException, SegmentLoadingException
   {
     Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
@@ -290,26 +315,52 @@ public class CompactionTask extends AbstractTask
       return Collections.emptyList();
     }
 
+    // find metadata for interval
+    final List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments = loadSegments(
+        timelineSegments,
+        segmentFileMap,
+        toolbox.getIndexIO()
+    );
+
+    final IndexTuningConfig compactionTuningConfig = partitionConfigurationManager.computeTuningConfig(
+        queryableIndexAndSegments
+    );
+
     if (keepSegmentGranularity) {
-      // if keepSegmentGranularity = true, create indexIngestionSpec per segment interval, so that we can run an index
+      // If keepSegmentGranularity = true, create indexIngestionSpec per segment interval, so that we can run an index
       // task per segment interval.
-      final List<IndexIngestionSpec> specs = new ArrayList<>(timelineSegments.size());
-      for (TimelineObjectHolder<String, DataSegment> holder : timelineSegments) {
+
+      //noinspection unchecked,ConstantConditions
+      final Map<Interval, List<Pair<QueryableIndex, DataSegment>>> intervalToSegments = queryableIndexAndSegments
+          .stream()
+          .collect(
+              Collectors.toMap(
+                  // rhs can't be null here so we skip null checking and supress the warning with the above comment
+                  p -> p.rhs.getInterval(),
+                  Lists::newArrayList,
+                  (l1, l2) -> {
+                    l1.addAll(l2);
+                    return l1;
+                  }
+              )
+          );
+      final List<IndexIngestionSpec> specs = new ArrayList<>(intervalToSegments.size());
+      for (Entry<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
+        final Interval interval = entry.getKey();
+        final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.getValue();
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
-            holder.getInterval(),
-            Collections.singletonList(holder),
+            interval,
+            segmentsToCompact,
             dimensionsSpec,
-            toolbox.getIndexIO(),
-            jsonMapper,
-            segmentFileMap
+            jsonMapper
         );
 
         specs.add(
             new IndexIngestionSpec(
                 dataSchema,
-                createIoConfig(toolbox, dataSchema, holder.getInterval()),
-                tuningConfig
+                createIoConfig(toolbox, dataSchema, interval),
+                compactionTuningConfig
             )
         );
       }
@@ -319,18 +370,16 @@ public class CompactionTask extends AbstractTask
       final DataSchema dataSchema = createDataSchema(
           segmentProvider.dataSource,
           segmentProvider.interval,
-          timelineSegments,
+          queryableIndexAndSegments,
           dimensionsSpec,
-          toolbox.getIndexIO(),
-          jsonMapper,
-          segmentFileMap
+          jsonMapper
       );
 
       return Collections.singletonList(
           new IndexIngestionSpec(
               dataSchema,
               createIoConfig(toolbox, dataSchema, segmentProvider.interval),
-              tuningConfig
+              compactionTuningConfig
           )
       );
     }
@@ -368,21 +417,11 @@ public class CompactionTask extends AbstractTask
   private static DataSchema createDataSchema(
       String dataSource,
       Interval totalInterval,
-      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolder,
+      List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments,
       DimensionsSpec dimensionsSpec,
-      IndexIO indexIO,
-      ObjectMapper jsonMapper,
-      Map<DataSegment, File> segmentFileMap
+      ObjectMapper jsonMapper
   )
-      throws IOException
   {
-    // find metadata for interval
-    final List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments = loadSegments(
-        timelineObjectHolder,
-        segmentFileMap,
-        indexIO
-    );
-
     // find merged aggregators
     for (Pair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
       final QueryableIndex index = pair.lhs;
@@ -461,8 +500,8 @@ public class CompactionTask extends AbstractTask
       final Map<String, DimensionHandler> dimensionHandlerMap = queryableIndex.getDimensionHandlers();
 
       for (String dimension : queryableIndex.getAvailableDimensions()) {
-        final Column column = Preconditions.checkNotNull(
-            queryableIndex.getColumn(dimension),
+        final ColumnHolder columnHolder = Preconditions.checkNotNull(
+            queryableIndex.getColumnHolder(dimension),
             "Cannot find column for dimension[%s]",
             dimension
         );
@@ -478,10 +517,10 @@ public class CompactionTask extends AbstractTask
           dimensionSchemaMap.put(
               dimension,
               createDimensionSchema(
-                  column.getCapabilities().getType(),
+                  columnHolder.getCapabilities().getType(),
                   dimension,
                   dimensionHandler.getMultivalueHandling(),
-                  column.getCapabilities().hasBitmapIndexes()
+                  columnHolder.getCapabilities().hasBitmapIndexes()
               )
           );
         }
@@ -597,19 +636,29 @@ public class CompactionTask extends AbstractTask
 
     List<DataSegment> checkAndGetSegments(TaskToolbox toolbox) throws IOException
     {
-      final List<DataSegment> usedSegments = toolbox.getTaskActionClient()
-                                                    .submit(new SegmentListUsedAction(dataSource, interval, null));
+      final List<DataSegment> usedSegments = toolbox.getTaskActionClient().submit(
+          new SegmentListUsedAction(dataSource, interval, null)
+      );
+      final TimelineLookup<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(usedSegments);
+      final List<DataSegment> latestSegments = timeline
+          .lookup(interval)
+          .stream()
+          .map(TimelineObjectHolder::getObject)
+          .flatMap(partitionHolder -> StreamSupport.stream(partitionHolder.spliterator(), false))
+          .map(PartitionChunk::getObject)
+          .collect(Collectors.toList());
+
       if (segments != null) {
-        Collections.sort(usedSegments);
+        Collections.sort(latestSegments);
         Collections.sort(segments);
 
-        if (!usedSegments.equals(segments)) {
+        if (!latestSegments.equals(segments)) {
           final List<DataSegment> unknownSegments = segments.stream()
-                                                            .filter(segment -> !usedSegments.contains(segment))
+                                                            .filter(segment -> !latestSegments.contains(segment))
                                                             .collect(Collectors.toList());
-          final List<DataSegment> missingSegments = usedSegments.stream()
-                                                                .filter(segment -> !segments.contains(segment))
-                                                                .collect(Collectors.toList());
+          final List<DataSegment> missingSegments = latestSegments.stream()
+                                                                  .filter(segment -> !segments.contains(segment))
+                                                                  .collect(Collectors.toList());
           throw new ISE(
               "Specified segments in the spec are different from the current used segments. "
               + "There are unknown segments[%s] and missing segments[%s] in the spec.",
@@ -618,7 +667,108 @@ public class CompactionTask extends AbstractTask
           );
         }
       }
-      return usedSegments;
+      return latestSegments;
+    }
+  }
+
+  @VisibleForTesting
+  static class PartitionConfigurationManager
+  {
+    @Nullable
+    private final Long targetCompactionSizeBytes;
+    @Nullable
+    private final IndexTuningConfig tuningConfig;
+
+    PartitionConfigurationManager(@Nullable Long targetCompactionSizeBytes, @Nullable IndexTuningConfig tuningConfig)
+    {
+      this.targetCompactionSizeBytes = getValidTargetCompactionSizeBytes(targetCompactionSizeBytes, tuningConfig);
+      this.tuningConfig = tuningConfig;
+    }
+
+    @Nullable
+    IndexTuningConfig computeTuningConfig(List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments)
+    {
+      if (!hasPartitionConfig(tuningConfig)) {
+        final long nonNullTargetCompactionSizeBytes = Preconditions.checkNotNull(
+            targetCompactionSizeBytes,
+            "targetCompactionSizeBytes"
+        );
+        // Find IndexTuningConfig.targetPartitionSize which is the number of rows per segment.
+        // Assume that the segment size is proportional to the number of rows. We can improve this later.
+        final long totalNumRows = queryableIndexAndSegments
+            .stream()
+            .mapToLong(queryableIndexAndDataSegment -> queryableIndexAndDataSegment.lhs.getNumRows())
+            .sum();
+        final long totalSizeBytes = queryableIndexAndSegments
+            .stream()
+            .mapToLong(queryableIndexAndDataSegment -> queryableIndexAndDataSegment.rhs.getSize())
+            .sum();
+
+        if (totalSizeBytes == 0L) {
+          throw new ISE("Total input segment size is 0 byte");
+        }
+
+        final double avgRowsPerByte = totalNumRows / (double) totalSizeBytes;
+        final int targetPartitionSize = Math.toIntExact(Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes));
+        Preconditions.checkState(targetPartitionSize > 0, "Negative targetPartitionSize[%s]", targetPartitionSize);
+
+        log.info(
+            "Estimated targetPartitionSize[%d] = avgRowsPerByte[%f] * targetCompactionSizeBytes[%d]",
+            targetPartitionSize,
+            avgRowsPerByte,
+            nonNullTargetCompactionSizeBytes
+        );
+        return (tuningConfig == null ? IndexTuningConfig.createDefault() : tuningConfig)
+            .withTargetPartitionSize(targetPartitionSize);
+      } else {
+        return tuningConfig;
+      }
+    }
+
+    /**
+     * Check the validity of {@link #targetCompactionSizeBytes} and return a valid value. Note that
+     * targetCompactionSizeBytes cannot be used with {@link IndexTuningConfig#targetPartitionSize},
+     * {@link IndexTuningConfig#maxTotalRows}, or {@link IndexTuningConfig#numShards} together.
+     * {@link #hasPartitionConfig} checks one of those configs is set.
+     *
+     * This throws an {@link IllegalArgumentException} if targetCompactionSizeBytes is set and hasPartitionConfig
+     * returns true. If targetCompactionSizeBytes is not set, this returns null or
+     * {@link DataSourceCompactionConfig#DEFAULT_TARGET_COMPACTION_SIZE_BYTES} according to the result of
+     * hasPartitionConfig.
+     */
+    @Nullable
+    private static Long getValidTargetCompactionSizeBytes(
+        @Nullable Long targetCompactionSizeBytes,
+        @Nullable IndexTuningConfig tuningConfig
+    )
+    {
+      if (targetCompactionSizeBytes != null) {
+        Preconditions.checkArgument(
+            !hasPartitionConfig(tuningConfig),
+            "targetCompactionSizeBytes[%s] cannot be used with targetPartitionSize[%s], maxTotalRows[%s],"
+            + " or numShards[%s] of tuningConfig",
+            targetCompactionSizeBytes,
+            tuningConfig == null ? null : tuningConfig.getTargetPartitionSize(),
+            tuningConfig == null ? null : tuningConfig.getMaxTotalRows(),
+            tuningConfig == null ? null : tuningConfig.getNumShards()
+        );
+        return targetCompactionSizeBytes;
+      } else {
+        return hasPartitionConfig(tuningConfig)
+               ? null
+               : DataSourceCompactionConfig.DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
+      }
+    }
+
+    private static boolean hasPartitionConfig(@Nullable IndexTuningConfig tuningConfig)
+    {
+      if (tuningConfig != null) {
+        return tuningConfig.getTargetPartitionSize() != null
+               || tuningConfig.getMaxTotalRows() != null
+               || tuningConfig.getNumShards() != null;
+      } else {
+        return false;
+      }
     }
   }
 }

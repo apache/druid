@@ -63,7 +63,7 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(String value)
+  public ValueMatcher makeValueMatcher(@Nullable String value)
   {
     return BooleanValueMatcher.of(value == null);
   }
@@ -102,7 +102,7 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   }
 
   @Override
-  public int lookupId(String name)
+  public int lookupId(@Nullable String name)
   {
     return NullHandling.isNullOrEquivalent(name) ? 0 : -1;
   }

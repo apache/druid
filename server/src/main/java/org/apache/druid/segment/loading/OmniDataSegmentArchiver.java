@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.google.inject.Inject;
-
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
 

@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import org.apache.druid.java.util.common.ISE;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
@@ -29,6 +28,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.druid.java.util.common.ISE;
 
 import java.util.ArrayList;
 import java.util.List;

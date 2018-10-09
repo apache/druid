@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -64,7 +65,6 @@ import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -303,7 +303,10 @@ public class ParallelIndexSubTask extends AbstractTask
       );
     }
 
+    // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
+    @Nullable final Integer targetPartitionSize = IndexTask.getValidTargetPartitionSize(tuningConfig);
+    @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient, ingestionSchema);
@@ -348,8 +351,8 @@ public class ParallelIndexSubTask extends AbstractTask
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-            if (exceedMaxRowsInSegment(addResult.getNumRowsInSegment(), tuningConfig) ||
-                exceedMaxRowsInAppenderator(addResult.getTotalNumRowsInAppenderator(), tuningConfig)) {
+            if (exceedMaxRowsInSegment(targetPartitionSize, addResult.getNumRowsInSegment()) ||
+                exceedMaxRowsInAppenderator(maxTotalRows, addResult.getTotalNumRowsInAppenderator())) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
@@ -384,22 +387,19 @@ public class ParallelIndexSubTask extends AbstractTask
   }
 
   private static boolean exceedMaxRowsInSegment(
-      int numRowsInSegment,
-      ParallelIndexTuningConfig indexTuningConfig
+      @Nullable Integer maxRowsInSegment, // maxRowsInSegment can be null if numShards is set in indexTuningConfig
+      int numRowsInSegment
   )
   {
-    // maxRowsInSegment should be null if numShards is set in indexTuningConfig
-    final Integer maxRowsInSegment = indexTuningConfig.getTargetPartitionSize();
     return maxRowsInSegment != null && maxRowsInSegment <= numRowsInSegment;
   }
 
   private static boolean exceedMaxRowsInAppenderator(
-      long numRowsInAppenderator,
-      ParallelIndexTuningConfig indexTuningConfig
+      // maxRowsInAppenderator can be null if numShards is set in indexTuningConfig
+      @Nullable Long maxRowsInAppenderator,
+      long numRowsInAppenderator
   )
   {
-    // maxRowsInAppenderator should be null if numShards is set in indexTuningConfig
-    final Long maxRowsInAppenderator = indexTuningConfig.getMaxTotalRows();
     return maxRowsInAppenderator != null && maxRowsInAppenderator <= numRowsInAppenderator;
   }
 

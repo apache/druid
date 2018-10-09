@@ -20,11 +20,11 @@
 package org.apache.druid.storage.hdfs;
 
 import com.google.common.io.ByteStreams;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;

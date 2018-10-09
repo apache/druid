@@ -187,7 +187,7 @@ handle all formatting decisions on their own, without using the ParseSpec.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | column | String | The column of the timestamp. | yes |
-| format | String | iso, millis, posix, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto' |
+| format | String | iso, posix, millis, micro, nano, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto' |
 
 ### DimensionsSpec
 

@@ -19,15 +19,13 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import org.apache.druid.segment.data.ObjectStrategy;
-
-import java.nio.ByteBuffer;
-
-import javax.annotation.Nullable;
-
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
+import org.apache.druid.segment.data.ObjectStrategy;
+
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 public class ArrayOfDoublesSketchObjectStrategy implements ObjectStrategy<ArrayOfDoublesSketch>
 {
@@ -41,7 +39,7 @@ public class ArrayOfDoublesSketchObjectStrategy implements ObjectStrategy<ArrayO
   }
 
   @Override
-  public Class<? extends ArrayOfDoublesSketch> getClazz()
+  public Class<ArrayOfDoublesSketch> getClazz()
   {
     return ArrayOfDoublesSketch.class;
   }

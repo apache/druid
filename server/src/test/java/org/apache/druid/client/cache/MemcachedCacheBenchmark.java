@@ -24,8 +24,6 @@ import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
-import org.apache.druid.collections.StupidResourceHolder;
-import org.apache.druid.java.util.common.StringUtils;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -33,6 +31,8 @@ import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.transcoders.SerializingTranscoder;
+import org.apache.druid.collections.StupidResourceHolder;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.List;
 import java.util.Map;

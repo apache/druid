@@ -19,8 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import java.nio.ByteBuffer;
-
+import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
@@ -32,7 +31,7 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
+import java.nio.ByteBuffer;
 
 public class ArrayOfDoublesSketchMergeComplexMetricSerde extends ComplexMetricSerde
 {
@@ -70,7 +69,7 @@ public class ArrayOfDoublesSketchMergeComplexMetricSerde extends ComplexMetricSe
   public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
   {
     final GenericIndexed<ArrayOfDoublesSketch> ge = GenericIndexed.read(buffer, ArrayOfDoublesSketchObjectStrategy.STRATEGY);
-    builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), ge));
+    builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), ge));
   }
 
   @Override
@@ -79,7 +78,6 @@ public class ArrayOfDoublesSketchMergeComplexMetricSerde extends ComplexMetricSe
     return ArrayOfDoublesSketchObjectStrategy.STRATEGY;
   }
 
-  // support large columns
   @Override
   public GenericColumnSerializer getSerializer(final SegmentWriteOutMedium segmentWriteOutMedium, final String column)
   {

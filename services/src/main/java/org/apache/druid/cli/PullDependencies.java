@@ -27,16 +27,17 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
-import org.apache.druid.guice.ExtensionsConfig;
-import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
+import io.netty.util.SuppressForbidden;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.guice.RepositorySystemSessionProvider;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.guice.ExtensionsConfig;
+import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
@@ -414,6 +415,7 @@ public class PullDependencies implements Runnable
     log.info("Finish downloading extension [%s]", versionedArtifact);
   }
 
+  @SuppressForbidden(reason = "System#out")
   private DefaultTeslaAether getAetherClient()
   {
     /*
