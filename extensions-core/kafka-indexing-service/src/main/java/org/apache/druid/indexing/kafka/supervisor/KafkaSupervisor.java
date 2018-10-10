@@ -77,7 +77,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
-import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -1014,31 +1013,19 @@ public class KafkaSupervisor implements Supervisor
 
   private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
   {
-    final Map<String, Object> configs = new HashMap<>();
-    configs.put("metadata.max.age.ms", "10000");
-    configs.put("group.id", StringUtils.format("kafka-supervisor-%s", RealtimeIndexTask.makeRandomId()));
+    final Properties props = new Properties();
 
-    // Extract passwords before SSL connection to Kafka
-    for (Map.Entry<String, Object> entry : ioConfig.getConsumerProperties().entrySet()) {
-      String propertyKey = entry.getKey();
-      if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
-          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
-          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
-        PasswordProvider configPasswordProvider = sortingMapper.readValue(
-            sortingMapper.writeValueAsString(entry.getValue()),
-            PasswordProvider.class
-        );
-        configs.put(propertyKey, (configPasswordProvider.getPassword()));
-      } else {
-        configs.put(propertyKey, entry.getValue());
-      }
-    }
-    configs.put("enable.auto.commit", "false");
+    props.setProperty("metadata.max.age.ms", "10000");
+    props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", RealtimeIndexTask.makeRandomId()));
+
+    KafkaIndexTask.addConsumerPropertiesFromConfig(props, sortingMapper, ioConfig.getConsumerProperties());
+
+    props.put("enable.auto.commit", "false");
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      return new KafkaConsumer<>(configs, new ByteArrayDeserializer(), new ByteArrayDeserializer());
+      return new KafkaConsumer<>(props, new ByteArrayDeserializer(), new ByteArrayDeserializer());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

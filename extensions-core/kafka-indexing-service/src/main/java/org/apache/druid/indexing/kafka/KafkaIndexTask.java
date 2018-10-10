@@ -64,9 +64,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -284,7 +282,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  KafkaConsumer<byte[], byte[]> newConsumer() throws IOException
+  KafkaConsumer<byte[], byte[]> newConsumer()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
@@ -292,21 +290,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
       final Properties props = new Properties();
 
-      // Extract passwords before SSL connection to Kafka
-      for (Map.Entry<String, Object> entry: ioConfig.getConsumerProperties().entrySet()) {
-        String propertyKey = entry.getKey();
-        if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
-            || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
-            || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
-          PasswordProvider configPasswordProvider = configMapper.convertValue(
-              entry.getValue(),
-              PasswordProvider.class
-          );
-          props.setProperty(propertyKey, (configPasswordProvider.getPassword()));
-        } else {
-          props.setProperty(propertyKey, String.valueOf(entry.getValue()));
-        }
-      }
+      addConsumerPropertiesFromConfig(props, configMapper, ioConfig.getConsumerProperties());
 
       props.setProperty("enable.auto.commit", "false");
       props.setProperty("auto.offset.reset", "none");
@@ -317,6 +301,25 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
+  }
+
+  public static void addConsumerPropertiesFromConfig(Properties properties, ObjectMapper configMapper, Map<String, Object> consumerProperties)
+  {
+    // Extract passwords before SSL connection to Kafka
+    for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
+      String propertyKey = entry.getKey();
+      if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+        PasswordProvider configPasswordProvider = configMapper.convertValue(
+            entry.getValue(),
+            PasswordProvider.class
+        );
+        properties.setProperty(propertyKey, (configPasswordProvider.getPassword()));
+      } else {
+        properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
+      }
     }
   }
 

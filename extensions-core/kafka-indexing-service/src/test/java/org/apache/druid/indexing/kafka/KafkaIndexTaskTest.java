@@ -581,7 +581,7 @@ public class KafkaIndexTaskTest
         kafkaProducer.send(records.get(i)).get();
       }
 
-      Map<String, String> consumerProps = kafkaServer.consumerProperties();
+      Map<String, Object> consumerProps = kafkaServer.consumerProperties();
       consumerProps.put("max.poll.records", "1");
 
       final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
