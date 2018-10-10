@@ -101,10 +101,4 @@ public class TimestampAggregator implements Aggregator
   {
     // no resource to cleanup
   }
-
-  @Override
-  public Aggregator clone()
-  {
-    return new TimestampAggregator(name, selector, timestampSpec, comparator, initValue);
-  }
 }
