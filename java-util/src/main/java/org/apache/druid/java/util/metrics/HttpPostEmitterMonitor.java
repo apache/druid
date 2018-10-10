@@ -52,6 +52,8 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
   {
     emitEmittedEvents(emitter);
     emitDroppedBuffers(emitter);
+    emitAllocatedBuffers(emitter);
+    emitFailedBuffers(emitter);
 
     emitTimeCounterMetrics(emitter, httpPostEmitter.getBatchFillingTimeCounter(), "emitter/batchFilling/");
     emitTimeCounterMetrics(emitter, httpPostEmitter.getSuccessfulSendingTimeCounter(), "emitter/successfulSending/");
@@ -60,11 +62,7 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
     emitter.emit(builder.build("emitter/events/emitQueue", httpPostEmitter.getEventsToEmit()));
     emitter.emit(builder.build("emitter/events/large/emitQueue", httpPostEmitter.getLargeEventsToEmit()));
 
-    emitAllocatedBuffers(emitter);
-
     emitter.emit(builder.build("emitter/buffers/emitQueue", httpPostEmitter.getBuffersToEmit()));
-
-    emitFailedBuffers(emitter);
 
     emitter.emit(builder.build("emitter/buffers/reuseQueue", httpPostEmitter.getBuffersToReuse()));
 
@@ -75,7 +73,7 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
   {
     long newTotalEmittedEvents = httpPostEmitter.getTotalEmittedEvents();
     long emittedEventsDelta = newTotalEmittedEvents - lastTotalEmittedEvents;
-    emitter.emit(builder.build("emitter/events/emitted", emittedEventsDelta));
+    emitter.emit(builder.build("emitter/events/emitted/delta", emittedEventsDelta));
     lastTotalEmittedEvents = newTotalEmittedEvents;
   }
 
@@ -83,8 +81,24 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
   {
     int newTotalDroppedBuffers = httpPostEmitter.getTotalDroppedBuffers();
     int droppedBuffersDelta = newTotalDroppedBuffers - lastTotalDroppedBuffers;
-    emitter.emit(builder.build("emitter/buffers/dropped", droppedBuffersDelta));
+    emitter.emit(builder.build("emitter/buffers/dropped/delta", droppedBuffersDelta));
     lastTotalDroppedBuffers = newTotalDroppedBuffers;
+  }
+
+  private void emitAllocatedBuffers(ServiceEmitter emitter)
+  {
+    int newTotalAllocatedBuffers = httpPostEmitter.getTotalAllocatedBuffers();
+    int allocatedBuffersDelta = newTotalAllocatedBuffers - lastTotalAllocatedBuffers;
+    emitter.emit(builder.build("emitter/buffers/allocated/delta", allocatedBuffersDelta));
+    lastTotalAllocatedBuffers = newTotalAllocatedBuffers;
+  }
+
+  private void emitFailedBuffers(ServiceEmitter emitter)
+  {
+    int newTotalFailedBuffers = httpPostEmitter.getTotalFailedBuffers();
+    int failedBuffersDelta = newTotalFailedBuffers - lastTotalFailedBuffers;
+    emitter.emit(builder.build("emitter/buffers/failed/delta", failedBuffersDelta));
+    lastTotalFailedBuffers = newTotalFailedBuffers;
   }
 
   private void emitTimeCounterMetrics(ServiceEmitter emitter, ConcurrentTimeCounter timeCounter, String metricNameBase)
@@ -94,24 +108,6 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
     emitter.emit(builder.build(metricNameBase + "count", ConcurrentTimeCounter.count(timeSumAndCount)));
     emitter.emit(builder.build(metricNameBase + "maxTimeMs", timeCounter.getAndResetMaxTime()));
     emitter.emit(builder.build(metricNameBase + "minTimeMs", timeCounter.getAndResetMinTime()));
-  }
-
-  private void emitAllocatedBuffers(ServiceEmitter emitter)
-  {
-    int newTotalAllocatedBuffers = httpPostEmitter.getTotalAllocatedBuffers();
-    int allocatedBuffersDelta = newTotalAllocatedBuffers - lastTotalAllocatedBuffers;
-    emitter.emit(builder.build("emitter/buffers/allocated/total", newTotalAllocatedBuffers));
-    emitter.emit(builder.build("emitter/buffers/allocated/delta", allocatedBuffersDelta));
-    lastTotalAllocatedBuffers = newTotalAllocatedBuffers;
-  }
-
-  private void emitFailedBuffers(ServiceEmitter emitter)
-  {
-    int newTotalFailedBuffers = httpPostEmitter.getTotalFailedBuffers();
-    int failedBuffersDelta = newTotalFailedBuffers - lastTotalFailedBuffers;
-    emitter.emit(builder.build("emitter/buffers/failed/total", newTotalFailedBuffers));
-    emitter.emit(builder.build("emitter/buffers/failed/delta", failedBuffersDelta));
-    lastTotalFailedBuffers = newTotalFailedBuffers;
   }
 
   @Override
