@@ -44,6 +44,9 @@ public interface MetadataSegmentManager
 
   /**
    * Prefer {@link #removeSegment(SegmentId)} to this method when possible.
+   *
+   * This method is not removed because {@link org.apache.druid.server.http.DataSourcesResource#deleteDatasourceSegment}
+   * uses it and if it migrates to {@link #removeSegment(SegmentId)} the performance will be worse.
    */
   boolean removeSegment(String dataSource, String segmentId);
 

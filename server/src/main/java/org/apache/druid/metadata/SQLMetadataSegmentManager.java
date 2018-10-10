@@ -466,6 +466,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public void poll()
   {
+    // See the comment to the pollLock field, explaining this synchronized block
     synchronized (pollLock) {
       try {
         doPoll();
