@@ -610,6 +610,7 @@ public class MovingAverageIterableTest
   @Test
   public void testMissingDaysInMiddle()
   {
+    System.setProperty("druid.generic.useDefaultValueForNull", "true");
 
     Map<String, Object> event1 = new HashMap<>();
     Map<String, Object> event2 = new HashMap<>();
@@ -726,6 +727,7 @@ public class MovingAverageIterableTest
   @Test
   public void testMissingDaysAtEnd()
   {
+    System.setProperty("druid.generic.useDefaultValueForNull", "true");
 
     Map<String, Object> event1 = new HashMap<>();
     Map<String, Object> event2 = new HashMap<>();

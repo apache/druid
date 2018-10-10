@@ -35,10 +35,13 @@ To use this extension, make sure to [load](../../operations/including-extensions
 ##Configuration
 There are currently no configuration properties specific to Moving Average.
 
+##Limitations
+* movingAverage is missing support for the following groupBy properties: `subtotalsSpec`, `virtualColumns`.
+* movingAverage is missing support for the following timeseries properties: `descending`.
+* movingAverage is missing support for [SQL-compatible null handling](https://github.com/apache/incubator-druid/issues/4349) (So setting druid.generic.useDefaultValueForNull in configuration will give an error). 
+
 ##Query spec:
 * Most properties in the For the query spec derived from  [groupBy query](../../querying/groupbyquery.html) / [timeseries](../../querying/timeseriesquery.html), see documentation for these query types.
-* Note: movingAverage is missing support for the following groupBy properties: `subtotalsSpec`, `virtualColumns`.
-* Note: movingAverage is missing support for the following timeseries properties: `descending`.
 
 |property|description|required?|
 |--------|-----------|---------|

@@ -57,6 +57,7 @@ public class PostAveragerCalculatorTest
   @Before
   public void setup()
   {
+    System.setProperty("druid.generic.useDefaultValueForNull", "true");
     query = new MovingAverageQuery(
         new TableDataSource("d"),
         new MultipleIntervalSegmentSpec(Collections.singletonList(new Interval("2017-01-01/2017-01-01", ISOChronology.getInstanceUTC()))),

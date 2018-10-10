@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
@@ -91,6 +92,9 @@ public class MovingAverageQuery extends BaseQuery<Row>
   )
   {
     super(dataSource, querySegmentSpec, false, context);
+
+    //TBD: Implement null awareness to respect the contract of this flag.
+    Preconditions.checkArgument(NullHandling.replaceWithDefault(), "movingAverage does not support druid.generic.useDefaultValueForNull=false");
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;
