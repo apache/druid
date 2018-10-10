@@ -56,7 +56,7 @@ public class SegmentIdTest
   }
 
   @Test
-  public void testDataSourceWithUnderscore1()
+  public void testDataSourceWithUnderscore()
   {
     String datasource = "datasource_1";
     SegmentId desc = SegmentId.of(datasource, Intervals.of("2015-01-02/2015-01-03"), "ver_0", 1);
@@ -76,8 +76,12 @@ public class SegmentIdTest
     Assert.assertEquals(desc, SegmentId.tryParse(datasource, desc.toString()));
   }
 
+  /**
+   * Test the ambiguity of a datasource name ending with '_yyyy-mm-dd..' string that could be considered either as the
+   * end of the datasource name or the interval start in the segment id's string representation.
+   */
   @Test
-  public void testDataSourceWithUnderscore2()
+  public void testDataSourceWithUnderscoreAndTimeStringInDataSourceName()
   {
     String dataSource = "datasource_2015-01-01T00:00:00.000Z";
     SegmentId desc = SegmentId.of(dataSource, Intervals.of("2015-01-02/2015-01-03"), "ver_0", 1);
@@ -109,18 +113,27 @@ public class SegmentIdTest
     Assert.assertEquals(desc, SegmentId.tryParse(dataSource, desc.toString()));
   }
 
+  /**
+   * The interval start is later than the end
+   */
   @Test
   public void testInvalidFormat0()
   {
     Assert.assertNull(SegmentId.tryParse("ds", "datasource_2015-01-02T00:00:00.000Z_2014-10-20T00:00:00.000Z_version"));
   }
 
+  /**
+   * No interval dates
+   */
   @Test
   public void testInvalidFormat1()
   {
     Assert.assertNull(SegmentId.tryParse("datasource", "datasource_invalid_interval_version"));
   }
 
+  /**
+   * Not enough interval dates
+   */
   @Test
   public void testInvalidFormat2()
   {

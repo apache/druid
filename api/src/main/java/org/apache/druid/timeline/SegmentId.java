@@ -267,6 +267,7 @@ public final class SegmentId implements Comparable<SegmentId>
     // Start with partitionNum and version hash codes, because they are often little sequential numbers. If they are
     // added in the end of the chain, resulting hashCode of SegmentId could have worse distribution.
     int hashCode = partitionNum;
+    // 1000003 is a constant used in Google AutoValue, provides a little better distribution than 31
     hashCode = hashCode * 1000003 + version.hashCode();
 
     hashCode = hashCode * 1000003 + dataSource.hashCode();
