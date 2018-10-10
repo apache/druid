@@ -136,7 +136,7 @@ public class MovingAverageQueryTest
         }
     );
 
-
+    System.setProperty("druid.generic.useDefaultValueForNull", "true");
     Injector baseInjector = GuiceInjectors.makeStartupInjector();
     injector = Initialization.makeInjectorWithModules(baseInjector, modules);
 
