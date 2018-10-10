@@ -543,7 +543,8 @@ public class LookupReferencesManagerTest
   @Test
   public void testLoadLookupOnCoordinatorFailure() throws Exception
   {
-    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFolder().getAbsolutePath()){
+    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFolder().getAbsolutePath())
+    {
       @Override
       public int getCoordinatorRetryDelay()
       {
@@ -576,7 +577,8 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.add("testMockForLoadLookupOnCoordinatorFailure", container);
     lookupReferencesManager.handlePendingNotices();
     lookupReferencesManager.stop();
-    lookupConfig = new LookupConfig(lookupReferencesManager.lookupSnapshotTaker.getPersistFile(LOOKUP_TIER).getParent()){
+    lookupConfig = new LookupConfig(lookupReferencesManager.lookupSnapshotTaker.getPersistFile(LOOKUP_TIER).getParent())
+    {
       @Override
       public int getCoordinatorRetryDelay()
       {
@@ -605,7 +607,8 @@ public class LookupReferencesManagerTest
   @Test
   public void testDisableLookupSync() throws Exception
   {
-    LookupConfig lookupConfig = new LookupConfig(null){
+    LookupConfig lookupConfig = new LookupConfig(null)
+    {
       @Override
       public boolean getEnableLookupSyncOnStartup()
       {
@@ -614,7 +617,9 @@ public class LookupReferencesManagerTest
     };
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
         lookupConfig,
-        mapper, druidLeaderClient, config
+        mapper,
+        druidLeaderClient,
+        config
     );
     Map<String, Object> lookupMap = new HashMap<>();
     lookupMap.put("testMockForDisableLookupSync", container);

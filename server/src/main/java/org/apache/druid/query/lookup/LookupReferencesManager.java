@@ -389,7 +389,7 @@ public class LookupReferencesManager
           () -> {
             if (firstAttempt.isTrue()) {
               firstAttempt.setValue(false);
-            } else if (lookupConfig.getCoordinatorRetryDelay() > 0){
+            } else if (lookupConfig.getCoordinatorRetryDelay() > 0) {
               // Adding any configured extra time in addition to the retry wait. In RetryUtils, retry wait starts from
               // a few seconds, that is likely not enough to coordinator to be back to healthy state, e. g. if it
               // experiences 30-second GC pause. Default is 1 minute
