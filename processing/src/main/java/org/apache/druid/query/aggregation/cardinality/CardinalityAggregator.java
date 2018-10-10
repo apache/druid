@@ -32,10 +32,6 @@ import java.util.List;
 
 public class CardinalityAggregator implements Aggregator
 {
-  private final String name;
-  private final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses;
-  private final boolean byRow;
-
   public static final HashFunction hashFn = Hashing.murmur3_128();
 
   static void hashRow(
@@ -65,26 +61,22 @@ public class CardinalityAggregator implements Aggregator
     }
   }
 
+  private final ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses;
+  private final boolean byRow;
   private HyperLogLogCollector collector;
 
   @VisibleForTesting
   @SuppressWarnings("unchecked")
   CardinalityAggregator(
-      String name,
       List<ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>> selectorPlusList,
       boolean byRow
   )
   {
-    this(name, selectorPlusList.toArray(new ColumnSelectorPlus[0]), byRow);
+    this(selectorPlusList.toArray(new ColumnSelectorPlus[0]), byRow);
   }
 
-  CardinalityAggregator(
-      String name,
-      ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses,
-      boolean byRow
-  )
+  CardinalityAggregator(ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>[] selectorPluses, boolean byRow)
   {
-    this.name = name;
     this.selectorPluses = selectorPluses;
     this.collector = HyperLogLogCollector.makeLatestCollector();
     this.byRow = byRow;
@@ -124,12 +116,6 @@ public class CardinalityAggregator implements Aggregator
   public double getDouble()
   {
     throw new UnsupportedOperationException("CardinalityAggregator does not support getDouble()");
-  }
-
-  @Override
-  public Aggregator clone()
-  {
-    return new CardinalityAggregator(name, selectorPluses, byRow);
   }
 
   @Override

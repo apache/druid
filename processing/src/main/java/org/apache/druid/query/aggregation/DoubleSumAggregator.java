@@ -79,12 +79,6 @@ public class DoubleSumAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new DoubleSumAggregator(selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

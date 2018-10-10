@@ -82,12 +82,6 @@ public class HyperUniquesAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new HyperUniquesAggregator(selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup
