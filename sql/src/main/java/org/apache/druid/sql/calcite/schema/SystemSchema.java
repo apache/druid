@@ -629,7 +629,16 @@ public class SystemSchema extends AbstractSchema
       @Override
       public boolean hasNext()
       {
-        return iterator.hasNext();
+        final boolean hasNext = iterator.hasNext();
+        if (!hasNext) {
+          try {
+            it.close();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        return hasNext;
       }
 
       @Override
