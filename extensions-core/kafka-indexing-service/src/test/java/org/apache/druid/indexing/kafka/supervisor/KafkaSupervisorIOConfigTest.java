@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
 import org.junit.Assert;
@@ -33,7 +33,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.util.Map;
+import java.util.Properties;
 
 public class KafkaSupervisorIOConfigTest
 {
@@ -128,34 +128,23 @@ public class KafkaSupervisorIOConfigTest
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
                      + "  \"topic\": \"my-topic\",\n"
-                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\","
-                     + "   \"ssl.truststore.password\":\"mytruststorepassword\","
-                     + "   \"ssl.keystore.password\":\"mykeystorepassword\","
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\",\n"
+                     + "   \"ssl.truststore.password\":{\"type\": \"default\", \"password\": \"mytruststorepassword\"},\n"
+                     + "   \"ssl.keystore.password\":{\"type\": \"default\", \"password\": \"mykeystorepassword\"},\n"
                      + "   \"ssl.key.password\":\"mykeypassword\"}\n"
                      + "}";
 
     KafkaSupervisorIOConfig config = mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                KafkaSupervisorIOConfig.class
-            )
-        ), KafkaSupervisorIOConfig.class
+        jsonStr, KafkaSupervisorIOConfig.class
     );
+    Properties props = new Properties();
+    KafkaIndexTask.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
 
     Assert.assertEquals("my-topic", config.getTopic());
-    Map<String, Object> consumerPropertyMap = config.getConsumerProperties();
-    DefaultPasswordProvider trustStorePasswordProvider = new DefaultPasswordProvider(String.valueOf(consumerPropertyMap.get(
-        "ssl.truststore.password")));
-    DefaultPasswordProvider keyStorePasswordProvider = new DefaultPasswordProvider(String.valueOf(consumerPropertyMap.get(
-        "ssl.keystore.password")));
-    DefaultPasswordProvider keyPasswordProvider = new DefaultPasswordProvider(String.valueOf(consumerPropertyMap.get(
-        "ssl.key.password")));
-
-    Assert.assertEquals("localhost:9092", consumerPropertyMap.get("bootstrap.servers"));
-    Assert.assertEquals("mytruststorepassword", trustStorePasswordProvider.getPassword());
-    Assert.assertEquals("mykeystorepassword", keyStorePasswordProvider.getPassword());
-    Assert.assertEquals("mykeypassword", keyPasswordProvider.getPassword());
+    Assert.assertEquals("localhost:9092", props.getProperty("bootstrap.servers"));
+    Assert.assertEquals("mytruststorepassword", props.getProperty("ssl.truststore.password"));
+    Assert.assertEquals("mykeystorepassword", props.getProperty("ssl.keystore.password"));
+    Assert.assertEquals("mykeypassword", props.getProperty("ssl.key.password"));
   }
 
   @Test

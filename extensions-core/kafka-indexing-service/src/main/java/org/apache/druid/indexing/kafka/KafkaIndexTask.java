@@ -316,7 +316,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             entry.getValue(),
             PasswordProvider.class
         );
-        properties.setProperty(propertyKey, (configPasswordProvider.getPassword()));
+        properties.setProperty(propertyKey, configPasswordProvider.getPassword());
       } else {
         properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
       }
