@@ -175,7 +175,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
 
     OakMap tmpOakMap = descending ? oak.descendingMap() : oak;
     OakTransformView transformView = tmpOakMap.createTransformView(transformer);
-    OakCloseableIterator<Row> valuesIterator = transformView.valuesIterator();
+    OakCloseableIterator<Row> valuesIterator = transformView.entriesIterator();
     return new Iterable<Row>()
     {
       @Override
