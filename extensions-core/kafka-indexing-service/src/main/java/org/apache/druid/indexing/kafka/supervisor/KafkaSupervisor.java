@@ -1020,7 +1020,7 @@ public class KafkaSupervisor implements Supervisor
 
     KafkaIndexTask.addConsumerPropertiesFromConfig(props, sortingMapper, ioConfig.getConsumerProperties());
 
-    props.put("enable.auto.commit", "false");
+    props.setProperty("enable.auto.commit", "false");
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
