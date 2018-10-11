@@ -211,7 +211,7 @@ is resumed. Responds with updated SupervisorSpec.
 ```
 POST /druid/indexer/v1/supervisor/suspendAll
 ```
-Suspend all supervisors at a time.
+Suspend all supervisors at once.
 
 #### Resume Supervisor
 
@@ -225,7 +225,7 @@ Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
 ```
 POST /druid/indexer/v1/supervisor/resumeAll
 ```
-Resume all supervisors at a time.
+Resume all supervisors at once.
 
 #### Reset Supervisor
 ```
@@ -259,7 +259,7 @@ spec to the create api.
 ```
 POST /druid/indexer/v1/supervisor/terminateAll
 ```
-Terminate all supervisors at a time.
+Terminate all supervisors at once.
 
 #### Shutdown Supervisor
 _Deprecated: use the equivalent 'terminate' instead_
