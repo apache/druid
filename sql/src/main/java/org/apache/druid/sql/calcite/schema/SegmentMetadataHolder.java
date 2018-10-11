@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  * Immutable representation of RowSignature and other segment attributes needed by {@link SystemSchema.SegmentsTable}
@@ -34,8 +35,8 @@ public class SegmentMetadataHolder
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-
-  private final long numReplicas;
+  // segment -> replica-count
+  private final Map<String, Long> numReplicas;
   @Nullable
   private final RowSignature rowSignature;
   @Nullable
@@ -66,7 +67,7 @@ public class SegmentMetadataHolder
     return isRealtime;
   }
 
-  public long getNumReplicas()
+  public Map<String, Long> getNumReplicas()
   {
     return numReplicas;
   }
@@ -88,7 +89,8 @@ public class SegmentMetadataHolder
     private final long isPublished;
     private final long isAvailable;
     private final long isRealtime;
-    private long numReplicas;
+
+    private Map<String, Long> numReplicas;
     @Nullable
     private RowSignature rowSignature;
     @Nullable
@@ -98,7 +100,7 @@ public class SegmentMetadataHolder
         long isPublished,
         long isAvailable,
         long isRealtime,
-        long numReplicas
+        Map<String, Long> numReplicas
     )
     {
       this.isPublished = isPublished;
@@ -119,7 +121,7 @@ public class SegmentMetadataHolder
       return this;
     }
 
-    public Builder withNumReplicas(long numReplicas)
+    public Builder withNumReplicas(final Map<String, Long> numReplicas)
     {
       this.numReplicas = numReplicas;
       return this;

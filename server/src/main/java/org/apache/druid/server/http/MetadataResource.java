@@ -55,7 +55,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  */
@@ -151,16 +151,15 @@ public class MetadataResource
   public Response getDatabaseSegments(@Context final HttpServletRequest req)
   {
     final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getInventory();
-    final Set<DataSegment> metadataSegments = druidDataSources
+    final Stream<DataSegment> metadataSegments = druidDataSources
         .stream()
-        .flatMap(t -> t.getSegments().stream())
-        .collect(Collectors.toSet());
+        .flatMap(t -> t.getSegments().stream());
 
     Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
         AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
 
     final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-        req, metadataSegments, raGenerator, authorizerMapper);
+        req, () -> metadataSegments.iterator(), raGenerator, authorizerMapper);
 
     final StreamingOutput stream = outputStream -> {
       final JsonFactory jsonFactory = jsonMapper.getFactory();

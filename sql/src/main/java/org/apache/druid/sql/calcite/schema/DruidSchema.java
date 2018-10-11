@@ -326,7 +326,17 @@ public class DruidSchema extends AbstractSchema
         // segmentReplicatable is used to determine if segments are served by realtime servers or not
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
         final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
-        SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(isPublished, 1, isRealtime, 1).build();
+        final SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(
+            isPublished,
+            1,
+            isRealtime,
+            new HashMap<String, Long>()
+            {
+              {
+                put(segment.getIdentifier(), 1L);
+              }
+            }
+        ).build();
         // Unknown segment.
         setSegmentSignature(segment, holder);
         segmentsNeedingRefresh.add(segment);
@@ -338,13 +348,16 @@ public class DruidSchema extends AbstractSchema
         }
       } else {
         if (knownSegments.containsKey(segment)) {
-          SegmentMetadataHolder holder = knownSegments.get(segment);
-          SegmentMetadataHolder holderWithNumReplicas = new SegmentMetadataHolder.Builder(
+          final SegmentMetadataHolder holder = knownSegments.get(segment);
+          final Map<String, Long> replicas = holder.getNumReplicas();
+          final Long existingReplicas = replicas.get(segment.getIdentifier());
+          replicas.put(segment.getIdentifier(), existingReplicas + 1);
+          final SegmentMetadataHolder holderWithNumReplicas = new SegmentMetadataHolder.Builder(
               holder.isPublished(),
               holder.isAvailable(),
               holder.isRealtime(),
               holder.getNumReplicas()
-          ).withNumReplicas(holder.getNumReplicas() + 1).build();
+          ).withNumReplicas(replicas).build();
           knownSegments.put(segment, holderWithNumReplicas);
         }
         if (server.segmentReplicatable()) {
