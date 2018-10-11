@@ -27,6 +27,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
@@ -35,6 +36,11 @@ public interface TimelineServerView extends ServerView
 {
   @Nullable
   TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource);
+
+  /**
+   * Returns a list of {@link ImmutableDruidServer}
+   */
+  List<ImmutableDruidServer> getDruidServers();
 
   <T> QueryRunner<T> getQueryRunner(DruidServer server);
 
