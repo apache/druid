@@ -134,9 +134,7 @@ public class MetadataResource
   @Path("/datasources/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getDatabaseSegmentDataSource(
-      @PathParam("dataSourceName") final String dataSourceName
-  )
+  public Response getDatabaseSegmentDataSource(@PathParam("dataSourceName") final String dataSourceName)
   {
     ImmutableDruidDataSource dataSource = metadataSegmentManager.getDataSource(dataSourceName);
     if (dataSource == null) {
@@ -151,7 +149,7 @@ public class MetadataResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseSegments(@Context final HttpServletRequest req)
   {
-    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getInventory();
+    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
     final Set<DataSegment> metadataSegments = druidDataSources
         .stream()
         .flatMap(t -> t.getSegments().stream())
