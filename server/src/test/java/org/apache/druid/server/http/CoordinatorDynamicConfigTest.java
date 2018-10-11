@@ -269,7 +269,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
     Assert.assertEquals(expectedEmitingBalancingStats, config.emitBalancingStats());
-    Assert.assertEquals(expectedKillableDatasources, config.getKillableDatasources());
+    Assert.assertEquals(expectedKillableDatasources, config.getKillableDataSources());
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
     Assert.assertEquals(maintenanceList, config.getHistoricalNodesInMaintenance());
