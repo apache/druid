@@ -177,6 +177,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       try {
         if (startOrder == currentStartOrder) {
           poll();
+        } else {
+          log.debug("startOrder = currentStartOrder = %d, skipping poll()", startOrder);
         }
       }
       catch (Exception e) {

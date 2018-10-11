@@ -174,6 +174,9 @@ public final class SegmentId implements Comparable<SegmentId>
     catch (IllegalArgumentException e) {
       return Collections.emptyList();
     }
+    if (start.compareTo(end) >= 0) {
+      return Collections.emptyList();
+    }
     List<SegmentId> possibleParsings = new ArrayList<>(2);
     String version = DELIMITER_JOINER.join(splits.subList(2, Math.max(splits.size() - 1, 3)));
     String trail = splits.size() > 3 ? splits.get(splits.size() - 1) : null;

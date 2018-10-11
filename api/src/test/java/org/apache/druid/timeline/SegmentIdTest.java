@@ -119,7 +119,9 @@ public class SegmentIdTest
   @Test
   public void testInvalidFormat0()
   {
-    Assert.assertNull(SegmentId.tryParse("ds", "datasource_2015-01-02T00:00:00.000Z_2014-10-20T00:00:00.000Z_version"));
+    Assert.assertNull(
+        SegmentId.tryParse("datasource", "datasource_2015-01-02T00:00:00.000Z_2014-10-20T00:00:00.000Z_version")
+    );
   }
 
   /**
@@ -187,6 +189,43 @@ public class SegmentIdTest
         SegmentId.of("datasource_2015-01-01T00:00:00.000Z", new Interval(dt2, dt3), "ver_0_1", 0)
     );
     Assert.assertEquals(4, possibleParsings.size());
+    Assert.assertEquals(expected, ImmutableSet.copyOf(possibleParsings));
+  }
+
+  @Test
+  public void testIterateAllPossibleParsingsWithEmptyVersion()
+  {
+    String segmentId = "datasource_2015-01-01T00:00:00.000Z_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z__1";
+    List<SegmentId> possibleParsings = ImmutableList.copyOf(SegmentId.iterateAllPossibleParsings(segmentId));
+    DateTime dt1 = DateTimes.of("2015-01-01T00:00:00.000Z");
+    DateTime dt2 = DateTimes.of("2015-01-02T00:00:00.000Z");
+    DateTime dt3 = DateTimes.of("2015-01-03T00:00:00.000Z");
+    Set<SegmentId> expected = ImmutableSet.of(
+        SegmentId.of("datasource", new Interval(dt1, dt2), "2015-01-03T00:00:00.000Z_", 1),
+        SegmentId.of("datasource", new Interval(dt1, dt2), "2015-01-03T00:00:00.000Z__1", 0),
+        SegmentId.of("datasource_2015-01-01T00:00:00.000Z", new Interval(dt2, dt3), "", 1),
+        SegmentId.of("datasource_2015-01-01T00:00:00.000Z", new Interval(dt2, dt3), "_1", 0)
+    );
+    Assert.assertEquals(4, possibleParsings.size());
+    Assert.assertEquals(expected, ImmutableSet.copyOf(possibleParsings));
+  }
+
+  /**
+   * Three DateTime strings included, but not ascending, that makes a pair of parsings impossible, compared to {@link
+   * #testIterateAllPossibleParsings}.
+   */
+  @Test
+  public void testIterateAllPossibleParsings2()
+  {
+    String segmentId = "datasource_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_2015-01-02T00:00:00.000Z_ver_1";
+    List<SegmentId> possibleParsings = ImmutableList.copyOf(SegmentId.iterateAllPossibleParsings(segmentId));
+    DateTime dt1 = DateTimes.of("2015-01-02T00:00:00.000Z");
+    DateTime dt2 = DateTimes.of("2015-01-03T00:00:00.000Z");
+    Set<SegmentId> expected = ImmutableSet.of(
+        SegmentId.of("datasource", new Interval(dt1, dt2), "2015-01-02T00:00:00.000Z_ver", 1),
+        SegmentId.of("datasource", new Interval(dt1, dt2), "2015-01-02T00:00:00.000Z_ver_1", 0)
+    );
+    Assert.assertEquals(2, possibleParsings.size());
     Assert.assertEquals(expected, ImmutableSet.copyOf(possibleParsings));
   }
 }
