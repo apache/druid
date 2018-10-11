@@ -206,12 +206,26 @@ Suspend indexing tasks associated with a supervisor. Note that the supervisor it
 operating and emitting logs and metrics, it will just ensure that no indexing tasks are running until the supervisor
 is resumed. Responds with updated SupervisorSpec.
 
-#### Resume Supervisor 
+#### Suspend All Supervisors
+
+```
+POST /druid/indexer/v1/supervisor/suspendAll
+```
+Suspend all supervisors at once.
+
+#### Resume Supervisor
 
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/resume
 ```
 Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
+
+#### Resume All Supervisors
+
+```
+POST /druid/indexer/v1/supervisor/resumeAll
+```
+Resume all supervisors at once.
 
 #### Reset Supervisor
 ```
@@ -241,7 +255,13 @@ with the supervisor history api, but will not be listed in the 'get supervisors'
 or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
 spec to the create api.
 
-#### Shutdown Supervisor 
+#### Terminate All Supervisors
+```
+POST /druid/indexer/v1/supervisor/terminateAll
+```
+Terminate all supervisors at once.
+
+#### Shutdown Supervisor
 _Deprecated: use the equivalent 'terminate' instead_
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown
