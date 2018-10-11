@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -163,7 +165,7 @@ public class QueryResource implements QueryCountStatsProvider
     Query<?> query = null;
 
     String acceptHeader = req.getHeader("Accept");
-    if (acceptHeader == null || acceptHeader.length() == 0) {
+    if (Strings.isNullOrEmpty(acceptHeader)) {
       //default to content-type
       acceptHeader = req.getContentType();
     }
