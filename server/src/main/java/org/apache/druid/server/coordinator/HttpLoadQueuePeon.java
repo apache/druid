@@ -35,9 +35,6 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
-import org.apache.druid.java.util.http.client.response.ClientResponse;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
@@ -47,7 +44,6 @@ import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
 import javax.servlet.http.HttpServletResponse;
@@ -207,9 +203,9 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             {
               boolean scheduleNextRunImmediately = true;
               try {
-                if (responseHandler.status == HttpServletResponse.SC_NO_CONTENT) {
+                if (responseHandler.getStatus() == HttpServletResponse.SC_NO_CONTENT) {
                   log.debug("Received NO CONTENT reseponse from [%s]", serverId);
-                } else if (HttpServletResponse.SC_OK == responseHandler.status) {
+                } else if (HttpServletResponse.SC_OK == responseHandler.getStatus()) {
                   try {
                     List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = jsonMapper.readValue(
                         result, RESPONSE_ENTITY_TYPE_REF
@@ -260,7 +256,6 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             public void onFailure(Throwable t)
             {
               try {
-                responseHandler.description = t.toString();
                 logRequestFailure(t);
               }
               finally {
@@ -274,8 +269,8 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                   t,
                   "Request[%s] Failed with status[%s]. Reason[%s].",
                   changeRequestURL,
-                  responseHandler.status,
-                  responseHandler.description
+                  responseHandler.getStatus(),
+                  responseHandler.getDescription()
               );
             }
           },
@@ -596,17 +591,4 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     }
   }
 
-  private static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
-  {
-    private int status;
-    private String description;
-
-    @Override
-    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
-    {
-      status = response.getStatus().getCode();
-      description = response.getStatus().getReasonPhrase();
-      return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
-    }
-  }
 }

@@ -260,6 +260,35 @@ public class SupervisorResource
     );
   }
 
+  @POST
+  @Path("/suspendAll")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response suspendAll()
+  {
+    return suspendOrResumeAll(true);
+  }
+
+  @POST
+  @Path("/resumeAll")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response resumeAll()
+  {
+    return suspendOrResumeAll(false);
+  }
+
+  @POST
+  @Path("/terminateAll")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response terminateAll()
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          manager.stopAndRemoveAllSupervisors();
+          return Response.ok(ImmutableMap.of("status", "success")).build();
+        }
+    );
+  }
+
   @GET
   @Path("/history")
   @Produces(MediaType.APPLICATION_JSON)
@@ -378,23 +407,34 @@ public class SupervisorResource
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
-          if (!spec.isPresent()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
-                           .build();
-          }
-
-          if (spec.get().isSuspended() == suspend) {
-            final String errMsg =
-                StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running");
-            return Response.status(Response.Status.BAD_REQUEST)
+          if (manager.suspendOrResumeSupervisor(id, suspend)) {
+            Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
+            return Response.ok(spec.get()).build();
+          } else {
+            Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
+            Response.Status status;
+            String errMsg;
+            if (spec.isPresent()) {
+              status = Response.Status.BAD_REQUEST;
+              errMsg = StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running");
+            } else {
+              status = Response.Status.NOT_FOUND;
+              errMsg = StringUtils.format("[%s] does not exist", id);
+            }
+            return Response.status(status)
                            .entity(ImmutableMap.of("error", errMsg))
                            .build();
           }
-          manager.suspendOrResumeSupervisor(id, suspend);
-          spec = manager.getSupervisorSpec(id);
-          return Response.ok(spec.get()).build();
+        }
+    );
+  }
+
+  private Response suspendOrResumeAll(boolean suspend)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          manager.suspendOrResumeAllSupervisors(suspend);
+          return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
   }

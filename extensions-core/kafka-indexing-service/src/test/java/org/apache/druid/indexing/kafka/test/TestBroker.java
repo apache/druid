@@ -110,9 +110,9 @@ public class TestBroker implements Closeable
     return props;
   }
 
-  public Map<String, String> consumerProperties()
+  public Map<String, Object> consumerProperties()
   {
-    final Map<String, String> props = Maps.newHashMap();
+    final Map<String, Object> props = Maps.newHashMap();
     props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
     props.put("key.deserializer", ByteArrayDeserializer.class.getName());
     props.put("value.deserializer", ByteArrayDeserializer.class.getName());
