@@ -25,14 +25,12 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
-import com.amazonaws.services.kinesis.clientlibrary.proxies.IKinesisProxy;
-import com.amazonaws.services.kinesis.clientlibrary.proxies.IKinesisProxyFactory;
-import com.amazonaws.services.kinesis.clientlibrary.proxies.KinesisProxyFactory;
-import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord;
+import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
+import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.util.AwsHostNameUtils;
@@ -48,7 +46,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -74,7 +71,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private class PartitionResource
   {
     private final StreamPartition<String> streamPartition;
-    private final IKinesisProxy kinesisProxy;
+    private final AmazonKinesis kinesisProxy;
     private final ScheduledExecutorService scheduledExec;
     private final Object startLock = new Object();
 
@@ -84,7 +81,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     public PartitionResource(
         StreamPartition<String> streamPartition,
-        IKinesisProxy kinesisProxy,
+        AmazonKinesis kinesisProxy,
         ScheduledExecutorService scheduledExec
     )
     {
@@ -156,22 +153,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             return;
           }
 
-          GetRecordsResult recordsResult = kinesisProxy.get(shardIterator, recordsPerFetch);
+          GetRecordsResult recordsResult = kinesisProxy.getRecords(new GetRecordsRequest().withShardIterator(
+              shardIterator).withLimit(recordsPerFetch));
 
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
             final List<byte[]> data;
 
-            if (deaggregate) {
-              data = new ArrayList<>();
 
-              final List<UserRecord> userRecords = UserRecord.deaggregate(Collections.singletonList(kinesisRecord));
-              for (UserRecord userRecord : userRecords) {
-                data.add(toByteArray(userRecord.getData()));
-              }
-            } else {
-              data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
-            }
+            data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
 
             final OrderedPartitionableRecord<String, String> record = new OrderedPartitionableRecord<>(
                 streamPartition.getStream(),
@@ -200,9 +190,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                   recordBufferFullWait
               );
 
-              shardIterator = kinesisProxy.getIterator(
-                  record.getPartitionId(), ShardIteratorType.AT_SEQUENCE_NUMBER.toString(), record.getSequenceNumber()
-              );
+              shardIterator = kinesisProxy.getShardIterator(
+                  record.getStream(),
+                  record.getPartitionId(),
+                  ShardIteratorType.AT_SEQUENCE_NUMBER.toString(),
+                  record.getSequenceNumber()
+              ).getShardIterator();
 
               rescheduleRunnable(recordBufferFullWait);
               return;
@@ -242,10 +235,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private final int recordBufferFullWait;
   private final int fetchSequenceNumberTimeout;
 
-  private final IKinesisProxyFactory kinesisProxyFactory;
+  private final AmazonKinesisClientBuilder kinesisBuilder;
   private final ScheduledExecutorService scheduledExec;
 
-  private final Map<String, IKinesisProxy> kinesisProxies = new ConcurrentHashMap<>();
+  private final Map<String, AmazonKinesis> kinesisProxies = new ConcurrentHashMap<>();
   private final Map<StreamPartition<String>, PartitionResource> partitionResources = new ConcurrentHashMap<>();
   private final BlockingQueue<OrderedPartitionableRecord<String, String>> records;
 
@@ -294,16 +287,18 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
       awsCredentialsProvider = builder.build();
     }
-    AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.standard()
-                                                            .withCredentials(awsCredentialsProvider)
-                                                            .withClientConfiguration(new ClientConfiguration())
-                                                            .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                                                                endpoint,
-                                                                AwsHostNameUtils.parseRegion(endpoint, null)
-                                                            ))
-                                                            .build();
+    kinesisBuilder = AmazonKinesisClientBuilder.standard()
+                                               .withCredentials(awsCredentialsProvider)
+                                               .withClientConfiguration(new ClientConfiguration())
+                                               .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                                                   endpoint,
+                                                   AwsHostNameUtils.parseRegion(
+                                                       endpoint,
+                                                       null
+                                                   )
+                                               ));
 
-    kinesisProxyFactory = new KinesisProxyFactory(awsCredentialsProvider, kinesisClient);
+
     records = new LinkedBlockingQueue<>(recordBufferSize);
 
     log.info(
@@ -430,8 +425,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   public Set<String> getPartitionIds(String stream)
   {
     checkIfClosed();
-    Set<String> shardList = getKinesisProxy(stream).getAllShardIds();
-    return shardList != null ? shardList : ImmutableSet.of();
+    return getKinesisProxy(stream).describeStream(stream)
+                                  .getStreamDescription()
+                                  .getShards()
+                                  .stream()
+                                  .map(Shard::getShardId).collect(Collectors.toSet());
   }
 
   @Override
@@ -457,10 +455,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.closed = true;
   }
 
-  private IKinesisProxy getKinesisProxy(String streamName)
+  private AmazonKinesis getKinesisProxy(String streamName)
   {
     if (!kinesisProxies.containsKey(streamName)) {
-      kinesisProxies.put(streamName, kinesisProxyFactory.getProxy(streamName));
+      kinesisProxies.put(streamName, kinesisBuilder.build());
     }
 
     return kinesisProxies.get(streamName);
@@ -479,9 +477,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         sequenceNumber != null ? sequenceNumber : iteratorEnum.toString()
     );
 
-    resource.shardIterator = getKinesisProxy(partition.getStream()).getIterator(
-        partition.getPartitionId(), iteratorEnum.toString(), sequenceNumber
-    );
+    resource.shardIterator = getKinesisProxy(partition.getStream()).getShardIterator(
+        partition.getStream(),
+        partition.getPartitionId(),
+        iteratorEnum.toString(),
+        sequenceNumber
+    ).getShardIterator();
 
     checkPartitionsStarted = true;
   }
@@ -490,11 +491,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       throws TimeoutException
   {
     long timeoutMillis = System.currentTimeMillis() + fetchSequenceNumberTimeout;
-    IKinesisProxy kinesisProxy = getKinesisProxy(partition.getStream());
+    AmazonKinesis kinesis = getKinesisProxy(partition.getStream());
     String shardIterator = null;
 
     try {
-      shardIterator = kinesisProxy.getIterator(partition.getPartitionId(), iteratorEnum.toString(), null);
+      shardIterator = kinesis.getShardIterator(
+          partition.getStream(),
+          partition.getPartitionId(),
+          iteratorEnum.toString()
+      ).getShardIterator();
     }
     catch (ResourceNotFoundException e) {
       log.warn("Caught ResourceNotFoundException: %s", e.getMessage());
@@ -509,7 +514,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
       GetRecordsResult recordsResult;
       try {
-        recordsResult = kinesisProxy.get(shardIterator, 1);
+        recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1));
       }
       catch (ProvisionedThroughputExceededException e) {
         log.warn("Exceeded provisioned throughput, retrying in [%,dms]", PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS);
