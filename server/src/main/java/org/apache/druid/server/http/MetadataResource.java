@@ -159,7 +159,7 @@ public class MetadataResource
         AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
 
     final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-        req, () -> metadataSegments.iterator(), raGenerator, authorizerMapper);
+        req, metadataSegments::iterator, raGenerator, authorizerMapper);
 
     final StreamingOutput stream = outputStream -> {
       final JsonFactory jsonFactory = jsonMapper.getFactory();

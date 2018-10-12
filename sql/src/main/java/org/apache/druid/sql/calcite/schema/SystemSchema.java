@@ -70,13 +70,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
@@ -211,16 +211,11 @@ public class SystemSchema extends AbstractSchema
                                                                                                                   .iterator();
 
       // in memory map to store segment data from available segments
-      final Map<String, PartialSegmentData> partialSegmentDataMap = new HashMap<>();
-      for (SegmentMetadataHolder holder : availableSegmentMetadata.values()) {
-        final PartialSegmentData data = new PartialSegmentData(
-            holder.isAvailable(),
-            holder.isRealtime(),
-            holder.getNumReplicas(),
-            holder.getNumRows()
-        );
-        partialSegmentDataMap.put(holder.getSegmentId(), data);
-      }
+      final Map<String, PartialSegmentData> partialSegmentDataMap = availableSegmentMetadata.values().stream().collect(
+          Collectors.toMap(
+              SegmentMetadataHolder::getSegmentId,
+              h -> new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(), h.getNumRows())
+          ));
 
       //get published segments from coordinator
       final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
@@ -231,18 +226,14 @@ public class SystemSchema extends AbstractSchema
 
       final Set<String> segmentsAlreadySeen = new HashSet<>();
 
-      //auth check for published segments
-      final CloseableIterator<DataSegment> authorizedPublishedSegments = getAuthorizedPublishedSegments(
-          metadataSegments,
-          root
-      );
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> authorizedPublishedSegments)
+          .from(() -> getAuthorizedPublishedSegments(
+              metadataSegments,
+              root
+          ))
           .transform(val -> {
             try {
-              if (!segmentsAlreadySeen.contains(val.getIdentifier())) {
-                segmentsAlreadySeen.add(val.getIdentifier());
-              }
+              segmentsAlreadySeen.add(val.getIdentifier());
               final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getIdentifier());
               return new Object[]{
                   val.getIdentifier(),
@@ -253,7 +244,7 @@ public class SystemSchema extends AbstractSchema
                   val.getVersion(),
                   val.getShardSpec().getPartitionNum(),
                   partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas(),
-                  partialSegmentData == null ? -1L : partialSegmentData.getNumRows(),
+                  partialSegmentData == null ? 0L : partialSegmentData.getNumRows(),
                   1L, //is_published is true for published segments
                   partialSegmentData == null ? 1L : partialSegmentData.isAvailable(),
                   partialSegmentData == null ? 0L : partialSegmentData.isRealtime(),
@@ -268,14 +259,11 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
-      //auth check for available segments
-      final Iterator<Entry<DataSegment, SegmentMetadataHolder>> authorizedAvailableSegments = getAuthorizedAvailableSegments(
-          availableSegmentEntries,
-          root
-      );
-
       final FluentIterable<Object[]> availableSegments = FluentIterable
-          .from(() -> authorizedAvailableSegments)
+          .from(() -> getAuthorizedAvailableSegments(
+              availableSegmentEntries,
+              root
+          ))
           .transform(val -> {
             try {
               if (segmentsAlreadySeen.contains(val.getKey().getIdentifier())) {
@@ -289,7 +277,7 @@ public class SystemSchema extends AbstractSchema
                   val.getKey().getSize(),
                   val.getKey().getVersion(),
                   val.getKey().getShardSpec().getPartitionNum(),
-                  partialSegmentDataMap.get(val.getKey().getIdentifier()) == null ? 0
+                  partialSegmentDataMap.get(val.getKey().getIdentifier()) == null ? 0L
                     : partialSegmentDataMap.get(val.getKey().getIdentifier()).getNumReplicas(),
                   val.getValue().getNumRows(),
                   val.getValue().isPublished(),
