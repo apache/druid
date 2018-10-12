@@ -461,6 +461,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ROW(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
+                Pair.of("COLUMN_NAME", "dim3"),
+                Pair.of("DATA_TYPE", Types.VARCHAR),
+                Pair.of("TYPE_NAME", "VARCHAR"),
+                Pair.of("IS_NULLABLE", "YES")
+            ),
+            ROW(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
