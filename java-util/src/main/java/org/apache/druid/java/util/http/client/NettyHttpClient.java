@@ -253,7 +253,7 @@ public class NettyHttpClient extends AbstractHttpClient
                   possiblySuspendReads(response);
                 }
               } else {
-                throw new IllegalStateException(StringUtils.format("Unknown message type[%s]", msg.getClass()));
+                throw new ISE("Unknown message type[%s]", msg.getClass());
               }
             }
             catch (Exception ex) {

@@ -47,6 +47,7 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -249,10 +250,7 @@ public class SystemSchema extends AbstractSchema
               };
             }
             catch (JsonProcessingException e) {
-              throw new RuntimeException(StringUtils.format(
-                  "Error getting segment payload for segment %s",
-                  val.getKey().getIdentifier()
-              ), e);
+              throw new RE(e, "Error getting segment payload for segment %s", val.getKey().getIdentifier());
             }
           });
 
@@ -285,10 +283,7 @@ public class SystemSchema extends AbstractSchema
               };
             }
             catch (JsonProcessingException e) {
-              throw new RuntimeException(StringUtils.format(
-                  "Error getting segment payload for segment %s",
-                  val.getIdentifier()
-              ), e);
+              throw new RE(e, "Error getting segment payload for segment %s", val.getIdentifier());
             }
           });
 

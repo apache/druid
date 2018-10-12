@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.emitter.core;
 
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.net.URI;
@@ -57,12 +58,12 @@ public class ParametrizedUriExtractor implements UriExtractor
     for (String key : params) {
       Object paramValue = eventMap.get(key);
       if (paramValue == null) {
-        throw new IllegalArgumentException(StringUtils.format(
+        throw new IAE(
             "ParametrizedUriExtractor with pattern %s requires %s to be set in event, but found %s",
             uriPattern,
             key,
             eventMap
-        ));
+        );
       }
       processedUri = processedUri.replace(StringUtils.format("{%s}", key), paramValue.toString());
     }
