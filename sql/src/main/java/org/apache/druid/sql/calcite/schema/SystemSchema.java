@@ -244,7 +244,10 @@ public class SystemSchema extends AbstractSchema
                   val.getVersion(),
                   val.getShardSpec().getPartitionNum(),
                   partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas(),
-                  partialSegmentData == null ? 0L : partialSegmentData.getNumRows(),
+                  partialSegmentData == null ? 0L
+                                             : partialSegmentData.getNumRows() == null
+                                               ? 0L
+                                               : partialSegmentData.getNumRows(),
                   1L, //is_published is true for published segments
                   partialSegmentData == null ? 1L : partialSegmentData.isAvailable(),
                   partialSegmentData == null ? 0L : partialSegmentData.isRealtime(),
