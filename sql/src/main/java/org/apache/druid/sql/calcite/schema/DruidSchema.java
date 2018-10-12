@@ -328,7 +328,7 @@ public class DruidSchema extends AbstractSchema
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
         final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
         final SegmentMetadataHolder holder = SegmentMetadataHolder
-            .builder(segment.getId(), isPublished,1, isRealtime, 1)
+            .builder(segment.getId(), isPublished, 1, isRealtime, 1)
             .build();
         // Unknown segment.
         setSegmentSignature(segment, holder);
