@@ -34,7 +34,7 @@ public class SegmentMetadataHolder
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-
+  private final String segmentId;
   private final long numReplicas;
   @Nullable
   private final RowSignature rowSignature;
@@ -49,6 +49,7 @@ public class SegmentMetadataHolder
     this.isRealtime = builder.isRealtime;
     this.numReplicas = builder.numReplicas;
     this.numRows = builder.numRows;
+    this.segmentId = builder.segmentId;
   }
 
   public long isPublished()
@@ -64,6 +65,11 @@ public class SegmentMetadataHolder
   public long isRealtime()
   {
     return isRealtime;
+  }
+
+  public String getSegmentId()
+  {
+    return segmentId;
   }
 
   public long getNumReplicas()
@@ -85,9 +91,11 @@ public class SegmentMetadataHolder
 
   public static class Builder
   {
+    private final String segmentId;
     private final long isPublished;
     private final long isAvailable;
     private final long isRealtime;
+
     private long numReplicas;
     @Nullable
     private RowSignature rowSignature;
@@ -95,12 +103,14 @@ public class SegmentMetadataHolder
     private Long numRows;
 
     public Builder(
+        String segmentId,
         long isPublished,
         long isAvailable,
         long isRealtime,
         long numReplicas
     )
     {
+      this.segmentId = segmentId;
       this.isPublished = isPublished;
       this.isAvailable = isAvailable;
       this.isRealtime = isRealtime;
