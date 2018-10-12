@@ -11,11 +11,19 @@ REST query interface. For normal Druid operations, queries should be issued to t
 to the queryable nodes like this -
 
  ```bash
- curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -d @<query_json_file>
+ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
  ```
  
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different 
 [client libraries](../development/libraries.html) in other languages to query Druid. 
+
+The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
+
+ ```bash
+ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:x-jackson-smile' -d @<query_json_file>
+ ```
+
+Note: If Accept header is not provided, it defaults to value of 'Content-Type' header.
 
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries 
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build 
