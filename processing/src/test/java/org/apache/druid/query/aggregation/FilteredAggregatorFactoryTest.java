@@ -19,58 +19,29 @@
 
 package org.apache.druid.query.aggregation;
 
-import java.util.Comparator;
+import org.apache.druid.query.filter.TrueDimFilter;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public class CountAggregator implements Aggregator
+public class FilteredAggregatorFactoryTest
 {
-  static final Comparator COMPARATOR = LongSumAggregator.COMPARATOR;
-
-  static Object combineValues(Object lhs, Object rhs)
+  @Test
+  public void testSimpleNaming()
   {
-    return ((Number) lhs).longValue() + ((Number) rhs).longValue();
-  }
-
-  private long count = 0;
-
-  public CountAggregator()
-  {
-  }
-
-  @Override
-  public void aggregate()
-  {
-    ++count;
-  }
-
-  @Override
-  public Object get()
-  {
-    return count;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return (float) count;
-  }
-
-  @Override
-  public long getLong()
-  {
-    return count;
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return (double) count;
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
+    Assert.assertEquals("overrideName", new FilteredAggregatorFactory(
+        new CountAggregatorFactory("foo"),
+        new TrueDimFilter(),
+        "overrideName"
+    ).getName());
+    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
+        new CountAggregatorFactory("delegateName"),
+        new TrueDimFilter(),
+        ""
+    ).getName());
+    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
+        new CountAggregatorFactory("delegateName"),
+        new TrueDimFilter(),
+        null
+    ).getName());
   }
 }

@@ -32,6 +32,7 @@ import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
@@ -51,6 +52,7 @@ import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.server.security.Access;
@@ -66,6 +68,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -309,16 +312,62 @@ public class DruidPlanner implements Closeable
     } else {
       final BindableRel theRel = bindableRel;
       final DataContext dataContext = plannerContext.createDataContext((JavaTypeFactory) planner.getTypeFactory());
-      final Supplier<Sequence<Object[]>> resultsSupplier = new Supplier<Sequence<Object[]>>()
-      {
-        @Override
-        public Sequence<Object[]> get()
-        {
-          final Enumerable enumerable = theRel.bind(dataContext);
-          return Sequences.simple(enumerable);
-        }
+      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+        final Enumerable enumerable = theRel.bind(dataContext);
+        final Enumerator enumerator = enumerable.enumerator();
+        return Sequences.withBaggage(new BaseSequence<>(
+            new BaseSequence.IteratorMaker<Object[], EnumeratorIterator<Object[]>>()
+            {
+              @Override
+              public EnumeratorIterator make()
+              {
+                return new EnumeratorIterator(new Iterator<Object[]>()
+                {
+                  @Override
+                  public boolean hasNext()
+                  {
+                    return enumerator.moveNext();
+                  }
+
+                  @Override
+                  public Object[] next()
+                  {
+                    return (Object[]) enumerator.current();
+                  }
+                });
+              }
+
+              @Override
+              public void cleanup(EnumeratorIterator iterFromMake)
+              {
+
+              }
+            }
+        ), () -> enumerator.close());
       };
       return new PlannerResult(resultsSupplier, root.validatedRowType);
+    }
+  }
+
+  private static class EnumeratorIterator<T> implements Iterator<T>
+  {
+    private final Iterator<T> it;
+
+    public EnumeratorIterator(Iterator<T> it)
+    {
+      this.it = it;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return it.hasNext();
+    }
+
+    @Override
+    public T next()
+    {
+      return it.next();
     }
   }
 

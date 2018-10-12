@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.IntervalDimFilter;
@@ -34,15 +36,28 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class FilteredAggregatorFactory extends AggregatorFactory
 {
   private final AggregatorFactory delegate;
   private final DimFilter filter;
+  private final String name;
 
+  // Constructor for backwards compat only
+  public FilteredAggregatorFactory(
+      AggregatorFactory delegate,
+      DimFilter filter
+  )
+  {
+    this(delegate, filter, null);
+  }
+
+  @JsonCreator
   public FilteredAggregatorFactory(
       @JsonProperty("aggregator") AggregatorFactory delegate,
-      @JsonProperty("filter") DimFilter filter
+      @JsonProperty("filter") DimFilter filter,
+      @JsonProperty("name") String name
   )
   {
     Preconditions.checkNotNull(delegate);
@@ -50,6 +65,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
 
     this.delegate = delegate;
     this.filter = filter;
+    this.name = name;
   }
 
   @Override
@@ -108,11 +124,16 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     return delegate.finalizeComputation(object);
   }
 
+  // See https://github.com/apache/incubator-druid/pull/6219#pullrequestreview-148919845
   @JsonProperty
   @Override
   public String getName()
   {
-    return delegate.getName();
+    String name = this.name;
+    if (Strings.isNullOrEmpty(name)) {
+      name = delegate.getName();
+    }
+    return name;
   }
 
   @Override
@@ -198,7 +219,8 @@ public class FilteredAggregatorFactory extends AggregatorFactory
               intervalDimFilter.getDimension(),
               effectiveFilterIntervals,
               intervalDimFilter.getExtractionFn()
-          )
+          ),
+          this.name
       );
     } else {
       return this;
@@ -224,15 +246,6 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String toString()
-  {
-    return "FilteredAggregatorFactory{" +
-           "delegate=" + delegate +
-           ", filter=" + filter +
-           '}';
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -241,24 +254,25 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     FilteredAggregatorFactory that = (FilteredAggregatorFactory) o;
-
-    if (delegate != null ? !delegate.equals(that.delegate) : that.delegate != null) {
-      return false;
-    }
-    if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(delegate, that.delegate) &&
+           Objects.equals(filter, that.filter) &&
+           Objects.equals(name, that.name);
   }
 
   @Override
   public int hashCode()
   {
-    int result = delegate != null ? delegate.hashCode() : 0;
-    result = 31 * result + (filter != null ? filter.hashCode() : 0);
-    return result;
+    return Objects.hash(delegate, filter, name);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "FilteredAggregatorFactory{" +
+           "delegate=" + delegate +
+           ", filter=" + filter +
+           ", name='" + name + '\'' +
+           '}';
   }
 }

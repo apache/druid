@@ -106,6 +106,7 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -468,6 +469,7 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"druid"},
+            new Object[]{"sys"},
             new Object[]{"INFORMATION_SCHEMA"}
         )
     );
@@ -488,7 +490,11 @@ public class CalciteQueryTest extends CalciteTestBase
             new Object[]{"druid", "bview", "VIEW"},
             new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"},
             new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"},
-            new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"}
+            new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"},
+            new Object[]{"sys", "segments", "SYSTEM_TABLE"},
+            new Object[]{"sys", "server_segments", "SYSTEM_TABLE"},
+            new Object[]{"sys", "servers", "SYSTEM_TABLE"},
+            new Object[]{"sys", "tasks", "SYSTEM_TABLE"}
         )
     );
 
@@ -507,7 +513,11 @@ public class CalciteQueryTest extends CalciteTestBase
             new Object[]{"druid", "bview", "VIEW"},
             new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"},
             new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"},
-            new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"}
+            new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"},
+            new Object[]{"sys", "segments", "SYSTEM_TABLE"},
+            new Object[]{"sys", "server_segments", "SYSTEM_TABLE"},
+            new Object[]{"sys", "servers", "SYSTEM_TABLE"},
+            new Object[]{"sys", "tasks", "SYSTEM_TABLE"}
         )
     );
   }
@@ -7710,11 +7720,13 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig, viewManager);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
+        systemSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,
