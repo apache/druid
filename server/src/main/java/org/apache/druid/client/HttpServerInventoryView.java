@@ -226,7 +226,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
   @Override
   public void registerSegmentCallback(
-      Executor exec, SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter
+      Executor exec,
+      SegmentCallback callback,
+      Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
     if (lifecycleLock.isStarted()) {

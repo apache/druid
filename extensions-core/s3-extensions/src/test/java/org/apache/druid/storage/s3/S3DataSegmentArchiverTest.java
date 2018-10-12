@@ -40,16 +40,22 @@ import java.util.Map;
 public class S3DataSegmentArchiverTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper()
-      .setInjectableValues(new InjectableValues()
-      {
-        @Override
-        public Object findInjectableValue(
-            Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
-        )
-        {
-          return PULLER;
-        }
-      }).registerModule(new SimpleModule("s3-archive-test-module").registerSubtypes(S3LoadSpec.class));
+      .setInjectableValues(
+          new InjectableValues()
+          {
+            @Override
+            public Object findInjectableValue(
+                Object valueId,
+                DeserializationContext ctxt,
+                BeanProperty forProperty,
+                Object beanInstance
+            )
+            {
+              return PULLER;
+            }
+          }
+      )
+      .registerModule(new SimpleModule("s3-archive-test-module").registerSubtypes(S3LoadSpec.class));
   private static final S3DataSegmentArchiverConfig ARCHIVER_CONFIG = new S3DataSegmentArchiverConfig()
   {
     @Override

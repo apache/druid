@@ -312,8 +312,13 @@ public class SystemSchema extends AbstractSchema
       Function<Entry<DataSegment, SegmentMetadataHolder>, Iterable<ResourceAction>> raGenerator = segment -> Collections
           .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource()));
 
-      final Iterable<Entry<DataSegment, SegmentMetadataHolder>> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult, () -> availableSegmentEntries, raGenerator, authorizerMapper);
+      final Iterable<Entry<DataSegment, SegmentMetadataHolder>> authorizedSegments =
+          AuthorizationUtils.filterAuthorizedResources(
+              authenticationResult,
+              () -> availableSegmentEntries,
+              raGenerator,
+              authorizerMapper
+          );
 
       return authorizedSegments.iterator();
     }
@@ -330,7 +335,11 @@ public class SystemSchema extends AbstractSchema
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
 
       final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult, () -> it, raGenerator, authorizerMapper);
+          authenticationResult,
+          () -> it,
+          raGenerator,
+          authorizerMapper
+      );
 
       return wrap(authorizedSegments.iterator(), it);
     }
@@ -624,7 +633,11 @@ public class SystemSchema extends AbstractSchema
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(task.getDataSource()));
 
       final Iterable<TaskStatusPlus> authorizedTasks = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult, () -> it, raGenerator, authorizerMapper);
+          authenticationResult,
+          () -> it,
+          raGenerator,
+          authorizerMapper
+      );
 
       return wrap(authorizedTasks.iterator(), it);
     }

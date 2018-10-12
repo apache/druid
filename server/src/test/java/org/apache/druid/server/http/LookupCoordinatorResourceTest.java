@@ -86,10 +86,8 @@ public class LookupCoordinatorResourceTest
       ImmutableMap.of(LOOKUP_NAME, SINGLE_LOOKUP), null, null
   );
 
-  private static final Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> NODES_LOOKUP_STATE = ImmutableMap
-      .of(
-          LOOKUP_NODE, LOOKUP_STATE
-      );
+  private static final Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> NODES_LOOKUP_STATE =
+      ImmutableMap.of(LOOKUP_NODE, LOOKUP_STATE);
 
   @Test
   public void testSimpleGet()
@@ -1076,9 +1074,7 @@ public class LookupCoordinatorResourceTest
 
     final Response response = lookupCoordinatorResource.getSpecificNodeStatus(LOOKUP_TIER, LOOKUP_NODE);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
-        LOOKUP_STATE, response.getEntity()
-    );
+    Assert.assertEquals(LOOKUP_STATE, response.getEntity());
 
     EasyMock.verify(lookupCoordinatorManager);
   }

@@ -35,7 +35,9 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
    */
   @Override
   protected double computeCost(
-      final DataSegment proposalSegment, final ServerHolder server, final boolean includeCurrentServer
+      final DataSegment proposalSegment,
+      final ServerHolder server,
+      final boolean includeCurrentServer
   )
   {
     double cost = super.computeCost(proposalSegment, server, includeCurrentServer);

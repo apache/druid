@@ -34,6 +34,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.util.Map;
 import java.util.Properties;
@@ -122,13 +123,10 @@ public class PolyBind
     final TypeLiteral<T> interfaceType = interfaceKey.getTypeLiteral();
 
     if (interfaceKey.getAnnotation() != null) {
-      return MapBinder.newMapBinder(
-          binder, TypeLiteral.get(String.class), interfaceType, interfaceKey.getAnnotation()
-      );
+      return MapBinder.newMapBinder(binder, TypeLiteral.get(String.class), interfaceType, interfaceKey.getAnnotation());
     } else if (interfaceKey.getAnnotationType() != null) {
-      return MapBinder.newMapBinder(
-          binder, TypeLiteral.get(String.class), interfaceType, interfaceKey.getAnnotationType()
-      );
+      Class<? extends Annotation> annotationType = interfaceKey.getAnnotationType();
+      return MapBinder.newMapBinder(binder, TypeLiteral.get(String.class), interfaceType, annotationType);
     } else {
       return MapBinder.newMapBinder(binder, TypeLiteral.get(String.class), interfaceType);
     }

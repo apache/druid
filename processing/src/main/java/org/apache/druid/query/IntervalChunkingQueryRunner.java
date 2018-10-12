@@ -50,8 +50,11 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
   private final ServiceEmitter emitter;
 
   public IntervalChunkingQueryRunner(
-      QueryRunner<T> baseRunner, QueryToolChest<T, Query<T>> toolChest,
-      ExecutorService executor, QueryWatcher queryWatcher, ServiceEmitter emitter
+      QueryRunner<T> baseRunner,
+      QueryToolChest<T, Query<T>> toolChest,
+      ExecutorService executor,
+      QueryWatcher queryWatcher,
+      ServiceEmitter emitter
   )
   {
     this.baseRunner = baseRunner;

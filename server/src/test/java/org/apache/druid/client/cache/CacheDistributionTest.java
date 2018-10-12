@@ -19,7 +19,6 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -37,7 +36,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Arrays;
@@ -56,7 +54,9 @@ public class CacheDistributionTest
   public static Iterable<Object[]> data()
   {
     List<HashAlgorithm> hash = ImmutableList.of(
-        DefaultHashAlgorithm.FNV1A_64_HASH, DefaultHashAlgorithm.KETAMA_HASH, MemcachedCache.MURMUR3_128
+        DefaultHashAlgorithm.FNV1A_64_HASH,
+        DefaultHashAlgorithm.KETAMA_HASH,
+        MemcachedCache.MURMUR3_128
     );
     List<Integer> repetitions = Arrays.asList(160, 500, 1000, 2500, 5000);
 
@@ -64,17 +64,7 @@ public class CacheDistributionTest
         Sets.newLinkedHashSet(hash),
         Sets.newLinkedHashSet(repetitions)
     );
-    return Iterables.transform(
-        values, new Function<List<Object>, Object[]>()
-        {
-          @Nullable
-          @Override
-          public Object[] apply(List<Object> input)
-          {
-            return input.toArray();
-          }
-        }
-    );
+    return Iterables.transform(values, List::toArray);
   }
 
   final HashAlgorithm hash;

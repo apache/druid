@@ -209,9 +209,7 @@ public class PooledTopNAlgorithm
   }
 
   @Override
-  public PooledTopNParams makeInitParams(
-      ColumnSelectorPlus selectorPlus, Cursor cursor
-  )
+  public PooledTopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
   {
     ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take();
     ByteBuffer resultsBuf = resultsBufHolder.get();

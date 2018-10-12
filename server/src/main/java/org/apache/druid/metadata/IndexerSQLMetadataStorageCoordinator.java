@@ -116,9 +116,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(
-      final String dataSource, final List<Interval> intervals
-  )
+  public List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
   {
     return connector.retryWithHandle(
         new HandleCallback<List<DataSegment>>()
@@ -1014,9 +1012,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public boolean resetDataSourceMetadata(
-      final String dataSource, final DataSourceMetadata dataSourceMetadata
-  ) throws IOException
+  public boolean resetDataSourceMetadata(final String dataSource, final DataSourceMetadata dataSourceMetadata)
+      throws IOException
   {
     final byte[] newCommitMetadataBytes = jsonMapper.writeValueAsBytes(dataSourceMetadata);
     final String newCommitMetadataSha1 = BaseEncoding.base16().encode(

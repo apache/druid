@@ -93,9 +93,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   }
 
   @Override
-  public Boolean perform(
-      Task task, TaskActionToolbox toolbox
-  )
+  public Boolean perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getSupervisorManager().checkPointDataSourceMetadata(
         supervisorId,

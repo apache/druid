@@ -168,10 +168,11 @@ public class QueryRunnerTestHelper
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
-  public static final ArithmeticPostAggregator addRowsIndexConstant =
-      new ArithmeticPostAggregator(
-          addRowsIndexConstantMetric, "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
-      );
+  public static final ArithmeticPostAggregator addRowsIndexConstant = new ArithmeticPostAggregator(
+      addRowsIndexConstantMetric,
+      "+",
+      Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
+  );
   // dependent on AddRowsIndexContact postAgg
   public static final ArithmeticPostAggregator dependentPostAgg = new ArithmeticPostAggregator(
       dependentPostAggMetric,
@@ -262,17 +263,7 @@ public class QueryRunnerTestHelper
 
   public static Iterable<Object[]> transformToConstructionFeeder(Iterable<?> in)
   {
-    return Iterables.transform(
-        in, new Function<Object, Object[]>()
-        {
-          @Nullable
-          @Override
-          public Object[] apply(@Nullable Object input)
-          {
-            return new Object[]{input};
-          }
-        }
-    );
+    return Iterables.transform(in, (Function<Object, Object[]>) input -> new Object[]{input});
   }
 
   // simple cartesian iterable
@@ -408,10 +399,7 @@ public class QueryRunnerTestHelper
   )
   {
     return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     )
     {
@@ -429,15 +417,10 @@ public class QueryRunnerTestHelper
       final String runnerName
   )
   {
-    final QueryRunner<T> qr = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
-        .create(
-            new UnionQueryRunner<T>(
-                new BySegmentQueryRunner<T>(
-                    segmentId, adapter.getDataInterval().getStart(),
-                    factory.createRunner(adapter)
-                )
-            )
-        )
+    BySegmentQueryRunner<T> bySegmentQueryRunner =
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter));
+    final QueryRunner<T> runner = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
+        .create(new UnionQueryRunner<>(bySegmentQueryRunner))
         .mergeResults()
         .applyPostMergeDecoration();
 
@@ -446,7 +429,7 @@ public class QueryRunnerTestHelper
       @Override
       public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
       {
-        return qr.run(queryPlus, responseContext);
+        return runner.run(queryPlus, responseContext);
       }
 
       @Override
@@ -462,7 +445,6 @@ public class QueryRunnerTestHelper
       final QueryRunnerFactory<T, Query<T>> factory
   )
   {
-
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
     return new FluentQueryRunnerBuilder<T>(toolChest)
         .create(

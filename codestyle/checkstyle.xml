@@ -198,5 +198,14 @@
       <property name="format" value="^org.apache.druid.*$"/>
     </module>
     <module name="PackageDeclaration"/>
+
+    <module name="Regexp">
+      <property
+          name="format"
+          value='(?&lt;!ImmutableMap.of|Types.mapOf|orderedMap|makeSelectResults|makeListOfPairs)\(\s*\n +([^,\n\(\{"&lt;/]+|[^,\n\(\{" /]+&gt; [a-zA-Z0-9_]+)\, ++[^,\n/]+'
+      />
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Please read codestyle/parameters_and_arguments.txt"/>
+    </module>
   </module>
 </module>

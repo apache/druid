@@ -101,7 +101,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
   @Override
   public Function<ScanResultValue, ScanResultValue> makePreComputeManipulatorFn(
-      ScanQuery query, MetricManipulationFn fn
+      ScanQuery query,
+      MetricManipulationFn fn
   )
   {
     return Functions.identity();
@@ -119,9 +120,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return new QueryRunner<ScanResultValue>()
     {
       @Override
-      public Sequence<ScanResultValue> run(
-          QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext
-      )
+      public Sequence<ScanResultValue> run(QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext)
       {
         ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
         if (scanQuery.getFilter() != null) {

@@ -353,9 +353,7 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public <T> Future<Boolean> append(
-      String s, T t, Transcoder<T> tTranscoder
-  )
+  public <T> Future<Boolean> append(String s, T t, Transcoder<T> tTranscoder)
   {
     return null;
   }
@@ -379,9 +377,7 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public <T> Future<Boolean> prepend(
-      String s, T t, Transcoder<T> tTranscoder
-  )
+  public <T> Future<Boolean> prepend(String s, T t, Transcoder<T> tTranscoder)
   {
     return null;
   }
@@ -399,17 +395,13 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public Future<CASResponse> asyncCAS(
-      String s, long l, int i, Object o
-  )
+  public Future<CASResponse> asyncCAS(String s, long l, int i, Object o)
   {
     return null;
   }
 
   @Override
-  public <T> OperationFuture<CASResponse> asyncCAS(
-      String s, long l, int i, T t, Transcoder<T> tTranscoder
-  )
+  public <T> OperationFuture<CASResponse> asyncCAS(String s, long l, int i, T t, Transcoder<T> tTranscoder)
   {
     return null;
   }
@@ -433,9 +425,7 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public <T> CASResponse cas(
-      String s, long l, T t, Transcoder<T> tTranscoder
-  )
+  public <T> CASResponse cas(String s, long l, T t, Transcoder<T> tTranscoder)
   {
     return null;
   }
@@ -1004,9 +994,7 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public CountDownLatch broadcastOp(
-      BroadcastOpFactory broadcastOpFactory, Collection<MemcachedNode> memcachedNodes
-  )
+  public CountDownLatch broadcastOp(BroadcastOpFactory broadcastOpFactory, Collection<MemcachedNode> memcachedNodes)
   {
     return null;
   }

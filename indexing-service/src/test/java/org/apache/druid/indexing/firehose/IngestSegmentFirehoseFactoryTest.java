@@ -382,10 +382,12 @@ public class IngestSegmentFirehoseFactoryTest
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
     objectMapper.setAnnotationIntrospectors(
         new AnnotationIntrospectorPair(
-            guiceIntrospector, objectMapper.getSerializationConfig().getAnnotationIntrospector()
+            guiceIntrospector,
+            objectMapper.getSerializationConfig().getAnnotationIntrospector()
         ),
         new AnnotationIntrospectorPair(
-            guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
+            guiceIntrospector,
+            objectMapper.getDeserializationConfig().getAnnotationIntrospector()
         )
     );
     objectMapper.setInjectableValues(

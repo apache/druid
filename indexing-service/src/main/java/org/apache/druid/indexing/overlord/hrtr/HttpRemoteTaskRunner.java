@@ -328,7 +328,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         ImmutableMap.copyOf(
             Maps.transformEntries(
                 Maps.filterEntries(
-                    workers, new Predicate<Map.Entry<String, WorkerHolder>>()
+                    workers,
+                    new Predicate<Map.Entry<String, WorkerHolder>>()
                     {
                       @Override
                       public boolean apply(Map.Entry<String, WorkerHolder> input)
@@ -339,16 +340,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       }
                     }
                 ),
-                new Maps.EntryTransformer<String, WorkerHolder, ImmutableWorkerInfo>()
-                {
-                  @Override
-                  public ImmutableWorkerInfo transformEntry(
-                      String key, WorkerHolder value
-                  )
-                  {
-                    return value.toImmutable();
-                  }
-                }
+                (String key, WorkerHolder value) -> value.toImmutable()
             )
         ),
         task
@@ -777,9 +769,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> markWorkersLazy(
-      Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers
-  )
+  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
   {
     synchronized (statusLock) {
       Iterator<String> iterator = workers.keySet().iterator();

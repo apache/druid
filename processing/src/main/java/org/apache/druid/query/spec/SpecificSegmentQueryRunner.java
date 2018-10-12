@@ -67,14 +67,10 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
     final String newName = StringUtils.format("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
 
     final Sequence<T> baseSequence = doNamed(
-        currThread, currThreadName, newName, new Supplier<Sequence<T>>()
-        {
-          @Override
-          public Sequence<T> get()
-          {
-            return base.run(queryPlus, responseContext);
-          }
-        }
+        currThread,
+        currThreadName,
+        newName,
+        () -> base.run(queryPlus, responseContext)
     );
 
     Sequence<T> segmentMissingCatchingSequence = new Sequence<T>()

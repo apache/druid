@@ -176,9 +176,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     return StringUtils.fromUtf8(Arrays.copyOfRange(cachedResult, Integer.BYTES, etagLength + Integer.BYTES));
   }
 
-  private Sequence<T> deserializeResults(
-      final byte[] cachedResult, CacheStrategy strategy, String resultSetId
-  )
+  private Sequence<T> deserializeResults(final byte[] cachedResult, CacheStrategy strategy, String resultSetId)
   {
     if (cachedResult == null) {
       log.error("Cached result set is null");

@@ -356,7 +356,8 @@ public class CachingClusteredClientTest
                                       delegate.submit((Callable) pair.rhs) :
                                       delegate.submit((Runnable) pair.rhs);
             Futures.addCallback(
-                future, new FutureCallback()
+                future,
+                new FutureCallback()
                 {
                   @Override
                   public void onSuccess(@Nullable Object result)
@@ -1288,7 +1289,10 @@ public class CachingClusteredClientTest
         makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
 
         Intervals.of("2011-01-05/2011-01-10"),
-        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-05"),
+        makeSelectResults(
+            dimensions,
+            metrics,
+            DateTimes.of("2011-01-05"),
             DateTimes.of("2011-01-06"),
             DateTimes.of("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7), ImmutableMap.of("a", "ff"),
             DateTimes.of("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
@@ -1296,7 +1300,10 @@ public class CachingClusteredClientTest
         ),
 
         Intervals.of("2011-01-05/2011-01-10"),
-        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+        makeSelectResults(
+            dimensions,
+            metrics,
+            DateTimes.of("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
             DateTimes.of("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
             DateTimes.of("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
             DateTimes.of("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
@@ -1314,7 +1321,10 @@ public class CachingClusteredClientTest
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
-        makeSelectResults(dimensions, metrics, DateTimes.of("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
+        makeSelectResults(
+            dimensions,
+            metrics,
+            DateTimes.of("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
             DateTimes.of("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
             DateTimes.of("2011-01-05"),
             DateTimes.of("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
@@ -1358,7 +1368,8 @@ public class CachingClusteredClientTest
 
         Intervals.of("2011-01-05/2011-01-10"),
         makeSelectResults(
-            dimensions, metrics,
+            dimensions,
+            metrics,
             DateTimes.of("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
             DateTimes.of("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
             DateTimes.of("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
@@ -1368,7 +1379,8 @@ public class CachingClusteredClientTest
 
         Intervals.of("2011-01-05/2011-01-10"),
         makeSelectResults(
-            dimensions, metrics,
+            dimensions,
+            metrics,
             DateTimes.of("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
             DateTimes.of("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
             DateTimes.of("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
@@ -1388,7 +1400,8 @@ public class CachingClusteredClientTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         makeSelectResults(
-            dimensions, metrics,
+            dimensions,
+            metrics,
             DateTimes.of("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
             DateTimes.of("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
             DateTimes.of("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
@@ -1411,7 +1424,8 @@ public class CachingClusteredClientTest
         .build();
     TestHelper.assertExpectedResults(
         makeSelectResults(
-            dimensions, metrics,
+            dimensions,
+            metrics,
             DateTimes.of("2011-01-01"), ImmutableMap.of("a2", "b", "rows", 1),
             DateTimes.of("2011-01-02"), ImmutableMap.of("a2", "c", "rows", 5),
             DateTimes.of("2011-01-05"), ImmutableMap.of("a2", "d", "rows", 5),
@@ -1740,7 +1754,12 @@ public class CachingClusteredClientTest
   }
 
   private ServerSelector makeMockSingleDimensionSelector(
-      DruidServer server, String dimension, String start, String end, int partitionNum)
+      DruidServer server,
+      String dimension,
+      String start,
+      String end,
+      int partitionNum
+  )
   {
     DataSegment segment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(segment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
@@ -2255,7 +2274,9 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result<TopNResultValue>> toQueryableTopNResults(
-      Iterable<String> segmentIds, Iterable<Interval> intervals, Iterable<Iterable<Result<TopNResultValue>>> results
+      Iterable<String> segmentIds,
+      Iterable<Interval> intervals,
+      Iterable<Iterable<Result<TopNResultValue>>> results
   )
   {
     return Sequences.simple(
@@ -2289,7 +2310,9 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result<SearchResultValue>> toQueryableSearchResults(
-      Iterable<String> segmentIds, Iterable<Interval> intervals, Iterable<Iterable<Result<SearchResultValue>>> results
+      Iterable<String> segmentIds,
+      Iterable<Interval> intervals,
+      Iterable<Iterable<Result<SearchResultValue>>> results
   )
   {
     return Sequences.simple(
@@ -2323,7 +2346,9 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result<SelectResultValue>> toQueryableSelectResults(
-      Iterable<String> segmentIds, Iterable<Interval> intervals, Iterable<Iterable<Result<SelectResultValue>>> results
+      Iterable<String> segmentIds,
+      Iterable<Interval> intervals,
+      Iterable<Iterable<Result<SelectResultValue>>> results
   )
   {
     return Sequences.simple(
@@ -2357,7 +2382,9 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result> toQueryableGroupByResults(
-      Iterable<String> segmentIds, Iterable<Interval> intervals, Iterable<Iterable<Row>> results
+      Iterable<String> segmentIds,
+      Iterable<Interval> intervals,
+      Iterable<Iterable<Row>> results
   )
   {
     return Sequences.simple(
@@ -2563,7 +2590,11 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<Result<SelectResultValue>> makeSelectResults(Set<String> dimensions, Set<String> metrics, Object... objects)
+  private Iterable<Result<SelectResultValue>> makeSelectResults(
+      Set<String> dimensions,
+      Set<String> metrics,
+      Object... objects
+  )
   {
     List<Result<SelectResultValue>> retVal = Lists.newArrayList();
     int index = 0;
@@ -2576,11 +2607,11 @@ public class CachingClusteredClientTest
         values.add(new EventHolder(null, 0, (Map) objects[index++]));
       }
 
-      retVal.add(new Result<>(
+      Result<SelectResultValue> result = new Result<>(
           timestamp,
-          new SelectResultValue(ImmutableMap.of(timestamp.toString(), 0),
-                                dimensions, metrics, values)
-      ));
+          new SelectResultValue(ImmutableMap.of(timestamp.toString(), 0), dimensions, metrics, values)
+      );
+      retVal.add(result);
     }
     return retVal;
   }

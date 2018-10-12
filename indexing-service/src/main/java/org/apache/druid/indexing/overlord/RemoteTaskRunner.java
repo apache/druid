@@ -780,7 +780,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               ImmutableMap.copyOf(
                   Maps.transformEntries(
                       Maps.filterEntries(
-                          zkWorkers, new Predicate<Map.Entry<String, ZkWorker>>()
+                          zkWorkers,
+                          new Predicate<Map.Entry<String, ZkWorker>>()
                           {
                             @Override
                             public boolean apply(Map.Entry<String, ZkWorker> input)
@@ -791,16 +792,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                             }
                           }
                       ),
-                      new Maps.EntryTransformer<String, ZkWorker, ImmutableWorkerInfo>()
-                      {
-                        @Override
-                        public ImmutableWorkerInfo transformEntry(
-                            String key, ZkWorker value
-                        )
-                        {
-                          return value.toImmutable();
-                        }
-                      }
+                      (String key, ZkWorker value) -> value.toImmutable()
                   )
               ),
               task

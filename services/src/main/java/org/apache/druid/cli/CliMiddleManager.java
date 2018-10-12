@@ -109,11 +109,12 @@ public class CliMiddleManager extends ServerRunnable
                 Key.get(RowIngestionMetersFactory.class),
                 Key.get(DropwizardRowIngestionMetersFactory.class)
             );
-            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
-                binder, Key.get(RowIngestionMetersFactory.class)
-            );
-            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
-                                                   .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder =
+                PolyBind.optionBinder(binder, Key.get(RowIngestionMetersFactory.class));
+            rowIngestionMetersHandlerProviderBinder
+                .addBinding("dropwizard")
+                .to(DropwizardRowIngestionMetersFactory.class)
+                .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
 

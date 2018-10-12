@@ -80,7 +80,10 @@ public class ConfigManager
 
       poller = new PollingCallable();
       ScheduledExecutors.scheduleWithFixedDelay(
-          exec, new Duration(0), config.get().getPollDuration().toStandardDuration(), poller
+          exec,
+          new Duration(0),
+          config.get().getPollDuration().toStandardDuration(),
+          poller
       );
 
       started = true;

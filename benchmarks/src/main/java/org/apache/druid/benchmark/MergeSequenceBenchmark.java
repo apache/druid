@@ -22,7 +22,6 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -94,25 +93,14 @@ public class MergeSequenceBenchmark
     }
 
     if (!toMerge.isEmpty()) {
-      partialMerged.add(new MergeSequence<Integer>(Ordering.natural(), Sequences.simple(toMerge)));
+      partialMerged.add(new MergeSequence<>(Ordering.natural(), Sequences.simple(toMerge)));
     }
-    MergeSequence<Integer> mergeSequence = new MergeSequence(
-        Ordering.<Integer>natural(),
+    MergeSequence<Integer> mergeSequence = new MergeSequence<>(
+        Ordering.natural(),
         Sequences.simple(partialMerged)
     );
-    Integer accumulate = mergeSequence.accumulate(
-        0, new Accumulator<Integer, Integer>()
-        {
-          @Override
-          public Integer accumulate(Integer accumulated, Integer in)
-          {
-            return accumulated + in;
-          }
-        }
-    );
+    Integer accumulate = mergeSequence.accumulate(0, Integer::sum);
     blackhole.consume(accumulate);
-
-
   }
 
   @Benchmark
@@ -120,20 +108,8 @@ public class MergeSequenceBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void mergeFlat(final Blackhole blackhole)
   {
-    MergeSequence<Integer> mergeSequence = new MergeSequence(Ordering.<Integer>natural(), Sequences.simple(sequences));
-    Integer accumulate = mergeSequence.accumulate(
-        0, new Accumulator<Integer, Integer>()
-        {
-          @Override
-          public Integer accumulate(Integer accumulated, Integer in)
-          {
-            return accumulated + in;
-          }
-        }
-    );
+    MergeSequence<Integer> mergeSequence = new MergeSequence<>(Ordering.natural(), Sequences.simple(sequences));
+    Integer accumulate = mergeSequence.accumulate(0, Integer::sum);
     blackhole.consume(accumulate);
-
   }
-
-
 }

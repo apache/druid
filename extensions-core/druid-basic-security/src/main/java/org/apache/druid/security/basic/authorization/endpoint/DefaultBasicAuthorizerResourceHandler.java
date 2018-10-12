@@ -126,9 +126,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
-  public Response setRolePermissions(
-      String authorizerName, String roleName, List<ResourceAction> permissions
-  )
+  public Response setRolePermissions(String authorizerName, String roleName, List<ResourceAction> permissions)
   {
     return NOT_FOUND_RESPONSE;
   }

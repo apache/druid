@@ -42,13 +42,15 @@ public class CacheUtil
     final byte[] versionBytes = StringUtils.toUtf8(descriptor.getVersion());
 
     return new Cache.NamedKey(
-        segmentIdentifier, ByteBuffer
-        .allocate(16 + versionBytes.length + 4 + queryCacheKey.length)
-        .putLong(segmentQueryInterval.getStartMillis())
-        .putLong(segmentQueryInterval.getEndMillis())
-        .put(versionBytes)
-        .putInt(descriptor.getPartitionNumber())
-        .put(queryCacheKey).array()
+        segmentIdentifier,
+        ByteBuffer
+            .allocate(16 + versionBytes.length + 4 + queryCacheKey.length)
+            .putLong(segmentQueryInterval.getStartMillis())
+            .putLong(segmentQueryInterval.getEndMillis())
+            .put(versionBytes)
+            .putInt(descriptor.getPartitionNumber())
+            .put(queryCacheKey)
+            .array()
     );
   }
 

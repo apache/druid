@@ -30,12 +30,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
-import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import org.apache.druid.segment.realtime.plumber.Plumber;
-import org.apache.druid.segment.realtime.plumber.PlumberSchool;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -60,17 +56,8 @@ public class TaskAnnouncementTest
         new FireDepartment(
             new DataSchema("foo", null, new AggregatorFactory[0], null, null, new DefaultObjectMapper()),
             new RealtimeIOConfig(
-                new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
-                {
-                  @Override
-                  public Plumber findPlumber(
-                      DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-                  )
-                  {
-                    return null;
-                  }
-
-                },
+                new LocalFirehoseFactory(new File("lol"), "rofl", null),
+                (schema, config, metrics) -> null,
                 null
             ),
             null

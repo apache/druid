@@ -150,16 +150,17 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<Row> applyPostProcessing(
-      Sequence<Row> results, GroupByQuery query
-  )
+  public Sequence<Row> applyPostProcessing(Sequence<Row> results, GroupByQuery query)
   {
     return query.postProcess(results);
   }
 
   @Override
   public Sequence<Row> processSubqueryResult(
-      GroupByQuery subquery, GroupByQuery query, GroupByQueryResource resource, Sequence<Row> subqueryResult
+      GroupByQuery subquery,
+      GroupByQuery query,
+      GroupByQueryResource resource,
+      Sequence<Row> subqueryResult
   )
   {
     final Set<AggregatorFactory> aggs = Sets.newHashSet();
@@ -264,7 +265,9 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
   @Override
   public Sequence<Row> processSubtotalsSpec(
-      GroupByQuery query, GroupByQueryResource resource, Sequence<Row> queryResult
+      GroupByQuery query,
+      GroupByQueryResource resource,
+      Sequence<Row> queryResult
   )
   {
     throw new UnsupportedOperationException("subtotalsSpec is not supported for v1 groupBy strategy.");

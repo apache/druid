@@ -20,7 +20,6 @@ package org.apache.druid.guice;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
@@ -56,9 +55,8 @@ public class BloomFilterSerializersModule extends SimpleModule
     }
 
     @Override
-    public void serialize(
-        BloomKFilter bloomKFilter, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
-    ) throws IOException
+    public void serialize(BloomKFilter bloomKFilter, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+        throws IOException
     {
       ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
       BloomKFilter.serialize(byteArrayOutputStream, bloomKFilter);
@@ -76,13 +74,11 @@ public class BloomFilterSerializersModule extends SimpleModule
     }
 
     @Override
-    public BloomKFilter deserialize(
-        JsonParser jsonParser, DeserializationContext deserializationContext
-    ) throws IOException, JsonProcessingException
+    public BloomKFilter deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException
     {
       byte[] bytes = jsonParser.getBinaryValue();
       return BloomKFilter.deserialize(new ByteArrayInputStream(bytes));
-
     }
   }
 }
