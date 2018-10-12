@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-SNAPSHOT</version>
+    <version>0.13.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -57,7 +57,7 @@
         <connection>scm:git:ssh://git@github.com/apache/incubator-druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/incubator-druid.git</developerConnection>
         <url>https://github.com/apache/incubator-druid.git</url>
-        <tag>0.13.0-SNAPSHOT</tag>
+        <tag>0.13.0-incubating-SNAPSHOT</tag>
     </scm>
 
     <properties>
