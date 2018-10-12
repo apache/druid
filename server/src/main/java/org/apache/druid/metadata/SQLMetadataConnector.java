@@ -641,7 +641,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     BasicDataSource dataSource = null;
 
     try {
-      Properties dbcpProperties = connectorConfig.getProperties();
+      Properties dbcpProperties = connectorConfig.getDbcpProperties();
       if (dbcpProperties != null) {
         dataSource = BasicDataSourceFactory.createDataSource(dbcpProperties);
       } else {
@@ -649,7 +649,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       }
     }
     catch (Exception e) {
-      log.error(e, "Failed to create data source using dbcp properties file");
       throw new RuntimeException(e);
     }
 

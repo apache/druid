@@ -35,8 +35,7 @@ public class MetadataStorageConnectorConfigTest
       int port,
       String connectURI,
       String user,
-      String pwdString,
-      String dbcpPropertiesFile
+      String pwdString
   )
       throws IOException
   {
@@ -48,7 +47,10 @@ public class MetadataStorageConnectorConfigTest
         "\"connectURI\": \"" + connectURI + "\"," +
         "\"user\": \"" + user + "\"," +
         "\"password\": " + pwdString + "," +
-        "\"dbcpPropertiesFile\": \"" + dbcpPropertiesFile + "\"" +
+        "\"dbcp\": {\n" +
+        "  \"maxConnLifetimeMillis\" : 1200000,\n" +
+        "  \"defaultQueryTimeout\" : \"30000\"\n" +
+        "}" +
         "}",
         MetadataStorageConnectorConfig.class
     );
@@ -63,8 +65,7 @@ public class MetadataStorageConnectorConfigTest
         4000,
         "url",
         "user",
-        "\"nothing\"",
-        "abc"
+        "\"nothing\""
     );
     MetadataStorageConnectorConfig metadataStorageConnectorConfig2 = createMetadataStorageConfig(
         true,
@@ -72,8 +73,7 @@ public class MetadataStorageConnectorConfigTest
         4000,
         "url",
         "user",
-        "\"nothing\"",
-        "abc"
+        "\"nothing\""
     );
     Assert.assertTrue(metadataStorageConnectorConfig.equals(metadataStorageConnectorConfig2));
     Assert.assertTrue(metadataStorageConnectorConfig.hashCode() == metadataStorageConnectorConfig2.hashCode());
@@ -91,9 +91,7 @@ public class MetadataStorageConnectorConfigTest
         "connectURI",
         "user",
         "\"nothing\"",
-        "nothing",
-        null
-
+        "nothing"
     );
   }
 
@@ -107,8 +105,7 @@ public class MetadataStorageConnectorConfigTest
         "connectURI",
         "user",
         "{\"type\":\"default\",\"password\":\"nothing\"}",
-        "nothing",
-        null
+        "nothing"
     );
   }
 
@@ -119,8 +116,7 @@ public class MetadataStorageConnectorConfigTest
       String connectURI,
       String user,
       String pwdString,
-      String pwd,
-      String dbcpPropertiesFile
+      String pwd
   ) throws Exception
   {
     MetadataStorageConnectorConfig config = jsonMapper.readValue(
@@ -130,8 +126,7 @@ public class MetadataStorageConnectorConfigTest
         "\"port\": \"" + port + "\"," +
         "\"connectURI\": \"" + connectURI + "\"," +
         "\"user\": \"" + user + "\"," +
-        "\"password\": " + pwdString + "," +
-        "\"dbcpPropertiesFile\": " + dbcpPropertiesFile +
+        "\"password\": " + pwdString +
         "}",
         MetadataStorageConnectorConfig.class
     );
@@ -141,7 +136,7 @@ public class MetadataStorageConnectorConfigTest
     Assert.assertEquals(connectURI, config.getConnectURI());
     Assert.assertEquals(user, config.getUser());
     Assert.assertEquals(pwd, config.getPassword());
-    Assert.assertEquals(dbcpPropertiesFile, config.getDbcpPropertiesFile());
+    Assert.assertNull(config.getDbcpProperties());
   }
 
   @Test
@@ -154,8 +149,7 @@ public class MetadataStorageConnectorConfigTest
         "connectURI",
         "user",
         "{\"type\":\"default\",\"password\":\"nothing\"}",
-        "nothing",
-        "src/test/resources/dbcp.properties"
+        "nothing"
     );
   }
   private void testDbcpPropertiesFile(
@@ -165,8 +159,7 @@ public class MetadataStorageConnectorConfigTest
           String connectURI,
           String user,
           String pwdString,
-          String pwd,
-          String dbcpPropertiesFile
+          String pwd
   ) throws Exception
   {
     MetadataStorageConnectorConfig config = jsonMapper.readValue(
@@ -177,7 +170,10 @@ public class MetadataStorageConnectorConfigTest
                     "\"connectURI\": \"" + connectURI + "\"," +
                     "\"user\": \"" + user + "\"," +
                     "\"password\": " + pwdString + "," +
-                    "\"dbcpPropertiesFile\": \"" + dbcpPropertiesFile + "\"" +
+                    "\"dbcp\": {\n" +
+                    "  \"maxConnLifetimeMillis\" : 1200000,\n" +
+                    "  \"defaultQueryTimeout\" : \"30000\"\n" +
+                    "}" +
                     "}",
             MetadataStorageConnectorConfig.class
     );
@@ -187,8 +183,7 @@ public class MetadataStorageConnectorConfigTest
     Assert.assertEquals(connectURI, config.getConnectURI());
     Assert.assertEquals(user, config.getUser());
     Assert.assertEquals(pwd, config.getPassword());
-    Assert.assertEquals(dbcpPropertiesFile, config.getDbcpPropertiesFile());
-    Properties dbcpProperties = config.getProperties();
+    Properties dbcpProperties = config.getDbcpProperties();
     Assert.assertEquals(dbcpProperties.getProperty("maxConnLifetimeMillis"), "1200000");
     Assert.assertEquals(dbcpProperties.getProperty("defaultQueryTimeout"), "30000");
   }

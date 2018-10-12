@@ -201,8 +201,7 @@ public class SQLMetadataConnectorTest
       String connectURI,
       String user,
       String pwdString,
-      String pwd,
-      String dbcpPropertiesFile
+      String pwd
   ) throws Exception
   {
     return jsonMapper.readValue(
@@ -213,7 +212,10 @@ public class SQLMetadataConnectorTest
         "\"connectURI\": \"" + connectURI + "\"," +
         "\"user\": \"" + user + "\"," +
         "\"password\": " + pwdString + "," +
-        "\"dbcpPropertiesFile\": \"" + dbcpPropertiesFile + "\"" +
+        "\"dbcp\": {\n" +
+        "  \"maxConnLifetimeMillis\" : 1200000,\n" +
+        "  \"defaultQueryTimeout\" : \"30000\"\n" +
+        "}" +
         "}",
         MetadataStorageConnectorConfig.class
     );
@@ -229,8 +231,7 @@ public class SQLMetadataConnectorTest
         "connectURI",
         "user",
         "{\"type\":\"default\",\"password\":\"nothing\"}",
-        "nothing",
-        "src/test/resources/dbcp.properties"
+        "nothing"
     );
     TestSQLMetadataConnector testSQLMetadataConnector = new TestSQLMetadataConnector(
         Suppliers.ofInstance(config),

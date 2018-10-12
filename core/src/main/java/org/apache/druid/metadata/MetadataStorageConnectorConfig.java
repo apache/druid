@@ -20,15 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
-
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -53,8 +45,8 @@ public class MetadataStorageConnectorConfig
   @JsonProperty("password")
   private PasswordProvider passwordProvider;
 
-  @JsonProperty("dbcpPropertiesFile")
-  private String dbcpPropertiesFile;
+  @JsonProperty("dbcp")
+  private Properties dbcpProperties;
 
   public boolean isCreateTables()
   {
@@ -90,21 +82,9 @@ public class MetadataStorageConnectorConfig
     return passwordProvider == null ? null : passwordProvider.getPassword();
   }
 
-  @Nullable
-  public Properties getProperties() throws IOException
+  public Properties getDbcpProperties()
   {
-    if (dbcpPropertiesFile == null) {
-      return null;
-    } else {
-      //no reason to save properties file as it is only used on startup
-      File propertiesFile = new File(dbcpPropertiesFile);
-      Properties properties = new Properties();
-      try (FileInputStream stream = new FileInputStream(propertiesFile);
-           InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
-        properties.load(reader);
-      }
-      return properties;
-    }
+    return dbcpProperties;
   }
 
   @Override
@@ -115,14 +95,8 @@ public class MetadataStorageConnectorConfig
            ", connectURI='" + getConnectURI() + '\'' +
            ", user='" + user + '\'' +
            ", passwordProvider=" + passwordProvider +
-           ", dbcpPropertiesFile=" + dbcpPropertiesFile +
+           ", dbcpProperties=" + dbcpProperties +
            '}';
-  }
-
-  @VisibleForTesting
-  String getDbcpPropertiesFile()
-  {
-    return dbcpPropertiesFile;
   }
 
   @Override
@@ -152,9 +126,9 @@ public class MetadataStorageConnectorConfig
     if (getUser() != null ? !getUser().equals(that.getUser()) : that.getUser() != null) {
       return false;
     }
-    if (getDbcpPropertiesFile() == null
-        ? that.getDbcpPropertiesFile() != null
-        : !getDbcpPropertiesFile().equals(that.getDbcpPropertiesFile())) {
+    if (getDbcpProperties() == null
+        ? that.getDbcpProperties() != null
+        : !getDbcpProperties().equals(that.getDbcpProperties())) {
       return false;
     }
     return passwordProvider != null ? passwordProvider.equals(that.passwordProvider) : that.passwordProvider == null;
@@ -170,7 +144,7 @@ public class MetadataStorageConnectorConfig
     result = 31 * result + (getConnectURI() != null ? getConnectURI().hashCode() : 0);
     result = 31 * result + (getUser() != null ? getUser().hashCode() : 0);
     result = 31 * result + (passwordProvider != null ? passwordProvider.hashCode() : 0);
-    result = 31 * result + (dbcpPropertiesFile != null ? dbcpPropertiesFile.hashCode() : 0);
+    result = 31 * result + (dbcpProperties != null ? dbcpProperties.hashCode() : 0);
     return result;
   }
 }
