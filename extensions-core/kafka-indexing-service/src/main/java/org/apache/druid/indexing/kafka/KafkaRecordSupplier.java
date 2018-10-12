@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -44,7 +43,6 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
@@ -53,16 +51,16 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   private static final Random RANDOM = ThreadLocalRandom.current();
 
   private final KafkaConsumer<byte[], byte[]> consumer;
-  private final KafkaSupervisorIOConfig ioConfig;
+  private final Map<String, String> consumerProperties;
   private boolean closed;
   private final BlockingQueue<OrderedPartitionableRecord<Integer, Long>> records;
 
 
   public KafkaRecordSupplier(
-      KafkaSupervisorIOConfig ioConfig
+      Map<String, String> consumerProperties
   )
   {
-    this.ioConfig = ioConfig;
+    this.consumerProperties = consumerProperties;
     this.consumer = getKafkaConsumer();
     this.closed = false;
     this.records = new LinkedBlockingQueue<>();
@@ -120,25 +118,17 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public OrderedPartitionableRecord<Integer, Long> poll(long timeout)
   {
-    if (records.isEmpty()) {
-      ConsumerRecords<byte[], byte[]> polledRecords = consumer.poll(timeout);
-      for (ConsumerRecord<byte[], byte[]> record : polledRecords) {
-        records.offer(new OrderedPartitionableRecord<>(
-            record.topic(),
-            record.partition(),
-            record.offset(),
-            ImmutableList.of(record.value())
-        ));
-      }
+    ConsumerRecords<byte[], byte[]> polledRecords = consumer.poll(timeout);
+    if (!polledRecords.isEmpty()) {
+      ConsumerRecord<byte[], byte[]> record = polledRecords.iterator().next();
+      return new OrderedPartitionableRecord<>(
+          record.topic(),
+          record.partition(),
+          record.offset(),
+          record.value() == null ? null : ImmutableList.of(record.value())
+      );
     }
-
-    try {
-      return records.poll(timeout, TimeUnit.MILLISECONDS);
-    }
-    catch (InterruptedException e) {
-      log.warn(e, "InterruptedException");
-      return null;
-    }
+    return null;
   }
 
   @Override
@@ -189,8 +179,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
     props.setProperty("metadata.max.age.ms", "10000");
     props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", getRandomId()));
+    props.setProperty("max.poll.records", "1");
 
-    props.putAll(ioConfig.getConsumerProperties());
+    props.putAll(consumerProperties);
 
     props.setProperty("enable.auto.commit", "false");
 

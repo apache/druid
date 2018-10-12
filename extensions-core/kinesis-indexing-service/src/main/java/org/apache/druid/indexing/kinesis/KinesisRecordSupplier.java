@@ -422,8 +422,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public String position(StreamPartition<String> partition)
   {
-    // only needed in calcLag, which is not supported in Kinesis
-    throw new UnsupportedOperationException("position in KinesisRecordSupplier not supported");
+    checkIfClosed();
+    return null;
   }
 
   @Override

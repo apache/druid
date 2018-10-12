@@ -20,13 +20,14 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Represents a generic record with a partitionType (partition id) and sequenceType (sequence number) and data
  * from a Kafka/Kinesis stream
  *
  * @param <partitionType> partition id
- * @param <sequenceType> sequence number
+ * @param <sequenceType>  sequence number
  */
 public class OrderedPartitionableRecord<partitionType, sequenceType>
 {
@@ -37,7 +38,12 @@ public class OrderedPartitionableRecord<partitionType, sequenceType>
   private final sequenceType sequenceNumber;
   private final List<byte[]> data;
 
-  public OrderedPartitionableRecord(String stream, partitionType partitionId, sequenceType sequenceNumber, List<byte[]> data)
+  public OrderedPartitionableRecord(
+      String stream,
+      partitionType partitionId,
+      sequenceType sequenceNumber,
+      List<byte[]> data
+  )
   {
     this.stream = stream;
     this.partitionId = partitionId;
@@ -68,5 +74,26 @@ public class OrderedPartitionableRecord<partitionType, sequenceType>
   public StreamPartition getStreamPartition()
   {
     return StreamPartition.of(stream, partitionId);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OrderedPartitionableRecord<?, ?> that = (OrderedPartitionableRecord<?, ?>) o;
+    return Objects.equals(stream, that.stream) &&
+           Objects.equals(partitionId, that.partitionId) &&
+           Objects.equals(sequenceNumber, that.sequenceNumber);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(stream, partitionId, sequenceNumber);
   }
 }
