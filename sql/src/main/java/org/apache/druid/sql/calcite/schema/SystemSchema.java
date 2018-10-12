@@ -210,10 +210,16 @@ public class SystemSchema extends AbstractSchema
       final Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries = availableSegmentMetadata.entrySet()
                                                                                                                   .iterator();
 
-      // in memory map to store segment -> replica-count
-      final Map<String, Long> segmentReplicas = new HashMap<>();
+      // in memory map to store segment data from available segments
+      final Map<String, PartialSegmentData> partialSegmentDataMap = new HashMap<>();
       for (SegmentMetadataHolder holder : availableSegmentMetadata.values()) {
-        segmentReplicas.putAll(holder.getNumReplicas());
+        final PartialSegmentData data = new PartialSegmentData(
+            holder.isAvailable(),
+            holder.isRealtime(),
+            holder.getNumReplicas(),
+            holder.getNumRows()
+        );
+        partialSegmentDataMap.put(holder.getSegmentId(), data);
       }
 
       //get published segments from coordinator
@@ -237,6 +243,7 @@ public class SystemSchema extends AbstractSchema
               if (!segmentsAlreadySeen.contains(val.getIdentifier())) {
                 segmentsAlreadySeen.add(val.getIdentifier());
               }
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getIdentifier());
               return new Object[]{
                   val.getIdentifier(),
                   val.getDataSource(),
@@ -245,11 +252,11 @@ public class SystemSchema extends AbstractSchema
                   val.getSize(),
                   val.getVersion(),
                   val.getShardSpec().getPartitionNum(),
-                  segmentReplicas.getOrDefault(val.getIdentifier(), 0L),
-                  -1L,
-                  1L,
-                  0L,
-                  0L,
+                  partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas(),
+                  partialSegmentData == null ? -1L : partialSegmentData.getNumRows(),
+                  1L, //is_published is true for published segments
+                  partialSegmentData == null ? 1L : partialSegmentData.isAvailable(),
+                  partialSegmentData == null ? 0L : partialSegmentData.isRealtime(),
                   jsonMapper.writeValueAsString(val)
               };
             }
@@ -282,7 +289,8 @@ public class SystemSchema extends AbstractSchema
                   val.getKey().getSize(),
                   val.getKey().getVersion(),
                   val.getKey().getShardSpec().getPartitionNum(),
-                  segmentReplicas.getOrDefault(val.getKey().getIdentifier(), 0L),
+                  partialSegmentDataMap.get(val.getKey().getIdentifier()) == null ? 0
+                    : partialSegmentDataMap.get(val.getKey().getIdentifier()).getNumReplicas(),
                   val.getValue().getNumRows(),
                   val.getValue().isPublished(),
                   val.getValue().isAvailable(),
@@ -337,6 +345,48 @@ public class SystemSchema extends AbstractSchema
           authenticationResult, () -> it, raGenerator, authorizerMapper);
 
       return wrap(authorizedSegments.iterator(), it);
+    }
+
+    private static class PartialSegmentData
+    {
+      private final long isAvailable;
+      private final long isRealtime;
+      private final long numReplicas;
+      private final Long numRows;
+
+      public PartialSegmentData(
+          final long isAvailable,
+          final long isRealtime,
+          final long numReplicas,
+          final Long numRows
+      )
+
+      {
+        this.isAvailable = isAvailable;
+        this.isRealtime = isRealtime;
+        this.numReplicas = numReplicas;
+        this.numRows = numRows;
+      }
+
+      public long isAvailable()
+      {
+        return isAvailable;
+      }
+
+      public long isRealtime()
+      {
+        return isRealtime;
+      }
+
+      public long getNumReplicas()
+      {
+        return numReplicas;
+      }
+
+      public Long getNumRows()
+      {
+        return numRows;
+      }
     }
   }
 

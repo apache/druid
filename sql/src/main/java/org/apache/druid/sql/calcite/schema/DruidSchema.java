@@ -327,15 +327,11 @@ public class DruidSchema extends AbstractSchema
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
         final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
         final SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(
+            segment.getIdentifier(),
             isPublished,
             1,
             isRealtime,
-            new HashMap<String, Long>()
-            {
-              {
-                put(segment.getIdentifier(), 1L);
-              }
-            }
+            1
         ).build();
         // Unknown segment.
         setSegmentSignature(segment, holder);
@@ -349,15 +345,13 @@ public class DruidSchema extends AbstractSchema
       } else {
         if (knownSegments.containsKey(segment)) {
           final SegmentMetadataHolder holder = knownSegments.get(segment);
-          final Map<String, Long> replicas = holder.getNumReplicas();
-          final Long existingReplicas = replicas.get(segment.getIdentifier());
-          replicas.put(segment.getIdentifier(), existingReplicas + 1);
           final SegmentMetadataHolder holderWithNumReplicas = new SegmentMetadataHolder.Builder(
+              holder.getSegmentId(),
               holder.isPublished(),
               holder.isAvailable(),
               holder.isRealtime(),
               holder.getNumReplicas()
-          ).withNumReplicas(replicas).build();
+          ).withNumReplicas(holder.getNumReplicas() + 1).build();
           knownSegments.put(segment, holderWithNumReplicas);
         }
         if (server.segmentReplicatable()) {
@@ -465,6 +459,7 @@ public class DruidSchema extends AbstractSchema
             final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
             SegmentMetadataHolder holder = dataSourceSegments.get(segment);
             SegmentMetadataHolder updatedHolder = new SegmentMetadataHolder.Builder(
+                holder.getSegmentId(),
                 holder.isPublished(),
                 holder.isAvailable(),
                 holder.isRealtime(),

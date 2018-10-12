@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.schema;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 
 /**
  * Immutable representation of RowSignature and other segment attributes needed by {@link SystemSchema.SegmentsTable}
@@ -35,8 +34,8 @@ public class SegmentMetadataHolder
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-  // segment -> replica-count
-  private final Map<String, Long> numReplicas;
+  private final String segmentId;
+  private final long numReplicas;
   @Nullable
   private final RowSignature rowSignature;
   @Nullable
@@ -50,6 +49,7 @@ public class SegmentMetadataHolder
     this.isRealtime = builder.isRealtime;
     this.numReplicas = builder.numReplicas;
     this.numRows = builder.numRows;
+    this.segmentId = builder.segmentId;
   }
 
   public long isPublished()
@@ -67,7 +67,12 @@ public class SegmentMetadataHolder
     return isRealtime;
   }
 
-  public Map<String, Long> getNumReplicas()
+  public String getSegmentId()
+  {
+    return segmentId;
+  }
+
+  public long getNumReplicas()
   {
     return numReplicas;
   }
@@ -86,23 +91,26 @@ public class SegmentMetadataHolder
 
   public static class Builder
   {
+    private final String segmentId;
     private final long isPublished;
     private final long isAvailable;
     private final long isRealtime;
 
-    private Map<String, Long> numReplicas;
+    private long numReplicas;
     @Nullable
     private RowSignature rowSignature;
     @Nullable
     private Long numRows;
 
     public Builder(
+        String segmentId,
         long isPublished,
         long isAvailable,
         long isRealtime,
-        Map<String, Long> numReplicas
+        long numReplicas
     )
     {
+      this.segmentId = segmentId;
       this.isPublished = isPublished;
       this.isAvailable = isAvailable;
       this.isRealtime = isRealtime;
@@ -121,7 +129,7 @@ public class SegmentMetadataHolder
       return this;
     }
 
-    public Builder withNumReplicas(final Map<String, Long> numReplicas)
+    public Builder withNumReplicas(long numReplicas)
     {
       this.numReplicas = numReplicas;
       return this;
