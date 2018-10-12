@@ -296,7 +296,10 @@ public class SystemSchemaTest extends CalciteTestBase
       1L,
       ImmutableMap.of(
           "dummy",
-          new ImmutableDruidDataSource("dummy", Collections.emptyMap(), Arrays.asList(segment3, segment4, segment5))
+          // It uses segment2 rather than segment3 because in testSegmentsTable() later, it asserts for 2 replicas
+          // for segment2. So it's trying to mimic the behavior that segment2 is served by both the servers druidServer1
+          // and druidServer2.
+          new ImmutableDruidDataSource("dummy", Collections.emptyMap(), Arrays.asList(segment2, segment4, segment5))
       ),
       3
   );
