@@ -97,7 +97,7 @@ public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
   public byte[] getCacheKey()
   {
     byte[] delegateCacheKey = delegate.getCacheKey();
-    byte[] prefixBytes = StringUtils.toUtf8(NullHandling.nullToEmptyIfNeeded(prefix));
+    byte[] prefixBytes = StringUtils.toUtf8(prefix);
     return ByteBuffer.allocate(2 + delegateCacheKey.length + prefixBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(delegateCacheKey)
@@ -121,16 +121,14 @@ public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
     if (!delegate.equals(that.delegate)) {
       return false;
     }
-    return NullHandling.nullToEmptyIfNeeded(prefix)
-        .equals(NullHandling.nullToEmptyIfNeeded(that.prefix));
-
+    return prefix.equals(that.prefix);
   }
 
   @Override
   public int hashCode()
   {
     int result = delegate.hashCode();
-    result = 31 * result + NullHandling.nullToEmptyIfNeeded(prefix).hashCode();
+    result = 31 * result + prefix.hashCode();
     return result;
   }
 
@@ -138,7 +136,7 @@ public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
   public String toString()
   {
     return "PrefixFilteredDimensionSpec{" +
-           "Prefix='" + NullHandling.nullToEmptyIfNeeded(prefix) + '\'' +
+           "Prefix='" + prefix + '\'' +
            '}';
   }
 }
