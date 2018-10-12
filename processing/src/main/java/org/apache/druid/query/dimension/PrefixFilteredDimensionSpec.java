@@ -71,7 +71,8 @@ public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
             @Override
             public boolean apply(@Nullable String input)
             {
-              return NullHandling.nullToEmptyIfNeeded(input).startsWith(prefix);
+              String val = NullHandling.nullToEmptyIfNeeded(input);
+              return val == null ? false : val.startsWith(prefix);
             }
           }
       );
@@ -81,7 +82,8 @@ public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
     final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap();
     forwardMapping.defaultReturnValue(-1);
     for (int i = 0; i < selectorCardinality; i++) {
-      if (NullHandling.nullToEmptyIfNeeded(selector.lookupName(i)).startsWith(prefix)) {
+      String val = NullHandling.nullToEmptyIfNeeded(selector.lookupName(i));
+      if (val != null && val.startsWith(prefix)) {
         forwardMapping.put(i, count++);
       }
     }
