@@ -327,7 +327,9 @@ public class DruidSchema extends AbstractSchema
         // segmentReplicatable is used to determine if segments are served by realtime servers or not
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
         final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
-        SegmentMetadataHolder holder = SegmentMetadataHolder.builder(isPublished, 1, isRealtime, 1).build();
+        final SegmentMetadataHolder holder = SegmentMetadataHolder
+            .builder(segment.getId(), isPublished,1, isRealtime, 1)
+            .build();
         // Unknown segment.
         setSegmentSignature(segment, holder);
         segmentsNeedingRefresh.add(segment);
@@ -339,9 +341,15 @@ public class DruidSchema extends AbstractSchema
         }
       } else {
         if (knownSegments.containsKey(segment)) {
-          SegmentMetadataHolder holder = knownSegments.get(segment);
-          SegmentMetadataHolder holderWithNumReplicas = SegmentMetadataHolder
-              .builder(holder.isPublished(), holder.isAvailable(), holder.isRealtime(), holder.getNumReplicas())
+          final SegmentMetadataHolder holder = knownSegments.get(segment);
+          final SegmentMetadataHolder holderWithNumReplicas = SegmentMetadataHolder
+              .builder(
+                  holder.getSegmentId(),
+                  holder.isPublished(),
+                  holder.isAvailable(),
+                  holder.isRealtime(),
+                  holder.getNumReplicas()
+              )
               .withNumReplicas(holder.getNumReplicas() + 1)
               .build();
           knownSegments.put(segment, holderWithNumReplicas);
@@ -444,7 +452,13 @@ public class DruidSchema extends AbstractSchema
             final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
             SegmentMetadataHolder holder = dataSourceSegments.get(segment);
             SegmentMetadataHolder updatedHolder = SegmentMetadataHolder
-                .builder(holder.isPublished(), holder.isAvailable(), holder.isRealtime(), holder.getNumReplicas())
+                .builder(
+                    holder.getSegmentId(),
+                    holder.isPublished(),
+                    holder.isAvailable(),
+                    holder.isRealtime(),
+                    holder.getNumReplicas()
+                )
                 .withRowSignature(rowSignature)
                 .withNumRows(analysis.getNumRows())
                 .build();

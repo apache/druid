@@ -449,19 +449,21 @@ public class SystemSchemaTest extends CalciteTestBase
     Enumerator<Object[]> enumerator = rows.enumerator();
 
     Assert.assertEquals(true, enumerator.moveNext());
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row2 = enumerator.current();
-    //segment 2 is published and has 2 replicas
-    Assert.assertEquals(1L, row2[9]);
-    Assert.assertEquals(2L, row2[7]);
-    Assert.assertEquals(true, enumerator.moveNext());
-    Assert.assertEquals(true, enumerator.moveNext());
-    Assert.assertEquals(true, enumerator.moveNext());
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row6 = enumerator.current();
+    Object[] row1 = enumerator.current();
     //segment 6 is published and unavailable, num_replicas is 0
-    Assert.assertEquals(1L, row6[9]);
-    Assert.assertEquals(0L, row6[7]);
+    Assert.assertEquals(1L, row1[9]);
+    Assert.assertEquals(0L, row1[7]);
+
+    Assert.assertEquals(true, enumerator.moveNext());
+    Assert.assertEquals(true, enumerator.moveNext());
+    Assert.assertEquals(true, enumerator.moveNext());
+    Assert.assertEquals(true, enumerator.moveNext());
+
+    Object[] row5 = enumerator.current();
+    //segment 2 is published and has 2 replicas
+    Assert.assertEquals(1L, row5[9]);
+    Assert.assertEquals(2L, row5[7]);
+    Assert.assertEquals(true, enumerator.moveNext());
     Assert.assertEquals(false, enumerator.moveNext());
 
   }

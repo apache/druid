@@ -19,6 +19,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 
@@ -27,18 +28,24 @@ import javax.annotation.Nullable;
  */
 public class SegmentMetadataHolder
 {
-  public static Builder builder(long isPublished, long isAvailable, long isRealtime, long numReplicas)
+  public static Builder builder(
+      SegmentId segmentId,
+      long isPublished,
+      long isAvailable,
+      long isRealtime,
+      long numReplicas
+  )
   {
-    return new Builder(isPublished, isAvailable, isRealtime, numReplicas);
+    return new Builder(segmentId, isPublished, isAvailable, isRealtime, numReplicas);
   }
 
+  private final SegmentId segmentId;
   // Booleans represented as long type, where 1 = true and 0 = false
   // to make it easy to count number of segments which are
   // published, available or realtime etc.
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-
   private final long numReplicas;
   @Nullable
   private final RowSignature rowSignature;
@@ -53,6 +60,7 @@ public class SegmentMetadataHolder
     this.isRealtime = builder.isRealtime;
     this.numReplicas = builder.numReplicas;
     this.numRows = builder.numRows;
+    this.segmentId = builder.segmentId;
   }
 
   public long isPublished()
@@ -68,6 +76,11 @@ public class SegmentMetadataHolder
   public long isRealtime()
   {
     return isRealtime;
+  }
+
+  public SegmentId getSegmentId()
+  {
+    return segmentId;
   }
 
   public long getNumReplicas()
@@ -89,17 +102,20 @@ public class SegmentMetadataHolder
 
   public static class Builder
   {
+    private final SegmentId segmentId;
     private final long isPublished;
     private final long isAvailable;
     private final long isRealtime;
+
     private long numReplicas;
     @Nullable
     private RowSignature rowSignature;
     @Nullable
     private Long numRows;
 
-    private Builder(long isPublished, long isAvailable, long isRealtime, long numReplicas)
+    private Builder(SegmentId segmentId, long isPublished, long isAvailable, long isRealtime, long numReplicas)
     {
+      this.segmentId = segmentId;
       this.isPublished = isPublished;
       this.isAvailable = isAvailable;
       this.isRealtime = isRealtime;
