@@ -49,7 +49,6 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.segment.column.ValueType;
@@ -78,10 +77,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
-  private static final Logger log = new Logger(SystemSchema.class);
 
   public static final String NAME = "sys";
   private static final String SEGMENTS_TABLE = "segments";
@@ -212,6 +211,13 @@ public class SystemSchema extends AbstractSchema
       final Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries = availableSegmentMetadata.entrySet()
                                                                                                                   .iterator();
 
+      // in memory map to store segment data from available segments
+      final Map<String, PartialSegmentData> partialSegmentDataMap = availableSegmentMetadata.values().stream().collect(
+          Collectors.toMap(
+              SegmentMetadataHolder::getSegmentId,
+              h -> new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(), h.getNumRows())
+          ));
+
       //get published segments from coordinator
       final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
           druidLeaderClient,
@@ -219,19 +225,47 @@ public class SystemSchema extends AbstractSchema
           responseHandler
       );
 
-      Set<String> availableSegmentIds = new HashSet<>();
-      //auth check for available segments
-      final Iterator<Entry<DataSegment, SegmentMetadataHolder>> authorizedAvailableSegments = getAuthorizedAvailableSegments(
-          availableSegmentEntries,
-          root
-      );
+      final Set<String> segmentsAlreadySeen = new HashSet<>();
 
-      final FluentIterable<Object[]> availableSegments = FluentIterable
-          .from(() -> authorizedAvailableSegments)
+      final FluentIterable<Object[]> publishedSegments = FluentIterable
+          .from(() -> getAuthorizedPublishedSegments(
+              metadataSegments,
+              root
+          ))
           .transform(val -> {
             try {
-              if (!availableSegmentIds.contains(val.getKey().getIdentifier())) {
-                availableSegmentIds.add(val.getKey().getIdentifier());
+              segmentsAlreadySeen.add(val.getIdentifier());
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getIdentifier());
+              return new Object[]{
+                  val.getIdentifier(),
+                  val.getDataSource(),
+                  val.getInterval().getStart(),
+                  val.getInterval().getEnd(),
+                  val.getSize(),
+                  val.getVersion(),
+                  val.getShardSpec().getPartitionNum(),
+                  partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas(),
+                  partialSegmentData == null ? 0L : partialSegmentData.getNumRows(),
+                  1L, //is_published is true for published segments
+                  partialSegmentData == null ? 1L : partialSegmentData.isAvailable(),
+                  partialSegmentData == null ? 0L : partialSegmentData.isRealtime(),
+                  jsonMapper.writeValueAsString(val)
+              };
+            }
+            catch (JsonProcessingException e) {
+              throw new RE(e, "Error getting segment payload for segment %s", val.getIdentifier());
+            }
+          });
+
+      final FluentIterable<Object[]> availableSegments = FluentIterable
+          .from(() -> getAuthorizedAvailableSegments(
+              availableSegmentEntries,
+              root
+          ))
+          .transform(val -> {
+            try {
+              if (segmentsAlreadySeen.contains(val.getKey().getIdentifier())) {
+                return null;
               }
               return new Object[]{
                   val.getKey().getIdentifier(),
@@ -241,7 +275,8 @@ public class SystemSchema extends AbstractSchema
                   val.getKey().getSize(),
                   val.getKey().getVersion(),
                   val.getKey().getShardSpec().getPartitionNum(),
-                  val.getValue().getNumReplicas(),
+                  partialSegmentDataMap.get(val.getKey().getIdentifier()) == null ? 0L
+                    : partialSegmentDataMap.get(val.getKey().getIdentifier()).getNumReplicas(),
                   val.getValue().getNumRows(),
                   val.getValue().isPublished(),
                   val.getValue().isAvailable(),
@@ -254,41 +289,9 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
-      //auth check for published segments
-      final CloseableIterator<DataSegment> authorizedPublishedSegments = getAuthorizedPublishedSegments(
-          metadataSegments,
-          root
-      );
-      final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> authorizedPublishedSegments)
-          .transform(val -> {
-            try {
-              if (availableSegmentIds.contains(val.getIdentifier())) {
-                return null;
-              }
-              return new Object[]{
-                  val.getIdentifier(),
-                  val.getDataSource(),
-                  val.getInterval().getStart(),
-                  val.getInterval().getEnd(),
-                  val.getSize(),
-                  val.getVersion(),
-                  val.getShardSpec().getPartitionNum(),
-                  0L,
-                  -1L,
-                  1L,
-                  0L,
-                  0L,
-                  jsonMapper.writeValueAsString(val)
-              };
-            }
-            catch (JsonProcessingException e) {
-              throw new RE(e, "Error getting segment payload for segment %s", val.getIdentifier());
-            }
-          });
-
       final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
-          Iterables.concat(availableSegments, publishedSegments));
+          Iterables.concat(publishedSegments, availableSegments)
+      );
 
       return Linq4j.asEnumerable(allSegments).where(t -> t != null);
 
@@ -326,6 +329,48 @@ public class SystemSchema extends AbstractSchema
           authenticationResult, () -> it, raGenerator, authorizerMapper);
 
       return wrap(authorizedSegments.iterator(), it);
+    }
+
+    private static class PartialSegmentData
+    {
+      private final long isAvailable;
+      private final long isRealtime;
+      private final long numReplicas;
+      private final Long numRows;
+
+      public PartialSegmentData(
+          final long isAvailable,
+          final long isRealtime,
+          final long numReplicas,
+          final Long numRows
+      )
+
+      {
+        this.isAvailable = isAvailable;
+        this.isRealtime = isRealtime;
+        this.numReplicas = numReplicas;
+        this.numRows = numRows;
+      }
+
+      public long isAvailable()
+      {
+        return isAvailable;
+      }
+
+      public long isRealtime()
+      {
+        return isRealtime;
+      }
+
+      public long getNumReplicas()
+      {
+        return numReplicas;
+      }
+
+      public Long getNumRows()
+      {
+        return numRows;
+      }
     }
   }
 
