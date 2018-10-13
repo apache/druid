@@ -22,42 +22,37 @@ package org.apache.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.segment.DimensionSelector;
-
-import javax.annotation.Nullable;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import java.nio.ByteBuffer;
-import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 
 /**
  */
-public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
+public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
 {
 
-  private static final byte CACHE_TYPE_ID = 0x2;
+  private static final byte CACHE_TYPE_ID = 0x4;
 
-  private final String pattern;
+  private final String prefix;
 
-  private final Pattern compiledRegex;
-
-  public RegexFilteredDimensionSpec(
+  public PrefixFilteredDimensionSpec(
       @JsonProperty("delegate") DimensionSpec delegate,
-      @JsonProperty("pattern") String pattern //rows not matching the pattern will be discarded
+      @JsonProperty("prefix") String prefix //rows not starting with the prefix will be discarded
   )
   {
     super(delegate);
-    this.pattern = Preconditions.checkNotNull(pattern, "pattern must not be null");
-    this.compiledRegex = Pattern.compile(pattern);
+    this.prefix = Preconditions.checkNotNull(prefix, "prefix must not be null");
   }
 
   @JsonProperty
-  public String getPattern()
+  public String getPrefix()
   {
-    return pattern;
+    return prefix;
   }
 
   @Override
@@ -77,7 +72,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
             public boolean apply(@Nullable String input)
             {
               String val = NullHandling.nullToEmptyIfNeeded(input);
-              return val == null ? false : compiledRegex.matcher(val).matches();
+              return val == null ? false : val.startsWith(prefix);
             }
           }
       );
@@ -88,7 +83,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     forwardMapping.defaultReturnValue(-1);
     for (int i = 0; i < selectorCardinality; i++) {
       String val = NullHandling.nullToEmptyIfNeeded(selector.lookupName(i));
-      if (val != null && compiledRegex.matcher(val).matches()) {
+      if (val != null && val.startsWith(prefix)) {
         forwardMapping.put(i, count++);
       }
     }
@@ -104,12 +99,12 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
   public byte[] getCacheKey()
   {
     byte[] delegateCacheKey = delegate.getCacheKey();
-    byte[] regexBytes = StringUtils.toUtf8(pattern);
-    return ByteBuffer.allocate(2 + delegateCacheKey.length + regexBytes.length)
+    byte[] prefixBytes = StringUtils.toUtf8(prefix);
+    return ByteBuffer.allocate(2 + delegateCacheKey.length + prefixBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(delegateCacheKey)
                      .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(regexBytes)
+                     .put(prefixBytes)
                      .array();
   }
 
@@ -123,28 +118,27 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return false;
     }
 
-    RegexFilteredDimensionSpec that = (RegexFilteredDimensionSpec) o;
+    PrefixFilteredDimensionSpec that = (PrefixFilteredDimensionSpec) o;
 
     if (!delegate.equals(that.delegate)) {
       return false;
     }
-    return pattern.equals(that.pattern);
-
+    return prefix.equals(that.prefix);
   }
 
   @Override
   public int hashCode()
   {
     int result = delegate.hashCode();
-    result = 31 * result + pattern.hashCode();
+    result = 31 * result + prefix.hashCode();
     return result;
   }
 
   @Override
   public String toString()
   {
-    return "RegexFilteredDimensionSpec{" +
-           "pattern='" + pattern + '\'' +
+    return "PrefixFilteredDimensionSpec{" +
+           "Prefix='" + prefix + '\'' +
            '}';
   }
 }
