@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexer;
 
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -36,9 +36,7 @@ public interface Jobby
   @Nullable
   default Map<String, Object> getStats()
   {
-    throw new UnsupportedOperationException(
-        StringUtils.format("This Jobby does not implement getJobStats(), Jobby class: [%s]", getClass())
-    );
+    throw new UOE("This Jobby does not implement getJobStats(), Jobby class: [%s]", getClass());
   }
 
   /**
@@ -48,8 +46,6 @@ public interface Jobby
   @Nullable
   default String getErrorMessage()
   {
-    throw new UnsupportedOperationException(
-        StringUtils.format("This Jobby does not implement getErrorMessage(), Jobby class: [%s]", getClass())
-    );
+    throw new UOE("This Jobby does not implement getErrorMessage(), Jobby class: [%s]", getClass());
   }
 }

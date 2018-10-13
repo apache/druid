@@ -22,7 +22,7 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
@@ -104,7 +104,7 @@ public class TaskStatusPlus
       this.statusCode = status;
     } else {
       if (statusCode != null && status != null && statusCode != status) {
-        throw new RuntimeException(StringUtils.format("statusCode[%s] and status[%s] must match", statusCode, status));
+        throw new RE("statusCode[%s] and status[%s] must match", statusCode, status);
       }
       this.statusCode = statusCode;
     }
