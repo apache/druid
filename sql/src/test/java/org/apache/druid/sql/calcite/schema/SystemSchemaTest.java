@@ -34,24 +34,19 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.ReflectionQueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -64,7 +59,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -284,25 +278,6 @@ public class SystemSchemaTest extends CalciteTestBase
       DataSegment.PruneLoadSpecHolder.DEFAULT
   );
 
-  private final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
-  private final DirectDruidClient client1 = new DirectDruidClient(
-      new ReflectionQueryToolChestWarehouse(),
-      QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-      new DefaultObjectMapper(),
-      httpClient,
-      "http",
-      "foo",
-      new NoopServiceEmitter()
-  );
-  private final DirectDruidClient client2 = new DirectDruidClient(
-      new ReflectionQueryToolChestWarehouse(),
-      QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-      new DefaultObjectMapper(),
-      httpClient,
-      "http",
-      "foo2",
-      new NoopServiceEmitter()
-  );
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
       new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
       1L,
@@ -586,14 +561,26 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals("test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", row1[1]);
 
     Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row2 = enumerator.current();
+    Assert.assertEquals("localhost:0000", row2[0]);
+    Assert.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", row2[1]);
+
     Assert.assertEquals(true, enumerator.moveNext());
     Object[] row3 = enumerator.current();
     Assert.assertEquals("server2:1234", row3[0]);
     Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row3[1]);
 
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row4 = enumerator.current();
+    Assert.assertEquals("server2:1234", row4[0]);
+    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row4[1]);
+
+    Assert.assertEquals(true, enumerator.moveNext());
     Object[] row5 = rows.last();
     Assert.assertEquals("server2:1234", row5[0]);
     Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row5[1]);
+
+    Assert.assertEquals(false, enumerator.moveNext());
   }
 
   @Test
