@@ -314,7 +314,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DruidServerMetadata("server2", "server2:1234", null, 5L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
       1L,
       null,
-      ImmutableMap.of("segment2", segment2, "segment4", segment4, "segment5", segment5)
+      ImmutableMap.of("segment3", segment3, "segment4", segment4, "segment5", segment5)
   );
 
   private final List<ImmutableDruidServer> immutableDruidServers = ImmutableList.of(druidServer1, druidServer2);
