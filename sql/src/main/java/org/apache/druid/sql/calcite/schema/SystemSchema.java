@@ -473,7 +473,7 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
-  private static class ServerSegmentsTable extends AbstractTable implements ScannableTable
+  static class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
     final AuthorizerMapper authorizerMapper;
