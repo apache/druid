@@ -68,7 +68,7 @@ public class SingleTaskBackgroundRunnerTest
   public void setup() throws IOException
   {
     final TestUtils utils = new TestUtils();
-    final DruidNode node = new DruidNode("testServer", "testHost", 1000, null, true, false);
+    final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
     final TaskConfig taskConfig = new TaskConfig(
         temporaryFolder.newFile().toString(),
         null,
