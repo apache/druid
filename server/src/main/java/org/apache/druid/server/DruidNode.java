@@ -48,6 +48,13 @@ public class DruidNode
   private String host;
 
   /**
+   * This property indicates whether the druid node's internal jetty server bind on {@link DruidNode#host}.
+   * Default is false, which means binding to all interfaces.
+   */
+  @JsonProperty
+  private boolean bindOnHost = false;
+
+  /**
    * This property is now deprecated, this is present just so that JsonConfigurator does not fail if this is set.
    * Please use {@link DruidNode#plaintextPort} instead, which if set will be used and hence this has -1 as default value.
    * */
@@ -73,13 +80,14 @@ public class DruidNode
   public DruidNode(
       String serviceName,
       String host,
+      boolean bindOnHost,
       Integer plaintextPort,
       Integer tlsPort,
       boolean enablePlaintextPort,
       boolean enableTlsPort
   )
   {
-    this(serviceName, host, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort);
+    this(serviceName, host, bindOnHost, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort);
   }
 
   /**
@@ -103,6 +111,7 @@ public class DruidNode
   public DruidNode(
       @JacksonInject @Named("serviceName") @JsonProperty("service") String serviceName,
       @JsonProperty("host") String host,
+      @JsonProperty("bindOnHost") boolean bindOnHost,
       @JsonProperty("plaintextPort") Integer plaintextPort,
       @JacksonInject @Named("servicePort") @JsonProperty("port") Integer port,
       @JacksonInject @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
@@ -113,6 +122,7 @@ public class DruidNode
     init(
         serviceName,
         host,
+        bindOnHost,
         plaintextPort != null ? plaintextPort : port,
         tlsPort,
         enablePlaintextPort == null ? true : enablePlaintextPort.booleanValue(),
@@ -120,7 +130,7 @@ public class DruidNode
     );
   }
 
-  private void init(String serviceName, String host, Integer plainTextPort, Integer tlsPort, boolean enablePlaintextPort, boolean enableTlsPort)
+  private void init(String serviceName, String host, boolean bindOnHost, Integer plainTextPort, Integer tlsPort, boolean enablePlaintextPort, boolean enableTlsPort)
   {
     Preconditions.checkNotNull(serviceName);
 
@@ -178,6 +188,7 @@ public class DruidNode
 
     this.serviceName = serviceName;
     this.host = host;
+    this.bindOnHost = bindOnHost;
   }
 
   public String getServiceName()
@@ -188,6 +199,11 @@ public class DruidNode
   public String getHost()
   {
     return host;
+  }
+
+  public boolean isBindOnHost()
+  {
+    return bindOnHost;
   }
 
   public int getPlaintextPort()
@@ -212,7 +228,7 @@ public class DruidNode
 
   public DruidNode withService(String service)
   {
-    return new DruidNode(service, host, plaintextPort, tlsPort, enablePlaintextPort, enableTlsPort);
+    return new DruidNode(service, host, bindOnHost, plaintextPort, tlsPort, enablePlaintextPort, enableTlsPort);
   }
 
   public String getServiceScheme()
@@ -278,6 +294,7 @@ public class DruidNode
     }
     DruidNode druidNode = (DruidNode) o;
     return port == druidNode.port &&
+           bindOnHost == druidNode.bindOnHost &&
            plaintextPort == druidNode.plaintextPort &&
            enablePlaintextPort == druidNode.enablePlaintextPort &&
            tlsPort == druidNode.tlsPort &&
@@ -298,6 +315,7 @@ public class DruidNode
     return "DruidNode{" +
            "serviceName='" + serviceName + '\'' +
            ", host='" + host + '\'' +
+           ", bindOnHost=" + bindOnHost +
            ", port=" + port +
            ", plaintextPort=" + plaintextPort +
            ", enablePlaintextPort=" + enablePlaintextPort +
