@@ -26,7 +26,7 @@
 
   <name>druid-core</name>
   <artifactId>druid-core</artifactId>
-  <description>Odds and ends</description>
+  <description>Core druid module</description>
 
   <parent>
     <artifactId>druid</artifactId>
@@ -381,6 +381,4 @@
       </build>
     </profile>
   </profiles>
-
-
 </project>
