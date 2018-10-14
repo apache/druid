@@ -381,7 +381,7 @@ public class OakTopNBenchmark
 
   @Benchmark
   @BenchmarkMode(Mode.SingleShotTime)
-  @OutputTimeUnit(TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndex(Blackhole blackhole)
   {
     long time = System.currentTimeMillis();

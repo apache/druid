@@ -129,7 +129,7 @@ public class OakIncrementalIndexIngestionBenchmark
 
   @Benchmark
   @BenchmarkMode(Mode.SingleShotTime)
-  @OutputTimeUnit(TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @Threads(1)
   public void addRows(Blackhole blackhole) throws Exception
   {
