@@ -112,11 +112,6 @@ public class IncrementalIndexRow
     return dims[dimIndex];
   }
 
-  public boolean isNull(int dimIndex)
-  {
-    return dimIndex >= getDimsLength() || dims[dimIndex] == null;
-  }
-
   public Object[] getDims()
   {
     return dims;

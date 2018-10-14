@@ -49,14 +49,13 @@ public class OnheapAggsManager extends AggsManager<Aggregator>
   OnheapAggsManager(
           final IncrementalIndexSchema incrementalIndexSchema,
           final boolean deserializeComplexMetrics,
-          final boolean reportParseExceptions,
           final boolean concurrentEventAdd,
           Supplier<InputRow> rowSupplier,
           Map<String, ColumnCapabilitiesImpl> columnCapabilities,
           IncrementalIndex incrementalIndex
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions,
+    super(incrementalIndexSchema, deserializeComplexMetrics,
             concurrentEventAdd, rowSupplier, columnCapabilities, incrementalIndex);
     this.aggregators = new ConcurrentHashMap<>();
   }

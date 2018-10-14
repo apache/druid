@@ -48,7 +48,6 @@ public class OffheapAggsManager extends AggsManager<BufferAggregator>
   OffheapAggsManager(
           final IncrementalIndexSchema incrementalIndexSchema,
           final boolean deserializeComplexMetrics,
-          final boolean reportParseExceptions,
           final boolean concurrentEventAdd,
           Supplier<InputRow> rowSupplier,
           Map<String, ColumnCapabilitiesImpl> columnCapabilities,
@@ -56,7 +55,7 @@ public class OffheapAggsManager extends AggsManager<BufferAggregator>
           IncrementalIndex incrementalIndex
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions,
+    super(incrementalIndexSchema, deserializeComplexMetrics,
             concurrentEventAdd, rowSupplier, columnCapabilities, incrementalIndex);
     this.bufferPool = bufferPool;
   }

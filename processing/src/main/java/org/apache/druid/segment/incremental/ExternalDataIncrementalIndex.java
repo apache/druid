@@ -406,19 +406,6 @@ public abstract class ExternalDataIncrementalIndex<AggregatorType> extends Incre
               .sorted(incrementalIndexRowComparator);
     }
 
-    private Iterable<IncrementalIndexRow> concat(
-            final Iterable<Deque<IncrementalIndexRow>> iterable,
-            final boolean descending
-    )
-    {
-      return () -> Iterators.concat(
-        Iterators.transform(
-          iterable.iterator(),
-          input -> descending ? input.descendingIterator() : input.iterator()
-        )
-      );
-    }
-
     @Override
     public Iterable<IncrementalIndexRow> keySet()
     {

@@ -617,8 +617,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract long getMaxTimeMillis();
 
-  public abstract AggregatorType[] getAggs();
-
   public abstract AggregatorFactory[] getMetricAggs();
 
   public List<String> getDimensionNames()

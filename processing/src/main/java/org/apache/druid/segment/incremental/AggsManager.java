@@ -59,7 +59,6 @@ public abstract class AggsManager<AggregatorType>
   protected final AggregatorFactory[] metrics;
   protected final AggregatorType[] aggs;
   protected final boolean deserializeComplexMetrics;
-  protected final boolean reportParseExceptions;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
   private final VirtualColumns virtualColumns;
 
@@ -71,7 +70,6 @@ public abstract class AggsManager<AggregatorType>
   public AggsManager(
           final IncrementalIndexSchema incrementalIndexSchema,
           final boolean deserializeComplexMetrics,
-          final boolean reportParseExceptions,
           final boolean concurrentEventAdd,
           Supplier<InputRow> rowSupplier,
           Map<String, ColumnCapabilitiesImpl> columnCapabilities,
@@ -82,7 +80,6 @@ public abstract class AggsManager<AggregatorType>
     this.virtualColumns = incrementalIndexSchema.getVirtualColumns();
     this.metrics = incrementalIndexSchema.getMetrics();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
-    this.reportParseExceptions = reportParseExceptions;
     this.columnCapabilities = columnCapabilities;
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
     this.aggLocks = new ReentrantLock[this.aggs.length];

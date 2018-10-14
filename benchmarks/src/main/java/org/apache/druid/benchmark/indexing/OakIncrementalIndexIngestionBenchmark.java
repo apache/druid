@@ -43,7 +43,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -72,7 +71,7 @@ public class OakIncrementalIndexIngestionBenchmark
   private BenchmarkSchemaInfo schemaInfo;
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
@@ -96,7 +95,7 @@ public class OakIncrementalIndexIngestionBenchmark
   }
 
   @Setup(Level.Iteration)
-  public void setup2() throws IOException
+  public void setup2()
   {
     incIndex = makeIncIndex();
   }

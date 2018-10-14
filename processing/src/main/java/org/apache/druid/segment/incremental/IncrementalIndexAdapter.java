@@ -99,10 +99,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         final int dimIndex = dimension.getIndex();
         DimensionAccessor accessor = accessors.get(dimension.getName());
 
-        Object dim = null;
-        if (dimIndex < row.getDimsLength()) {
-          dim = row.getDim(dimIndex);
-        }
+        Object dim = row.getDim(dimIndex);
 
         // Add 'null' to the dimension's dictionary.
         if (dim == null) {

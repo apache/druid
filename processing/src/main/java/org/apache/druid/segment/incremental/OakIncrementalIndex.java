@@ -25,8 +25,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -58,8 +56,6 @@ import javax.annotation.Nullable;
  */
 public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggregator>
 {
-
-  private static final Logger log = new Logger(OakIncrementalIndex.class);
 
   // When serializing an object from IncrementalIndexRow.dims, we use:
   // 1. 4 bytes for representing its type (Double, Float, Long or String)
@@ -94,7 +90,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
     super(incrementalIndexSchema, reportParseExceptions, maxRowCount);
 
     this.aggsManager = new OffheapAggsManager(incrementalIndexSchema, deserializeComplexMetrics,
-            reportParseExceptions, concurrentEventAdd, rowSupplier,
+            concurrentEventAdd, rowSupplier,
             columnCapabilities, null, this);
 
     this.rowIndexGenerator = new AtomicInteger(IncrementalIndexRow.EMPTY_ROW_INDEX);
@@ -108,7 +104,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
 
     OakMapBuilder builder = new OakMapBuilder()
             .setKeySerializer(new OakKeySerializer(dimensionDescsList))
-            .setValueSerializer(new OakValueSerializer(dimensionDescsList, aggsManager, reportParseExceptions, in))
+            .setValueSerializer(new OakValueSerializer(aggsManager, reportParseExceptions, in))
             .setMinKey(minIncrementalIndexRow)
             .setComparator(new OakKeysComparator(dimensionDescsList, this.isRollup()))
             .setMemoryCapacity(memoryCapacity);
@@ -213,7 +209,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
   @Override
   protected BufferAggregator[] getAggsForRow(IncrementalIndexRow incrementalIndexRow)
   {
-    return getAggs();
+    return aggsManager.getAggs();
   }
 
   @Override
@@ -224,7 +220,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       public Object apply(Map.Entry<ByteBuffer, ByteBuffer> entry)
       {
         ByteBuffer serializedValue = entry.getValue();
-        BufferAggregator agg = getAggs()[aggIndex];
+        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.get(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       }
     };
@@ -241,7 +237,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       public Float apply(Map.Entry<ByteBuffer, ByteBuffer> entry)
       {
         ByteBuffer serializedValue = entry.getValue();
-        BufferAggregator agg = getAggs()[aggIndex];
+        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.getFloat(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       }
     };
@@ -258,7 +254,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       public Long apply(Map.Entry<ByteBuffer, ByteBuffer> entry)
       {
         ByteBuffer serializedValue = entry.getValue();
-        BufferAggregator agg = getAggs()[aggIndex];
+        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.getLong(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       }
     };
@@ -275,7 +271,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       public Object apply(Map.Entry<ByteBuffer, ByteBuffer> entry)
       {
         ByteBuffer serializedValue = entry.getValue();
-        BufferAggregator agg = getAggs()[aggIndex];
+        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.get(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       }
     };
@@ -292,7 +288,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       public Double apply(Map.Entry<ByteBuffer, ByteBuffer> entry)
       {
         ByteBuffer serializedValue = entry.getValue();
-        BufferAggregator agg = getAggs()[aggIndex];
+        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.getDouble(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       }
     };
@@ -309,7 +305,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       public Boolean apply(Map.Entry<ByteBuffer, ByteBuffer> entry)
       {
         ByteBuffer serializedValue = entry.getValue();
-        BufferAggregator agg = getAggs()[aggIndex];
+        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.isNull(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       }
     };
@@ -412,47 +408,9 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
   }
 
   @Override
-  public BufferAggregator[] getAggs()
-  {
-    return aggsManager.getAggs();
-  }
-
-  @Override
   public AggregatorFactory[] getMetricAggs()
   {
     return aggsManager.getMetricAggs();
-  }
-
-  public static void aggregate(
-          AggregatorFactory[] metrics,
-          boolean reportParseExceptions,
-          InputRow row,
-          ThreadLocal<InputRow> rowContainer,
-          ByteBuffer aggBuffer,
-          int[] aggOffsetInBuffer,
-          BufferAggregator[] aggs
-  )
-  {
-    rowContainer.set(row);
-
-    for (int i = 0; i < metrics.length; i++) {
-      final BufferAggregator agg = aggs[i];
-
-      synchronized (agg) {
-        try {
-          agg.aggregate(aggBuffer, aggBuffer.position() + aggOffsetInBuffer[i]);
-        }
-        catch (ParseException e) {
-          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          if (reportParseExceptions) {
-            throw new ParseException(e, "Encountered parse error for aggregator[%s]", metrics[i].getName());
-          } else {
-            log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
-          }
-        }
-      }
-    }
-    rowContainer.set(null);
   }
 
   @Override

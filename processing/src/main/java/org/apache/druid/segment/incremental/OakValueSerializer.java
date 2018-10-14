@@ -23,26 +23,21 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 
 import java.nio.ByteBuffer;
-import java.util.List;
-import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 import com.oath.oak.OakSerializer;
 
 public class OakValueSerializer implements OakSerializer<Row>
 {
 
-  private List<DimensionDesc> dimensionDescsList;
   private OffheapAggsManager aggsManager;
   private boolean reportParseExceptions;
   private ThreadLocal<InputRow> rowContainer;
 
   public OakValueSerializer(
-          List<DimensionDesc> dimensionDescsList,
           OffheapAggsManager aggsManager,
           boolean reportParseExceptions,
           ThreadLocal<InputRow> rowContainer
   )
   {
-    this.dimensionDescsList = dimensionDescsList;
     this.aggsManager = aggsManager;
     this.reportParseExceptions = reportParseExceptions;
     this.rowContainer = rowContainer;

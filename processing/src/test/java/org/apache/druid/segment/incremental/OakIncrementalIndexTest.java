@@ -23,7 +23,6 @@ import com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -60,9 +59,9 @@ public class OakIncrementalIndexTest
     rows[4] = toMapRow(minTime + 2000, "StringA", "A", "StringB", "B");
     rows[5] = toMapRow(minTime + 3000, "StringD", "D");
 
-    for (int i = 0; i < rows.length; i++) {
+    for (MapBasedInputRow row : rows) {
       for (int j = 0; j < 5; j++) {
-        index.add(rows[i]);
+        index.add(row);
       }
     }
 
@@ -74,7 +73,7 @@ public class OakIncrementalIndexTest
   @Test
   public void testOffHeapOakIncrementalIndexNoSchema() throws Exception
   {
-    IncrementalIndex index = new OakIncrementalIndex.Builder()
+    IncrementalIndex index = new IncrementalIndex.Builder()
             .setSimpleTestingIndexSchema(true, new CountAggregatorFactory("cnt"))
             .setMaxRowCount(1000)
             .buildOffheapOak();
@@ -90,9 +89,9 @@ public class OakIncrementalIndexTest
     rows[4] = toMapRow(minTime + 2000, "StringA", "A", "StringB", "B");
     rows[5] = toMapRow(minTime + 3000, "StringD", "D");
 
-    for (int i = 0; i < rows.length; i++) {
+    for (MapBasedInputRow row : rows) {
       for (int j = 0; j < 5; j++) {
-        index.add(rows[i]);
+        index.add(row);
       }
     }
 
@@ -123,8 +122,8 @@ public class OakIncrementalIndexTest
     rows[9] = toMapRow(time - 3000, "StringD", "A", "StringB", "B");
 
     for (int j = 0; j < 5; j++) {
-      for (int i = 0; i < rows.length; i++) {
-        index.add(rows[i]);
+      for (MapBasedInputRow row : rows) {
+        index.add(row);
       }
     }
     Assert.assertEquals(index.size(), rows.length);
@@ -168,8 +167,8 @@ public class OakIncrementalIndexTest
     rows[9] = toMapRow(time - 3000, "StringD", "A", "StringB", "B");
 
     for (int j = 0; j < 5; j++) {
-      for (int i = 0; i < rows.length; i++) {
-        index.add(rows[i]);
+      for (MapBasedInputRow row : rows) {
+        index.add(row);
       }
     }
 
@@ -237,8 +236,8 @@ public class OakIncrementalIndexTest
     rows[9] = toMapRow(time - 3000, "StringD", "A", "StringB", "B");
 
     for (int j = 0; j < insertionTrials; j++) {
-      for (int i = 0; i < rows.length; i++) {
-        index.add(rows[i]);
+      for (MapBasedInputRow row : rows) {
+        index.add(row);
       }
     }
 
@@ -256,10 +255,14 @@ public class OakIncrementalIndexTest
         long countD = Long.valueOf(row.getDimension("CountStringD=D").get(0));
 
         Assert.assertEquals(insertionTrials, count);
-        Assert.assertEquals(countA, row.getDimension("StringA").size() > 0 && row.getDimension("StringA").get(0) == "A" ? insertionTrials : 0);
-        Assert.assertEquals(countB, row.getDimension("StringB").size() > 0 && row.getDimension("StringB").get(0) == "B" ? insertionTrials : 0);
-        Assert.assertEquals(countC, row.getDimension("StringC").size() > 0 && row.getDimension("StringC").get(0) == "C" ? insertionTrials : 0);
-        Assert.assertEquals(countD, row.getDimension("StringD").size() > 0 && row.getDimension("StringD").get(0) == "D" ? insertionTrials : 0);
+        Assert.assertEquals(countA, row.getDimension("StringA").size() > 0 &&
+                row.getDimension("StringA").get(0).equals("A") ? insertionTrials : 0);
+        Assert.assertEquals(countB, row.getDimension("StringB").size() > 0
+                && row.getDimension("StringB").get(0).equals("B") ? insertionTrials : 0);
+        Assert.assertEquals(countC, row.getDimension("StringC").size() > 0 &&
+                row.getDimension("StringC").get(0).equals("C") ? insertionTrials : 0);
+        Assert.assertEquals(countD, row.getDimension("StringD").size() > 0 &&
+                row.getDimension("StringD").get(0).equals("D") ? insertionTrials : 0);
       }
     };
 
@@ -273,7 +276,6 @@ public class OakIncrementalIndexTest
     OakIncrementalIndex index = getIndex(false);
     MapBasedInputRow[] rows = new MapBasedInputRow[10];
     int insertionTrials = 5;
-    OakKeysComparator comparator = new OakKeysComparator(index.dimensionDescsList, true);
 
     long time = System.currentTimeMillis();
 
@@ -290,32 +292,30 @@ public class OakIncrementalIndexTest
     rows[9] = toMapRow(time, "StringD", "A", "StringB", "B");
 
     for (int j = 0; j < insertionTrials; j++) {
-      for (int i = 0; i < rows.length; i++) {
-        index.add(rows[i]);
+      for (MapBasedInputRow row : rows) {
+        index.add(row);
       }
     }
 
     Assert.assertEquals(index.size(), 50);
     Iterable<Row> iterable = index.iterableWithPostAggregations(null, false);
-    int replicationsCounter = 0;
-    Consumer<Row> rowConsumer = new Consumer<Row>() {
+    Consumer<Row> rowConsumer = row -> {
+      // insertion trials counters
+      long count = Long.valueOf(row.getDimension("Count").get(0));
+      long countA = Long.valueOf(row.getDimension("CountStringA=A").get(0));
+      long countB = Long.valueOf(row.getDimension("CountStringB=B").get(0));
+      long countC = Long.valueOf(row.getDimension("CountStringC=C").get(0));
+      long countD = Long.valueOf(row.getDimension("CountStringD=D").get(0));
 
-      @Override
-      public void accept(Row row)
-      {
-        // insertion trials counters
-        long count = Long.valueOf(row.getDimension("Count").get(0));
-        long countA = Long.valueOf(row.getDimension("CountStringA=A").get(0));
-        long countB = Long.valueOf(row.getDimension("CountStringB=B").get(0));
-        long countC = Long.valueOf(row.getDimension("CountStringC=C").get(0));
-        long countD = Long.valueOf(row.getDimension("CountStringD=D").get(0));
-
-        Assert.assertEquals(1, count);
-        Assert.assertEquals(countA, row.getDimension("StringA").size() > 0 && row.getDimension("StringA").get(0) == "A" ? 1 : 0);
-        Assert.assertEquals(countB, row.getDimension("StringB").size() > 0 && row.getDimension("StringB").get(0) == "B" ? 1 : 0);
-        Assert.assertEquals(countC, row.getDimension("StringC").size() > 0 && row.getDimension("StringC").get(0) == "C" ? 1 : 0);
-        Assert.assertEquals(countD, row.getDimension("StringD").size() > 0 && row.getDimension("StringD").get(0) == "D" ? 1 : 0);
-      }
+      Assert.assertEquals(1, count);
+      Assert.assertEquals(countA, row.getDimension("StringA").size() > 0 &&
+              row.getDimension("StringA").get(0).equals("A") ? 1 : 0);
+      Assert.assertEquals(countB, row.getDimension("StringB").size() > 0 &&
+              row.getDimension("StringB").get(0).equals("B") ? 1 : 0);
+      Assert.assertEquals(countC, row.getDimension("StringC").size() > 0 &&
+              row.getDimension("StringC").get(0).equals("C") ? 1 : 0);
+      Assert.assertEquals(countD, row.getDimension("StringD").size() > 0 &&
+              row.getDimension("StringD").get(0).equals("D") ? 1 : 0);
     };
 
     iterable.forEach(rowConsumer);
@@ -325,7 +325,7 @@ public class OakIncrementalIndexTest
   private OakIncrementalIndex getIndex(boolean rollup)
   {
     DimensionsSpec dimensions = new DimensionsSpec(
-            Arrays.<DimensionSchema>asList(
+            Arrays.asList(
                     new StringDimensionSchema("StringA"),
                     new StringDimensionSchema("StringB"),
                     new StringDimensionSchema("StringC"),

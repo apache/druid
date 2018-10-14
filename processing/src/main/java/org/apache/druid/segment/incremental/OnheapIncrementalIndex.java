@@ -65,7 +65,7 @@ public class OnheapIncrementalIndex extends ExternalDataIncrementalIndex<Aggrega
   {
     super(incrementalIndexSchema, reportParseExceptions, sortFacts, maxRowCount);
     this.aggsManager = new OnheapAggsManager(incrementalIndexSchema, deserializeComplexMetrics,
-            reportParseExceptions, concurrentEventAdd, rowSupplier, columnCapabilities, this);
+            concurrentEventAdd, rowSupplier, columnCapabilities, this);
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
   }
@@ -102,12 +102,6 @@ public class OnheapIncrementalIndex extends ExternalDataIncrementalIndex<Aggrega
   protected FactsHolder getFacts()
   {
     return facts;
-  }
-
-  @Override
-  public Aggregator[] getAggs()
-  {
-    return aggsManager.getAggs();
   }
 
   @Override

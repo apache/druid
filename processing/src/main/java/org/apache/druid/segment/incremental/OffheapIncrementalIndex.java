@@ -66,7 +66,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   {
     super(incrementalIndexSchema, reportParseExceptions, sortFacts, maxRowCount);
     this.aggsManager = new OffheapAggsManager(incrementalIndexSchema, deserializeComplexMetrics,
-            reportParseExceptions, concurrentEventAdd, rowSupplier,
+            concurrentEventAdd, rowSupplier,
             columnCapabilities, bufferPool, this);
 
     //check that stupid pool gives buffers that can hold at least one row's aggregators
@@ -83,13 +83,6 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   {
     return facts;
   }
-
-  @Override
-  public BufferAggregator[] getAggs()
-  {
-    return aggsManager.getAggs();
-  }
-
 
   @Override
   public AggregatorFactory[] getMetricAggs()
@@ -121,13 +114,13 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
         bufferOffset = indexAndOffset[1];
         aggBuffer = aggBuffers.get(bufferIndex).get();
       } else {
-        if (aggsManager.metrics.length > 0 && getAggs()[0] == null) {
+        if (aggsManager.metrics.length > 0 && aggsManager.getAggs()[0] == null) {
           // note: creation of Aggregators is done lazily when at least one row from input is available
           // so that FilteredAggregators could be initialized correctly.
           rowContainer.set(row);
           for (int i = 0; i < aggsManager.metrics.length; i++) {
             final AggregatorFactory agg = aggsManager.metrics[i];
-            getAggs()[i] = agg.factorizeBuffered(aggsManager.selectors.get(agg.getName()));
+            aggsManager.getAggs()[i] = agg.factorizeBuffered(aggsManager.selectors.get(agg.getName()));
           }
           rowContainer.set(null);
         }
@@ -155,7 +148,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
         }
 
         for (int i = 0; i < aggsManager.metrics.length; i++) {
-          getAggs()[i].init(aggBuffer, bufferOffset + aggsManager.aggOffsetInBuffer[i]);
+          aggsManager.getAggs()[i].init(aggBuffer, bufferOffset + aggsManager.aggOffsetInBuffer[i]);
         }
 
         // Last ditch sanity checks
@@ -180,7 +173,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
     rowContainer.set(row);
 
     for (int i = 0; i < aggsManager.metrics.length; i++) {
-      final BufferAggregator agg = getAggs()[i];
+      final BufferAggregator agg = aggsManager.getAggs()[i];
 
       synchronized (agg) {
         try {
@@ -225,7 +218,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   @Override
   protected BufferAggregator[] getAggsForRow(IncrementalIndexRow incrementalIndexRow)
   {
-    return getAggs();
+    return aggsManager.getAggs();
   }
 
   @Override
@@ -233,7 +226,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   {
     int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer aggBuffer = aggBuffers.get(indexAndOffset[0]).get();
-    BufferAggregator agg = getAggs()[aggIndex];
+    BufferAggregator agg = aggsManager.getAggs()[aggIndex];
     return agg.get(aggBuffer, indexAndOffset[1] + aggsManager.aggOffsetInBuffer[aggIndex]);
   }
 
@@ -242,7 +235,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   {
     int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer aggBuffer = aggBuffers.get(indexAndOffset[0]).get();
-    BufferAggregator agg = getAggs()[aggIndex];
+    BufferAggregator agg = aggsManager.getAggs()[aggIndex];
     return agg.getFloat(aggBuffer, indexAndOffset[1] + aggsManager.aggOffsetInBuffer[aggIndex]);
   }
 
@@ -251,7 +244,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   {
     int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer aggBuffer = aggBuffers.get(indexAndOffset[0]).get();
-    BufferAggregator agg = getAggs()[aggIndex];
+    BufferAggregator agg = aggsManager.getAggs()[aggIndex];
     return agg.getLong(aggBuffer, indexAndOffset[1] + aggsManager.aggOffsetInBuffer[aggIndex]);
   }
 
@@ -260,7 +253,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   {
     int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer aggBuffer = aggBuffers.get(indexAndOffset[0]).get();
-    BufferAggregator agg = getAggs()[aggIndex];
+    BufferAggregator agg = aggsManager.getAggs()[aggIndex];
     return agg.get(aggBuffer, indexAndOffset[1] + aggsManager.aggOffsetInBuffer[aggIndex]);
   }
 
@@ -269,7 +262,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   {
     int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer aggBuffer = aggBuffers.get(indexAndOffset[0]).get();
-    BufferAggregator agg = getAggs()[aggIndex];
+    BufferAggregator agg = aggsManager.getAggs()[aggIndex];
     return agg.getDouble(aggBuffer, indexAndOffset[1] + aggsManager.aggOffsetInBuffer[aggIndex]);
   }
 
@@ -278,7 +271,7 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   {
     int[] indexAndOffset = indexAndOffsets.get(incrementalIndexRow.getRowIndex());
     ByteBuffer aggBuffer = aggBuffers.get(indexAndOffset[0]).get();
-    BufferAggregator agg = getAggs()[aggIndex];
+    BufferAggregator agg = aggsManager.getAggs()[aggIndex];
     return agg.isNull(aggBuffer, indexAndOffset[1] + aggsManager.aggOffsetInBuffer[aggIndex]);
   }
 

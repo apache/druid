@@ -64,13 +64,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   }
 
   @Override
-  public boolean isNull(int dimIndex)
-  {
-    return dimIndex >= getDimsLength() ||
-            getDimType(dimIndex) == OakIncrementalIndex.NO_DIM;
-  }
-
-  @Override
   public Object[] getDims()
   {
     if (getDimsLength() == 0) {
