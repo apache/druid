@@ -32,6 +32,7 @@ import org.apache.druid.client.selector.Server;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -74,19 +75,19 @@ public class TieredBrokerHostSelectorTest
 
     node1 = new DiscoveryDruidNode(
         new DruidNode("hotBroker", "hotHost", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+        NodeType.BROKER,
         ImmutableMap.of()
     );
 
     node2 = new DiscoveryDruidNode(
         new DruidNode("coldBroker", "coldHost1", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+        NodeType.BROKER,
         ImmutableMap.of()
     );
 
     node3 = new DiscoveryDruidNode(
         new DruidNode("coldBroker", "coldHost2", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+        NodeType.BROKER,
         ImmutableMap.of()
     );
 
@@ -105,7 +106,7 @@ public class TieredBrokerHostSelectorTest
       }
     };
 
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.BROKER))
             .andReturn(druidNodeDiscovery);
 
     EasyMock.replay(druidNodeDiscoveryProvider);

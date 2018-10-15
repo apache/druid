@@ -37,8 +37,8 @@ import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DiscoveryDruidNode;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
@@ -672,7 +672,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                                           new LookupNodeService(getContextValue(CTX_KEY_LOOKUP_TIER));
     return new DiscoveryDruidNode(
         toolbox.getDruidNode(),
-        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
+        NodeType.PEON,
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
             lookupNodeService.getName(), lookupNodeService

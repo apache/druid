@@ -51,6 +51,7 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -91,7 +92,6 @@ public class DruidSchema extends AbstractSchema
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
 
   private final QueryLifecycleFactory queryLifecycleFactory;
-  private final TimelineServerView serverView;
   private final PlannerConfig config;
   private final ViewManager viewManager;
   private final ExecutorService cacheExec;
@@ -103,9 +103,10 @@ public class DruidSchema extends AbstractSchema
   // Protects access to segmentSignatures, mutableSegments, segmentsNeedingRefresh, lastRefresh, isServerViewInitialized
   private final Object lock = new Object();
 
-  // DataSource -> Segment -> RowSignature for that segment.
+  // DataSource -> Segment -> SegmentMetadataHolder(contains RowSignature) for that segment.
   // Use TreeMap for segments so they are merged in deterministic order, from older to newer.
-  private final Map<String, TreeMap<DataSegment, RowSignature>> segmentSignatures = new HashMap<>();
+  // This data structure need to be accessed in a thread-safe way since SystemSchema accesses it
+  private final Map<String, TreeMap<DataSegment, SegmentMetadataHolder>> segmentMetadataInfo = new HashMap<>();
 
   // All mutable segments.
   private final Set<DataSegment> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
@@ -134,7 +135,7 @@ public class DruidSchema extends AbstractSchema
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
-    this.serverView = Preconditions.checkNotNull(serverView, "serverView");
+    Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
@@ -320,25 +321,46 @@ public class DruidSchema extends AbstractSchema
   private void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     synchronized (lock) {
-      final Map<DataSegment, RowSignature> knownSegments = segmentSignatures.get(segment.getDataSource());
+      final Map<DataSegment, SegmentMetadataHolder> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       if (knownSegments == null || !knownSegments.containsKey(segment)) {
+        // segmentReplicatable is used to determine if segments are served by realtime servers or not
+        final long isRealtime = server.segmentReplicatable() ? 0 : 1;
+        final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
+        final SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(
+            segment.getIdentifier(),
+            isPublished,
+            1,
+            isRealtime,
+            1
+        ).build();
         // Unknown segment.
-        setSegmentSignature(segment, null);
+        setSegmentSignature(segment, holder);
         segmentsNeedingRefresh.add(segment);
-
         if (!server.segmentReplicatable()) {
           log.debug("Added new mutable segment[%s].", segment.getIdentifier());
           mutableSegments.add(segment);
         } else {
           log.debug("Added new immutable segment[%s].", segment.getIdentifier());
         }
-      } else if (server.segmentReplicatable()) {
-        // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
-        // even if it's also available on non-replicatable (realtime) servers.
-        mutableSegments.remove(segment);
-        log.debug("Segment[%s] has become immutable.", segment.getIdentifier());
+      } else {
+        if (knownSegments.containsKey(segment)) {
+          final SegmentMetadataHolder holder = knownSegments.get(segment);
+          final SegmentMetadataHolder holderWithNumReplicas = new SegmentMetadataHolder.Builder(
+              holder.getSegmentId(),
+              holder.isPublished(),
+              holder.isAvailable(),
+              holder.isRealtime(),
+              holder.getNumReplicas()
+          ).withNumReplicas(holder.getNumReplicas() + 1).build();
+          knownSegments.put(segment, holderWithNumReplicas);
+        }
+        if (server.segmentReplicatable()) {
+          // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
+          // even if it's also available on non-replicatable (realtime) servers.
+          mutableSegments.remove(segment);
+          log.debug("Segment[%s] has become immutable.", segment.getIdentifier());
+        }
       }
-
       if (!tables.containsKey(segment.getDataSource())) {
         refreshImmediately = true;
       }
@@ -356,11 +378,11 @@ public class DruidSchema extends AbstractSchema
       segmentsNeedingRefresh.remove(segment);
       mutableSegments.remove(segment);
 
-      final Map<DataSegment, RowSignature> dataSourceSegments = segmentSignatures.get(segment.getDataSource());
+      final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
       dataSourceSegments.remove(segment);
 
       if (dataSourceSegments.isEmpty()) {
-        segmentSignatures.remove(segment.getDataSource());
+        segmentMetadataInfo.remove(segment.getDataSource());
         tables.remove(segment.getDataSource());
         log.info("Removed all metadata for dataSource[%s].", segment.getDataSource());
       }
@@ -431,10 +453,22 @@ public class DruidSchema extends AbstractSchema
         if (segment == null) {
           log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
-          final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
-          setSegmentSignature(segment, rowSignature);
-          retVal.add(segment);
+          synchronized (lock) {
+            final RowSignature rowSignature = analysisToRowSignature(analysis);
+            log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
+            final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
+            SegmentMetadataHolder holder = dataSourceSegments.get(segment);
+            SegmentMetadataHolder updatedHolder = new SegmentMetadataHolder.Builder(
+                holder.getSegmentId(),
+                holder.isPublished(),
+                holder.isAvailable(),
+                holder.isRealtime(),
+                holder.getNumReplicas()
+            ).withRowSignature(rowSignature).withNumRows(analysis.getNumRows()).build();
+            dataSourceSegments.put(segment, updatedHolder);
+            setSegmentSignature(segment, updatedHolder);
+            retVal.add(segment);
+          }
         }
 
         yielder = yielder.next(null);
@@ -455,22 +489,23 @@ public class DruidSchema extends AbstractSchema
     return retVal;
   }
 
-  private void setSegmentSignature(final DataSegment segment, final RowSignature rowSignature)
+  private void setSegmentSignature(final DataSegment segment, final SegmentMetadataHolder segmentMetadataHolder)
   {
     synchronized (lock) {
-      segmentSignatures.computeIfAbsent(segment.getDataSource(), x -> new TreeMap<>(SEGMENT_ORDER))
-                       .put(segment, rowSignature);
+      segmentMetadataInfo.computeIfAbsent(segment.getDataSource(), x -> new TreeMap<>(SEGMENT_ORDER))
+                         .put(segment, segmentMetadataHolder);
     }
   }
 
   private DruidTable buildDruidTable(final String dataSource)
   {
     synchronized (lock) {
-      final TreeMap<DataSegment, RowSignature> segmentMap = segmentSignatures.get(dataSource);
+      final TreeMap<DataSegment, SegmentMetadataHolder> segmentMap = segmentMetadataInfo.get(dataSource);
       final Map<String, ValueType> columnTypes = new TreeMap<>();
 
       if (segmentMap != null) {
-        for (RowSignature rowSignature : segmentMap.values()) {
+        for (SegmentMetadataHolder segmentMetadataHolder : segmentMap.values()) {
+          final RowSignature rowSignature = segmentMetadataHolder.getRowSignature();
           if (rowSignature != null) {
             for (String column : rowSignature.getRowOrder()) {
               // Newer column types should override older ones.
@@ -520,7 +555,6 @@ public class DruidSchema extends AbstractSchema
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
       if (entry.getValue().isError()) {
         // Skip columns with analysis errors.
@@ -539,7 +573,17 @@ public class DruidSchema extends AbstractSchema
 
       rowSignatureBuilder.add(entry.getKey(), valueType);
     }
-
     return rowSignatureBuilder.build();
+  }
+
+  public Map<DataSegment, SegmentMetadataHolder> getSegmentMetadata()
+  {
+    final Map<DataSegment, SegmentMetadataHolder> segmentMetadata = new HashMap<>();
+    synchronized (lock) {
+      for (TreeMap<DataSegment, SegmentMetadataHolder> val : segmentMetadataInfo.values()) {
+        segmentMetadata.putAll(val);
+      }
+    }
+    return segmentMetadata;
   }
 }

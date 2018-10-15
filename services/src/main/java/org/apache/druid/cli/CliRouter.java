@@ -32,6 +32,7 @@ import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -120,12 +121,10 @@ public class CliRouter extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
 
-            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
-                new DiscoverySideEffectsProvider(
-                    DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER,
-                    ImmutableList.of()
-                )
-            ).in(LazySingleton.class);
+            binder
+                .bind(DiscoverySideEffectsProvider.Child.class)
+                .toProvider(new DiscoverySideEffectsProvider(NodeType.ROUTER, ImmutableList.of()))
+                .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
 
@@ -134,7 +133,6 @@ public class CliRouter extends ServerRunnable
           public ServerDiscoverySelector getCoordinatorServerDiscoverySelector(
               TieredBrokerConfig config,
               ServerDiscoveryFactory factory
-
           )
           {
             return factory.createSelector(config.getCoordinatorServiceName());
@@ -151,7 +149,7 @@ public class CliRouter extends ServerRunnable
             return new DruidLeaderClient(
                 httpClient,
                 druidNodeDiscoveryProvider,
-                DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+                NodeType.COORDINATOR,
                 "/druid/coordinator/v1/leader",
                 serverDiscoverySelector
             );
