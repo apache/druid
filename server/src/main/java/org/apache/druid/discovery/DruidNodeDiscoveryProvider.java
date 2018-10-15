@@ -35,63 +35,40 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Provider of DruidNodeDiscovery instances.
+ * Provider of {@link DruidNodeDiscovery} instances.
  */
 public abstract class DruidNodeDiscoveryProvider
 {
-  private static final Logger log = new Logger(DruidNodeDiscoveryProvider.class);
-
-  public static final String NODE_TYPE_COORDINATOR = "coordinator";
-  public static final String NODE_TYPE_HISTORICAL = "historical";
-  public static final String NODE_TYPE_BROKER = "broker";
-  public static final String NODE_TYPE_OVERLORD = "overlord";
-  public static final String NODE_TYPE_PEON = "peon";
-  public static final String NODE_TYPE_ROUTER = "router";
-  public static final String NODE_TYPE_MM = "middleManager";
-
-  public static final Set<String> ALL_NODE_TYPES = ImmutableSet.of(
-      NODE_TYPE_COORDINATOR,
-      NODE_TYPE_HISTORICAL,
-      NODE_TYPE_BROKER,
-      NODE_TYPE_OVERLORD,
-      NODE_TYPE_PEON,
-      NODE_TYPE_ROUTER,
-      NODE_TYPE_MM
+  private static final Map<String, Set<NodeType>> SERVICE_TO_NODE_TYPES = ImmutableMap.of(
+      LookupNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.BROKER, NodeType.HISTORICAL, NodeType.PEON),
+      DataNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.HISTORICAL, NodeType.PEON),
+      WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeType.PEON)
   );
 
-  private static final Map<String, Set<String>> SERVICE_TO_NODE_TYPES = ImmutableMap.of(
-      LookupNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_BROKER, NODE_TYPE_HISTORICAL, NODE_TYPE_PEON),
-      DataNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_HISTORICAL, NODE_TYPE_PEON),
-      WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_MM)
-  );
-
-  private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap = new ConcurrentHashMap<>(
-      SERVICE_TO_NODE_TYPES.size());
+  private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap =
+      new ConcurrentHashMap<>(SERVICE_TO_NODE_TYPES.size());
 
   /**
    * Get DruidNodeDiscovery instance to discover nodes of given nodeType.
    */
-  public abstract DruidNodeDiscovery getForNodeType(String nodeType);
+  public abstract DruidNodeDiscovery getForNodeType(NodeType nodeType);
 
   /**
    * Get DruidNodeDiscovery instance to discover nodes that announce given service in its metadata.
    */
   public DruidNodeDiscovery getForService(String serviceName)
   {
-    return serviceDiscoveryMap.compute(
+    return serviceDiscoveryMap.computeIfAbsent(
         serviceName,
-        (k, v) -> {
-          if (v != null) {
-            return v;
-          }
+        service -> {
 
-          Set<String> nodeTypesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(serviceName);
+          Set<NodeType> nodeTypesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(service);
           if (nodeTypesToWatch == null) {
-            throw new IAE("Unknown service [%s].", serviceName);
+            throw new IAE("Unknown service [%s].", service);
           }
 
-          ServiceDruidNodeDiscovery serviceDiscovery = new ServiceDruidNodeDiscovery(serviceName);
-          for (String nodeType : nodeTypesToWatch) {
+          ServiceDruidNodeDiscovery serviceDiscovery = new ServiceDruidNodeDiscovery(service);
+          for (NodeType nodeType : nodeTypesToWatch) {
             getForNodeType(nodeType).registerListener(serviceDiscovery.nodeTypeListener());
           }
           return serviceDiscovery;
