@@ -417,8 +417,9 @@ public class JobHelper
           @Override
           public long push() throws IOException
           {
-            try (OutputStream outputStream = outputFS.create(
-                tmpPath,
+               
+           try (OutputStream outputStream = outputFS.create(
+                finalIndexZipFilePath,
                 true,
                 DEFAULT_FS_BUFFER_SIZE,
                 progressable
@@ -435,21 +436,13 @@ public class JobHelper
         RetryPolicies.exponentialBackoffRetry(NUM_RETRIES, SECONDS_BETWEEN_RETRIES, TimeUnit.SECONDS)
     );
     zipPusher.push();
-    log.info("Zipped %,d bytes to [%s]", size.get(), tmpPath.toUri());
+    log.info("Zipped %,d bytes to [%s]", size.get(), finalIndexZipFilePath.toUri());
 
     final URI indexOutURI = finalIndexZipFilePath.toUri();
     final DataSegment finalSegment = segmentTemplate
         .withLoadSpec(dataSegmentPusher.makeLoadSpec(indexOutURI))
         .withSize(size.get())
         .withBinaryVersion(SegmentUtils.getVersionFromDir(mergedBase));
-
-    if (!renameIndexFiles(outputFS, tmpPath, finalIndexZipFilePath)) {
-      throw new IOE(
-          "Unable to rename [%s] to [%s]",
-          tmpPath.toUri().toString(),
-          finalIndexZipFilePath.toUri().toString()
-      );
-    }
 
     writeSegmentDescriptor(
         outputFS,
