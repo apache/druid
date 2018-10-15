@@ -41,7 +41,7 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>java-util</artifactId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>

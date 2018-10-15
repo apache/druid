@@ -37,7 +37,8 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "default", value = DefaultDimensionSpec.class),
     @JsonSubTypes.Type(name = "extraction", value = ExtractionDimensionSpec.class),
     @JsonSubTypes.Type(name = "regexFiltered", value = RegexFilteredDimensionSpec.class),
-    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class)
+    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class),
+    @JsonSubTypes.Type(name = "prefixFiltered", value = PrefixFilteredDimensionSpec.class)
 })
 public interface DimensionSpec extends Cacheable
 {

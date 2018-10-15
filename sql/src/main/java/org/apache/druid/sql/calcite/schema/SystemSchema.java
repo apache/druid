@@ -248,6 +248,13 @@ public class SystemSchema extends AbstractSchema
             try {
               segmentsAlreadySeen.add(val.getId());
               final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getId());
+              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 1L;
+              if (partialSegmentData != null) {
+                numReplicas = partialSegmentData.getNumReplicas();
+                numRows = partialSegmentData.getNumRows();
+                isAvailable = partialSegmentData.isAvailable();
+                isRealtime = partialSegmentData.isRealtime();
+              }
               return new Object[]{
                   val.getId(),
                   val.getDataSource(),
@@ -256,11 +263,11 @@ public class SystemSchema extends AbstractSchema
                   val.getSize(),
                   val.getVersion(),
                   val.getShardSpec().getPartitionNum(),
-                  partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas(),
-                  partialSegmentData == null ? 0L : partialSegmentData.getNumRows(),
+                  numReplicas,
+                  numRows,
                   1L, //is_published is true for published segments
-                  partialSegmentData == null ? 1L : partialSegmentData.isAvailable(),
-                  partialSegmentData == null ? 0L : partialSegmentData.isRealtime(),
+                  isAvailable,
+                  isRealtime,
                   jsonMapper.writeValueAsString(val)
               };
             }
@@ -302,7 +309,8 @@ public class SystemSchema extends AbstractSchema
           });
 
       final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
-          Iterables.concat(publishedSegments, availableSegments));
+          Iterables.concat(publishedSegments, availableSegments)
+      );
 
       return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
 
@@ -356,13 +364,13 @@ public class SystemSchema extends AbstractSchema
       private final long isAvailable;
       private final long isRealtime;
       private final long numReplicas;
-      private final Long numRows;
+      private final long numRows;
 
       public PartialSegmentData(
           final long isAvailable,
           final long isRealtime,
           final long numReplicas,
-          final Long numRows
+          final long numRows
       )
 
       {
@@ -387,7 +395,7 @@ public class SystemSchema extends AbstractSchema
         return numReplicas;
       }
 
-      public Long getNumRows()
+      public long getNumRows()
       {
         return numRows;
       }
@@ -482,7 +490,7 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
-  private static class ServerSegmentsTable extends AbstractTable implements ScannableTable
+  static class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
     final AuthorizerMapper authorizerMapper;

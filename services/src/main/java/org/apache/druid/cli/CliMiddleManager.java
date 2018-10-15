@@ -30,7 +30,7 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -129,12 +129,12 @@ public class CliMiddleManager extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
 
-            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
-                new DiscoverySideEffectsProvider(
-                    DruidNodeDiscoveryProvider.NODE_TYPE_MM,
-                    ImmutableList.of(WorkerNodeService.class)
+            binder
+                .bind(DiscoverySideEffectsProvider.Child.class)
+                .toProvider(
+                    new DiscoverySideEffectsProvider(NodeType.MIDDLE_MANAGER, ImmutableList.of(WorkerNodeService.class))
                 )
-            ).in(LazySingleton.class);
+                .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
 

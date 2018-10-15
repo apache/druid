@@ -36,7 +36,7 @@ import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.ConditionalMultibind;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.Jerseys;
@@ -217,12 +217,11 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorCleanupPendingSegments.class
             );
 
-            binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(Coordinator.class).toProvider(
-                new DiscoverySideEffectsProvider(
-                    DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
-                    ImmutableList.of()
-                )
-            ).in(LazySingleton.class);
+            binder
+                .bind(DiscoverySideEffectsProvider.Child.class)
+                .annotatedWith(Coordinator.class)
+                .toProvider(new DiscoverySideEffectsProvider(NodeType.COORDINATOR, ImmutableList.of()))
+                .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, Coordinator.class));
           }
 

@@ -296,10 +296,7 @@ public class SystemSchemaTest extends CalciteTestBase
       1L,
       ImmutableMap.of(
           "dummy",
-          // It uses segment2 rather than segment3 because in testSegmentsTable() later, it asserts for 2 replicas
-          // for segment2. So it's trying to mimic the behavior that segment2 is served by both the servers druidServer1
-          // and druidServer2.
-          new ImmutableDruidDataSource("dummy", Collections.emptyMap(), Arrays.asList(segment2, segment4, segment5))
+          new ImmutableDruidDataSource("dummy", Collections.emptyMap(), Arrays.asList(segment3, segment4, segment5))
       ),
       3
   );
@@ -453,6 +450,7 @@ public class SystemSchemaTest extends CalciteTestBase
     //segment 6 is published and unavailable, num_replicas is 0
     Assert.assertEquals(1L, row1[9]);
     Assert.assertEquals(0L, row1[7]);
+    Assert.assertEquals(0L, row1[8]); //numRows = 0
 
     Assert.assertEquals(true, enumerator.moveNext());
     Assert.assertEquals(true, enumerator.moveNext());
@@ -463,6 +461,7 @@ public class SystemSchemaTest extends CalciteTestBase
     //segment 2 is published and has 2 replicas
     Assert.assertEquals(1L, row5[9]);
     Assert.assertEquals(2L, row5[7]);
+    Assert.assertEquals(3L, row5[8]);  //numRows = 3
     Assert.assertEquals(true, enumerator.moveNext());
     Assert.assertEquals(false, enumerator.moveNext());
 
@@ -513,6 +512,84 @@ public class SystemSchemaTest extends CalciteTestBase
     Object[] row2 = rows.last();
     Assert.assertEquals("server2:1234", row2[0]);
     Assert.assertEquals("historical", row2[4].toString());
+  }
+
+  @Test
+  public void testServerSegmentsTable()
+  {
+    SystemSchema.ServerSegmentsTable serverSegmentsTable = EasyMock.createMockBuilder(SystemSchema.ServerSegmentsTable.class)
+                                                                   .withConstructor(serverView, authMapper)
+                                                                   .createMock();
+    EasyMock.replay(serverSegmentsTable);
+    EasyMock.expect(serverView.getDruidServers())
+            .andReturn(immutableDruidServers)
+            .once();
+    EasyMock.replay(serverView);
+    DataContext dataContext = new DataContext()
+    {
+      @Override
+      public SchemaPlus getRootSchema()
+      {
+        return null;
+      }
+
+      @Override
+      public JavaTypeFactory getTypeFactory()
+      {
+        return null;
+      }
+
+      @Override
+      public QueryProvider getQueryProvider()
+      {
+        return null;
+      }
+
+      @Override
+      public Object get(String name)
+      {
+        return CalciteTests.SUPER_USER_AUTH_RESULT;
+      }
+    };
+    Enumerable<Object[]> rows = serverSegmentsTable.scan(dataContext);
+    Assert.assertEquals(5, rows.count());
+
+    //server_segments table is the join of servers and segments table
+    // it will have 5 rows as follows
+    // localhost:0000 |  test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1(segment1)
+    // localhost:0000 |  test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2(segment2)
+    // server2:1234   |  test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3(segment3)
+    // server2:1234   |  test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4(segment4)
+    // server2:1234   |  test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5(segment5)
+
+    Enumerator<Object[]> enumerator = rows.enumerator();
+    Assert.assertEquals(true, enumerator.moveNext());
+
+    Object[] row1 = rows.first();
+    Assert.assertEquals("localhost:0000", row1[0]);
+    Assert.assertEquals("test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", row1[1]);
+
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row2 = enumerator.current();
+    Assert.assertEquals("localhost:0000", row2[0]);
+    Assert.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", row2[1]);
+
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row3 = enumerator.current();
+    Assert.assertEquals("server2:1234", row3[0]);
+    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row3[1]);
+
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row4 = enumerator.current();
+    Assert.assertEquals("server2:1234", row4[0]);
+    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row4[1]);
+
+    Assert.assertEquals(true, enumerator.moveNext());
+    Object[] row5 = rows.last();
+    Assert.assertEquals("server2:1234", row5[0]);
+    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row5[1]);
+
+    Assert.assertEquals(false, enumerator.moveNext());
   }
 
   @Test

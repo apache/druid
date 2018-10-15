@@ -47,10 +47,9 @@ public class SegmentMetadataHolder
   private final long isAvailable;
   private final long isRealtime;
   private final long numReplicas;
+  private final long numRows;
   @Nullable
   private final RowSignature rowSignature;
-  @Nullable
-  private final Long numRows;
 
   private SegmentMetadataHolder(Builder builder)
   {
@@ -88,8 +87,7 @@ public class SegmentMetadataHolder
     return numReplicas;
   }
 
-  @Nullable
-  public Long getNumRows()
+  public long getNumRows()
   {
     return numRows;
   }
@@ -110,8 +108,7 @@ public class SegmentMetadataHolder
     private long numReplicas;
     @Nullable
     private RowSignature rowSignature;
-    @Nullable
-    private Long numRows;
+    private long numRows;
 
     private Builder(SegmentId segmentId, long isPublished, long isAvailable, long isRealtime, long numReplicas)
     {
@@ -128,7 +125,7 @@ public class SegmentMetadataHolder
       return this;
     }
 
-    public Builder withNumRows(Long numRows)
+    public Builder withNumRows(long numRows)
     {
       this.numRows = numRows;
       return this;

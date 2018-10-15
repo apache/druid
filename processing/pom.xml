@@ -34,13 +34,8 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-common</artifactId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.druid</groupId>
-          <artifactId>java-util</artifactId>
-          <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -120,7 +115,7 @@
         <!-- Tests -->
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-common</artifactId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
@@ -172,7 +167,7 @@
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.apache.druid</groupId>
-                            <artifactId>druid-common</artifactId>
+                            <artifactId>druid-core</artifactId>
                             <version>${project.parent.version}</version>
                         </path>
                     </annotationProcessorPaths>

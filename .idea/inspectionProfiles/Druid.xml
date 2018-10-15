@@ -139,6 +139,55 @@
         <constraint name="y" within="" contains="" />
         <constraint name="z" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="Use RE (a Druid's class)" created="1539352150701" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.RuntimeException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use RE (a Druid's class) with cause" created="1539353059868" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.RuntimeException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use ISE (a Druid's class)" created="1539353519594" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalStateException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use ISE (a Druid's class) with cause" created="1539353595734" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalStateException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IAE (a Druid's class)" created="1539353691746" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalArgumentException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IAE (a Druid's class) with cause" created="1539353766336" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalArgumentException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IOE (a Druid's class)" created="1539353913074" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.io\.IOException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IOE (a Druid's class) with cause" created="1539354009031" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.io\.IOException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use UOE (a Druid's class)" created="1539354091201" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.UnsupportedOperationException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
       <option name="processCode" value="true" />

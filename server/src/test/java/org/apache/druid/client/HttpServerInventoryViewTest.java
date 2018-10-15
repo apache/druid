@@ -30,6 +30,7 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -63,7 +64,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-
 
 /**
  */
@@ -170,7 +170,7 @@ public class HttpServerInventoryViewTest
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
         new DruidNode("service", "host", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
+        NodeType.HISTORICAL,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
         )
