@@ -7,13 +7,15 @@ layout: doc_page
 This module extends [Druid Hadoop based indexing](../../ingestion/hadoop.html) to ingest data directly from offline 
 Apache Parquet files. 
 
-Note: `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to [include  both](../../operations/including-extensions.html).
+Note: `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to
+ [include  both](../../operations/including-extensions.html).
 
 ## Parquet Hadoop Parser
 
 This extension provides two ways to parse Parquet files:
 * `parquet` - using a simple conversion contained within this extension 
-* `parquet-avro` - conversion to avro records with the `parquet-avro` library and using the `druid-avro-extensions` module to parse the avro data
+* `parquet-avro` - conversion to avro records with the `parquet-avro` library and using the `druid-avro-extensions`
+ module to parse the avro data
 
 Selection of conversion method is controlled by parser type, and the correct hadoop input format must also be set in 
 the `ioConfig`,  `org.apache.druid.data.input.parquet.simple.DruidParquetInputFormat` for `parquet` and 
@@ -22,10 +24,13 @@ the `ioConfig`,  `org.apache.druid.data.input.parquet.simple.DruidParquetInputFo
 
 Both parse options support auto field discovery and flattening if provided with a 
 [flattenSpec](../../ingestion/flatten-json.html) with `parquet` or `avro` as the `format`. Parquet nested list and map 
-[logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md) _should_ operate correctly with json path expressions for all supported types.
+[logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md) _should_ operate correctly with 
+json path expressions for all supported types. `parquet-avro` sets a hadoop job property 
+`parquet.avro.add-list-element-records` to `false` (which normally defaults to `true`), in order to 'unwrap' primitive 
+list elements into multi-value dimensions.
 
 The `parquet` parser supports `int96` Parquet values, while `parquet-avro` does not. There may also be some subtle 
-differences in the behavior of json path expression evaluation of `flattenSpec`. 
+differences in the behavior of json path expression evaluation of `flattenSpec`.
 
 We suggest using `parquet` over `parquet-avro` to allow ingesting data beyond the schema constraints of Avro conversion. 
 However, `parquet-avro` was the original basis for this extension, and as such it is a bit more mature.
