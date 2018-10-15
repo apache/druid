@@ -33,6 +33,7 @@ import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -84,7 +85,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -134,7 +135,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
         new DruidNode("service", "host1", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
         )
@@ -142,7 +143,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
         new DruidNode("service", "host2", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0")
         )
@@ -173,7 +174,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -227,7 +228,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
         new DruidNode("service", "host1", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
         )
@@ -235,7 +236,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
         new DruidNode("service", "host2", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0")
         )
@@ -261,7 +262,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -326,7 +327,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
         new DruidNode("service", "host", 1234, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
         )
@@ -411,7 +412,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -465,7 +466,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
         new DruidNode("service", "host", 1234, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
         )
@@ -584,7 +585,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -638,10 +639,8 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
         new DruidNode("service", "host", 1234, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
-        ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
-        )
+        NodeType.MIDDLE_MANAGER,
+        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0"))
     );
 
     workerHolders.put(
@@ -757,7 +756,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -815,7 +814,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
         new DruidNode("service", "host1", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 1, "0")
         )
@@ -860,7 +859,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
         new DruidNode("service", "host2", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0"))
     );
 
@@ -890,7 +889,7 @@ public class HttpRemoteTaskRunnerTest
 
     DiscoveryDruidNode druidNode3 = new DiscoveryDruidNode(
         new DruidNode("service", "host3", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+        NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0"))
     );
 
@@ -1182,7 +1181,7 @@ public class HttpRemoteTaskRunnerTest
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 

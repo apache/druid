@@ -77,7 +77,7 @@ public class InDimFilter implements DimFilter
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
-    Preconditions.checkArgument(values != null && !values.isEmpty(), "values can not be null or empty");
+    Preconditions.checkArgument(values != null, "values can not be null");
 
     this.values = new TreeSet<>(Comparators.naturalNullsFirst());
     for (String value : values) {

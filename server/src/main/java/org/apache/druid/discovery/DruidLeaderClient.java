@@ -67,7 +67,7 @@ public class DruidLeaderClient
 
   private final HttpClient httpClient;
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-  private final String nodeTypeToWatch;
+  private final NodeType nodeTypeToWatch;
 
   private final String leaderRequestPath;
 
@@ -81,7 +81,7 @@ public class DruidLeaderClient
   public DruidLeaderClient(
       HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      String nodeTypeToWatch,
+      NodeType nodeTypeToWatch,
       String leaderRequestPath,
       ServerDiscoverySelector serverDiscoverySelector
   )

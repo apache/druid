@@ -27,6 +27,7 @@ import com.google.inject.Provider;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -58,8 +59,8 @@ public abstract class ServerRunnable extends GuiceRunnable
   }
 
   /**
-   * This is a helper class used by CliXXX classes to announce DiscoveryDruidNode
-   * as part of lifecycle Stage.LAST .
+   * This is a helper class used by CliXXX classes to announce {@link DiscoveryDruidNode}
+   * as part of {@link Lifecycle.Stage#LAST}.
    */
   protected static class DiscoverySideEffectsProvider implements Provider<DiscoverySideEffectsProvider.Child>
   {
@@ -77,10 +78,10 @@ public abstract class ServerRunnable extends GuiceRunnable
     @Inject
     private Injector injector;
 
-    private final String nodeType;
+    private final NodeType nodeType;
     private final List<Class<? extends DruidService>> serviceClasses;
 
-    public DiscoverySideEffectsProvider(String nodeType, List<Class<? extends DruidService>> serviceClasses)
+    public DiscoverySideEffectsProvider(NodeType nodeType, List<Class<? extends DruidService>> serviceClasses)
     {
       this.nodeType = nodeType;
       this.serviceClasses = serviceClasses;
@@ -95,10 +96,7 @@ public abstract class ServerRunnable extends GuiceRunnable
         builder.put(service.getName(), service);
       }
 
-      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode,
-                                                                     nodeType,
-                                                                     builder.build()
-      );
+      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeType, builder.build());
 
       lifecycle.addHandler(
           new Lifecycle.Handler()

@@ -31,11 +31,11 @@
     </parent>
 
     <dependencies>
-        <!-- include druid-common to prevent older versions of dependencies
+        <!-- include druid-core to prevent older versions of dependencies
         from being pulled in by airline and dependencies of druid-server -->
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-common</artifactId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>

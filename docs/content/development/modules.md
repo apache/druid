@@ -72,7 +72,7 @@ Binders.dataSegmentPusherBinder(binder)
        .to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
 ```
 
-`Binders.dataSegment*Binder()` is a call provided by the druid-api jar which sets up a Guice multibind "MapBinder".  If that doesn't make sense, don't worry about it, just think of it as a magical incantation.
+`Binders.dataSegment*Binder()` is a call provided by the druid-core jar which sets up a Guice multibind "MapBinder".  If that doesn't make sense, don't worry about it, just think of it as a magical incantation.
 
 `addBinding("hdfs")` for the Puller binder creates a new handler for loadSpec objects of type "hdfs".  For the Pusher binder it creates a new type value that you can specify for the `druid.storage.type` parameter.
 

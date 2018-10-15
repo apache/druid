@@ -97,8 +97,7 @@
     </properties>
 
     <modules>
-        <module>api</module>
-        <module>common</module>
+        <module>core</module>
         <module>examples</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
@@ -109,7 +108,6 @@
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>aws-common</module>
-        <module>java-util</module>
         <module>extendedset</module>
         <module>hll</module>
         <!-- Core extensions -->
@@ -697,8 +695,6 @@
                 <artifactId>metrics-core</artifactId>
                 <version>${dropwizard.metrics.version}</version>
             </dependency>
-
-            <!-- Test Scope -->
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-core-asl</artifactId>
@@ -730,15 +726,17 @@
                 <version>3.0.15</version>
             </dependency>
             <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
                 <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>com.github.ben-manes.caffeine</groupId>
-                <artifactId>caffeine</artifactId>
-                <version>${caffeine.version}</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.easymock</groupId>

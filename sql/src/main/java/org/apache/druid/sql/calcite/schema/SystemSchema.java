@@ -47,6 +47,7 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
@@ -235,6 +236,13 @@ public class SystemSchema extends AbstractSchema
             try {
               segmentsAlreadySeen.add(val.getIdentifier());
               final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getIdentifier());
+              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 1L;
+              if (partialSegmentData != null) {
+                numReplicas = partialSegmentData.getNumReplicas();
+                numRows = partialSegmentData.getNumRows();
+                isAvailable = partialSegmentData.isAvailable();
+                isRealtime = partialSegmentData.isRealtime();
+              }
               return new Object[]{
                   val.getIdentifier(),
                   val.getDataSource(),
@@ -243,19 +251,16 @@ public class SystemSchema extends AbstractSchema
                   val.getSize(),
                   val.getVersion(),
                   val.getShardSpec().getPartitionNum(),
-                  partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas(),
-                  partialSegmentData == null ? 0L : partialSegmentData.getNumRows(),
+                  numReplicas,
+                  numRows,
                   1L, //is_published is true for published segments
-                  partialSegmentData == null ? 1L : partialSegmentData.isAvailable(),
-                  partialSegmentData == null ? 0L : partialSegmentData.isRealtime(),
+                  isAvailable,
+                  isRealtime,
                   jsonMapper.writeValueAsString(val)
               };
             }
             catch (JsonProcessingException e) {
-              throw new RuntimeException(StringUtils.format(
-                  "Error getting segment payload for segment %s",
-                  val.getIdentifier()
-              ), e);
+              throw new RE(e, "Error getting segment payload for segment %s", val.getIdentifier());
             }
           });
 
@@ -287,15 +292,13 @@ public class SystemSchema extends AbstractSchema
               };
             }
             catch (JsonProcessingException e) {
-              throw new RuntimeException(StringUtils.format(
-                  "Error getting segment payload for segment %s",
-                  val.getKey().getIdentifier()
-              ), e);
+              throw new RE(e, "Error getting segment payload for segment %s", val.getKey().getIdentifier());
             }
           });
 
       final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
-          Iterables.concat(publishedSegments, availableSegments));
+          Iterables.concat(publishedSegments, availableSegments)
+      );
 
       return Linq4j.asEnumerable(allSegments).where(t -> t != null);
 
@@ -349,13 +352,13 @@ public class SystemSchema extends AbstractSchema
       private final long isAvailable;
       private final long isRealtime;
       private final long numReplicas;
-      private final Long numRows;
+      private final long numRows;
 
       public PartialSegmentData(
           final long isAvailable,
           final long isRealtime,
           final long numReplicas,
-          final Long numRows
+          final long numRows
       )
 
       {
@@ -380,7 +383,7 @@ public class SystemSchema extends AbstractSchema
         return numReplicas;
       }
 
-      public Long getNumRows()
+      public long getNumRows()
       {
         return numRows;
       }
@@ -475,7 +478,7 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
-  private static class ServerSegmentsTable extends AbstractTable implements ScannableTable
+  static class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
     final AuthorizerMapper authorizerMapper;
