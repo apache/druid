@@ -71,12 +71,6 @@ public class DoubleMinAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new DoubleMinAggregator(selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

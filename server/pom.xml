@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.13.0-SNAPSHOT</version>
+        <version>0.13.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -45,11 +45,11 @@
         <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-console</artifactId>
-            <version>0.0.2</version>
+            <version>0.0.4</version>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>java-util</artifactId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
@@ -203,7 +203,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-common</artifactId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
             <scope>test</scope>

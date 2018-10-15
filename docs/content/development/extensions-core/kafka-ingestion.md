@@ -166,7 +166,7 @@ For Roaring bitmaps:
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`topic`|String|The Kafka topic to read from. This must be a specific topic as topic patterns are not supported.|yes|
-|`consumerProperties`|Map<String, String>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.|yes|
+|`consumerProperties`|Map<String, Object>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`. For SSL connections, the `keystore`, `truststore` and `key` passwords can be provided as a [Password Provider](../../operations/password-provider.html) or String password.|yes|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKafkaPartitions}`.|no (default == 1)|
 |`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
@@ -206,12 +206,26 @@ Suspend indexing tasks associated with a supervisor. Note that the supervisor it
 operating and emitting logs and metrics, it will just ensure that no indexing tasks are running until the supervisor
 is resumed. Responds with updated SupervisorSpec.
 
-#### Resume Supervisor 
+#### Suspend All Supervisors
+
+```
+POST /druid/indexer/v1/supervisor/suspendAll
+```
+Suspend all supervisors at once.
+
+#### Resume Supervisor
 
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/resume
 ```
 Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
+
+#### Resume All Supervisors
+
+```
+POST /druid/indexer/v1/supervisor/resumeAll
+```
+Resume all supervisors at once.
 
 #### Reset Supervisor
 ```
@@ -241,7 +255,13 @@ with the supervisor history api, but will not be listed in the 'get supervisors'
 or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
 spec to the create api.
 
-#### Shutdown Supervisor 
+#### Terminate All Supervisors
+```
+POST /druid/indexer/v1/supervisor/terminateAll
+```
+Terminate all supervisors at once.
+
+#### Shutdown Supervisor
 _Deprecated: use the equivalent 'terminate' instead_
 ```
 POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown

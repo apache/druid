@@ -21,6 +21,7 @@ package org.apache.druid.discovery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.selector.Server;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
@@ -66,7 +67,7 @@ public class DruidLeaderClient
 
   private final HttpClient httpClient;
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-  private final String nodeTypeToWatch;
+  private final NodeType nodeTypeToWatch;
 
   private final String leaderRequestPath;
 
@@ -80,7 +81,7 @@ public class DruidLeaderClient
   public DruidLeaderClient(
       HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      String nodeTypeToWatch,
+      NodeType nodeTypeToWatch,
       String leaderRequestPath,
       ServerDiscoverySelector serverDiscoverySelector
   )
@@ -131,6 +132,18 @@ public class DruidLeaderClient
   public FullResponseHolder go(Request request) throws IOException, InterruptedException
   {
     return go(request, new FullResponseHandler(StandardCharsets.UTF_8));
+  }
+
+  /**
+   * Executes the request object aimed at the leader and process the response with given handler
+   * Note: this method doesn't do retrying on errors or handle leader changes occurred during communication
+   */
+  public <Intermediate, Final> ListenableFuture<Final> goAsync(
+      final Request request,
+      final HttpResponseHandler<Intermediate, Final> handler
+  )
+  {
+    return httpClient.go(request, handler);
   }
 
   /**

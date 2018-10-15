@@ -32,19 +32,25 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.collections.CloseableStupidPool;
+import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -115,10 +121,12 @@ import org.apache.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
@@ -567,5 +575,31 @@ public class CalciteTests
             "m1", m1
         )
     ).get(0);
+  }
+
+
+  public static SystemSchema createMockSystemSchema(
+      final DruidSchema druidSchema,
+      final SpecificSegmentsQuerySegmentWalker walker
+  )
+  {
+    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+        EasyMock.createMock(HttpClient.class),
+        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
+        NodeType.COORDINATOR,
+        "/simple/leader",
+        new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
+    )
+    {
+    };
+    final SystemSchema schema = new SystemSchema(
+        druidSchema,
+        new TestServerInventoryView(walker.getSegments()),
+        TEST_AUTHORIZER_MAPPER,
+        druidLeaderClient,
+        druidLeaderClient,
+        getJsonMapper()
+    );
+    return schema;
   }
 }

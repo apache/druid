@@ -152,11 +152,11 @@ public class HadoopTuningConfig implements TuningConfig
     this.allowedHadoopPrefix = allowedHadoopPrefix == null ? ImmutableList.of() : allowedHadoopPrefix;
 
 
-    this.ignoreInvalidRows = ignoreInvalidRows;
+    this.ignoreInvalidRows = ignoreInvalidRows == null ? false : ignoreInvalidRows;
     if (maxParseExceptions != null) {
       this.maxParseExceptions = maxParseExceptions;
     } else {
-      if (ignoreInvalidRows == null || !ignoreInvalidRows) {
+      if (!this.ignoreInvalidRows) {
         this.maxParseExceptions = 0;
       } else {
         this.maxParseExceptions = TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS;
