@@ -52,7 +52,7 @@
               {
                 "type": "path",
                 "name": "listDim",
-                "expr": "$.nestedData.listDim[*].array"
+                "expr": "$.nestedData.listDim[*]"
               }
             ]
           },
