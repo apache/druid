@@ -51,7 +51,7 @@ public class DruidParquetReadSupport extends GroupReadSupport
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     ParseSpec parseSpec = config.getParser().getParseSpec();
 
-    // todo: this is kind of lame, maybe we can still trim what we read if we
+    // this is kind of lame, maybe we can still trim what we read if we
     // parse the flatten spec and determine it isn't auto discovering props?
     if (parseSpec instanceof ParquetParseSpec) {
       if (((ParquetParseSpec) parseSpec).getFlattenSpec() != null) {

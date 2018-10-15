@@ -22,12 +22,10 @@ package org.apache.druid.data.input.parquet.simple;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.TypeRef;
-import com.jayway.jsonpath.spi.mapper.MappingProvider;
+import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.schema.Type;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
@@ -38,20 +36,6 @@ import java.util.stream.Collectors;
 
 public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Group>
 {
-  private static final MappingProvider DEFAULT_MAPPING_PROVIDER = new MappingProvider()
-  {
-    @Override
-    public <T> T map(Object source, Class<T> targetType, Configuration configuration)
-    {
-      throw new NotImplementedException();
-    }
-
-    @Override
-    public <T> T map(Object source, TypeRef<T> targetType, Configuration configuration)
-    {
-      throw new NotImplementedException();
-    }
-  };
 
   private final Configuration jsonPathConfiguration;
   private final ParquetGroupConverter converter;
@@ -61,7 +45,7 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
     this.converter = new ParquetGroupConverter(binaryAsString);
     this.jsonPathConfiguration = Configuration.builder()
                                               .jsonProvider(new ParquetGroupJsonProvider(converter))
-                                              .mappingProvider(DEFAULT_MAPPING_PROVIDER)
+                                              .mappingProvider(new NotImplementedMappingProvider())
                                               .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                               .build();
   }
@@ -98,7 +82,7 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
   @Override
   public Function<Group, Object> makeJsonQueryExtractor(String expr)
   {
-    return null;
+    throw new UnsupportedOperationException("Parquet does not support JQ");
   }
 
   /**

@@ -28,7 +28,6 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.avro.AvroFlattenerMaker;
 import org.apache.druid.data.input.avro.AvroParseSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -72,7 +71,7 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
 
     this.recordFlattener = ObjectFlatteners.create(
         flattenSpec,
-        new AvroFlattenerMaker(false, this.binaryAsString)
+        new ParquetAvroFlattenerMaker(false, this.binaryAsString)
     );
   }
 

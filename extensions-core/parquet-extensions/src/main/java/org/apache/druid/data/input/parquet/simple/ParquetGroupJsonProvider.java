@@ -58,20 +58,13 @@ public class ParquetGroupJsonProvider implements JsonProvider
   @Override
   public boolean isArray(final Object o)
   {
-    if (o instanceof List) {
-      return true;
-    }
-    return false;
+    return o instanceof List;
   }
 
   @Override
   public boolean isMap(final Object o)
   {
-    if (o instanceof Map) {
-      return true;
-    } else {
-      return o instanceof Group;
-    }
+    return o instanceof Map || o instanceof Group;
   }
 
   @Override

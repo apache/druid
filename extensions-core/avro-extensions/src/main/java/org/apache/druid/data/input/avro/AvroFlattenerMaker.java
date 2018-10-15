@@ -28,6 +28,7 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 
 import java.nio.ByteBuffer;
@@ -39,10 +40,10 @@ import java.util.stream.Collectors;
 
 public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<GenericRecord>
 {
-  private static final Configuration JSONPATH_CONFIGURATION =
+  static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
                    .jsonProvider(new GenericAvroJsonProvider())
-                   .mappingProvider(new GenericAvroMappingProvider())
+                   .mappingProvider(new NotImplementedMappingProvider())
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
@@ -55,24 +56,29 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       Schema.Type.DOUBLE
   );
 
-  private static boolean isPrimitive(Schema schema)
+  public static boolean isPrimitive(Schema schema)
   {
     return ROOT_TYPES.contains(schema.getType());
   }
-  private static boolean isPrimitiveArray(Schema schema)
+
+  public static boolean isPrimitiveArray(Schema schema)
   {
     return schema.getType().equals(Schema.Type.ARRAY) && isPrimitive(schema.getElementType());
   }
 
-  private static boolean isOptionalPrimitive(Schema schema)
+  public static boolean isOptionalPrimitive(Schema schema)
   {
     return schema.getType().equals(Schema.Type.UNION) &&
            schema.getTypes().size() == 2 &&
-           schema.getTypes().get(0).getType().equals(Schema.Type.NULL) &&
-           (isPrimitive(schema.getTypes().get(1)) || isPrimitiveArray(schema.getTypes().get(1)));
+           (
+               (schema.getTypes().get(0).getType().equals(Schema.Type.NULL) &&
+                (isPrimitive(schema.getTypes().get(1)) || isPrimitiveArray(schema.getTypes().get(1)))) ||
+               (schema.getTypes().get(1).getType().equals(Schema.Type.NULL) &&
+                (isPrimitive(schema.getTypes().get(0)) || isPrimitiveArray(schema.getTypes().get(0))))
+           );
   }
 
-  private static boolean isFieldPrimitive(Schema.Field field)
+  static boolean isFieldPrimitive(Schema.Field field)
   {
     return isPrimitive(field.schema()) ||
            isPrimitiveArray(field.schema()) ||
