@@ -63,6 +63,10 @@ public class ParquetAvroFlattenerMaker extends AvroFlattenerMaker
   {
     // conversion of lists of primitives can leave 'wrapped' list primitives, which through avro conversion are
     // typed ArrayList<GenericRecord>, where the GenericRecord is of type 'RECORD' and has a single primitive field
+    // Note that this can also perhaps be resolved by setting '"parquet.avro.add-list-element-records": "true"' in
+    // hadoop jobProperties, but including this here to be friendly and compatible with 'simple' conversion out of the
+    // box because i think it is sane default behavior
+    // see https://github.com/apache/incubator-druid/issues/5433#issuecomment-388539306
     if (o instanceof ArrayList) {
       ArrayList lst = (ArrayList) o;
       if (lst.stream().allMatch(item -> {
