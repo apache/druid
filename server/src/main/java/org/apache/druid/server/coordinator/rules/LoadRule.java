@@ -144,7 +144,7 @@ public abstract class LoadRule implements Rule
   private static List<ServerHolder> getFilteredHolders(
       final String tier,
       final DruidCluster druidCluster,
-      Predicate<ServerHolder> predicate
+      final Predicate<ServerHolder> predicate
   )
   {
     final NavigableSet<ServerHolder> queue = druidCluster.getHistoricalsByTier(tier);
@@ -152,8 +152,8 @@ public abstract class LoadRule implements Rule
       log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
       return Collections.emptyList();
     }
-    Predicate<ServerHolder> isGeneral = s -> !s.isInMaintenance();
-    return queue.stream().filter(isGeneral.and(predicate)).collect(Collectors.toList());
+    Predicate<ServerHolder> isNotInMaintenance = s -> !s.isInMaintenance();
+    return queue.stream().filter(isNotInMaintenance.and(predicate)).collect(Collectors.toList());
   }
 
   /**

@@ -104,18 +104,26 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       return;
     }
 
+    /*
+      Take as much segments from maintenance servers as priority allows and find the best location for them on
+      available servers. After that, balance segments within available servers pool.
+     */
     Map<Boolean, List<ServerHolder>> partitions =
         servers.stream().collect(Collectors.partitioningBy(ServerHolder::isInMaintenance));
-    final List<ServerHolder> maintenance = partitions.get(true);
-    final List<ServerHolder> general = partitions.get(false);
-    log.info("Found %d servers in maintenance, %d general servers", maintenance.size(), general.size());
+    final List<ServerHolder> maintenanceServers = partitions.get(true);
+    final List<ServerHolder> availableServers = partitions.get(false);
+    log.info(
+        "Found %d servers in maintenance, %d available servers servers",
+        maintenanceServers.size(),
+        availableServers.size()
+    );
 
-    if (maintenance.isEmpty()) {
-      if (general.size() <= 1) {
-        log.info("[%s]: %d general servers found.  Cannot balance.", tier, general.size());
+    if (maintenanceServers.isEmpty()) {
+      if (availableServers.size() <= 1) {
+        log.info("[%s]: %d available servers servers found.  Cannot balance.", tier, availableServers.size());
       }
-    } else if (general.isEmpty()) {
-      log.info("[%s]: no general servers found during maintenance.  Cannot balance.", tier);
+    } else if (availableServers.isEmpty()) {
+      log.info("[%s]: no available servers servers found during maintenance.  Cannot balance.", tier);
     }
 
     int numSegments = 0;
@@ -130,12 +138,14 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
     int priority = params.getCoordinatorDynamicConfig().getNodesInMaintenancePriority();
-    int maintenanceSegmentsToMove = (int) Math.ceil(maxSegmentsToMove * priority / 10.0);
-    log.info("Processing %d segments from servers in maintenance mode", maintenanceSegmentsToMove);
-    Pair<Integer, Integer> maintenanceResult = balanceServers(params, maintenance, general, maintenanceSegmentsToMove);
-    int generalSegmentsToMove = maxSegmentsToMove - maintenanceResult.lhs;
-    log.info("Processing %d segments from servers in general mode", generalSegmentsToMove);
-    Pair<Integer, Integer> generalResult = balanceServers(params, general, general, generalSegmentsToMove);
+    int maxMaintenanceSegmentsToMove = (int) Math.ceil(maxSegmentsToMove * priority / 10.0);
+    log.info("Processing %d segments from servers in maintenanceServers mode", maxMaintenanceSegmentsToMove);
+    Pair<Integer, Integer> maintenanceResult =
+        balanceServers(params, maintenanceServers, availableServers, maxMaintenanceSegmentsToMove);
+    int maxGeneralSegmentsToMove = maxSegmentsToMove - maintenanceResult.lhs;
+    log.info("Processing %d segments from servers in availableServers mode", maxGeneralSegmentsToMove);
+    Pair<Integer, Integer> generalResult =
+        balanceServers(params, availableServers, availableServers, maxGeneralSegmentsToMove);
 
     int moved = generalResult.lhs + maintenanceResult.lhs;
     int unmoved = generalResult.rhs + maintenanceResult.rhs;
