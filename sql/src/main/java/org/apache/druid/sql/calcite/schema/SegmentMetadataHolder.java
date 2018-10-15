@@ -34,12 +34,11 @@ public class SegmentMetadataHolder
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-
+  private final String segmentId;
   private final long numReplicas;
+  private final long numRows;
   @Nullable
   private final RowSignature rowSignature;
-  @Nullable
-  private final Long numRows;
 
   private SegmentMetadataHolder(Builder builder)
   {
@@ -49,6 +48,7 @@ public class SegmentMetadataHolder
     this.isRealtime = builder.isRealtime;
     this.numReplicas = builder.numReplicas;
     this.numRows = builder.numRows;
+    this.segmentId = builder.segmentId;
   }
 
   public long isPublished()
@@ -66,13 +66,17 @@ public class SegmentMetadataHolder
     return isRealtime;
   }
 
+  public String getSegmentId()
+  {
+    return segmentId;
+  }
+
   public long getNumReplicas()
   {
     return numReplicas;
   }
 
-  @Nullable
-  public Long getNumRows()
+  public long getNumRows()
   {
     return numRows;
   }
@@ -85,22 +89,25 @@ public class SegmentMetadataHolder
 
   public static class Builder
   {
+    private final String segmentId;
     private final long isPublished;
     private final long isAvailable;
     private final long isRealtime;
+
     private long numReplicas;
     @Nullable
     private RowSignature rowSignature;
-    @Nullable
-    private Long numRows;
+    private long numRows;
 
     public Builder(
+        String segmentId,
         long isPublished,
         long isAvailable,
         long isRealtime,
         long numReplicas
     )
     {
+      this.segmentId = segmentId;
       this.isPublished = isPublished;
       this.isAvailable = isAvailable;
       this.isRealtime = isRealtime;
@@ -113,7 +120,7 @@ public class SegmentMetadataHolder
       return this;
     }
 
-    public Builder withNumRows(Long numRows)
+    public Builder withNumRows(long numRows)
     {
       this.numRows = numRows;
       return this;

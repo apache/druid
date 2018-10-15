@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -66,7 +67,7 @@ public class BloomDimFilter implements DimFilter
       BloomKFilter.serialize(byteArrayOutputStream, bloomKFilter);
     }
     catch (IOException e) {
-      throw new IllegalStateException(StringUtils.format("Exception when generating cache key for [%s]", this), e);
+      throw new ISE(e, "Exception when generating cache key for [%s]", this);
     }
     byte[] bloomFilterBytes = byteArrayOutputStream.toByteArray();
     return new CacheKeyBuilder(DimFilterUtils.BLOOM_DIM_FILTER_CACHE_ID)

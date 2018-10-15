@@ -326,7 +326,13 @@ public class DruidSchema extends AbstractSchema
         // segmentReplicatable is used to determine if segments are served by realtime servers or not
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
         final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
-        SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(isPublished, 1, isRealtime, 1).build();
+        final SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(
+            segment.getIdentifier(),
+            isPublished,
+            1,
+            isRealtime,
+            1
+        ).build();
         // Unknown segment.
         setSegmentSignature(segment, holder);
         segmentsNeedingRefresh.add(segment);
@@ -338,8 +344,9 @@ public class DruidSchema extends AbstractSchema
         }
       } else {
         if (knownSegments.containsKey(segment)) {
-          SegmentMetadataHolder holder = knownSegments.get(segment);
-          SegmentMetadataHolder holderWithNumReplicas = new SegmentMetadataHolder.Builder(
+          final SegmentMetadataHolder holder = knownSegments.get(segment);
+          final SegmentMetadataHolder holderWithNumReplicas = new SegmentMetadataHolder.Builder(
+              holder.getSegmentId(),
               holder.isPublished(),
               holder.isAvailable(),
               holder.isRealtime(),
@@ -452,6 +459,7 @@ public class DruidSchema extends AbstractSchema
             final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
             SegmentMetadataHolder holder = dataSourceSegments.get(segment);
             SegmentMetadataHolder updatedHolder = new SegmentMetadataHolder.Builder(
+                holder.getSegmentId(),
                 holder.isPublished(),
                 holder.isAvailable(),
                 holder.isRealtime(),

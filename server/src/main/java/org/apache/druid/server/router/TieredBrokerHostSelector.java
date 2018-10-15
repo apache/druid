@@ -29,6 +29,7 @@ import org.apache.druid.client.selector.Server;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -125,7 +126,7 @@ public class TieredBrokerHostSelector<T>
         servers.put(entry.getValue(), new NodesHolder());
       }
 
-      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER);
+      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.BROKER);
       druidNodeDiscovery.registerListener(
           new DruidNodeDiscovery.Listener()
           {
