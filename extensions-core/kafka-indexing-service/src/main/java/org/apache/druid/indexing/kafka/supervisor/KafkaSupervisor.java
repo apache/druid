@@ -1034,11 +1034,22 @@ public class KafkaSupervisor implements Supervisor
 
   private void updatePartitionDataFromKafka()
   {
-    List<PartitionInfo> partitions = consumer.partitionsFor(ioConfig.getTopic());
-    if (partitions == null) {
-      log.warn("No such topic [%s] found", ioConfig.getTopic());
+    List<PartitionInfo> partitions;
+    try {
+      synchronized (consumerLock) {
+        partitions = consumer.partitionsFor(ioConfig.getTopic());
+      }
     }
-    int numPartitions = (partitions != null ? partitions.size() : 0);
+    catch (Exception e) {
+      log.warn(
+          e,
+          "Unable to get partition data from Kafka for brokers [%s], are the brokers up?",
+          ioConfig.getConsumerProperties().get(KafkaSupervisorIOConfig.BOOTSTRAP_SERVERS_KEY)
+      );
+      return;
+    }
+
+    int numPartitions = partitions.size();
 
     log.debug("Found [%d] Kafka partitions for topic [%s]", numPartitions, ioConfig.getTopic());
 
