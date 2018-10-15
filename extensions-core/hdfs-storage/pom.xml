@@ -36,21 +36,9 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-api</artifactId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-common</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.druid</groupId>
-          <artifactId>java-util</artifactId>
-          <version>${project.parent.version}</version>
-          <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
