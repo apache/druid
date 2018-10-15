@@ -49,7 +49,7 @@ public class TestBroker implements Closeable
   private final File directory;
   private final boolean directoryCleanup;
   private final int id;
-  private final Map<String, String> brokerProps;
+  private final Map<String, Object> brokerProps;
 
   private volatile KafkaServer server;
 
@@ -57,7 +57,7 @@ public class TestBroker implements Closeable
       String zookeeperConnect,
       @Nullable File directory,
       int id,
-      Map<String, String> brokerProps
+      Map<String, Object> brokerProps
   )
   {
     this.zookeeperConnect = zookeeperConnect;

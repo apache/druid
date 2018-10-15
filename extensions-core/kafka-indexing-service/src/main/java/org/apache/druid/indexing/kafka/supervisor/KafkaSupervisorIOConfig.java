@@ -31,8 +31,11 @@ import java.util.Map;
 public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
   public static final String BOOTSTRAP_SERVERS_KEY = "bootstrap.servers";
+  public static final String TRUST_STORE_PASSWORD_KEY = "ssl.truststore.password";
+  public static final String KEY_STORE_PASSWORD_KEY = "ssl.keystore.password";
+  public static final String KEY_PASSWORD_KEY = "ssl.key.password";
 
-  private final Map<String, String> consumerProperties;
+  private final Map<String, Object> consumerProperties;
   private final boolean skipOffsetGaps;
 
   @JsonCreator
@@ -41,7 +44,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("replicas") Integer replicas,
       @JsonProperty("taskCount") Integer taskCount,
       @JsonProperty("taskDuration") Period taskDuration,
-      @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
+      @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
       @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
@@ -79,7 +82,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   }
 
   @JsonProperty
-  public Map<String, String> getConsumerProperties()
+  public Map<String, Object> getConsumerProperties()
   {
     return consumerProperties;
   }

@@ -35,7 +35,7 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
   private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
   @Nullable
-  private final Map<String, String> consumerProperties;
+  private final Map<String, Object> consumerProperties;
   private final boolean skipOffsetGaps;
 
   @JsonCreator
@@ -44,7 +44,7 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
       @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") SeekableStreamPartitions<Integer, Long> startPartitions,
       @JsonProperty("endPartitions") SeekableStreamPartitions<Integer, Long> endPartitions,
-      @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
+      @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
@@ -84,7 +84,7 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
 
   @Nullable
   @JsonProperty
-  public Map<String, String> getConsumerProperties()
+  public Map<String, Object> getConsumerProperties()
   {
     return consumerProperties;
   }

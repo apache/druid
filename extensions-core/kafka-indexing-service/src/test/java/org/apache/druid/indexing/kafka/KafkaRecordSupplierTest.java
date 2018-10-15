@@ -30,6 +30,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.TestHelper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.AfterClass;
@@ -53,6 +54,7 @@ public class KafkaRecordSupplierTest
   private static String topic = "topic";
   private static long poll_timeout_millis = 1000;
   private static int topicPosFix = 0;
+  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
 
   private static TestingCluster zkServer;
   private static TestBroker kafkaServer;
@@ -175,7 +177,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties());
+        kafkaServer.consumerProperties(), objectMapper);
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
 
@@ -204,7 +206,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties());
+        kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -244,7 +246,7 @@ public class KafkaRecordSupplierTest
 
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties());
+        kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -297,7 +299,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties());
+        kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
 
@@ -345,7 +347,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties());
+        kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
 
@@ -376,7 +378,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties());
+        kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
 
@@ -406,7 +408,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties());
+        kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
 

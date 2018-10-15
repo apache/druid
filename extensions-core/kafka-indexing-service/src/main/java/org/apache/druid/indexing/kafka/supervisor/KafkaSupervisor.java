@@ -158,8 +158,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   @Override
   protected RecordSupplier<Integer, Long> setupRecordSupplier()
   {
-    return new KafkaRecordSupplier(spec.getIoConfig().getConsumerProperties());
-
+    return new KafkaRecordSupplier(spec.getIoConfig().getConsumerProperties(), sortingMapper);
   }
 
   @Override
@@ -290,7 +289,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           context,
           null,
           null,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          sortingMapper
       ));
     }
     return taskList;

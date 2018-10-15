@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kafka;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -51,16 +52,19 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   private static final Random RANDOM = ThreadLocalRandom.current();
 
   private final KafkaConsumer<byte[], byte[]> consumer;
-  private final Map<String, String> consumerProperties;
+  private final Map<String, Object> consumerProperties;
+  private final ObjectMapper sortingMapper;
   private boolean closed;
   private final BlockingQueue<OrderedPartitionableRecord<Integer, Long>> records;
 
 
   public KafkaRecordSupplier(
-      Map<String, String> consumerProperties
+      Map<String, Object> consumerProperties,
+      ObjectMapper sortingMapper
   )
   {
     this.consumerProperties = consumerProperties;
+    this.sortingMapper = sortingMapper;
     this.consumer = getKafkaConsumer();
     this.closed = false;
     this.records = new LinkedBlockingQueue<>();
@@ -181,7 +185,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", getRandomId()));
     props.setProperty("max.poll.records", "1");
 
-    props.putAll(consumerProperties);
+    KafkaIndexTask.addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
 
     props.setProperty("enable.auto.commit", "false");
 

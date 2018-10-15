@@ -187,4 +187,5 @@ public class KafkaSupervisorIOConfigTest
     exception.expectMessage(CoreMatchers.containsString("bootstrap.servers"));
     mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
   }
+
 }

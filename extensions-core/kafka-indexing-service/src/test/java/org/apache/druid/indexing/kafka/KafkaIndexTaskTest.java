@@ -420,6 +420,7 @@ public class KafkaIndexTaskTest
   @Test(timeout = 60_000L)
   public void testRunBeforeDataInserted() throws Exception
   {
+    Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIOConfig(
@@ -2423,7 +2424,8 @@ public class KafkaIndexTaskTest
     );
     IndexIO indexIO = new TestUtils().getTestIndexIO();
     QueryableIndex index = indexIO.loadIndex(outputLocation);
-    DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) index.getColumnHolder(column).getColumn();
+    DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) index.getColumnHolder(column)
+                                                                                       .getColumn();
     List<String> values = Lists.newArrayList();
     for (int i = 0; i < theColumn.length(); i++) {
       int id = theColumn.getSingleValueRow(i);

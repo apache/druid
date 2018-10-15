@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
@@ -32,6 +33,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -39,6 +41,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -67,6 +70,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
 
   private final SeekableStreamIndexTaskRunner<Integer, Long> runner;
+  private final ObjectMapper configMapper;
 
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
@@ -81,7 +85,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject ObjectMapper configMapper
   )
   {
     super(
@@ -96,6 +101,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         rowIngestionMetersFactory,
         "index_kafka"
     );
+    this.configMapper = configMapper;
     if (context != null && context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
         && ((boolean) context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
       runner = new IncrementalPublishingKafkaIndexTaskRunner(
@@ -209,9 +215,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 
       final Properties props = new Properties();
 
-      for (Map.Entry<String, String> entry : ((KafkaIOConfig) ioConfig).getConsumerProperties().entrySet()) {
-        props.setProperty(entry.getKey(), entry.getValue());
-      }
+      addConsumerPropertiesFromConfig(props, configMapper, ((KafkaIOConfig) ioConfig).getConsumerProperties());
 
       props.setProperty("enable.auto.commit", "false");
       props.setProperty("auto.offset.reset", "none");
@@ -224,6 +228,30 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       Thread.currentThread().setContextClassLoader(currCtxCl);
     }
   }
+
+  public static void addConsumerPropertiesFromConfig(
+      Properties properties,
+      ObjectMapper configMapper,
+      Map<String, Object> consumerProperties
+  )
+  {
+    // Extract passwords before SSL connection to Kafka
+    for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
+      String propertyKey = entry.getKey();
+      if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+        PasswordProvider configPasswordProvider = configMapper.convertValue(
+            entry.getValue(),
+            PasswordProvider.class
+        );
+        properties.setProperty(propertyKey, configPasswordProvider.getPassword());
+      } else {
+        properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
+      }
+    }
+  }
+
 
   static void assignPartitions(
       final KafkaConsumer consumer,
