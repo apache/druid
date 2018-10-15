@@ -1049,7 +1049,7 @@ public class KafkaSupervisor implements Supervisor
       return;
     }
 
-    int numPartitions = partitions.size();
+    int numPartitions = (partitions != null ? partitions.size() : 0);
 
     log.debug("Found [%d] Kafka partitions for topic [%s]", numPartitions, ioConfig.getTopic());
 
