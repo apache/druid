@@ -22,19 +22,18 @@ package org.apache.druid.java.util.common.parsers;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.TypeRef;
 import com.jayway.jsonpath.spi.mapper.MappingProvider;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class NotImplementedMappingProvider implements MappingProvider
 {
   @Override
   public <T> T map(Object source, Class<T> targetType, Configuration configuration)
   {
-    throw new NotImplementedException();
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public <T> T map(Object source, TypeRef<T> targetType, Configuration configuration)
   {
-    throw new NotImplementedException();
+    throw new UnsupportedOperationException();
   }
 }
