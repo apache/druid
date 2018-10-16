@@ -126,7 +126,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       JsonConfigProvider.bindInstance(
           binder,
           Key.get(DruidNode.class, Self.class),
-          new DruidNode("test", "localhost", null, null, true, false)
+          new DruidNode("test", "localhost", false, null, null, true, false)
       );
       binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
       LifecycleModule.register(binder, Server.class);

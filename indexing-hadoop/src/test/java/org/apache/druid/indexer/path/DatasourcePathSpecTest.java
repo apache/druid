@@ -172,7 +172,7 @@ public class DatasourcePathSpecTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("dummy-node", null, null, null, true, false)
+                    new DruidNode("dummy-node", null, false, null, null, true, false)
                 );
               }
             }

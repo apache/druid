@@ -88,7 +88,7 @@ public class ResetCluster extends GuiceRunnable
           JsonConfigProvider.bindInstance(
               binder,
               Key.get(DruidNode.class, Self.class),
-              new DruidNode("tools", "localhost", -1, null, true, false)
+              new DruidNode("tools", "localhost", false, -1, null, true, false)
           );
           JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
         },

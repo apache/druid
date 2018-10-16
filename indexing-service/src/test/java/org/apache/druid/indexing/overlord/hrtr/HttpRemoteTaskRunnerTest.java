@@ -134,7 +134,7 @@ public class HttpRemoteTaskRunnerTest
     taskRunner.start();
 
     DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
-        new DruidNode("service", "host1", 8080, null, true, false),
+        new DruidNode("service", "host1", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
@@ -142,7 +142,7 @@ public class HttpRemoteTaskRunnerTest
     );
 
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
-        new DruidNode("service", "host2", 8080, null, true, false),
+        new DruidNode("service", "host2", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0")
@@ -227,7 +227,7 @@ public class HttpRemoteTaskRunnerTest
     taskRunner.start();
 
     DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
-        new DruidNode("service", "host1", 8080, null, true, false),
+        new DruidNode("service", "host1", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
@@ -235,7 +235,7 @@ public class HttpRemoteTaskRunnerTest
     );
 
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
-        new DruidNode("service", "host2", 8080, null, true, false),
+        new DruidNode("service", "host2", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0")
@@ -326,7 +326,7 @@ public class HttpRemoteTaskRunnerTest
     taskRunner.start();
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
-        new DruidNode("service", "host", 1234, null, true, false),
+        new DruidNode("service", "host", false, 1234, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
@@ -465,7 +465,7 @@ public class HttpRemoteTaskRunnerTest
     Task task2 = NoopTask.create("task-id-2", 0);
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
-        new DruidNode("service", "host", 1234, null, true, false),
+        new DruidNode("service", "host", false, 1234, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
@@ -638,7 +638,7 @@ public class HttpRemoteTaskRunnerTest
     Task task2 = NoopTask.create("task-id-2", 0);
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
-        new DruidNode("service", "host", 1234, null, true, false),
+        new DruidNode("service", "host", false, 1234, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0"))
     );
@@ -813,7 +813,7 @@ public class HttpRemoteTaskRunnerTest
     AtomicInteger ticks = new AtomicInteger();
 
     DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
-        new DruidNode("service", "host1", 8080, null, true, false),
+        new DruidNode("service", "host1", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(
             WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 1, "0")
@@ -858,7 +858,7 @@ public class HttpRemoteTaskRunnerTest
     }
 
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
-        new DruidNode("service", "host2", 8080, null, true, false),
+        new DruidNode("service", "host2", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0"))
     );
@@ -888,7 +888,7 @@ public class HttpRemoteTaskRunnerTest
     }
 
     DiscoveryDruidNode druidNode3 = new DiscoveryDruidNode(
-        new DruidNode("service", "host3", 8080, null, true, false),
+        new DruidNode("service", "host3", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
         ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0"))
     );

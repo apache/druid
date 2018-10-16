@@ -192,7 +192,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1, null, true, false),
+        new DruidNode("dummy", "dummy", false, 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = ThreadLocalRandom.current().nextInt(9999) + 10000;
@@ -457,6 +457,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim2"),
+                Pair.of("DATA_TYPE", Types.VARCHAR),
+                Pair.of("TYPE_NAME", "VARCHAR"),
+                Pair.of("IS_NULLABLE", "YES")
+            ),
+            ROW(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", "foo"),
+                Pair.of("COLUMN_NAME", "dim3"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
@@ -790,7 +798,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", 1, null, true, false),
+        new DruidNode("dummy", "dummy", false, 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;

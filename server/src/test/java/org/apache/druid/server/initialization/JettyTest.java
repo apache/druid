@@ -89,7 +89,7 @@ public class JettyTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", null, null, true, false)
+                    new DruidNode("test", "localhost", false, null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
 
@@ -101,7 +101,6 @@ public class JettyTest extends BaseJettyTest
                 multibinder.addBinding().toInstance(
                     new ServletFilterHolder()
                     {
-
                       @Override
                       public String getPath()
                       {
@@ -131,7 +130,8 @@ public class JettyTest extends BaseJettyTest
                       {
                         return null;
                       }
-                    });
+                    }
+                );
 
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);

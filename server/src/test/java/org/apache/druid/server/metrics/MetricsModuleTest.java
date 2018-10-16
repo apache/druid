@@ -48,7 +48,7 @@ public class MetricsModuleTest
             JsonConfigProvider.bindInstance(
                 binder,
                 Key.get(DruidNode.class, Self.class),
-                new DruidNode("test-inject", null, null, null, true, false)
+                new DruidNode("test-inject", null, false, null, null, true, false)
             );
           }
         })
@@ -74,7 +74,7 @@ public class MetricsModuleTest
             JsonConfigProvider.bindInstance(
                 binder,
                 Key.get(DruidNode.class, Self.class),
-                new DruidNode("test-inject", null, null, null, true, false)
+                new DruidNode("test-inject", null, false, null, null, true, false)
             );
             binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
                   .toInstance(dataSource);

@@ -53,21 +53,21 @@ public class LookupNodeDiscoveryTest
             .andReturn(druidNodeDiscovery);
 
     DiscoveryDruidNode node1 = new DiscoveryDruidNode(
-        new DruidNode("s1", "h1", 8080, null, true, false),
+        new DruidNode("s1", "h1", false, 8080, null, true, false),
         NodeType.HISTORICAL,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier1"))
     );
 
     DiscoveryDruidNode node2 = new DiscoveryDruidNode(
-        new DruidNode("s2", "h2", 8080, null, true, false),
+        new DruidNode("s2", "h2", false, 8080, null, true, false),
         NodeType.PEON,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier1"))
     );
 
     DiscoveryDruidNode node3 = new DiscoveryDruidNode(
-        new DruidNode("s3", "h3", 8080, null, true, false),
+        new DruidNode("s3", "h3", false, 8080, null, true, false),
         NodeType.PEON,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier2"))

@@ -200,6 +200,13 @@
     <module name="PackageDeclaration"/>
 
     <module name="Regexp">
+      <property name="format" value="instanceof\s+(ObjectColumnSelector|LongColumnSelector|FloatColumnSelector|DoubleColumnSelector)"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="ObjectColumnSelector, LongColumnSelector, FloatColumnSelector
+      and DoubleColumnSelector must not be used in an instanceof statement, see Javadoc of those interfaces."/>
+    </module>
+
+    <module name="Regexp">
       <property
           name="format"
           value='(?&lt;!ImmutableMap.of|Types.mapOf|orderedMap|makeSelectResults|makeListOfPairs)\(\s*\n +([^,\n\(\{"&lt;/]+|[^,\n\(\{" /]+&gt; [a-zA-Z0-9_]+)\, ++[^,\n/]+'

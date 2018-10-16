@@ -111,7 +111,7 @@ public class HadoopDruidIndexerConfig
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("hadoop-indexer", null, null, null, true, false)
+                    new DruidNode("hadoop-indexer", null, false, null, null, true, false)
                 );
                 JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
               }

@@ -638,7 +638,7 @@ public class TaskLifecycleTest
         tb,
         taskConfig,
         emitter,
-        new DruidNode("dummy", "dummy", 10000, null, true, false),
+        new DruidNode("dummy", "dummy", false, 10000, null, true, false),
         new ServerConfig()
     );
   }
