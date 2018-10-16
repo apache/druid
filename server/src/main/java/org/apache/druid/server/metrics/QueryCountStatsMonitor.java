@@ -46,7 +46,8 @@ public class QueryCountStatsMonitor extends AbstractMonitor
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     Map<String, Long> diff = keyedDiff.to(
         "queryCountStats",
-        ImmutableMap.of("query/success/count", statsProvider.getSuccessfulQueryCount(),
+        ImmutableMap.of("query/total/count", statsProvider.getSuccessfulQueryCount() + statsProvider.getFailedQueryCount(),
+                        "query/success/count", statsProvider.getSuccessfulQueryCount(),
                         "query/failed/count", statsProvider.getFailedQueryCount(),
                         "query/interrupted/count", statsProvider.getInterruptedQueryCount()
         )
