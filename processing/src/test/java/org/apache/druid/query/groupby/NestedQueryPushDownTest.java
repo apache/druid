@@ -816,33 +816,26 @@ public class NestedQueryPushDownTest
 
     QueryRunner<Row> queryRunnerForSegments = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<Row>()
-            {
-              @Override
-              public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
-              {
-                return Sequences
-                    .simple(
-                        ImmutableList.of(
-                            Sequences.map(
-                                segment1Runner.run(queryPlus, responseContext),
-                                toolChest.makePreComputeManipulatorFn(
-                                    (GroupByQuery) queryPlus.getQuery(),
-                                    MetricManipulatorFns.deserializing()
-                                )
-                            ),
-                            Sequences.map(
-                                segment2Runner.run(queryPlus, responseContext),
-                                toolChest.makePreComputeManipulatorFn(
-                                    (GroupByQuery) queryPlus.getQuery(),
-                                    MetricManipulatorFns.deserializing()
-                                )
+            (queryPlus, responseContext) -> Sequences
+                .simple(
+                    ImmutableList.of(
+                        Sequences.map(
+                            segment1Runner.run(queryPlus, responseContext),
+                            toolChest.makePreComputeManipulatorFn(
+                                (GroupByQuery) queryPlus.getQuery(),
+                                MetricManipulatorFns.deserializing()
+                            )
+                        ),
+                        Sequences.map(
+                            segment2Runner.run(queryPlus, responseContext),
+                            toolChest.makePreComputeManipulatorFn(
+                                (GroupByQuery) queryPlus.getQuery(),
+                                MetricManipulatorFns.deserializing()
                             )
                         )
                     )
-                    .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
-              }
-            }
+                )
+                .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering())
         ),
         (QueryToolChest) toolChest
     );
@@ -858,16 +851,9 @@ public class NestedQueryPushDownTest
         queryWithPushDownDisabled,
         context
     );
-    GroupByQuery rewrittenQuery = ((GroupByQueryQueryToolChest) toolChest).rewriteNestedQueryForPushDown(nestedQuery);
-    // Broker executes this code and hence has
-    return strategy.applyPostProcessing(strategy.processSubqueryResult(
-        queryWithPushDownDisabled,
-        rewrittenQuery,
-        strategy.prepareResource(nestedQuery, false),
-        pushDownQueryResults,
-        true
-    ), nestedQuery);
 
+    return toolChest.mergeResults((queryPlus, responseContext) -> pushDownQueryResults)
+                    .run(QueryPlus.wrap(nestedQuery), context);
   }
 
   @Test
@@ -1045,14 +1031,7 @@ public class NestedQueryPushDownTest
       @Override
       public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
       {
-        return new QueryRunner<T>()
-        {
-          @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
-          {
-            return delegate.run(queryPlus, responseContext);
-          }
-        };
+        return (queryPlus, responseContext) -> delegate.run(queryPlus, responseContext);
       }
     };
   }
