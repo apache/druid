@@ -517,9 +517,10 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testServerSegmentsTable()
   {
-    SystemSchema.ServerSegmentsTable serverSegmentsTable = EasyMock.createMockBuilder(SystemSchema.ServerSegmentsTable.class)
-                                                                   .withConstructor(serverView, authMapper)
-                                                                   .createMock();
+    SystemSchema.ServerSegmentsTable serverSegmentsTable = EasyMock
+        .createMockBuilder(SystemSchema.ServerSegmentsTable.class)
+        .withConstructor(serverView, authMapper)
+        .createMock();
     EasyMock.replay(serverSegmentsTable);
     EasyMock.expect(serverView.getDruidServers())
             .andReturn(immutableDruidServers)
@@ -567,27 +568,27 @@ public class SystemSchemaTest extends CalciteTestBase
 
     Object[] row1 = rows.first();
     Assert.assertEquals("localhost:0000", row1[0]);
-    Assert.assertEquals("test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", row1[1]);
+    Assert.assertEquals("test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", row1[1].toString());
 
     Assert.assertEquals(true, enumerator.moveNext());
     Object[] row2 = enumerator.current();
     Assert.assertEquals("localhost:0000", row2[0]);
-    Assert.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", row2[1]);
+    Assert.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", row2[1].toString());
 
     Assert.assertEquals(true, enumerator.moveNext());
     Object[] row3 = enumerator.current();
     Assert.assertEquals("server2:1234", row3[0]);
-    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row3[1]);
+    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row3[1].toString());
 
     Assert.assertEquals(true, enumerator.moveNext());
     Object[] row4 = enumerator.current();
     Assert.assertEquals("server2:1234", row4[0]);
-    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row4[1]);
+    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row4[1].toString());
 
     Assert.assertEquals(true, enumerator.moveNext());
     Object[] row5 = rows.last();
     Assert.assertEquals("server2:1234", row5[0]);
-    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row5[1]);
+    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row5[1].toString());
 
     Assert.assertEquals(false, enumerator.moveNext());
   }
