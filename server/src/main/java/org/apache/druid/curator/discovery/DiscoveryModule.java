@@ -170,17 +170,21 @@ public class DiscoveryModule implements Module
         CURATOR_KEY
     );
 
+    // For some reason the second argument of Key.get() should be Annotation rather than Class, otherwise fails with NPE
+    Annotation coordinatorAnnotation = () -> Coordinator.class;
     PolyBind.createChoiceWithDefault(
         binder,
         INTERNAL_DISCOVERY_PROP,
-        Key.get(DruidLeaderSelector.class, Coordinator.class),
+        Key.get(DruidLeaderSelector.class, coordinatorAnnotation),
         CURATOR_KEY
     );
 
+    // For some reason the second argument of Key.get() should be Annotation rather than Class, otherwise fails with NPE
+    Annotation indexingServiceAnnotation = () -> IndexingService.class;
     PolyBind.createChoiceWithDefault(
         binder,
         INTERNAL_DISCOVERY_PROP,
-        Key.get(DruidLeaderSelector.class, IndexingService.class),
+        Key.get(DruidLeaderSelector.class, indexingServiceAnnotation),
         CURATOR_KEY
     );
 
