@@ -317,14 +317,15 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
             DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
-            while (aggsIter.hasNext() && resultIter.hasNext()) {
-              final AggregatorFactory factory = aggsIter.next();
-              retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
-            }
             if (isResultLevelCache) {
               Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
               while (postItr.hasNext() && resultIter.hasNext()) {
                 retVal.put(postItr.next().getName(), resultIter.next());
+              }
+            } else {
+              while (aggsIter.hasNext() && resultIter.hasNext()) {
+                final AggregatorFactory factory = aggsIter.next();
+                retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
               }
             }
 

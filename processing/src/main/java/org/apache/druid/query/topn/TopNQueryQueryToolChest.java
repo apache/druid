@@ -402,18 +402,19 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   DimensionHandlerUtils.convertObjectToType(resultIter.next(), query.getDimensionSpec().getOutputType())
               );
 
-              while (aggIter.hasNext() && resultIter.hasNext()) {
-                final AggregatorFactory factory = aggIter.next();
-                vals.put(factory.getName(), factory.deserialize(resultIter.next()));
-              }
-
-              for (PostAggregator postAgg : postAggs) {
-                vals.put(postAgg.getName(), postAgg.compute(vals));
-              }
               if (isResultLevelCache) {
                 Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
                 while (postItr.hasNext() && resultIter.hasNext()) {
                   vals.put(postItr.next().getName(), resultIter.next());
+                }
+              } else {
+                while (aggIter.hasNext() && resultIter.hasNext()) {
+                  final AggregatorFactory factory = aggIter.next();
+                  vals.put(factory.getName(), factory.deserialize(resultIter.next()));
+                }
+
+                for (PostAggregator postAgg : postAggs) {
+                  vals.put(postAgg.getName(), postAgg.compute(vals));
                 }
               }
               retVal.add(vals);

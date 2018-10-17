@@ -477,14 +477,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             }
 
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
-            while (aggsIter.hasNext() && results.hasNext()) {
-              final AggregatorFactory factory = aggsIter.next();
-              event.put(factory.getName(), factory.deserialize(results.next()));
-            }
             if (isResultLevelCache) {
               Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
               while (postItr.hasNext() && results.hasNext()) {
                 event.put(postItr.next().getName(), results.next());
+              }
+            } else {
+              while (aggsIter.hasNext() && results.hasNext()) {
+                final AggregatorFactory factory = aggsIter.next();
+                event.put(factory.getName(), factory.deserialize(results.next()));
               }
             }
             if (dimsIter.hasNext() || aggsIter.hasNext() || results.hasNext()) {
