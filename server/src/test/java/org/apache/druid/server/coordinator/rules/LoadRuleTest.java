@@ -411,7 +411,7 @@ public class LoadRuleTest
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
-            .times(2);
+            .times(4);
     EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
 
     LoadRule rule = createLoadRule(ImmutableMap.of(
@@ -558,7 +558,7 @@ public class LoadRuleTest
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
-            .times(1);
+            .times(2);
     EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
 
     LoadRule rule = createLoadRule(ImmutableMap.of(
@@ -796,7 +796,6 @@ public class LoadRuleTest
     EasyMock.verify(throttler, mockPeon1, mockPeon2, mockPeon3, mockPeon4, mockBalancerStrategy);
   }
 
-
   /**
    * 2 servers with a segment, one server in maintenance mode.
    * Should drop a segment from both.
@@ -809,7 +808,7 @@ public class LoadRuleTest
     EasyMock.expectLastCall().times(2);
     EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
-            .times(2);
+            .times(4);
     EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
 
     LoadRule rule = createLoadRule(ImmutableMap.of("tier1", 0));
@@ -857,6 +856,68 @@ public class LoadRuleTest
 
 
     EasyMock.verify(throttler, mockPeon);
+  }
+
+  /**
+   * 3 servers hosting 3 replicas of the segment.
+   * 1 servers is in maitenance.
+   * 1 replica is redundant.
+   * Should drop from the server in maintenance.
+   */
+  @Test
+  public void testRedundantReplicaDropDuringMaintenance()
+  {
+    final LoadQueuePeon mockPeon1 = new LoadQueuePeonTester();
+    final LoadQueuePeon mockPeon2 = new LoadQueuePeonTester();
+    final LoadQueuePeon mockPeon3 = new LoadQueuePeonTester();
+    EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy)
+            .times(4);
+    EasyMock.replay(throttler, mockBalancerStrategy);
+
+    LoadRule rule = createLoadRule(ImmutableMap.of("tier1", 2));
+
+    final DataSegment segment1 = createDataSegment("foo1");
+
+    DruidServer server1 = createServer("tier1");
+    server1.addDataSegment(segment1);
+    DruidServer server2 = createServer("tier1");
+    server2.addDataSegment(segment1);
+    DruidServer server3 = createServer("tier1");
+    server3.addDataSegment(segment1);
+
+    DruidCluster druidCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "tier1",
+            Arrays.asList(
+                new ServerHolder(server1.toImmutableDruidServer(), mockPeon1, false),
+                new ServerHolder(server2.toImmutableDruidServer(), mockPeon2, true),
+                new ServerHolder(server3.toImmutableDruidServer(), mockPeon3, false)
+            )
+        )
+    );
+
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withReplicationManager(throttler)
+        .withBalancerStrategy(mockBalancerStrategy)
+        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
+        .withAvailableSegments(segment1)
+        .build();
+    CoordinatorStats stats = rule.run(
+        null,
+        params,
+        segment1
+    );
+    Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "tier1"));
+    Assert.assertEquals(0, mockPeon1.getSegmentsToDrop().size());
+    Assert.assertEquals(1, mockPeon2.getSegmentsToDrop().size());
+    Assert.assertEquals(0, mockPeon3.getSegmentsToDrop().size());
+
+    EasyMock.verify(throttler);
   }
 
   private DataSegment createDataSegment(String dataSource)

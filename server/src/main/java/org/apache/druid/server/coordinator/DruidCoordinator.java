@@ -278,15 +278,6 @@ public class DruidCoordinator
     return retVal;
   }
 
-  boolean hasLoadPending(final String dataSource)
-  {
-    return loadManagementPeons
-        .values()
-        .stream()
-        .flatMap((final LoadQueuePeon peon) -> peon.getSegmentsToLoad().stream())
-        .anyMatch((final DataSegment segment) -> segment.getDataSource().equals(dataSource));
-  }
-
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Double> loadStatus = Maps.newHashMap();
