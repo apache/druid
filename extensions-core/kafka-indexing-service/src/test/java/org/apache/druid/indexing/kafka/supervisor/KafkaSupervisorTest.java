@@ -2583,7 +2583,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       String kafkaHost
   )
   {
-    Map<String, String> consumerProperties = new HashMap<>();
+    Map<String, Object> consumerProperties = new HashMap<>();
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
@@ -2711,7 +2711,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         Collections.emptyMap(),
         null,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        objectMapper
     );
   }
 

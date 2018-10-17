@@ -84,12 +84,6 @@ public class LongSumAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new LongSumAggregator(selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

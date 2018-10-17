@@ -197,8 +197,8 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/mem/max`|Max memory.|memKind.|Varies.|
 |`jvm/mem/used`|Used memory.|memKind.|< max memory|
 |`jvm/mem/committed`|Committed memory.|memKind.|close to max memory|
-|`jvm/gc/count`|Garbage collection count.|gcName.|< 100|
-|`jvm/gc/cpu`|Cpu time in Nanoseconds spent on garbage collection.|gcName.|< 1s|
+|`jvm/gc/count`|Garbage collection count.|gcName (cms/g1/parallel/etc.), gcGen (old/young)|Varies.|
+|`jvm/gc/cpu`|Cpu time in Nanoseconds spent on garbage collection.|gcName, gcGen|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.html#enabling-metrics)) |
 
 ### EventReceiverFirehose
 

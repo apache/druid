@@ -28,6 +28,7 @@ import java.util.Objects;
 
 public class LookupConfig
 {
+  static int DEFAULT_COORDINATOR_RETRY_DELAY = 60_000;
 
   @JsonProperty("snapshotWorkingDir")
   private String snapshotWorkingDir;
@@ -42,6 +43,13 @@ public class LookupConfig
   @Min(1)
   @JsonProperty("coordinatorFetchRetries")
   private int coordinatorFetchRetries = 3;
+
+  // By default, add an extra minute in addition to the retry wait. In RetryUtils, retry wait starts from a few
+  // seconds, that is likely not enough to coordinator to be back to healthy state, e. g. if it experiences
+  // 30-second GC pause.
+  @Min(0)
+  @JsonProperty("coordinatorRetryDelay")
+  private int coordinatorRetryDelay = DEFAULT_COORDINATOR_RETRY_DELAY;
 
   @Min(1)
   @JsonProperty("lookupStartRetries")
@@ -84,6 +92,11 @@ public class LookupConfig
     return lookupStartRetries;
   }
 
+  public int getCoordinatorRetryDelay()
+  {
+    return coordinatorRetryDelay;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -100,7 +113,8 @@ public class LookupConfig
            enableLookupSyncOnStartup == that.enableLookupSyncOnStartup &&
            numLookupLoadingThreads == that.numLookupLoadingThreads &&
            coordinatorFetchRetries == that.coordinatorFetchRetries &&
-           lookupStartRetries == that.lookupStartRetries;
+           lookupStartRetries == that.lookupStartRetries &&
+           coordinatorRetryDelay == that.coordinatorRetryDelay;
   }
 
   @Override
@@ -111,7 +125,8 @@ public class LookupConfig
         enableLookupSyncOnStartup,
         numLookupLoadingThreads,
         coordinatorFetchRetries,
-        lookupStartRetries
+        lookupStartRetries,
+        coordinatorRetryDelay
     );
   }
 
@@ -124,6 +139,7 @@ public class LookupConfig
            ", numLookupLoadingThreads=" + numLookupLoadingThreads +
            ", coordinatorFetchRetries=" + coordinatorFetchRetries +
            ", lookupStartRetries=" + lookupStartRetries +
+           ", coordinatorRetryDelay=" + coordinatorRetryDelay +
            '}';
   }
 }

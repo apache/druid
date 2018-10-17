@@ -76,7 +76,8 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
             @Override
             public boolean apply(@Nullable String input)
             {
-              return compiledRegex.matcher(NullHandling.nullToEmptyIfNeeded(input)).matches();
+              String val = NullHandling.nullToEmptyIfNeeded(input);
+              return val == null ? false : compiledRegex.matcher(val).matches();
             }
           }
       );

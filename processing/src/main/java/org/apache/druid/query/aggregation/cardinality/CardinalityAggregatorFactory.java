@@ -142,7 +142,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     if (selectorPluses.length == 0) {
       return NoopAggregator.instance();
     }
-    return new CardinalityAggregator(name, selectorPluses, byRow);
+    return new CardinalityAggregator(selectorPluses, byRow);
   }
 
 

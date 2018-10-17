@@ -71,6 +71,7 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -92,6 +93,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
 public class CompactionTask extends AbstractTask
 {
@@ -161,7 +163,7 @@ public class CompactionTask extends AbstractTask
     this.tuningConfig = tuningConfig;
     this.jsonMapper = jsonMapper;
     this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
-    this.partitionConfigurationManager = new PartitionConfigurationManager(targetCompactionSizeBytes, tuningConfig);
+    this.partitionConfigurationManager = new PartitionConfigurationManager(this.targetCompactionSizeBytes, tuningConfig);
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
@@ -261,8 +263,10 @@ public class CompactionTask extends AbstractTask
       log.warn("Interval[%s] has no segments, nothing to do.", interval);
       return TaskStatus.failure(getId());
     } else {
-      log.info("Generated [%d] compaction task specs", indexTaskSpecs.size());
+      final int totalNumSpecs = indexTaskSpecs.size();
+      log.info("Generated [%d] compaction task specs", totalNumSpecs);
 
+      int failCnt = 0;
       for (IndexTask eachSpec : indexTaskSpecs) {
         final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(eachSpec);
         log.info("Running indexSpec: " + json);
@@ -270,15 +274,18 @@ public class CompactionTask extends AbstractTask
         try {
           final TaskStatus eachResult = eachSpec.run(toolbox);
           if (!eachResult.isSuccess()) {
+            failCnt++;
             log.warn("Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
           }
         }
         catch (Exception e) {
+          failCnt++;
           log.warn(e, "Failed to run indexSpec: [%s].\nTrying the next indexSpec.", json);
         }
       }
 
-      return TaskStatus.success(getId());
+      log.info("Run [%d] specs, [%d] succeeded, [%d] failed", totalNumSpecs, totalNumSpecs - failCnt, failCnt);
+      return failCnt == 0 ? TaskStatus.success(getId()) : TaskStatus.failure(getId());
     }
   }
 
@@ -629,19 +636,29 @@ public class CompactionTask extends AbstractTask
 
     List<DataSegment> checkAndGetSegments(TaskToolbox toolbox) throws IOException
     {
-      final List<DataSegment> usedSegments = toolbox.getTaskActionClient()
-                                                    .submit(new SegmentListUsedAction(dataSource, interval, null));
+      final List<DataSegment> usedSegments = toolbox.getTaskActionClient().submit(
+          new SegmentListUsedAction(dataSource, interval, null)
+      );
+      final TimelineLookup<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(usedSegments);
+      final List<DataSegment> latestSegments = timeline
+          .lookup(interval)
+          .stream()
+          .map(TimelineObjectHolder::getObject)
+          .flatMap(partitionHolder -> StreamSupport.stream(partitionHolder.spliterator(), false))
+          .map(PartitionChunk::getObject)
+          .collect(Collectors.toList());
+
       if (segments != null) {
-        Collections.sort(usedSegments);
+        Collections.sort(latestSegments);
         Collections.sort(segments);
 
-        if (!usedSegments.equals(segments)) {
+        if (!latestSegments.equals(segments)) {
           final List<DataSegment> unknownSegments = segments.stream()
-                                                            .filter(segment -> !usedSegments.contains(segment))
+                                                            .filter(segment -> !latestSegments.contains(segment))
                                                             .collect(Collectors.toList());
-          final List<DataSegment> missingSegments = usedSegments.stream()
-                                                                .filter(segment -> !segments.contains(segment))
-                                                                .collect(Collectors.toList());
+          final List<DataSegment> missingSegments = latestSegments.stream()
+                                                                  .filter(segment -> !segments.contains(segment))
+                                                                  .collect(Collectors.toList());
           throw new ISE(
               "Specified segments in the spec are different from the current used segments. "
               + "There are unknown segments[%s] and missing segments[%s] in the spec.",
@@ -650,7 +667,7 @@ public class CompactionTask extends AbstractTask
           );
         }
       }
-      return usedSegments;
+      return latestSegments;
     }
   }
 

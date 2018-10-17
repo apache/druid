@@ -36,8 +36,8 @@ import org.apache.druid.client.cache.CacheMonitor;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
@@ -138,12 +138,10 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
 
-          binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
-              new DiscoverySideEffectsProvider(
-                  DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
-                  ImmutableList.of(LookupNodeService.class)
-              )
-          ).in(LazySingleton.class);
+          binder
+              .bind(DiscoverySideEffectsProvider.Child.class)
+              .toProvider(new DiscoverySideEffectsProvider(NodeType.BROKER, ImmutableList.of(LookupNodeService.class)))
+              .in(LazySingleton.class);
           LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
         },
         new LookupModule(),

@@ -103,6 +103,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       new DruidNode(
           "__internal-client-cache",
           "localhost",
+          false,
           -1,
           -1,
           true,

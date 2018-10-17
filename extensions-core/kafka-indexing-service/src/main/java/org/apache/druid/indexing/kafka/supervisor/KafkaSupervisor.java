@@ -1018,7 +1018,7 @@ public class KafkaSupervisor implements Supervisor
     props.setProperty("metadata.max.age.ms", "10000");
     props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", RealtimeIndexTask.makeRandomId()));
 
-    props.putAll(ioConfig.getConsumerProperties());
+    KafkaIndexTask.addConsumerPropertiesFromConfig(props, sortingMapper, ioConfig.getConsumerProperties());
 
     props.setProperty("enable.auto.commit", "false");
 
@@ -1918,7 +1918,7 @@ public class KafkaSupervisor implements Supervisor
     }
     TaskGroup group = taskGroups.get(groupId);
 
-    Map<String, String> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
+    Map<String, Object> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
     DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
     DateTime maximumMessageTime = taskGroups.get(groupId).maximumMessageTime.orNull();
 
@@ -1960,7 +1960,8 @@ public class KafkaSupervisor implements Supervisor
           context,
           null,
           null,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          sortingMapper
       );
 
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();

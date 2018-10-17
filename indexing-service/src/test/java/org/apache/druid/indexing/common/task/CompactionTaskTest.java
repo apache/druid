@@ -273,6 +273,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -423,6 +424,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -481,6 +483,7 @@ public class CompactionTaskTest
         500000,
         1000000L,
         5L,
+        null,
         null,
         null,
         new IndexSpec(
@@ -543,6 +546,7 @@ public class CompactionTaskTest
         null,
         null,
         3,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,
@@ -694,7 +698,9 @@ public class CompactionTaskTest
     expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
 
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    segments.remove(0);
+    Collections.sort(segments);
+    // Remove one segment in the middle
+    segments.remove(segments.size() / 2);
     CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(segments),
@@ -755,6 +761,7 @@ public class CompactionTaskTest
         5,
         500000,
         1000000L,
+        null,
         null,
         null,
         null,
@@ -847,6 +854,7 @@ public class CompactionTaskTest
             41943040, // automatically computed targetPartitionSize
             500000,
             1000000L,
+            null,
             null,
             null,
             null,
