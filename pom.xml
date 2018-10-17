@@ -1222,6 +1222,16 @@
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
+                <!-- Prevent the process-resource-bundles execution defined in the Apache parent POM from running -->
+                <plugin>
+                    <artifactId>maven-remote-resources-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>process-resource-bundles</id>
+                            <phase>none</phase>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
