@@ -41,6 +41,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
@@ -178,7 +179,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                   record.getPartitionId(),
                   record.getSequenceNumber(),
                   records.remainingCapacity(),
-                  record.getData().stream().map(String::new).collect(Collectors.toList())
+                  record.getData().stream().map(StringUtils::fromUtf8).collect(Collectors.toList())
               );
             }
 
@@ -276,7 +277,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       log.info("Assuming role [%s] with externalId [%s]", awsAssumedRoleArn, awsExternalId);
 
       STSAssumeRoleSessionCredentialsProvider.Builder builder = new STSAssumeRoleSessionCredentialsProvider
-          .Builder(awsAssumedRoleArn, String.format("druid-kinesis-%s", UUID.randomUUID().toString()))
+          .Builder(awsAssumedRoleArn, StringUtils.format("druid-kinesis-%s", UUID.randomUUID().toString()))
           .withStsClient(AWSSecurityTokenServiceClientBuilder.standard()
                                                              .withCredentials(awsCredentialsProvider)
                                                              .build());
@@ -544,7 +545,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     throw new TimeoutException(
-        String.format(
+        StringUtils.format(
             "Timeout while retrieving sequence number for partition[%s]",
             partition.getPartitionId()
         )

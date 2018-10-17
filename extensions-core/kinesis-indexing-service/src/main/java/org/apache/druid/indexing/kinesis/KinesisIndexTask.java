@@ -59,6 +59,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -221,7 +222,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     log.info("Starting up!");
-    startTime = DateTime.now();
+    startTime = DateTimes.nowUtc();
     mapper = toolbox.getObjectMapper();
     status = Status.STARTING;
 
@@ -321,7 +322,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       // Set up sequenceNames.
       final Map<String, String> sequenceNames = Maps.newHashMap();
       for (String partitionNum : lastOffsets.keySet()) {
-        sequenceNames.put(partitionNum, String.format("%s_%s", ioConfig.getBaseSequenceName(), partitionNum));
+        sequenceNames.put(partitionNum, StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), partitionNum));
       }
 
       // Set up committer.
@@ -993,7 +994,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(String.format("Can't pause, task is not in a pausable state (state: [%s])", status))
+                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
                      .build();
     }
 
@@ -1199,7 +1200,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     } else if (!endOffsets.keySet().containsAll(offsets.keySet())) {
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(
-                         String.format(
+                         StringUtils.format(
                              "Request contains partitions not being handled by this task, my partitions: %s",
                              endOffsets.keySet()
                          )
@@ -1219,7 +1220,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         if (entry.getValue().compareTo(lastOffsets.get(entry.getKey())) < 0) {
           return Response.status(Response.Status.BAD_REQUEST)
                          .entity(
-                             String.format(
+                             StringUtils.format(
                                  "End offset must be >= current offset for partition [%s] (current: %s)",
                                  entry.getKey(),
                                  lastOffsets.get(entry.getKey())

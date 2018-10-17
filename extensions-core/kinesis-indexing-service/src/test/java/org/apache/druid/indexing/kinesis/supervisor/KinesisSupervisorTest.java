@@ -151,7 +151,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
           "1",
           StringUtils.toUtf8("unparseable2")
       ),
-      generateRequestEntry("1", "{}".getBytes()),
+      generateRequestEntry("1", StringUtils.toUtf8("{}")),
       generateRequestEntry(
           "1",
           JB("2013", "f", "y", "10", "20.0", "1.0")

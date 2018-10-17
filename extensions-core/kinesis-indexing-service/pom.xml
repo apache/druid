@@ -27,8 +27,6 @@
   <name>druid-kinesis-indexing-service</name>
   <description>druid-kinesis-indexing-service</description>
 
-  <packaging>pom</packaging>
-
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
