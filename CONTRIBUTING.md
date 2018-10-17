@@ -12,7 +12,7 @@ When submitting a pull request (PR), please use the following guidelines:
   Non-trivial features should include unit tests covering the new functionality.
 - Bugfixes should include a unit test or integration test reproducing the issue.
 - Do not use author tags/information in the code.
-- Always include license header on each java file your create. See [this example](https://github.com/apache/incubator-druid/blob/master/common/src/main/java/org/apache/druid/metadata/PasswordProvider.java)
+- Always include license header on each java file your create. See [this example](https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/metadata/PasswordProvider.java)
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
 - Keep the number of commits small and combine commits for related changes.
