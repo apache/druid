@@ -226,13 +226,6 @@
                 <include>DISCLAIMER</include>
             </includes>
         </fileSet>
-        <fileSet>
-            <directory>${project.build.directory}</directory>
-            <includes>
-                <include>git.version</include>
-            </includes>
-            <outputDirectory/>
-        </fileSet>
     </fileSets>
     <dependencySets>
         <dependencySet>
