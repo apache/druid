@@ -180,7 +180,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
         zkServer.getConnectString(),
         null,
         1,
-        ImmutableMap.of("num.partitions", String.valueOf(NUM_PARTITIONS))
+        ImmutableMap.of(
+            "num.partitions",
+            String.valueOf(NUM_PARTITIONS),
+            "auto.create.topics.enable",
+            String.valueOf(false)
+        )
     );
     kafkaServer.start();
     kafkaHost = StringUtils.format("localhost:%d", kafkaServer.getPort());
@@ -2211,7 +2216,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    Assert.assertTrue(serviceEmitter.getStackTrace().startsWith("org.apache.druid.java.util.common.ISE: WTH?! cannot find"));
+    Assert.assertTrue(serviceEmitter.getStackTrace()
+                                    .startsWith("org.apache.druid.java.util.common.ISE: WTH?! cannot find"));
     Assert.assertEquals(
         "WTH?! cannot find taskGroup [0] among all taskGroups [{}]",
         serviceEmitter.getExceptionMessage()
