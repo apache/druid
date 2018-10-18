@@ -139,6 +139,9 @@ public class PeriodLoadRuleTest
     );
   }
 
+  /**
+   * test serialize/deserilize null values of {@link PeriodLoadRule#tieredReplicants} and {@link PeriodLoadRule#includeFuture}
+   */
   @Test
   public void testSerdeNull() throws Exception
   {
@@ -156,6 +159,9 @@ public class PeriodLoadRuleTest
     Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), rule.getTieredReplicants());
   }
 
+  /**
+   * test mapping null values of {@link PeriodLoadRule#tieredReplicants} and {@link PeriodLoadRule#includeFuture}
+   */
   @Test
   public void testMappingNull() throws Exception
   {

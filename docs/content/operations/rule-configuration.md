@@ -74,7 +74,7 @@ Period load rules are of the form:
 
 * `type` - this should always be "loadByPeriod"
 * `period` - A JSON Object representing ISO-8601 Periods
-* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. Default is true.
+* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 * `tieredReplicants` - A JSON Object where the keys are the tier names and values are the number of replicas for that tier.
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period `overlaps` the interval.
@@ -129,7 +129,7 @@ Period drop rules are of the form:
 
 * `type` - this should always be "dropByPeriod"
 * `period` - A JSON Object representing ISO-8601 Periods
-* `includeFuture` - A JSON Boolean indicating whether the drop period should include the future. Default is true.
+* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period `contains` the interval. This drop rule always dropping recent data.
 
@@ -185,7 +185,7 @@ Period broadcast rules are of the form:
 * `type` - this should always be "broadcastByPeriod"
 * `colocatedDataSources` - A JSON List containing data source names to be co-located. `null` and empty list means broadcasting to every node in the cluster.
 * `period` - A JSON Object representing ISO-8601 Periods
-* `includeFuture` - A JSON Boolean indicating whether the broadcast period should include the future. Default is true.
+* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period `overlaps` the interval.
 

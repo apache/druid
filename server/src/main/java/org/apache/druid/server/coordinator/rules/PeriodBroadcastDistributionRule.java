@@ -104,7 +104,7 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
     if (!Objects.equals(period, that.period)) {
       return false;
     }
-    if (!Objects.equals(includeFuture, that.includeFuture)) {
+    if (includeFuture != that.includeFuture) {
       return false;
     }
     return Objects.equals(colocatedDataSources, that.colocatedDataSources);
