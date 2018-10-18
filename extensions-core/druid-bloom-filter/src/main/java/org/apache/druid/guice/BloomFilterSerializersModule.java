@@ -20,14 +20,15 @@ package org.apache.druid.guice;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.google.common.hash.Hashing;
 import org.apache.druid.query.filter.BloomDimFilter;
+import org.apache.druid.query.filter.BloomKFilterHolder;
 import org.apache.hive.common.util.BloomKFilter;
 
 import java.io.ByteArrayInputStream;
@@ -45,6 +46,7 @@ public class BloomFilterSerializersModule extends SimpleModule
     );
     addSerializer(BloomKFilter.class, new BloomKFilterSerializer());
     addDeserializer(BloomKFilter.class, new BloomKFilterDeserializer());
+    addDeserializer(BloomKFilterHolder.class, new BloomKFilterHolderDeserializer());
   }
 
   public static class BloomKFilterSerializer extends StdSerializer<BloomKFilter>
@@ -78,11 +80,29 @@ public class BloomFilterSerializersModule extends SimpleModule
     @Override
     public BloomKFilter deserialize(
         JsonParser jsonParser, DeserializationContext deserializationContext
-    ) throws IOException, JsonProcessingException
+    ) throws IOException
     {
       byte[] bytes = jsonParser.getBinaryValue();
       return BloomKFilter.deserialize(new ByteArrayInputStream(bytes));
+    }
+  }
 
+  public static class BloomKFilterHolderDeserializer extends StdDeserializer<BloomKFilterHolder>
+  {
+    protected BloomKFilterHolderDeserializer()
+    {
+      super(BloomKFilterHolder.class);
+    }
+
+    @Override
+    public BloomKFilterHolder deserialize(
+        JsonParser jsonParser, DeserializationContext deserializationContext
+    ) throws IOException
+    {
+      byte[] bytes = jsonParser.getBinaryValue();
+      BloomKFilter filter = BloomKFilter.deserialize(new ByteArrayInputStream(bytes));
+      byte[] hash = Hashing.sha512().hashBytes(bytes).asBytes();
+      return new BloomKFilterHolder(filter, hash);
     }
   }
 }

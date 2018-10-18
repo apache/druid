@@ -25,15 +25,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.hive.common.util.BloomKFilter;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.HashSet;
 
 /**
@@ -43,39 +40,33 @@ public class BloomDimFilter implements DimFilter
 
   private final String dimension;
   private final BloomKFilter bloomKFilter;
+  private final byte[] hash;
   private final ExtractionFn extractionFn;
 
   @JsonCreator
   public BloomDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("bloomKFilter") BloomKFilter bloomKFilter,
+      @JsonProperty("bloomKFilter") BloomKFilterHolder bloomKFilterHolder,
       @JsonProperty("extractionFn") ExtractionFn extractionFn
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
-    Preconditions.checkNotNull(bloomKFilter);
+    Preconditions.checkNotNull(bloomKFilterHolder);
     this.dimension = dimension;
-    this.bloomKFilter = bloomKFilter;
+    this.bloomKFilter = bloomKFilterHolder.getFilter();
+    this.hash = bloomKFilterHolder.getFilterHash();
     this.extractionFn = extractionFn;
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    try {
-      BloomKFilter.serialize(byteArrayOutputStream, bloomKFilter);
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Exception when generating cache key for [%s]", this);
-    }
-    byte[] bloomFilterBytes = byteArrayOutputStream.toByteArray();
     return new CacheKeyBuilder(DimFilterUtils.BLOOM_DIM_FILTER_CACHE_ID)
         .appendString(dimension)
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByteArray(bloomFilterBytes)
+        .appendByteArray(hash)
         .build();
   }
 
