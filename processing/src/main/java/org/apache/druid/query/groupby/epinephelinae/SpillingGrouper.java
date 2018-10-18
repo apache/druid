@@ -73,7 +73,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final List<File> dictionaryFiles = Lists.newArrayList();
   private final boolean sortHasNonGroupingFields;
 
-  private boolean spillingAllowed = false;
+  private boolean spillingAllowed;
 
   public SpillingGrouper(
       final Supplier<ByteBuffer> bufferSupplier,

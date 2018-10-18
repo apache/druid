@@ -788,6 +788,7 @@ public class GroupByQuery extends BaseQuery<Row>
       postAggregatorSpecs = builder.postAggregatorSpecs;
       havingSpec = builder.havingSpec;
       limitSpec = builder.limitSpec;
+      subtotalsSpec = builder.subtotalsSpec.stream().map(ArrayList::new).collect(Collectors.toList());
       postProcessingFn = builder.postProcessingFn;
       limit = builder.limit;
       orderByColumnSpecs = new ArrayList<>(builder.orderByColumnSpecs);

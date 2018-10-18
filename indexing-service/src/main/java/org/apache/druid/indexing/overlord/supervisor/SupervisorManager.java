@@ -284,7 +284,7 @@ public class SupervisorManager
       metadataSupervisorManager.insert(id, spec);
     }
 
-    Supervisor supervisor = null;
+    Supervisor supervisor;
     try {
       supervisor = spec.createSupervisor();
       supervisor.start();

@@ -482,14 +482,6 @@ public class IndexIO
         }
       }
 
-      Set<String> colSet = Sets.newTreeSet();
-      for (String dimension : index.getAvailableDimensions()) {
-        colSet.add(dimension);
-      }
-      for (String metric : index.getAvailableMetrics()) {
-        colSet.add(metric);
-      }
-
       columns.put(
           ColumnHolder.TIME_COLUMN_NAME,
           new ColumnBuilder()

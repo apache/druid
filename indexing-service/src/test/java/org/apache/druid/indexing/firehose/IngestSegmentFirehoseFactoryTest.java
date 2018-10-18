@@ -175,7 +175,6 @@ public class IngestSegmentFirehoseFactoryTest
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {
       private final Set<DataSegment> published = Sets.newHashSet();
-      private final Set<DataSegment> nuked = Sets.newHashSet();
 
       @Override
       public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
@@ -211,7 +210,7 @@ public class IngestSegmentFirehoseFactoryTest
       @Override
       public void deleteSegments(Set<DataSegment> segments)
       {
-        nuked.addAll(segments);
+        // do nothing
       }
     };
     final LocalTaskActionClientFactory tac = new LocalTaskActionClientFactory(
@@ -595,7 +594,6 @@ public class IngestSegmentFirehoseFactoryTest
     final int numSegmentsPerPartitionChunk = 5;
     final int numPartitionChunksPerTimelineObject = 10;
     final int numSegments = numSegmentsPerPartitionChunk * numPartitionChunksPerTimelineObject;
-    final List<DataSegment> segments = new ArrayList<>(numSegments);
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final String version = "1";
 
@@ -620,7 +618,6 @@ public class IngestSegmentFirehoseFactoryTest
             1,
             1
         );
-        segments.add(segment);
 
         final PartitionChunk<DataSegment> partitionChunk = new NumberedPartitionChunk<>(
             i,

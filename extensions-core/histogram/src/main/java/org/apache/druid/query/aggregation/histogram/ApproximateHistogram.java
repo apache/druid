@@ -364,7 +364,6 @@ public class ApproximateHistogram
       mergeValue = true;
     }
     if (deltaLeft < minDelta) {
-      minDelta = deltaLeft;
       minPos = insertAt - 1;
       mergeValue = true;
     }
@@ -1533,7 +1532,7 @@ public class ApproximateHistogram
       int i = 0;
       int sum = 0;
       int k = 1;
-      long count = 0;
+      long count;
       while (k <= this.binCount()) {
         count = bins[k - 1];
         if (sum + count > s) {
@@ -1553,7 +1552,7 @@ public class ApproximateHistogram
         final double c = -2 * d;
         final long a = bins[i] - bins[i - 1];
         final long b = 2 * bins[i - 1];
-        double z = 0;
+        double z;
         if (a == 0) {
           z = -c / b;
         } else {

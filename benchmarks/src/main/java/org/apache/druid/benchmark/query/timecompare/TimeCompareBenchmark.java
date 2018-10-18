@@ -96,7 +96,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -168,15 +167,13 @@ public class TimeCompareBenchmark
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
-  private static final Map<String, Map<String, Object>> SCHEMA_QUERY_MAP = new LinkedHashMap<>();
-
   private void setupQueries()
   {
     // queries for the basic schema
-    Map<String, Object> basicQueries = new LinkedHashMap<>();
     BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
 
-    QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
+    QuerySegmentSpec intervalSpec =
+        new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     long startMillis = basicSchema.getDataInterval().getStartMillis();
     long endMillis = basicSchema.getDataInterval().getEndMillis();
@@ -205,9 +202,7 @@ public class TimeCompareBenchmark
       );
       queryAggs.add(
           new FilteredAggregatorFactory(
-              new LongSumAggregatorFactory(
-                  "_cmp_sumLongSequential", "sumLongSequential"
-              ),
+              new LongSumAggregatorFactory("_cmp_sumLongSequential", "sumLongSequential"),
               new IntervalDimFilter(
                   ColumnHolder.TIME_COLUMN_NAME,
                   Collections.singletonList(previous),
@@ -236,8 +231,6 @@ public class TimeCompareBenchmark
           new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
-
-      basicQueries.put("topNTimeCompare", queryBuilderA);
     }
     { // basic.timeseriesTimeCompare
       List<AggregatorFactory> queryAggs = new ArrayList<>();
@@ -266,24 +259,21 @@ public class TimeCompareBenchmark
           )
       );
 
-      Druids.TimeseriesQueryBuilder timeseriesQueryBuilder = Druids.newTimeseriesQueryBuilder()
-                                                                   .dataSource("blah")
-                                                                   .granularity(Granularities.ALL)
-                                                                   .intervals(intervalSpec)
-                                                                   .aggregators(queryAggs)
-                                                                   .descending(false);
+      Druids.TimeseriesQueryBuilder timeseriesQueryBuilder = Druids
+          .newTimeseriesQueryBuilder()
+          .dataSource("blah")
+          .granularity(Granularities.ALL)
+          .intervals(intervalSpec)
+          .aggregators(queryAggs)
+          .descending(false);
 
       timeseriesQuery = timeseriesQueryBuilder.build();
       timeseriesFactory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TimeseriesQueryQueryToolChest(QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
           new TimeseriesQueryEngine(),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
     }
-
-    SCHEMA_QUERY_MAP.put("basic", basicQueries);
   }
 
 

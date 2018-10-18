@@ -397,7 +397,7 @@ public class Filters
         {
           private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
           private int nextIndex = 0;
-          private int found = -1;
+          private int found;
 
           {
             found = findNextIndex();

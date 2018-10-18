@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 import org.apache.commons.codec.binary.Base64;
 
@@ -44,7 +45,7 @@ public class GenerateTestData
     int sequenceNumber = 0;
     for (int i = 0; i < 20; i++) {
       int product = rand.nextInt(10);
-      UpdateDoublesSketch sketch = UpdateDoublesSketch.builder().build();
+      UpdateDoublesSketch sketch = DoublesSketch.builder().build();
       for (int j = 0; j < 20; j++) {
         double value = rand.nextDouble();
         buildData.write("2016010101");

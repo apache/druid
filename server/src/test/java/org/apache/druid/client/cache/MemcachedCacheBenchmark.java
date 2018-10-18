@@ -131,7 +131,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
 
   public long timeGetObject(int reps)
   {
-    byte[] bytes = null;
+    byte[] bytes;
     long count = 0;
     for (int i = 0; i < reps; i++) {
       for (int k = 0; k < objectCount; ++k) {

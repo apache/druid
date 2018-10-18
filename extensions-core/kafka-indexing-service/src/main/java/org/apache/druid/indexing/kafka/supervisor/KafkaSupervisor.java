@@ -44,6 +44,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
@@ -338,7 +339,7 @@ public class KafkaSupervisor implements Supervisor
     this.futureTimeoutInSeconds = Math.max(
         MINIMUM_FUTURE_TIMEOUT_IN_SECONDS,
         tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
-                                         + KafkaIndexTaskClient.MAX_RETRY_WAIT_SECONDS)
+                                         + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
 
     int chatThreads = (this.tuningConfig.getChatThreads() != null
