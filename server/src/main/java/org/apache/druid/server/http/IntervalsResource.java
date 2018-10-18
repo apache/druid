@@ -41,6 +41,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -79,11 +80,7 @@ public class IntervalsResource
     final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
     for (ImmutableDruidDataSource dataSource : datasources) {
       for (DataSegment dataSegment : dataSource.getSegments()) {
-        Map<String, Map<String, Object>> interval = retVal.get(dataSegment.getInterval());
-        if (interval == null) {
-          Map<String, Map<String, Object>> tmp = Maps.newHashMap();
-          retVal.put(dataSegment.getInterval(), tmp);
-        }
+        retVal.computeIfAbsent(dataSegment.getInterval(), i -> new HashMap<>());
         setProperties(retVal, dataSource, dataSegment);
       }
     }
@@ -115,11 +112,7 @@ public class IntervalsResource
       for (ImmutableDruidDataSource dataSource : datasources) {
         for (DataSegment dataSegment : dataSource.getSegments()) {
           if (theInterval.contains(dataSegment.getInterval())) {
-            Map<String, Map<String, Object>> dataSourceInterval = retVal.get(dataSegment.getInterval());
-            if (dataSourceInterval == null) {
-              Map<String, Map<String, Object>> tmp = Maps.newHashMap();
-              retVal.put(dataSegment.getInterval(), tmp);
-            }
+            retVal.computeIfAbsent(dataSegment.getInterval(), k -> new HashMap<>());
             setProperties(retVal, dataSource, dataSegment);
           }
         }
