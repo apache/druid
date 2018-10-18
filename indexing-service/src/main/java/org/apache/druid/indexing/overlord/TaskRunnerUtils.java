@@ -104,7 +104,7 @@ public class TaskRunnerUtils
     Preconditions.checkArgument(pathFormat.startsWith("/"), "path must start with '/': %s", pathFormat);
     final String path = StringUtils.format(
         pathFormat,
-        Arrays.stream(pathParams).toArray()
+        Arrays.stream(pathParams).map(StringUtils::urlEncode).toArray()
     );
 
     try {
