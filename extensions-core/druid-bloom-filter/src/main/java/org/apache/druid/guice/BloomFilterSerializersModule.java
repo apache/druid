@@ -49,10 +49,10 @@ public class BloomFilterSerializersModule extends SimpleModule
     addDeserializer(BloomKFilterHolder.class, new BloomKFilterHolderDeserializer());
   }
 
-  public static class BloomKFilterSerializer extends StdSerializer<BloomKFilter>
+  private static class BloomKFilterSerializer extends StdSerializer<BloomKFilter>
   {
 
-    public BloomKFilterSerializer()
+    BloomKFilterSerializer()
     {
       super(BloomKFilter.class);
     }
@@ -69,10 +69,10 @@ public class BloomFilterSerializersModule extends SimpleModule
     }
   }
 
-  public static class BloomKFilterDeserializer extends StdDeserializer<BloomKFilter>
+  private static class BloomKFilterDeserializer extends StdDeserializer<BloomKFilter>
   {
 
-    protected BloomKFilterDeserializer()
+    BloomKFilterDeserializer()
     {
       super(BloomKFilter.class);
     }
@@ -87,9 +87,9 @@ public class BloomFilterSerializersModule extends SimpleModule
     }
   }
 
-  public static class BloomKFilterHolderDeserializer extends StdDeserializer<BloomKFilterHolder>
+  private static class BloomKFilterHolderDeserializer extends StdDeserializer<BloomKFilterHolder>
   {
-    protected BloomKFilterHolderDeserializer()
+    BloomKFilterHolderDeserializer()
     {
       super(BloomKFilterHolder.class);
     }
