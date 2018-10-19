@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
+import com.google.common.hash.HashCode;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -42,7 +43,7 @@ public class BloomDimFilter implements DimFilter
 
   private final String dimension;
   private final BloomKFilter bloomKFilter;
-  private final byte[] hash;
+  private final HashCode hash;
   private final ExtractionFn extractionFn;
 
   @JsonCreator
@@ -68,7 +69,7 @@ public class BloomDimFilter implements DimFilter
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByteArray(hash)
+        .appendByteArray(hash.asBytes())
         .build();
   }
 
@@ -180,9 +181,9 @@ public class BloomDimFilter implements DimFilter
   public String toString()
   {
     if (extractionFn != null) {
-      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, Base64.encodeBase64String(hash));
+      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, hash.toString());
     } else {
-      return StringUtils.format("%s = %s", dimension, Base64.encodeBase64String(hash));
+      return StringUtils.format("%s = %s", dimension, hash.toString());
     }
   }
 
@@ -201,7 +202,7 @@ public class BloomDimFilter implements DimFilter
     if (!dimension.equals(that.dimension)) {
       return false;
     }
-    if (hash != null ? !Arrays.equals(hash, that.hash) : that.hash != null) {
+    if (hash != null ? !hash.equals(that.hash) : that.hash != null) {
       return false;
     }
     return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;

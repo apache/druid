@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
@@ -101,7 +102,7 @@ public class BloomFilterSerializersModule extends SimpleModule
     {
       byte[] bytes = jsonParser.getBinaryValue();
       BloomKFilter filter = BloomKFilter.deserialize(new ByteArrayInputStream(bytes));
-      byte[] hash = Hashing.sha512().hashBytes(bytes).asBytes();
+      HashCode hash = Hashing.sha512().hashBytes(bytes);
       return new BloomKFilterHolder(filter, hash);
     }
   }

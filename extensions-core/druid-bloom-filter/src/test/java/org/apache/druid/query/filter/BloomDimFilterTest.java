@@ -379,7 +379,7 @@ public class BloomDimFilterTest extends BaseFilterTest
     BloomKFilter.serialize(byteArrayOutputStream, filter);
     byte[] bytes = byteArrayOutputStream.toByteArray();
 
-    return new BloomKFilterHolder(filter, Hashing.sha512().hashBytes(bytes).asBytes());
+    return new BloomKFilterHolder(filter, Hashing.sha512().hashBytes(bytes));
   }
 
   private static BloomKFilterHolder bloomKFilter(int expectedEntries, Float... values) throws IOException

@@ -19,16 +19,18 @@
 
 package org.apache.druid.query.filter;
 
+import com.google.common.hash.HashCode;
 import org.apache.hive.common.util.BloomKFilter;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 public class BloomKFilterHolder
 {
-  private BloomKFilter filter;
-  private byte[] hash;
+  private final BloomKFilter filter;
+  private final HashCode hash;
 
-  public BloomKFilterHolder(BloomKFilter filter, byte[] hash)
+  public BloomKFilterHolder(BloomKFilter filter, HashCode hash)
   {
     this.filter = filter;
     this.hash = hash;
@@ -39,7 +41,7 @@ public class BloomKFilterHolder
     return filter;
   }
 
-  byte[] getFilterHash()
+  HashCode getFilterHash()
   {
     return hash;
   }
@@ -55,6 +57,6 @@ public class BloomKFilterHolder
     }
 
     BloomKFilterHolder that = (BloomKFilterHolder) o;
-    return Arrays.equals(this.hash, that.hash);
+    return Objects.equals(this.hash, that.hash);
   }
 }
