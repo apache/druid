@@ -22,7 +22,6 @@ package org.apache.druid.query.filter;
 import com.google.common.hash.HashCode;
 import org.apache.hive.common.util.BloomKFilter;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 public class BloomKFilterHolder

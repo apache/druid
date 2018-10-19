@@ -26,14 +26,12 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashCode;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.hive.common.util.BloomKFilter;
 
-import java.util.Arrays;
 import java.util.HashSet;
 
 /**
