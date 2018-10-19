@@ -227,7 +227,7 @@ public class HttpPostEmitterStressTest
 
           emitter.emit(smallEvent);
 
-          Assert.assertTrue(emitter.getFailedBuffers() <= 10);
+          Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
           Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
         }
         threadsCompleted.countDown();
@@ -241,7 +241,7 @@ public class HttpPostEmitterStressTest
 
           emitter.emit(bigEvent);
 
-          Assert.assertTrue(emitter.getFailedBuffers() <= 10);
+          Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
           Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
         }
         threadsCompleted.countDown();

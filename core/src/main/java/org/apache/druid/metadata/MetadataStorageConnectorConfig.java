@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
+import java.util.Properties;
 
 /**
  */
@@ -43,6 +44,9 @@ public class MetadataStorageConnectorConfig
 
   @JsonProperty("password")
   private PasswordProvider passwordProvider;
+
+  @JsonProperty("dbcp")
+  private Properties dbcpProperties;
 
   public boolean isCreateTables()
   {
@@ -78,6 +82,11 @@ public class MetadataStorageConnectorConfig
     return passwordProvider == null ? null : passwordProvider.getPassword();
   }
 
+  public Properties getDbcpProperties()
+  {
+    return dbcpProperties;
+  }
+
   @Override
   public String toString()
   {
@@ -86,6 +95,7 @@ public class MetadataStorageConnectorConfig
            ", connectURI='" + getConnectURI() + '\'' +
            ", user='" + user + '\'' +
            ", passwordProvider=" + passwordProvider +
+           ", dbcpProperties=" + dbcpProperties +
            '}';
   }
 
@@ -116,6 +126,11 @@ public class MetadataStorageConnectorConfig
     if (getUser() != null ? !getUser().equals(that.getUser()) : that.getUser() != null) {
       return false;
     }
+    if (getDbcpProperties() == null
+        ? that.getDbcpProperties() != null
+        : !getDbcpProperties().equals(that.getDbcpProperties())) {
+      return false;
+    }
     return passwordProvider != null ? passwordProvider.equals(that.passwordProvider) : that.passwordProvider == null;
 
   }
@@ -129,6 +144,7 @@ public class MetadataStorageConnectorConfig
     result = 31 * result + (getConnectURI() != null ? getConnectURI().hashCode() : 0);
     result = 31 * result + (getUser() != null ? getUser().hashCode() : 0);
     result = 31 * result + (passwordProvider != null ? passwordProvider.hashCode() : 0);
+    result = 31 * result + (dbcpProperties != null ? dbcpProperties.hashCode() : 0);
     return result;
   }
 }
