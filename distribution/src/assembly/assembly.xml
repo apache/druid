@@ -31,9 +31,6 @@
             <includes>
                 <include>*/*</include>
             </includes>
-            <excludes>
-                <exclude>mysql-metadata-storage/**</exclude>
-            </excludes>
             <outputDirectory>extensions</outputDirectory>
         </fileSet>
 
