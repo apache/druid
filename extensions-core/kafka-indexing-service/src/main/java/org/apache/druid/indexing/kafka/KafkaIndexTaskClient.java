@@ -55,9 +55,8 @@ public class KafkaIndexTaskClient extends SeekableStreamIndexTaskClient<Integer,
   }
 
   @Override
-  protected JavaType constructMapType(Class<? extends Map> mapType)
+  protected JavaType constructPartitionOffsetMapType(Class<? extends Map> mapType)
   {
     return mapper.getTypeFactory().constructMapType(mapType, Integer.class, Long.class);
   }
-
 }

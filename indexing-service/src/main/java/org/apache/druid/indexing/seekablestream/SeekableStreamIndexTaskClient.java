@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -112,7 +113,7 @@ public abstract class SeekableStreamIndexTaskClient<partitionType, sequenceType>
 
       if (response.getStatus().equals(HttpResponseStatus.OK)) {
         log.info("Task [%s] paused successfully", id);
-        return deserialize(response.getContent(), constructMapType(Map.class));
+        return deserialize(response.getContent(), constructPartitionOffsetMapType(Map.class));
       }
 
       while (true) {
@@ -140,7 +141,7 @@ public abstract class SeekableStreamIndexTaskClient<partitionType, sequenceType>
       return ImmutableMap.of();
     }
     catch (IOException | InterruptedException e) {
-      throw new RuntimeException(
+      throw new RE(
           StringUtils.format("Exception [%s] while pausing Task [%s]", e.getMessage(), id),
           e
       );
@@ -219,7 +220,7 @@ public abstract class SeekableStreamIndexTaskClient<partitionType, sequenceType>
           null,
           retry
       );
-      return deserialize(response.getContent(), constructMapType(Map.class));
+      return deserialize(response.getContent(), constructPartitionOffsetMapType(Map.class));
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -236,7 +237,7 @@ public abstract class SeekableStreamIndexTaskClient<partitionType, sequenceType>
       final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
       return deserialize(
           response.getContent(),
-          constructMapType(TreeMap.class)
+          constructCheckpointMapType()
       );
     }
     catch (NoTaskLocationException e) {
@@ -261,7 +262,7 @@ public abstract class SeekableStreamIndexTaskClient<partitionType, sequenceType>
 
     try {
       final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
-      return deserialize(response.getContent(), constructMapType(Map.class));
+      return deserialize(response.getContent(), constructPartitionOffsetMapType(Map.class));
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -349,7 +350,17 @@ public abstract class SeekableStreamIndexTaskClient<partitionType, sequenceType>
     return doAsync(() -> getStatus(id));
   }
 
-  protected abstract JavaType constructMapType(Class<? extends Map> mapType);
+  private JavaType constructCheckpointMapType()
+  {
+    ObjectMapper mapper = new ObjectMapper();
+    return mapper.getTypeFactory()
+                 .constructMapType(
+                     TreeMap.class,
+                     mapper.getTypeFactory().constructType(Integer.class),
+                     constructPartitionOffsetMapType(TreeMap.class)
+                 );
+  }
 
+  protected abstract JavaType constructPartitionOffsetMapType(Class<? extends Map> mapType);
 }
 

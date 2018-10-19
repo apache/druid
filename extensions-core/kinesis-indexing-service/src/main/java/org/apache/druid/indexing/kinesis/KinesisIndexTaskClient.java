@@ -54,7 +54,7 @@ public class KinesisIndexTaskClient extends SeekableStreamIndexTaskClient<String
   }
 
   @Override
-  protected JavaType constructMapType(Class<? extends Map> mapType)
+  protected JavaType constructPartitionOffsetMapType(Class<? extends Map> mapType)
   {
     return mapper.getTypeFactory().constructMapType(mapType, String.class, String.class);
   }
