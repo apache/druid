@@ -99,6 +99,7 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -429,7 +430,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           }
 
           // if stop is requested or task's end offset is set by call to setEndOffsets method with finish set to true
-          if (stopRequested.get() || sequences.get(sequences.size() - 1).isCheckpointed()) {
+          if (stopRequested.get() || sequences.size() == 0 || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
             break;
           }
@@ -447,42 +448,26 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
           ConsumerRecords<byte[], byte[]> records = ConsumerRecords.empty();
           try {
-            records = consumer.poll(KafkaIndexTask.POLL_TIMEOUT_MILLIS);
+            records = consumer.poll(Duration.ofMillis(KafkaIndexTask.POLL_TIMEOUT_MILLIS));
           }
           catch (OffsetOutOfRangeException e) {
             log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
             possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, toolbox);
             stillReading = !assignment.isEmpty();
           }
-
           SequenceMetadata sequenceToCheckpoint = null;
+          int currentPartition = 0;
+          long currentOffset = 0;
           for (ConsumerRecord<byte[], byte[]> record : records) {
+            currentPartition = record.partition();
+            currentOffset = record.offset();
             log.trace(
                 "Got topic[%s] partition[%d] offset[%,d].",
                 record.topic(),
                 record.partition(),
                 record.offset()
             );
-
             if (record.offset() < endOffsets.get(record.partition())) {
-              if (record.offset() != nextOffsets.get(record.partition())) {
-                if (ioConfig.isSkipOffsetGaps()) {
-                  log.warn(
-                      "Skipped to offset[%,d] after offset[%,d] in partition[%d].",
-                      record.offset(),
-                      nextOffsets.get(record.partition()),
-                      record.partition()
-                  );
-                } else {
-                  throw new ISE(
-                      "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
-                      record.offset(),
-                      nextOffsets.get(record.partition()),
-                      record.partition()
-                  );
-                }
-              }
-
               try {
                 final byte[] valueBytes = record.value();
                 final List<InputRow> rows = valueBytes == null
@@ -574,15 +559,19 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
 
               nextOffsets.put(record.partition(), record.offset() + 1);
             }
-
-            if (nextOffsets.get(record.partition()).equals(endOffsets.get(record.partition()))
+            if (nextOffsets.get(record.partition()) >= endOffsets.get(record.partition())
                 && assignment.remove(record.partition())) {
               log.info("Finished reading topic[%s], partition[%,d].", record.topic(), record.partition());
               KafkaIndexTask.assignPartitions(consumer, topic, assignment);
               stillReading = !assignment.isEmpty();
             }
           }
-
+          if (nextOffsets.get(currentPartition) != null
+              && endOffsets.get(currentPartition) != null
+              && nextOffsets.get(currentPartition) < endOffsets.get(currentPartition)
+              && currentOffset > endOffsets.get(currentPartition)) {
+            nextOffsets.put(currentPartition, endOffsets.get(currentPartition));
+          }
           if (System.currentTimeMillis() > nextCheckpointTime) {
             sequenceToCheckpoint = sequences.get(sequences.size() - 1);
           }

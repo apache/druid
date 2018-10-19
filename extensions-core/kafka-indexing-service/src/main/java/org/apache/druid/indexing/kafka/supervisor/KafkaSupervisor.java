@@ -1930,8 +1930,7 @@ public class KafkaSupervisor implements Supervisor
         consumerProperties,
         true,
         minimumMessageTime,
-        maximumMessageTime,
-        ioConfig.isSkipOffsetGaps()
+        maximumMessageTime
     );
 
     final String checkpoints = sortingMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()

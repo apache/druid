@@ -47,7 +47,6 @@ public class KafkaSupervisorIOConfig
   private final Duration completionTimeout;
   private final Optional<Duration> lateMessageRejectionPeriod;
   private final Optional<Duration> earlyMessageRejectionPeriod;
-  private final boolean skipOffsetGaps;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -61,8 +60,7 @@ public class KafkaSupervisorIOConfig
       @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
       @JsonProperty("completionTimeout") Period completionTimeout,
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
-      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
-      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
+      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod
   )
   {
     this.topic = Preconditions.checkNotNull(topic, "topic");
@@ -85,7 +83,6 @@ public class KafkaSupervisorIOConfig
     this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
                                        ? Optional.absent()
                                        : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
-    this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : false;
   }
 
   @JsonProperty
@@ -154,12 +151,6 @@ public class KafkaSupervisorIOConfig
     return lateMessageRejectionPeriod;
   }
 
-  @JsonProperty
-  public boolean isSkipOffsetGaps()
-  {
-    return skipOffsetGaps;
-  }
-
   @Override
   public String toString()
   {
@@ -174,7 +165,6 @@ public class KafkaSupervisorIOConfig
            ", useEarliestOffset=" + useEarliestOffset +
            ", completionTimeout=" + completionTimeout +
            ", lateMessageRejectionPeriod=" + lateMessageRejectionPeriod +
-           ", skipOffsetGaps=" + skipOffsetGaps +
            '}';
   }
 

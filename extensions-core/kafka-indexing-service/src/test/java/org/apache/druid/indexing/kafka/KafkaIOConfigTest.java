@@ -74,8 +74,6 @@ public class KafkaIOConfigTest
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
-    Assert.assertFalse("maximumMessageTime", config.getMaximumMessageTime().isPresent());
-    Assert.assertFalse("skipOffsetGaps", config.isSkipOffsetGaps());
   }
 
   @Test
@@ -90,8 +88,7 @@ public class KafkaIOConfigTest
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
-                     + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\",\n"
-                     + "  \"skipOffsetGaps\": true\n"
+                     + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
     KafkaIOConfig config = (KafkaIOConfig) mapper.readValue(
@@ -112,7 +109,6 @@ public class KafkaIOConfigTest
     Assert.assertFalse(config.isUseTransaction());
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
     Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
-    Assert.assertTrue("skipOffsetGaps", config.isSkipOffsetGaps());
   }
 
   @Test

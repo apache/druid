@@ -296,6 +296,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       props.setProperty("auto.offset.reset", "none");
       props.setProperty("key.deserializer", ByteArrayDeserializer.class.getName());
       props.setProperty("value.deserializer", ByteArrayDeserializer.class.getName());
+      props.setProperty("isolation.level", "read_committed");
 
       return new KafkaConsumer<>(props);
     }

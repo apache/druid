@@ -34,7 +34,7 @@
   </parent>
 
   <properties>
-    <apache.kafka.version>0.10.2.0</apache.kafka.version>
+    <apache.kafka.version>2.0.0</apache.kafka.version>
   </properties>
 
   <dependencies>

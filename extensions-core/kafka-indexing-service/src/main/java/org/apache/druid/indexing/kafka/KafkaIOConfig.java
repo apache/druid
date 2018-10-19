@@ -43,7 +43,6 @@ public class KafkaIOConfig implements IOConfig
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
-  private final boolean skipOffsetGaps;
 
   @JsonCreator
   public KafkaIOConfig(
@@ -54,8 +53,7 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
-      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
-      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
+      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime
   )
   {
     this.taskGroupId = taskGroupId;
@@ -66,7 +64,6 @@ public class KafkaIOConfig implements IOConfig
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
-    this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
 
     Preconditions.checkArgument(
         startPartitions.getTopic().equals(endPartitions.getTopic()),
@@ -137,12 +134,6 @@ public class KafkaIOConfig implements IOConfig
     return minimumMessageTime;
   }
 
-  @JsonProperty
-  public boolean isSkipOffsetGaps()
-  {
-    return skipOffsetGaps;
-  }
-
   @Override
   public String toString()
   {
@@ -155,7 +146,6 @@ public class KafkaIOConfig implements IOConfig
            ", useTransaction=" + useTransaction +
            ", minimumMessageTime=" + minimumMessageTime +
            ", maximumMessageTime=" + maximumMessageTime +
-           ", skipOffsetGaps=" + skipOffsetGaps +
            '}';
   }
 }
