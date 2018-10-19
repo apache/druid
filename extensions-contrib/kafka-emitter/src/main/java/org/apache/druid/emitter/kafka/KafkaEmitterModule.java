@@ -21,6 +21,8 @@ package org.apache.druid.emitter.kafka;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonAppend;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
@@ -28,6 +30,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.server.log.EmittingRequestLogger;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +42,10 @@ public class KafkaEmitterModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.EMPTY_LIST;
+    return Collections.singletonList(
+      new SimpleModule("KafkaEmitter")
+        .setMixInAnnotation(EmittingRequestLogger.RequestLogEvent.class, ClusterNameMixin.class)
+    );
   }
 
   @Override
@@ -55,4 +61,13 @@ public class KafkaEmitterModule implements DruidModule
   {
     return new KafkaEmitter(kafkaEmitterConfig, mapper);
   }
+}
+
+@JsonAppend(
+    attrs = {
+        @JsonAppend.Attr(value = "clusterName")
+    }
+)
+abstract class ClusterNameMixin
+{
 }

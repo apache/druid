@@ -21,6 +21,7 @@ package org.apache.druid.emitter.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
 import org.apache.druid.java.util.common.StringUtils;
@@ -31,6 +32,7 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.server.log.EmittingRequestLogger;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -50,8 +52,11 @@ public class KafkaEmitter implements Emitter
   private static Logger log = new Logger(KafkaEmitter.class);
 
   private static final int DEFAULT_RETRIES = 3;
+  private static final int QUEUES_SIZE = 4; // metric, alert, request, invalid
+
   private final AtomicLong metricLost;
   private final AtomicLong alertLost;
+  private final AtomicLong requestLost;
   private final AtomicLong invalidLost;
 
   private final KafkaEmitterConfig config;
@@ -60,6 +65,7 @@ public class KafkaEmitter implements Emitter
   private final ObjectMapper jsonMapper;
   private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
   private final ScheduledExecutorService scheduler;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper)
@@ -73,9 +79,11 @@ public class KafkaEmitter implements Emitter
                                                       .getOrDefault(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432"));
     this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
-    this.scheduler = Executors.newScheduledThreadPool(3);
+    this.requestQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
+    this.scheduler = Executors.newScheduledThreadPool(QUEUES_SIZE);
     this.metricLost = new AtomicLong(0L);
     this.alertLost = new AtomicLong(0L);
+    this.requestLost = new AtomicLong(0L);
     this.invalidLost = new AtomicLong(0L);
   }
 
@@ -88,6 +96,8 @@ public class KafkaEmitter implements Emitter
           metricLost.incrementAndGet();
         } else if (recordMetadata.topic().equals(config.getAlertTopic())) {
           alertLost.incrementAndGet();
+        } else if (recordMetadata.topic().equals(config.getRequestTopic())) {
+          requestLost.incrementAndGet();
         } else {
           invalidLost.incrementAndGet();
         }
@@ -121,21 +131,29 @@ public class KafkaEmitter implements Emitter
   {
     scheduler.scheduleWithFixedDelay(this::sendMetricToKafka, 10, 10, TimeUnit.SECONDS);
     scheduler.scheduleWithFixedDelay(this::sendAlertToKafka, 10, 10, TimeUnit.SECONDS);
+    scheduler.scheduleWithFixedDelay(this::sendRequestToKafka, 10, 10, TimeUnit.SECONDS);
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], invalidLost=[%d]",
-               metricLost.get(), alertLost.get(), invalidLost.get());
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
+               metricLost.get(), alertLost.get(), requestLost.get(), invalidLost.get());
     }, 5, 5, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
 
   private void sendMetricToKafka()
   {
+
     sendToKafka(config.getMetricTopic(), metricQueue);
   }
 
   private void sendAlertToKafka()
   {
+
     sendToKafka(config.getAlertTopic(), alertQueue);
+  }
+
+  private void sendRequestToKafka()
+  {
+    sendToKafka(config.getRequestTopic(), requestQueue);
   }
 
   private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue)
@@ -156,14 +174,16 @@ public class KafkaEmitter implements Emitter
   public void emit(final Event event)
   {
     if (event != null) {
-      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.<String, Object>builder().putAll(event.toMap());
-      if (config.getClusterName() != null) {
-        resultBuilder.put("clusterName", config.getClusterName());
-      }
-      Map<String, Object> result = resultBuilder.build();
+      Map<String, Object> eventAsMap = event.toMap();
 
       try {
-        String resultJson = jsonMapper.writeValueAsString(result);
+        String resultJson;
+        if (eventAsMap.isEmpty()) {
+          resultJson = serializeComplexEvent(event);
+        } else {
+          resultJson = serializeFlatEvent(eventAsMap);
+        }
+
         ObjectContainer<String> objectContainer = new ObjectContainer<>(
             resultJson,
             StringUtils.toUtf8(resultJson).length
@@ -176,6 +196,10 @@ public class KafkaEmitter implements Emitter
           if (!alertQueue.offer(objectContainer)) {
             alertLost.incrementAndGet();
           }
+        } else if (event instanceof EmittingRequestLogger.RequestLogEvent) {
+          if (!requestQueue.offer(objectContainer)) {
+            requestLost.incrementAndGet();
+          }
         } else {
           invalidLost.incrementAndGet();
         }
@@ -184,6 +208,25 @@ public class KafkaEmitter implements Emitter
         invalidLost.incrementAndGet();
       }
     }
+  }
+
+  private String serializeFlatEvent(Map<String, Object> eventAsMap) throws JsonProcessingException
+  {
+    ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.builder();
+    resultBuilder.putAll(eventAsMap);
+    if (config.getClusterName() != null) {
+      resultBuilder.put("clusterName", config.getClusterName());
+    }
+    return jsonMapper.writeValueAsString(resultBuilder.build());
+  }
+
+  private String serializeComplexEvent(Event event) throws JsonProcessingException
+  {
+    ObjectWriter objectWriter = jsonMapper.writerFor(event.getClass());
+    if (config.getClusterName() != null) {
+      objectWriter.withAttribute("clusterName", config.getClusterName());
+    }
+    return objectWriter.writeValueAsString(event);
   }
 
   @Override
