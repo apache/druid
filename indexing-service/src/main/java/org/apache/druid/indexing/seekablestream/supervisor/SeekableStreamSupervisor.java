@@ -1357,7 +1357,7 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
         killTask(taskId);
       }
     }
-    log.debug("Found [%d] seekable stream indexing tasks for dataSource [%s]", taskCount, dataSource);
+    log.debug("Found [%d] seekablestream indexing tasks for dataSource [%s]", taskCount, dataSource);
 
     // make sure the checkpoints are consistent with each other and with the metadata store
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
