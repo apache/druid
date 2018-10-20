@@ -1078,7 +1078,7 @@
                     </excludeProperties>
                     <gitDescribe>
                         <skip>false</skip>
-                        <always>false</always>
+                        <always>true</always>
                         <abbrev>7</abbrev>
                         <dirty>-dirty</dirty>
                         <forceLongFormat>true</forceLongFormat>
