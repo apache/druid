@@ -59,7 +59,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
     CuratorDruidLeaderSelector leaderSelector1 = new CuratorDruidLeaderSelector(
         curator,
-        new DruidNode("s1", "h1", 8080, null, true, false),
+        new DruidNode("s1", "h1", false, 8080, null, true, false),
         latchPath
     );
     leaderSelector1.registerListener(
@@ -91,7 +91,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
     CuratorDruidLeaderSelector leaderSelector2 = new CuratorDruidLeaderSelector(
         curator,
-        new DruidNode("s2", "h2", 8080, null, true, false),
+        new DruidNode("s2", "h2", false, 8080, null, true, false),
         latchPath
     );
     leaderSelector2.registerListener(
@@ -131,7 +131,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
     CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(
         curator,
-        new DruidNode("s3", "h3", 8080, null, true, false),
+        new DruidNode("s3", "h3", false, 8080, null, true, false),
         latchPath
     );
     leaderSelector3.registerListener(

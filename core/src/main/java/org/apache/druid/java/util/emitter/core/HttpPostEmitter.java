@@ -882,12 +882,12 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     return approximateBuffersToReuseCount.get();
   }
 
-  public int getFailedBuffers()
+  public int getTotalFailedBuffers()
   {
     return emittingThread.approximateFailedBuffersCount.get();
   }
 
-  public int getDroppedBuffers()
+  public int getTotalDroppedBuffers()
   {
     return droppedBuffers.get();
   }

@@ -43,6 +43,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
@@ -248,7 +249,7 @@ public class CalciteTests
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2")),
+              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")),
               null,
               null
           )
@@ -267,22 +268,62 @@ public class CalciteTests
 
   public static final List<InputRow> ROWS1 = ImmutableList.of(
       createRow(
-          ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "m2", "1.0", "dim1", "", "dim2", ImmutableList.of("a"))
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-01")
+              .put("m1", "1.0")
+              .put("m2", "1.0")
+              .put("dim1", "")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of("a", "b"))
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "m2", "2.0", "dim1", "10.1", "dim2", ImmutableList.of())
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-02")
+              .put("m1", "2.0")
+              .put("m2", "2.0")
+              .put("dim1", "10.1")
+              .put("dim2", ImmutableList.of())
+              .put("dim3", ImmutableList.of("b", "c"))
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "m2", "3.0", "dim1", "2", "dim2", ImmutableList.of(""))
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-03")
+              .put("m1", "3.0")
+              .put("m2", "3.0")
+              .put("dim1", "2")
+              .put("dim2", ImmutableList.of(""))
+              .put("dim3", ImmutableList.of("d"))
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "m2", "4.0", "dim1", "1", "dim2", ImmutableList.of("a"))
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-01")
+              .put("m1", "4.0")
+              .put("m2", "4.0")
+              .put("dim1", "1")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of(""))
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "m2", "5.0", "dim1", "def", "dim2", ImmutableList.of("abc"))
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-02")
+              .put("m1", "5.0")
+              .put("m2", "5.0")
+              .put("dim1", "def")
+              .put("dim2", ImmutableList.of("abc"))
+              .put("dim3", ImmutableList.of())
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2001-01-03", "m1", "6.0", "m2", "6.0", "dim1", "abc")
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-03")
+              .put("m1", "6.0")
+              .put("m2", "6.0")
+              .put("dim1", "abc")
+              .build()
       )
   );
 
@@ -585,7 +626,7 @@ public class CalciteTests
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         EasyMock.createMock(HttpClient.class),
         EasyMock.createMock(DruidNodeDiscoveryProvider.class),
-        "nodetype",
+        NodeType.COORDINATOR,
         "/simple/leader",
         new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
     )

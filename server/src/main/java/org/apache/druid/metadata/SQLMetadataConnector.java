@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,6 +48,7 @@ import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
@@ -636,7 +638,20 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     MetadataStorageConnectorConfig connectorConfig = getConfig();
 
-    BasicDataSource dataSource = new BasicDataSource();
+    BasicDataSource dataSource = null;
+
+    try {
+      Properties dbcpProperties = connectorConfig.getDbcpProperties();
+      if (dbcpProperties != null) {
+        dataSource = BasicDataSourceFactory.createDataSource(dbcpProperties);
+      } else {
+        dataSource = new BasicDataSource();
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
     dataSource.setUsername(connectorConfig.getUser());
     dataSource.setPassword(connectorConfig.getPassword());
     String uri = connectorConfig.getConnectURI();

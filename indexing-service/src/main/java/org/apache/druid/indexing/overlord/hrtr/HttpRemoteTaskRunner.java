@@ -107,12 +107,12 @@ import java.util.stream.Collectors;
  * A Remote TaskRunner to manage tasks on Middle Manager nodes using internal-discovery({@link DruidNodeDiscoveryProvider})
  * to discover them and Http.
  * Middle Managers expose 3 HTTP endpoints
- *  1. POST request for assigning a task
- *  2. POST request for shutting down a task
- *  3. GET request for getting list of assigned, running, completed tasks on Middle Manager and its enable/disable status.
- *    This endpoint is implemented to support long poll and holds the request till there is a change. This class
- *    sends the next request immediately as the previous finishes to keep the state up-to-date.
- *
+ * 1. POST request for assigning a task
+ * 2. POST request for shutting down a task
+ * 3. GET request for getting list of assigned, running, completed tasks on Middle Manager and its enable/disable status.
+ * This endpoint is implemented to support long poll and holds the request till there is a change. This class
+ * sends the next request immediately as the previous finishes to keep the state up-to-date.
+ * <p>
  * ZK_CLEANUP_TODO : As of 0.11.1, it is required to cleanup task status paths from ZK which are created by the
  * workers to support deprecated RemoteTaskRunner. So a method "scheduleCompletedTaskStatusCleanupFromZk()" is added'
  * which should be removed in the release that removes RemoteTaskRunner legacy ZK updation WorkerTaskMonitor class.
@@ -858,7 +858,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return Optional.absent();
     } else {
       // Worker is still running this task
-      final URL url = TaskRunnerUtils.makeWorkerURL(worker, "/druid/worker/v1/task/%s/log?offset=%d", taskId, offset);
+      final URL url = TaskRunnerUtils.makeWorkerURL(
+          worker,
+          "/druid/worker/v1/task/%s/log?offset=%s",
+          taskId,
+          Long.toString(offset)
+      );
       return Optional.of(
           new ByteSource()
           {

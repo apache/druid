@@ -79,7 +79,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
   @Override
   protected Injector setupInjector()
   {
-    final DruidNode node = new DruidNode("test", "localhost", null, null, true, false);
+    final DruidNode node = new DruidNode("test", "localhost", false, null, null, true, false);
     discoveryDruidNode = new DiscoveryDruidNode(node, NodeType.PEON, ImmutableMap.of());
 
     Injector injector = Initialization.makeInjectorWithModules(
@@ -193,7 +193,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
 
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     DiscoveryDruidNode dummyNode = new DiscoveryDruidNode(
-        new DruidNode("test", "dummyhost", 64231, null, true, false),
+        new DruidNode("test", "dummyhost", false, 64231, null, true, false),
         NodeType.PEON,
         ImmutableMap.of()
     );
