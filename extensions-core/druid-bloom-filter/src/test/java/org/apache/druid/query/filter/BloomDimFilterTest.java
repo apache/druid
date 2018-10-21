@@ -353,7 +353,14 @@ public class BloomDimFilterTest extends BaseFilterTest
         new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
     );
 
-    // actual size is 86 bytes instead of 7794075 bytes
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    BloomKFilter.serialize(byteArrayOutputStream, bloomFilter);
+    byte[] bloomFilterBytes = byteArrayOutputStream.toByteArray();
+
+    // serialized filter can be quite large for high capacity bloom filters...
+    Assert.assertTrue(bloomFilterBytes.length > 7794000);
+
+    // actual size is 86 bytes instead of 7794075 bytes of old key format
     final int actualSize = bloomDimFilter.getCacheKey().length;
     Assert.assertTrue(actualSize < 100);
   }

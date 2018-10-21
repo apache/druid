@@ -58,4 +58,10 @@ public class BloomKFilterHolder
     BloomKFilterHolder that = (BloomKFilterHolder) o;
     return Objects.equals(this.hash, that.hash);
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(filter, hash);
+  }
 }

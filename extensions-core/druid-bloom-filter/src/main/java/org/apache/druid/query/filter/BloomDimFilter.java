@@ -222,7 +222,7 @@ public class BloomDimFilter implements DimFilter
   public int hashCode()
   {
     int result = dimension.hashCode();
-    result = 31 * result + (bloomKFilter != null ? bloomKFilter.hashCode() : 0);
+    result = 31 * result + (hash != null ? hash.hashCode() : 0);
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
   }
