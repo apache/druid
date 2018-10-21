@@ -93,6 +93,8 @@ public class BloomDimFilterTest extends BaseFilterTest
       PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0)
   );
 
+  private static DefaultObjectMapper mapper = new DefaultObjectMapper();
+
   public BloomDimFilterTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -113,8 +115,6 @@ public class BloomDimFilterTest extends BaseFilterTest
         optimize
     );
   }
-
-  private static DefaultObjectMapper mapper = new DefaultObjectMapper();
 
   @BeforeClass
   public static void beforeClass()
@@ -353,9 +353,7 @@ public class BloomDimFilterTest extends BaseFilterTest
         new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
     );
 
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    BloomKFilter.serialize(byteArrayOutputStream, bloomFilter);
-    byte[] bloomFilterBytes = byteArrayOutputStream.toByteArray();
+    byte[] bloomFilterBytes = getFilterBytes(bloomFilter);
 
     // serialized filter can be quite large for high capacity bloom filters...
     Assert.assertTrue(bloomFilterBytes.length > 7794000);
@@ -377,16 +375,6 @@ public class BloomDimFilterTest extends BaseFilterTest
     }
 
     return getBloomKFilterHolder(filter);
-  }
-
-  @Nonnull
-  private static BloomKFilterHolder getBloomKFilterHolder(BloomKFilter filter) throws IOException
-  {
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    BloomKFilter.serialize(byteArrayOutputStream, filter);
-    byte[] bytes = byteArrayOutputStream.toByteArray();
-
-    return new BloomKFilterHolder(filter, Hashing.sha512().hashBytes(bytes));
   }
 
   private static BloomKFilterHolder bloomKFilter(int expectedEntries, Float... values) throws IOException
@@ -426,5 +414,20 @@ public class BloomDimFilterTest extends BaseFilterTest
       }
     }
     return getBloomKFilterHolder(filter);
+  }
+
+  @Nonnull
+  private static BloomKFilterHolder getBloomKFilterHolder(BloomKFilter filter) throws IOException
+  {
+    byte[] bytes = getFilterBytes(filter);
+
+    return new BloomKFilterHolder(filter, Hashing.sha512().hashBytes(bytes));
+  }
+
+  private static byte[] getFilterBytes(BloomKFilter filter) throws IOException
+  {
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    BloomKFilter.serialize(byteArrayOutputStream, filter);
+    return byteArrayOutputStream.toByteArray();
   }
 }
