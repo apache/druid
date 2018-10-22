@@ -20,8 +20,11 @@
 package org.apache.druid.query.filter;
 
 import com.google.common.hash.HashCode;
+import com.google.common.hash.Hashing;
+import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.hive.common.util.BloomKFilter;
 
+import java.io.IOException;
 import java.util.Objects;
 
 public class BloomKFilterHolder
@@ -43,6 +46,21 @@ public class BloomKFilterHolder
   HashCode getFilterHash()
   {
     return hash;
+  }
+
+  public static BloomKFilterHolder fromBloomKFilter(BloomKFilter filter) throws IOException
+  {
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+
+    return new BloomKFilterHolder(filter, Hashing.sha512().hashBytes(bytes));
+  }
+
+  public static BloomKFilterHolder fromBytes(byte[] bytes) throws IOException
+  {
+    return new BloomKFilterHolder(
+        BloomFilterSerializersModule.bloomKFilterFromBytes(bytes),
+        Hashing.sha512().hashBytes(bytes)
+    );
   }
 
   @Override

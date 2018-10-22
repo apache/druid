@@ -22,7 +22,6 @@ package org.apache.druid.query.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -50,8 +49,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nonnull;
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
@@ -345,7 +342,7 @@ public class BloomDimFilterTest extends BaseFilterTest
     // FILL IT UP!
     bloomFilter.addString("myTestString");
 
-    BloomKFilterHolder holder = getBloomKFilterHolder(bloomFilter);
+    BloomKFilterHolder holder = BloomKFilterHolder.fromBloomKFilter(bloomFilter);
 
     BloomDimFilter bloomDimFilter = new BloomDimFilter(
         "abc",
@@ -353,7 +350,7 @@ public class BloomDimFilterTest extends BaseFilterTest
         new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
     );
 
-    byte[] bloomFilterBytes = getFilterBytes(bloomFilter);
+    byte[] bloomFilterBytes = BloomFilterSerializersModule.bloomKFilterToBytes(bloomFilter);
 
     // serialized filter can be quite large for high capacity bloom filters...
     Assert.assertTrue(bloomFilterBytes.length > 7794000);
@@ -374,7 +371,7 @@ public class BloomDimFilterTest extends BaseFilterTest
       }
     }
 
-    return getBloomKFilterHolder(filter);
+    return BloomKFilterHolder.fromBloomKFilter(filter);
   }
 
   private static BloomKFilterHolder bloomKFilter(int expectedEntries, Float... values) throws IOException
@@ -387,7 +384,7 @@ public class BloomDimFilterTest extends BaseFilterTest
         filter.addFloat(value);
       }
     }
-    return getBloomKFilterHolder(filter);
+    return BloomKFilterHolder.fromBloomKFilter(filter);
   }
 
   private static BloomKFilterHolder bloomKFilter(int expectedEntries, Double... values) throws IOException
@@ -400,7 +397,7 @@ public class BloomDimFilterTest extends BaseFilterTest
         filter.addDouble(value);
       }
     }
-    return getBloomKFilterHolder(filter);
+    return BloomKFilterHolder.fromBloomKFilter(filter);
   }
 
   private static BloomKFilterHolder bloomKFilter(int expectedEntries, Long... values) throws IOException
@@ -413,21 +410,6 @@ public class BloomDimFilterTest extends BaseFilterTest
         filter.addLong(value);
       }
     }
-    return getBloomKFilterHolder(filter);
-  }
-
-  @Nonnull
-  private static BloomKFilterHolder getBloomKFilterHolder(BloomKFilter filter) throws IOException
-  {
-    byte[] bytes = getFilterBytes(filter);
-
-    return new BloomKFilterHolder(filter, Hashing.sha512().hashBytes(bytes));
-  }
-
-  private static byte[] getFilterBytes(BloomKFilter filter) throws IOException
-  {
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    BloomKFilter.serialize(byteArrayOutputStream, filter);
-    return byteArrayOutputStream.toByteArray();
+    return BloomKFilterHolder.fromBloomKFilter(filter);
   }
 }
