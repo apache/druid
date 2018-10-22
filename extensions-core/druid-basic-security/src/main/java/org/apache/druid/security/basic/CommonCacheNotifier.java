@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -57,13 +58,17 @@ public class CommonCacheNotifier
 {
   private static final EmittingLogger LOG = new EmittingLogger(CommonCacheNotifier.class);
 
-  private static final List<String> NODE_TYPES = Arrays.asList(
-      DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
-      DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
-      DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
-      DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
-      DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER,
-      DruidNodeDiscoveryProvider.NODE_TYPE_MM
+  /**
+   * {@link NodeType#COORDINATOR} is intentionally omitted because it gets its information about the auth state directly
+   * from metadata storage.
+   */
+  private static final List<NodeType> NODE_TYPES = Arrays.asList(
+      NodeType.BROKER,
+      NodeType.OVERLORD,
+      NodeType.HISTORICAL,
+      NodeType.PEON,
+      NodeType.ROUTER,
+      NodeType.MIDDLE_MANAGER
   );
 
   private final DruidNodeDiscoveryProvider discoveryProvider;
@@ -154,7 +159,7 @@ public class CommonCacheNotifier
   private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthorizerPrefix, byte[] serializedUserMap)
   {
     List<ListenableFuture<StatusResponseHolder>> futures = new ArrayList<>();
-    for (String nodeType : NODE_TYPES) {
+    for (NodeType nodeType : NODE_TYPES) {
       DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeType(nodeType);
       Collection<DiscoveryDruidNode> nodes = nodeDiscovery.getAllNodes();
       for (DiscoveryDruidNode node : nodes) {

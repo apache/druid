@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -105,7 +104,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       if (binaryAsString) {
         return StringUtils.fromUtf8(((ByteBuffer) field).array());
       } else {
-        return Arrays.toString(((ByteBuffer) field).array());
+        return ((ByteBuffer) field).array();
       }
     }
     if (field instanceof Utf8) {

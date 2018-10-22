@@ -19,9 +19,6 @@
 
 package org.apache.druid.client;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -32,7 +29,6 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -52,14 +48,12 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
-import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -71,20 +65,16 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -550,7 +540,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public JsonParserIterator<T> make()
           {
-            return new JsonParserIterator<T>(typeRef, future, url, query);
+            return new JsonParserIterator<T>(typeRef, future, url, query, host, objectMapper);
           }
 
           @Override
@@ -574,113 +564,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     }
 
     return retVal;
-  }
-
-  private class JsonParserIterator<T> implements Iterator<T>, Closeable
-  {
-    private JsonParser jp;
-    private ObjectCodec objectCodec;
-    private final JavaType typeRef;
-    private final Future<InputStream> future;
-    private final Query<T> query;
-    private final String url;
-
-    public JsonParserIterator(JavaType typeRef, Future<InputStream> future, String url, Query<T> query)
-    {
-      this.typeRef = typeRef;
-      this.future = future;
-      this.url = url;
-      this.query = query;
-      jp = null;
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      init();
-
-      if (jp.isClosed()) {
-        return false;
-      }
-      if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-        CloseQuietly.close(jp);
-        return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public T next()
-    {
-      init();
-
-      try {
-        final T retVal = objectCodec.readValue(jp, typeRef);
-        jp.nextToken();
-        return retVal;
-      }
-      catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
-    }
-
-    @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    private void init()
-    {
-      if (jp == null) {
-        try {
-          InputStream is = future.get();
-          if (is == null) {
-            throw new QueryInterruptedException(
-                new ResourceLimitExceededException(
-                    "query[%s] url[%s] timed out or max bytes limit reached.",
-                    query.getId(),
-                    url
-                ),
-                host
-            );
-          } else {
-            jp = objectMapper.getFactory().createParser(is);
-          }
-          final JsonToken nextToken = jp.nextToken();
-          if (nextToken == JsonToken.START_OBJECT) {
-            QueryInterruptedException cause = jp.getCodec().readValue(jp, QueryInterruptedException.class);
-            throw new QueryInterruptedException(cause, host);
-          } else if (nextToken != JsonToken.START_ARRAY) {
-            throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
-          } else {
-            jp.nextToken();
-            objectCodec = jp.getCodec();
-          }
-        }
-        catch (IOException | InterruptedException | ExecutionException e) {
-          throw new RE(
-              e,
-              "Failure getting results for query[%s] url[%s] because of [%s]",
-              query.getId(),
-              url,
-              e.getMessage()
-          );
-        }
-        catch (CancellationException e) {
-          throw new QueryInterruptedException(e, host);
-        }
-      }
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      if (jp != null) {
-        jp.close();
-      }
-    }
   }
 
   @Override

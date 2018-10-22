@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.util;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.DataSource;
@@ -30,9 +31,10 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.concurrent.Executor;
-
+// this class is used for testing and benchmark
 public class TestServerInventoryView implements TimelineServerView
 {
   private static final DruidServerMetadata DUMMY_SERVER = new DruidServerMetadata(
@@ -53,6 +55,13 @@ public class TestServerInventoryView implements TimelineServerView
 
   @Override
   public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Nullable
+  @Override
+  public List<ImmutableDruidServer> getDruidServers()
   {
     throw new UnsupportedOperationException();
   }

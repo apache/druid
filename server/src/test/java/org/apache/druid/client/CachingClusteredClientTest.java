@@ -2640,6 +2640,12 @@ public class CachingClusteredClientTest
           }
 
           @Override
+          public List<ImmutableDruidServer> getDruidServers()
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
           public <T> QueryRunner<T> getQueryRunner(DruidServer server)
           {
             return serverView.getQueryRunner(server);

@@ -84,12 +84,6 @@ public class FloatSumAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new FloatSumAggregator(selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

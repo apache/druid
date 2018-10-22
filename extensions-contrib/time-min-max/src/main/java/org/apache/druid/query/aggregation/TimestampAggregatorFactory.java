@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.ObjectColumnSelector;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
@@ -103,11 +102,11 @@ public class TimestampAggregatorFactory extends AggregatorFactory
 
       private long getTimestamp(ColumnValueSelector selector)
       {
-        if (selector instanceof ObjectColumnSelector) {
+        if (Long.class.equals(selector.classOfObject())) {
+          return selector.getLong();
+        } else {
           Object input = selector.getObject();
           return convertLong(timestampSpec, input);
-        } else {
-          return selector.getLong();
         }
       }
 

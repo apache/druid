@@ -698,7 +698,9 @@ public class CompactionTaskTest
     expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
 
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    segments.remove(0);
+    Collections.sort(segments);
+    // Remove one segment in the middle
+    segments.remove(segments.size() / 2);
     CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(segments),

@@ -599,9 +599,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       // Worker is still running this task
       final URL url = TaskRunnerUtils.makeWorkerURL(
           zkWorker.getWorker(),
-          "/druid/worker/v1/task/%s/log?offset=%d",
+          "/druid/worker/v1/task/%s/log?offset=%s",
           taskId,
-          offset
+          Long.toString(offset)
       );
       return Optional.of(
           new ByteSource()
