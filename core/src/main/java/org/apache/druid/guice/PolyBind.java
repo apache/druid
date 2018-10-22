@@ -176,7 +176,7 @@ public class PolyBind
       if (key.getAnnotation() != null) {
         implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType, key.getAnnotation()));
       } else if (key.getAnnotationType() != null) {
-        implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType, key.getAnnotation()));
+        implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType, key.getAnnotationType()));
       } else {
         implsMap = (Map<String, Provider<T>>) injector.getInstance(Key.get(mapType));
       }
