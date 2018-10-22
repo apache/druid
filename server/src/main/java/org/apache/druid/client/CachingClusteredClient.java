@@ -217,6 +217,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final int uncoveredIntervalsLimit;
     private final Query<T> downstreamQuery;
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = Maps.newHashMap();
+    private final List<Interval> intervals;
 
     SpecificQueryRunnable(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
     {
@@ -233,6 +234,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // and might blow up in some cases https://github.com/apache/incubator-druid/issues/2108
       this.uncoveredIntervalsLimit = QueryContexts.getUncoveredIntervalsLimit(query);
       this.downstreamQuery = query.withOverriddenContext(makeDownstreamQueryContext());
+      // For nested queries, we need to look at the intervals of the inner most query.
+      this.intervals = query.getIntervalsOfInnerMostQuery();
     }
 
     private ImmutableMap<String, Object> makeDownstreamQueryContext()
@@ -291,7 +294,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
           query,
-          query.getIntervals().stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
+          intervals.stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
       );
 
       final Set<ServerToSegment> segments = Sets.newLinkedHashSet();
@@ -322,7 +325,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final List<Interval> uncoveredIntervals = new ArrayList<>(uncoveredIntervalsLimit);
       boolean uncoveredIntervalsOverflowed = false;
 
-      for (Interval interval : query.getIntervals()) {
+      for (Interval interval : intervals) {
         Iterable<TimelineObjectHolder<String, ServerSelector>> lookup = timeline.lookup(interval);
         long startMillis = interval.getStartMillis();
         long endMillis = interval.getEndMillis();

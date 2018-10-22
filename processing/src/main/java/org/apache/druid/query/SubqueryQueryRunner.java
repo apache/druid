@@ -20,6 +20,8 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 
 import java.util.Map;
 
@@ -39,10 +41,29 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
     DataSource dataSource = queryPlus.getQuery().getDataSource();
-    if (dataSource instanceof QueryDataSource) {
+    boolean forcePushDownNestedQuery = queryPlus.getQuery()
+                                                .getContextBoolean(
+                                                    GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY,
+                                                    false
+                                                );
+    if (dataSource instanceof QueryDataSource && !forcePushDownNestedQuery) {
       return run(queryPlus.withQuery((Query<T>) ((QueryDataSource) dataSource).getQuery()), responseContext);
     } else {
-      return baseRunner.run(queryPlus, responseContext);
+      QueryPlus newQuery = queryPlus;
+      if (forcePushDownNestedQuery) {
+        // Disable any more push downs before firing off the query. But do let the historical know
+        // that it is executing the complete nested query and not just the inner most part of it
+        newQuery = queryPlus.withQuery(
+            queryPlus.getQuery()
+                     .withOverriddenContext(
+                         ImmutableMap.of(
+                             GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false,
+                             GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY, true
+                         )
+                     )
+        );
+      }
+      return baseRunner.run(newQuery, responseContext);
     }
   }
 }
