@@ -284,7 +284,9 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
                         lockResult.getTaskLock().getVersion(),
                         skipSegmentLineageCheck
                     )
-                ).onInvalidLocks(null)
+                ).onInvalidLocks(
+                    () -> null
+                    )
                 .build()
         );
       }
