@@ -18,9 +18,9 @@
   ~ under the License.
   -->
 
-<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3"
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3 http://maven.apache.org/xsd/assembly-1.1.3.xsd">
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
     <id>bin</id>
     <formats>
         <format>tar.gz</format>
@@ -31,9 +31,6 @@
             <includes>
                 <include>*/*</include>
             </includes>
-            <excludes>
-                <exclude>mysql-metadata-storage/**</exclude>
-            </excludes>
             <outputDirectory>extensions</outputDirectory>
         </fileSet>
 
@@ -223,6 +220,7 @@
             <includes>
                 <include>LICENSE</include>
                 <include>NOTICE</include>
+                <include>DISCLAIMER</include>
             </includes>
         </fileSet>
     </fileSets>

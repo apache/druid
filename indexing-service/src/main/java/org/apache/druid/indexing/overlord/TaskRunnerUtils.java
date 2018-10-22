@@ -99,12 +99,12 @@ public class TaskRunnerUtils
     }
   }
 
-  public static URL makeWorkerURL(Worker worker, String pathFormat, Object... pathParams)
+  public static URL makeWorkerURL(Worker worker, String pathFormat, String... pathParams)
   {
     Preconditions.checkArgument(pathFormat.startsWith("/"), "path must start with '/': %s", pathFormat);
     final String path = StringUtils.format(
         pathFormat,
-        Arrays.stream(pathParams).map(s -> StringUtils.urlEncode(s.toString())).toArray()
+        Arrays.stream(pathParams).map(StringUtils::urlEncode).toArray()
     );
 
     try {
