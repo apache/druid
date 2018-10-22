@@ -160,7 +160,8 @@ public class GroupByStrategyV1 implements GroupByStrategy
       GroupByQuery subquery,
       GroupByQuery query,
       GroupByQueryResource resource,
-      Sequence<Row> subqueryResult
+      Sequence<Row> subqueryResult,
+      boolean wasQueryPushedDown
   )
   {
     final Set<AggregatorFactory> aggs = Sets.newHashSet();
@@ -283,11 +284,14 @@ public class GroupByStrategyV1 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<Row> process(
-      final GroupByQuery query,
-      final StorageAdapter storageAdapter
-  )
+  public Sequence<Row> process(final GroupByQuery query, final StorageAdapter storageAdapter)
   {
     return engine.process(query, storageAdapter);
+  }
+
+  @Override
+  public boolean supportsNestedQueryPushDown()
+  {
+    return false;
   }
 }
