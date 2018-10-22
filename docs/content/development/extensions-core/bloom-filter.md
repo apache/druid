@@ -62,3 +62,25 @@ Internally, this implementation of bloom filter uses Murmur3 fast non-cryptograp
  - big endian longs in the BloomKFilter bitset
      
 Note: `org.apache.hive.common.util.BloomKFilter` provides a serialize method which can be used to serialize bloom filters to outputStream.
+
+### SQL Queries
+Bloom filters are supported in SQL via the `bloom_filter_test` operator:
+
+```sql
+SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, '<serialized_bytes_for_BloomKFilter>')
+```
+
+Very large filters may have poor performance during tokenization and parsing with calcite, to decrease query planning
+speed, the `context_literal_lookup` operator, and the value of the bloom filter can be set on the `context`
+of the query:
+
+```json
+{
+  "query": "SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, context_literal_lookup('x'))",
+  "context": {
+    "sqlLiteralLookup": {
+      "x": <serialized_bytes_for_BloomKFilter>
+    }
+  }
+}
+```
