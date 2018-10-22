@@ -767,8 +767,8 @@ public class KafkaSupervisor implements Supervisor
         // as well as the case where the metadata store do not have an entry for the reset partitions
         boolean doReset = false;
         for (Entry<Integer, Long> resetPartitionOffset : resetKafkaMetadata.getKafkaPartitions()
-                                                                               .getPartitionOffsetMap()
-                                                                               .entrySet()) {
+                                                                           .getPartitionOffsetMap()
+                                                                           .entrySet()) {
           final Long partitionOffsetInMetadataStore = currentMetadata == null
                                                       ? null
                                                       : currentMetadata.getKafkaPartitions()
@@ -1034,13 +1034,13 @@ public class KafkaSupervisor implements Supervisor
 
   private void updatePartitionDataFromKafka()
   {
-    Map<String, List<PartitionInfo>> topics;
+    List<PartitionInfo> partitions;
     try {
       synchronized (consumerLock) {
-        topics = consumer.listTopics(); // updates the consumer's list of partitions from the brokers
+        partitions = consumer.partitionsFor(ioConfig.getTopic());
       }
     }
-    catch (Exception e) { // calls to the consumer throw NPEs when the broker doesn't respond
+    catch (Exception e) {
       log.warn(
           e,
           "Unable to get partition data from Kafka for brokers [%s], are the brokers up?",
@@ -1049,10 +1049,6 @@ public class KafkaSupervisor implements Supervisor
       return;
     }
 
-    List<PartitionInfo> partitions = topics.get(ioConfig.getTopic());
-    if (partitions == null) {
-      log.warn("No such topic [%s] found, list of discovered topics [%s]", ioConfig.getTopic(), topics.keySet());
-    }
     int numPartitions = (partitions != null ? partitions.size() : 0);
 
     log.debug("Found [%d] Kafka partitions for topic [%s]", numPartitions, ioConfig.getTopic());
@@ -1101,7 +1097,7 @@ public class KafkaSupervisor implements Supervisor
       taskCount++;
       final KafkaIndexTask kafkaTask = (KafkaIndexTask) task;
       final String taskId = task.getId();
-      
+
       // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
       // later determine that this task is actively reading, we will make sure that it matches our current partition
       // allocation (getTaskGroupIdForPartition(partition) should return the same value for every partition being read
@@ -2263,16 +2259,17 @@ public class KafkaSupervisor implements Supervisor
   private void updateLatestOffsetsFromKafka()
   {
     synchronized (consumerLock) {
-      final Map<String, List<PartitionInfo>> topics = consumer.listTopics();
+      final List<PartitionInfo> partitionInfoList = consumer.partitionsFor(ioConfig.getTopic());
 
-      if (topics == null || !topics.containsKey(ioConfig.getTopic())) {
+      if (partitionInfoList == null || partitionInfoList.size() == 0) {
         throw new ISE("Could not retrieve partitions for topic [%s]", ioConfig.getTopic());
       }
 
-      final Set<TopicPartition> topicPartitions = topics.get(ioConfig.getTopic())
-                                                        .stream()
-                                                        .map(x -> new TopicPartition(x.topic(), x.partition()))
-                                                        .collect(Collectors.toSet());
+      final Set<TopicPartition> topicPartitions = partitionInfoList
+          .stream()
+          .map(x -> new TopicPartition(x.topic(), x.partition()))
+          .collect(Collectors.toSet());
+
       consumer.assign(topicPartitions);
       consumer.seekToEnd(topicPartitions);
 
