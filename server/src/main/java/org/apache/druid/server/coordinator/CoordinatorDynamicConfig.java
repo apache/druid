@@ -62,6 +62,7 @@ public class CoordinatorDynamicConfig
    * See {@link LoadQueuePeon}, {@link org.apache.druid.server.coordinator.rules.LoadRule#run}
    */
   private final int maxSegmentsInNodeLoadingQueue;
+  private final int balancerThreshold;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -80,7 +81,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
       @JsonProperty("killAllDataSources") boolean killAllDataSources,
       @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
-      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue
+      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
+      @JsonProperty("balancerThreshold") int balancerThreshold
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -95,6 +97,7 @@ public class CoordinatorDynamicConfig
     this.killDataSourceWhitelist = parseJsonStringOrArray(killDataSourceWhitelist);
     this.killPendingSegmentsSkipList = parseJsonStringOrArray(killPendingSegmentsSkipList);
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
+    this.balancerThreshold = Math.max(balancerThreshold, 1);
 
     if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -192,6 +195,12 @@ public class CoordinatorDynamicConfig
     return maxSegmentsInNodeLoadingQueue;
   }
 
+  @JsonProperty
+  public int getBalancerThreshold()
+  {
+    return balancerThreshold;
+  }
+
   @Override
   public String toString()
   {
@@ -208,6 +217,7 @@ public class CoordinatorDynamicConfig
            ", killAllDataSources=" + killAllDataSources +
            ", killPendingSegmentsSkipList=" + killPendingSegmentsSkipList +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
+           ", balancerThreshold=" + balancerThreshold +
            '}';
   }
 
@@ -256,6 +266,9 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(killDataSourceWhitelist, that.killDataSourceWhitelist)) {
       return false;
     }
+    if (balancerThreshold != that.balancerThreshold) {
+      return false;
+    }
     return Objects.equals(killPendingSegmentsSkipList, that.killPendingSegmentsSkipList);
   }
 
@@ -274,7 +287,8 @@ public class CoordinatorDynamicConfig
         killAllDataSources,
         maxSegmentsInNodeLoadingQueue,
         killDataSourceWhitelist,
-        killPendingSegmentsSkipList
+        killPendingSegmentsSkipList,
+        balancerThreshold
     );
   }
 
@@ -295,6 +309,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
+    private static final int DEFAULT_BALANCER_THRESHOLD = 5;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
@@ -308,6 +323,7 @@ public class CoordinatorDynamicConfig
     private Boolean killAllDataSources;
     private Object killPendingSegmentsSkipList;
     private Integer maxSegmentsInNodeLoadingQueue;
+    private Integer balancerThreshold;
 
     public Builder()
     {
@@ -326,7 +342,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("killDataSourceWhitelist") @Nullable Object killDataSourceWhitelist,
         @JsonProperty("killAllDataSources") @Nullable Boolean killAllDataSources,
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object killPendingSegmentsSkipList,
-        @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue
+        @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
+        @JsonProperty("balancerThreshold") Integer balancerThreshold
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -341,6 +358,7 @@ public class CoordinatorDynamicConfig
       this.killDataSourceWhitelist = killDataSourceWhitelist;
       this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
+      this.balancerThreshold = balancerThreshold;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -409,6 +427,13 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withBalancerThreshold(int balancerThreshold)
+    {
+      this.balancerThreshold = balancerThreshold;
+      return this;
+    }
+
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -423,7 +448,10 @@ public class CoordinatorDynamicConfig
           killDataSourceWhitelist,
           killAllDataSources == null ? DEFAULT_KILL_ALL_DATA_SOURCES : killAllDataSources,
           killPendingSegmentsSkipList,
-          maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue
+          maxSegmentsInNodeLoadingQueue == null
+          ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
+          : maxSegmentsInNodeLoadingQueue,
+          balancerThreshold == null ? DEFAULT_BALANCER_THRESHOLD : balancerThreshold
       );
     }
 
@@ -441,7 +469,10 @@ public class CoordinatorDynamicConfig
           killDataSourceWhitelist == null ? defaults.getKillDataSourceWhitelist() : killDataSourceWhitelist,
           killAllDataSources == null ? defaults.isKillAllDataSources() : killAllDataSources,
           killPendingSegmentsSkipList == null ? defaults.getKillPendingSegmentsSkipList() : killPendingSegmentsSkipList,
-          maxSegmentsInNodeLoadingQueue == null ? defaults.getMaxSegmentsInNodeLoadingQueue() : maxSegmentsInNodeLoadingQueue
+          maxSegmentsInNodeLoadingQueue == null
+          ? defaults.getMaxSegmentsInNodeLoadingQueue()
+          : maxSegmentsInNodeLoadingQueue,
+          balancerThreshold == null ? defaults.getBalancerThreshold() : balancerThreshold
       );
     }
   }

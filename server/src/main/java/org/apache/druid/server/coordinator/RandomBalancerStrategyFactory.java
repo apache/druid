@@ -22,9 +22,18 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 
 public class RandomBalancerStrategyFactory implements BalancerStrategyFactory
 {
+  private static final int DEFAULT_BALANCER_THRESHOLD = 5;
+
   @Override
   public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
   {
-    return new RandomBalancerStrategy();
+    return new RandomBalancerStrategy(DEFAULT_BALANCER_THRESHOLD);
   }
+
+  @Override
+  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec, int balancerThreshold)
+  {
+    return new RandomBalancerStrategy(balancerThreshold);
+  }
+
 }

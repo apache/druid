@@ -32,4 +32,10 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 public interface BalancerStrategyFactory
 {
   BalancerStrategy createBalancerStrategy(ListeningExecutorService exec);
+
+  default BalancerStrategy createBalancerStrategy(ListeningExecutorService exec, int balancerThreshold)
+  {
+    return createBalancerStrategy(exec);
+  }
+
 }

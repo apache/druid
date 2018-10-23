@@ -659,7 +659,10 @@ public class DruidCoordinator
             getDynamicConfigs().getBalancerComputeThreads(),
             "coordinator-cost-balancer-%s"
         ));
-        BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
+        BalancerStrategy balancerStrategy = factory.createBalancerStrategy(
+            balancerExec,
+            getDynamicConfigs().getBalancerThreshold()
+        );
 
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =

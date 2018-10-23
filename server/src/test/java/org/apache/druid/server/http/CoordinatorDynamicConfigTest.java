@@ -49,7 +49,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
-                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
+                     + "  \"balancerThreshold\": 5 \n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -61,7 +62,7 @@ public class CoordinatorDynamicConfigTest
         ),
         CoordinatorDynamicConfig.class
     );
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false, 1);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false, 1, 5);
   }
 
   @Test
@@ -77,7 +78,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": \"test1, test2\", \n"
-                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
+                     + "  \"balancerThreshold\": 5 \n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -89,7 +91,7 @@ public class CoordinatorDynamicConfigTest
         ),
         CoordinatorDynamicConfig.class
     );
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false, 1);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2"), false, 1, 5);
   }
 
   @Test
@@ -105,7 +107,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killAllDataSources\": true,\n"
-                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
+                     + "  \"balancerThreshold\": 5 \n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -118,7 +121,7 @@ public class CoordinatorDynamicConfigTest
         CoordinatorDynamicConfig.class
     );
 
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true, 1);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true, 1, 5);
 
     //ensure whitelist is empty when killAllDataSources is true
     try {
@@ -150,7 +153,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
-                     + "  \"killAllDataSources\": true\n"
+                     + "  \"killAllDataSources\": true,\n"
+                     + "  \"balancerThreshold\": 5 \n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -163,7 +167,7 @@ public class CoordinatorDynamicConfigTest
         CoordinatorDynamicConfig.class
     );
 
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true, 0);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true, 0, 5);
   }
 
   @Test
@@ -171,7 +175,7 @@ public class CoordinatorDynamicConfigTest
   {
 
     CoordinatorDynamicConfig defaultConfig = CoordinatorDynamicConfig.builder().build();
-    assertConfig(defaultConfig, 900000, 524288000, 100, 5, 15, 10, 1, false, ImmutableSet.of(), false, 0);
+    assertConfig(defaultConfig, 900000, 524288000, 100, 5, 15, 10, 1, false, ImmutableSet.of(), false, 0, 5);
   }
 
   @Test
@@ -184,7 +188,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(
         current,
         new CoordinatorDynamicConfig
-            .Builder(null, null, null, null, null, null, null, null, null, null, null, null)
+            .Builder(null, null, null, null, null, null, null, null, null, null, null, null, 5)
             .build(current)
     );
   }
@@ -209,7 +213,8 @@ public class CoordinatorDynamicConfigTest
                             boolean expectedEmitingBalancingStats,
                             Set<String> expectedKillDataSourceWhitelist,
                             boolean expectedKillAllDataSources,
-                            int expectedMaxSegmentsInNodeLoadingQueue)
+                            int expectedMaxSegmentsInNodeLoadingQueue,
+                            int balancerThreshold)
   {
     Assert.assertEquals(expectedMillisToWaitBeforeDeleting, config.getMillisToWaitBeforeDeleting());
     Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
@@ -222,5 +227,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedKillDataSourceWhitelist, config.getKillDataSourceWhitelist());
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
+    Assert.assertEquals(balancerThreshold, config.getBalancerThreshold());
   }
 }

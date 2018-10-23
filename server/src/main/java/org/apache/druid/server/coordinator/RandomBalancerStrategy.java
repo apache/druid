@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.commons.compress.utils.Lists;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;
@@ -27,9 +28,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public class RandomBalancerStrategy implements BalancerStrategy
 {
+  private final int balancerThreshold;
+
+  public RandomBalancerStrategy(int balancerThreshold)
+  {
+    this.balancerThreshold = balancerThreshold;
+  }
+
   @Override
   public ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
@@ -47,7 +56,24 @@ public class RandomBalancerStrategy implements BalancerStrategy
   @Override
   public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+    double used = 0;
+    double max = 0;
+    for (ServerHolder holder : serverHolders) {
+      used += holder.getSizeUsed();
+      max += holder.getMaxSize();
+    }
+    double usedAvg = (100 * used) / max;
+    List<ServerHolder> serverCandidates = Lists.newArrayList();
+    serverCandidates.addAll(serverHolders.stream()
+                                         .filter(holder -> usedAvg - holder.getPercentUsed() > balancerThreshold)
+                                         .filter(holder -> !holder.isServingSegment(proposalSegment))
+                                         .collect(Collectors.toList()));
+    if (serverCandidates.isEmpty()) {
+      return null;
+    } else {
+      return serverCandidates.get(ThreadLocalRandom.current()
+                                                   .nextInt(serverCandidates.size()));
+    }
   }
 
   @Override
