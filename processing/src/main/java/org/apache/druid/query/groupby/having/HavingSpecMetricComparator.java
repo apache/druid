@@ -73,10 +73,11 @@ class HavingSpecMetricComparator
           double d = Double.parseDouble(metricValueStr);
           return Double.compare(d, value.doubleValue());
         }
+      } else if (metricValueObj instanceof Number) {
+        BigDecimal d = new BigDecimal(metricValueObj.toString());
+        return d.compareTo((BigDecimal) value);
       } else {
-        //Default comparison for handling custom aggregator types
-        double d = ((Number) metricValueObj).doubleValue();
-        return Double.compare(d, value.doubleValue());
+        throw new ISE("Unknown type of metric value: %s", metricValueObj);
       }
     } else {
       return Double.compare(0, value.doubleValue());
