@@ -65,7 +65,10 @@ public class JsonConfiguratorTest
 
     @Override
     public <T> Set<ConstraintViolation<T>> validateValue(
-        Class<T> beanType, String propertyName, Object value, Class<?>... groups
+        Class<T> beanType,
+        String propertyName,
+        Object value,
+        Class<?>... groups
     )
     {
       return ImmutableSet.of();

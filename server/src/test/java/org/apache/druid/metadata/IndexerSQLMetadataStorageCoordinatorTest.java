@@ -211,7 +211,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     for (final DataSegment segment : SEGMENTS) {
       Assert.assertEquals(
-          1, (int) derbyConnector.getDBI().<Integer>withHandle(
+          1,
+          (int) derbyConnector.getDBI().<Integer>withHandle(
               new HandleCallback<Integer>()
               {
                 @Override

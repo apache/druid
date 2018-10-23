@@ -130,7 +130,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
   @Override
   public Function<Result<SearchResultValue>, Result<SearchResultValue>> makePreComputeManipulatorFn(
-      SearchQuery query, MetricManipulationFn fn
+      SearchQuery query,
+      MetricManipulationFn fn
   )
   {
     return Functions.identity();
@@ -333,7 +334,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             {
               @Override
               public Sequence<Result<SearchResultValue>> run(
-                  QueryPlus<Result<SearchResultValue>> queryPlus, Map<String, Object> responseContext
+                  QueryPlus<Result<SearchResultValue>> queryPlus,
+                  Map<String, Object> responseContext
               )
               {
                 SearchQuery searchQuery = (SearchQuery) queryPlus.getQuery();

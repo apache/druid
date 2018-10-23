@@ -55,15 +55,9 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   }
 
   @Override
-  public TopNParams makeInitParams(
-      ColumnSelectorPlus selectorPlus, Cursor cursor
-  )
+  public TopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
   {
-    return new TopNParams(
-        selectorPlus,
-        cursor,
-        Integer.MAX_VALUE
-    );
+    return new TopNParams(selectorPlus, cursor, Integer.MAX_VALUE);
   }
 
   @Override

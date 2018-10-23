@@ -25,6 +25,11 @@ RUN find /var/lib/mysql -type f -exec touch {} \; && /etc/init.d/mysql start \
 # Add Druid jars
 ADD lib/* /usr/local/druid/lib/
 
+# Download the MySQL Java connector
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils libmysql-java
+RUN ln -sf /usr/share/java/mysql-connector-java.jar /usr/local/druid/lib/mysql-connector-java.jar
+
 # Add sample data
 # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
 RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \

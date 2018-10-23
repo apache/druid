@@ -77,9 +77,8 @@ public class AllowAllAuthenticator implements Authenticator
       }
 
       @Override
-      public void doFilter(
-          ServletRequest request, ServletResponse response, FilterChain chain
-      ) throws IOException, ServletException
+      public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+          throws IOException, ServletException
       {
         request.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, ALLOW_ALL_RESULT);
         chain.doFilter(request, response);

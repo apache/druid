@@ -359,9 +359,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         }
       }
 
-      private WritableSupplier<ColumnarMultiInts> readMultiValuedColumn(
-          VERSION version, ByteBuffer buffer, int flags
-      )
+      private WritableSupplier<ColumnarMultiInts> readMultiValuedColumn(VERSION version, ByteBuffer buffer, int flags)
       {
         switch (version) {
           case UNCOMPRESSED_MULTI_VALUE: {

@@ -64,9 +64,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
     return new YieldingSequenceBase<T>()
     {
       @Override
-      public <OutType> Yielder<OutType> toYielder(
-          OutType initValue, YieldingAccumulator<OutType, T> accumulator
-      )
+      public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
       {
         List<SegmentDescriptor> missingSegments = getMissingSegments(context);
 
@@ -93,11 +91,8 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
             throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
           }
 
-          return new MergeSequence<>(
-              queryPlus.getQuery().getResultOrdering(),
-              Sequences.simple(listOfSequences)).toYielder(
-              initValue, accumulator
-          );
+          return new MergeSequence<>(queryPlus.getQuery().getResultOrdering(), Sequences.simple(listOfSequences))
+              .toYielder(initValue, accumulator);
         } else {
           return Iterables.getOnlyElement(listOfSequences).toYielder(initValue, accumulator);
         }

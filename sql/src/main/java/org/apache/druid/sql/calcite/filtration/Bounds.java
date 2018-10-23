@@ -80,10 +80,9 @@ public class Bounds
     } else if (upper == null) {
       return bound.isLowerStrict() ? Range.greaterThan(lower) : Range.atLeast(lower);
     } else {
-      return Range.range(
-          lower, bound.isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
-          upper, bound.isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED
-      );
+      BoundType lowerBoundType = bound.isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED;
+      BoundType upperBoundType = bound.isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED;
+      return Range.range(lower, lowerBoundType, upper, upperBoundType);
     }
   }
 

@@ -198,7 +198,8 @@ public class CachingClusteredClientFunctionalityTest
 
               @Override
               public QueryableDruidServer pick(
-                  Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers, DataSegment segment
+                  Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+                  DataSegment segment
               )
               {
                 return new QueryableDruidServer(

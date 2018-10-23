@@ -242,7 +242,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
           }
       );
       Futures.addCallback(
-          future, new FutureCallback<Object>()
+          future,
+          new FutureCallback<Object>()
           {
             @Override
             public void onSuccess(Object result)

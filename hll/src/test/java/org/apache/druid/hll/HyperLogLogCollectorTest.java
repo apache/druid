@@ -19,7 +19,6 @@
 
 package org.apache.druid.hll;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
@@ -31,7 +30,6 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.Arrays;
@@ -763,19 +761,8 @@ public class HyperLogLogCollectorTest
     );
 
     List<HyperLogLogCollector> collectors = Lists.transform(
-        objects, new Function<String, HyperLogLogCollector>()
-        {
-          @Nullable
-          @Override
-          public HyperLogLogCollector apply(
-              @Nullable String s
-          )
-          {
-            return HyperLogLogCollector.makeCollector(
-                ByteBuffer.wrap(Base64.decodeBase64(s))
-            );
-          }
-        }
+        objects,
+        s -> HyperLogLogCollector.makeCollector(ByteBuffer.wrap(Base64.decodeBase64(s)))
     );
 
     Collection<List<HyperLogLogCollector>> permutations = Collections2.permutations(collectors);

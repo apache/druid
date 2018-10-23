@@ -360,9 +360,7 @@ public class DeterminePartitionsJob implements Jobby
     }
 
     @Override
-    protected void map(
-        BytesWritable key, NullWritable value, Context context
-    ) throws IOException, InterruptedException
+    protected void map(BytesWritable key, NullWritable value, Context context) throws IOException, InterruptedException
     {
       final List<Object> timeAndDims = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(key.getBytes(), List.class);
 
@@ -529,9 +527,8 @@ public class DeterminePartitionsJob implements Jobby
     }
 
     @Override
-    protected void reduce(
-        BytesWritable key, Iterable<Text> values, Context context
-    ) throws IOException, InterruptedException
+    protected void reduce(BytesWritable key, Iterable<Text> values, Context context)
+        throws IOException, InterruptedException
     {
       SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
 
@@ -540,7 +537,9 @@ public class DeterminePartitionsJob implements Jobby
     }
 
     protected abstract void innerReduce(
-        Context context, SortableBytes keyBytes, Iterable<DimValueCount> combinedIterable
+        Context context,
+        SortableBytes keyBytes,
+        Iterable<DimValueCount> combinedIterable
     ) throws IOException, InterruptedException;
 
     private Iterable<DimValueCount> combineRows(Iterable<Text> input)
@@ -586,9 +585,8 @@ public class DeterminePartitionsJob implements Jobby
   public static class DeterminePartitionsDimSelectionCombiner extends DeterminePartitionsDimSelectionBaseReducer
   {
     @Override
-    protected void innerReduce(
-        Context context, SortableBytes keyBytes, Iterable<DimValueCount> combinedIterable
-    ) throws IOException, InterruptedException
+    protected void innerReduce(Context context, SortableBytes keyBytes, Iterable<DimValueCount> combinedIterable)
+        throws IOException, InterruptedException
     {
       for (DimValueCount dvc : combinedIterable) {
         write(context, keyBytes.getGroupKey(), dvc);
@@ -602,9 +600,8 @@ public class DeterminePartitionsJob implements Jobby
     private static final int HIGH_CARDINALITY_THRESHOLD = 3000000;
 
     @Override
-    protected void innerReduce(
-        Context context, SortableBytes keyBytes, Iterable<DimValueCount> combinedIterable
-    ) throws IOException
+    protected void innerReduce(Context context, SortableBytes keyBytes, Iterable<DimValueCount> combinedIterable)
+        throws IOException
     {
       final ByteBuffer groupKey = ByteBuffer.wrap(keyBytes.getGroupKey());
       groupKey.position(4); // Skip partition
@@ -807,14 +804,8 @@ public class DeterminePartitionsJob implements Jobby
                                              : minDistancePartitions;
 
       final List<ShardSpec> chosenShardSpecs = Lists.transform(
-          chosenPartitions.partitions, new Function<DimPartition, ShardSpec>()
-          {
-            @Override
-            public ShardSpec apply(DimPartition dimPartition)
-            {
-              return dimPartition.shardSpec;
-            }
-          }
+          chosenPartitions.partitions,
+          dimPartition -> dimPartition.shardSpec
       );
 
       log.info("Chosen partitions:");
@@ -950,13 +941,8 @@ public class DeterminePartitionsJob implements Jobby
   )
       throws IOException, InterruptedException
   {
-    context.write(
-        new SortableBytes(
-            groupKey, TAB_JOINER.join(dimValueCount.dim, dimValueCount.value).getBytes(
-            HadoopDruidIndexerConfig.JAVA_NATIVE_CHARSET
-        )
-        ).toBytesWritable(),
-        dimValueCount.toText()
-    );
+    byte[] sortKey = TAB_JOINER.join(dimValueCount.dim, dimValueCount.value)
+                               .getBytes(HadoopDruidIndexerConfig.JAVA_NATIVE_CHARSET);
+    context.write(new SortableBytes(groupKey, sortKey).toBytesWritable(), dimValueCount.toText());
   }
 }

@@ -45,9 +45,8 @@ public class AvroValueInputFormat extends FileInputFormat<NullWritable, GenericR
    * {@inheritDoc}
    */
   @Override
-  public RecordReader<NullWritable, GenericRecord> createRecordReader(
-      InputSplit split, TaskAttemptContext context
-  ) throws IOException
+  public RecordReader<NullWritable, GenericRecord> createRecordReader(InputSplit split, TaskAttemptContext context)
+      throws IOException
   {
     Schema readerSchema = AvroJob.getInputValueSchema(context.getConfiguration());
 

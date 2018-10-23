@@ -999,9 +999,7 @@ public class RealtimeIndexTaskTest
     )
     {
       @Override
-      public <T> QueryRunner<T> decorate(
-          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
-      )
+      public <T> QueryRunner<T> decorate(QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
       {
         return delegate;
       }
@@ -1033,7 +1031,9 @@ public class RealtimeIndexTaskTest
         {
           @Override
           public boolean registerSegmentHandoffCallback(
-              SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+              SegmentDescriptor descriptor,
+              Executor exec,
+              Runnable handOffRunnable
           )
           {
             handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));

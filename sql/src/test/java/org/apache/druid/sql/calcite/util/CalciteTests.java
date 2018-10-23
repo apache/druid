@@ -156,9 +156,7 @@ public class CalciteTests
       return new Authorizer()
       {
         @Override
-        public Access authorize(
-            AuthenticationResult authenticationResult, Resource resource, Action action
-        )
+        public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
         {
           if (authenticationResult.getIdentity().equals(TEST_SUPERUSER_NAME)) {
             return Access.OK;

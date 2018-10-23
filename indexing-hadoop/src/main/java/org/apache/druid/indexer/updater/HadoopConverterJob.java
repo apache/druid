@@ -302,7 +302,8 @@ public class HadoopConverterJob
       }
       final List<DataSegment> returnList = ImmutableList.copyOf(
           Lists.transform(
-              goodPaths, new Function<Path, DataSegment>()
+              goodPaths,
+              new Function<Path, DataSegment>()
               {
                 @Nullable
                 @Override
@@ -486,10 +487,7 @@ public class HadoopConverterJob
     private static final String TMP_FILE_LOC_KEY = "org.apache.druid.indexer.updater.converter.reducer.tmpDir";
 
     @Override
-    protected void map(
-        String key, String value,
-        final Context context
-    ) throws IOException, InterruptedException
+    protected void map(String key, String value, final Context context) throws IOException, InterruptedException
     {
       final InputSplit split = context.getInputSplit();
       if (!(split instanceof DatasourceInputSplit)) {
@@ -623,7 +621,8 @@ public class HadoopConverterJob
         throw new IOException("Bad config, missing segments");
       }
       return Lists.transform(
-          segments, new Function<DataSegment, InputSplit>()
+          segments,
+          new Function<DataSegment, InputSplit>()
           {
             @Nullable
             @Override
@@ -637,7 +636,8 @@ public class HadoopConverterJob
 
     @Override
     public RecordReader<String, String> createRecordReader(
-        final InputSplit inputSplit, final TaskAttemptContext taskAttemptContext
+        final InputSplit inputSplit,
+        final TaskAttemptContext taskAttemptContext
     )
     {
       return new RecordReader<String, String>()

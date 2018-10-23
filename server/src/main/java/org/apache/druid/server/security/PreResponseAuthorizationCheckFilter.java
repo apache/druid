@@ -68,9 +68,8 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   }
 
   @Override
-  public void doFilter(
-      ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
-  ) throws IOException, ServletException
+  public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+      throws IOException, ServletException
   {
     final HttpServletResponse response = (HttpServletResponse) servletResponse;
     final HttpServletRequest request = (HttpServletRequest) servletRequest;

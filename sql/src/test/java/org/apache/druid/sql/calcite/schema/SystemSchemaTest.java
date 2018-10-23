@@ -332,17 +332,25 @@ public class SystemSchemaTest extends CalciteTestBase
     // segment 3 is published but not served
     // segment 2 is served by 2 servers, so num_replicas=2
 
-    final SystemSchema.SegmentsTable segmentsTable = EasyMock.createMockBuilder(SystemSchema.SegmentsTable.class).withConstructor(
-        druidSchema, client, mapper, responseHandler, authMapper).createMock();
+    final SystemSchema.SegmentsTable segmentsTable = EasyMock
+        .createMockBuilder(SystemSchema.SegmentsTable.class)
+        .withConstructor(druidSchema, client, mapper, responseHandler, authMapper)
+        .createMock();
     EasyMock.replay(segmentsTable);
 
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments")).andReturn(request).anyTimes();
+    EasyMock
+        .expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments"))
+        .andReturn(request)
+        .anyTimes();
     SettableFuture<InputStream> future = SettableFuture.create();
     EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
     final int ok = HttpServletResponse.SC_OK;
     EasyMock.expect(responseHandler.getStatus()).andReturn(ok).once();
 
-    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/coordinator/v1/metadata/segments")).anyTimes();
+    EasyMock
+        .expect(request.getUrl())
+        .andReturn(new URL("http://test-host:1234/druid/coordinator/v1/metadata/segments"))
+        .anyTimes();
 
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
     //published but unavailable segments

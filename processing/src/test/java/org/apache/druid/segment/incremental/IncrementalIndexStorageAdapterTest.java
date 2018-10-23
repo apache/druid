@@ -666,9 +666,7 @@ public class IncrementalIndexStorageAdapterTest
     }
 
     @Override
-    public <T> T getBitmapResult(
-        BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory
-    )
+    public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
     {
       return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
     }
@@ -696,9 +694,7 @@ public class IncrementalIndexStorageAdapterTest
     }
 
     @Override
-    public boolean supportsSelectivityEstimation(
-        ColumnSelector columnSelector, BitmapIndexSelector indexSelector
-    )
+    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
     {
       return true;
     }

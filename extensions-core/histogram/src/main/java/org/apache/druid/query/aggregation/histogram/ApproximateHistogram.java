@@ -574,8 +574,15 @@ public class ApproximateHistogram
     }
 
     int mergedBinCount = combineBins(
-        this.binCount, this.positions, this.bins, h.binCount, h.positions, h.bins,
-        mergedPositions, mergedBins, deltas
+        this.binCount,
+        this.positions,
+        this.bins,
+        h.binCount,
+        h.positions,
+        h.bins,
+        mergedPositions,
+        mergedBins,
+        deltas
     );
     if (mergedBinCount == 0) {
       return this;
@@ -630,14 +637,26 @@ public class ApproximateHistogram
     if (this.binCount + h.binCount <= this.size) {
       // no need to merge bins
       mergedBinCount = combineBins(
-          this.binCount, this.positions, this.bins,
-          h.binCount, h.positions, h.bins,
-          mergedPositions, mergedBins, null
+          this.binCount,
+          this.positions,
+          this.bins,
+          h.binCount,
+          h.positions,
+          h.bins,
+          mergedPositions,
+          mergedBins,
+          null
       );
     } else {
       mergedBinCount = ruleCombineBins(
-          this.binCount, this.positions, this.bins, h.binCount, h.positions, h.bins,
-          mergedPositions, mergedBins
+          this.binCount,
+          this.positions,
+          this.bins,
+          h.binCount,
+          h.positions,
+          h.bins,
+          mergedPositions,
+          mergedBins
       );
     }
     for (int i = 0; i < mergedBinCount; ++i) {
@@ -652,9 +671,14 @@ public class ApproximateHistogram
   }
 
   protected int ruleCombineBins(
-      int leftBinCount, float[] leftPositions, long[] leftBins,
-      int rightBinCount, float[] rightPositions, long[] rightBins,
-      float[] mergedPositions, long[] mergedBins
+      int leftBinCount,
+      float[] leftPositions,
+      long[] leftBins,
+      int rightBinCount,
+      float[] rightPositions,
+      long[] rightBins,
+      float[] mergedPositions,
+      long[] mergedBins
   )
   {
     final float cutoff;
@@ -854,7 +878,8 @@ public class ApproximateHistogram
    * @return the last valid index into the mergedPositions and mergedBins arrays
    */
   private static void mergeBins(
-      int mergedBinCount, float[] mergedPositions,
+      int mergedBinCount,
+      float[] mergedPositions,
       long[] mergedBins,
       float[] deltas,
       int numMerge,
@@ -1048,9 +1073,15 @@ public class ApproximateHistogram
    * @return the number of combined bins
    */
   private static int combineBins(
-      int leftBinCount, float[] leftPositions, long[] leftBins,
-      int rightBinCount, float[] rightPositions, long[] rightBins,
-      float[] mergedPositions, long[] mergedBins, float[] deltas
+      int leftBinCount,
+      float[] leftPositions,
+      long[] leftBins,
+      int rightBinCount,
+      float[] rightPositions,
+      long[] rightBins,
+      float[] mergedPositions,
+      long[] mergedBins,
+      float[] deltas
   )
   {
     int i = 0;

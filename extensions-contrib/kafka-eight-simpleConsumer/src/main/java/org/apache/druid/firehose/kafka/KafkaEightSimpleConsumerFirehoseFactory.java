@@ -153,12 +153,14 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
     final Map<Integer, Long> lastOffsets = loadOffsetFromPreviousMetaData(lastCommit);
 
     for (Integer partition : partitionIdList) {
-      final KafkaSimpleConsumer kafkaSimpleConsumer = new KafkaSimpleConsumer(
-          feed, partition, clientId, brokerList, earliest
-      );
+      final KafkaSimpleConsumer kafkaSimpleConsumer =
+          new KafkaSimpleConsumer(feed, partition, clientId, brokerList, earliest);
       Long startOffset = lastOffsets.get(partition);
       PartitionConsumerWorker worker = new PartitionConsumerWorker(
-          feed, kafkaSimpleConsumer, partition, startOffset == null ? -1 : startOffset
+          feed,
+          kafkaSimpleConsumer,
+          partition,
+          startOffset == null ? -1 : startOffset
       );
       consumerWorkers.add(worker);
     }

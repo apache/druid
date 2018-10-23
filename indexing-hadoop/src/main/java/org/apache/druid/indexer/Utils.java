@@ -118,14 +118,9 @@ public class Utils
     );
   }
 
-  public static void storeStats(
-      JobContext job, Path path, Map<String, Object> stats
-  ) throws IOException
+  public static void storeStats(JobContext job, Path path, Map<String, Object> stats) throws IOException
   {
-    jsonMapper.writeValue(
-        makePathAndOutputStream(job, path, true),
-        stats
-    );
+    jsonMapper.writeValue(makePathAndOutputStream(job, path, true), stats);
   }
 
   public static String getFailureMessage(Job failedJob, ObjectMapper jsonMapper)

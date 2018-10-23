@@ -132,9 +132,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   }
 
   @Override
-  public boolean offer(
-      E e, long timeout, TimeUnit unit
-  ) throws InterruptedException
+  public boolean offer(E e, long timeout, TimeUnit unit) throws InterruptedException
   {
     checkNotNull(e);
     checkSize(e);

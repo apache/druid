@@ -67,7 +67,10 @@ public class EC2AutoScalerSerdeTest
         {
           @Override
           public Object findInjectableValue(
-              Object o, DeserializationContext deserializationContext, BeanProperty beanProperty, Object o1
+              Object o,
+              DeserializationContext deserializationContext,
+              BeanProperty beanProperty,
+              Object o1
           )
           {
             return null;

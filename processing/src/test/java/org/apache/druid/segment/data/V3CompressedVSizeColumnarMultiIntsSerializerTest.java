@@ -21,9 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -41,15 +39,16 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 
@@ -89,14 +88,8 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
     );
 
     return Iterables.transform(
-        combinations, new Function<List, Object[]>()
-        {
-          @Override
-          public Object[] apply(List input)
-          {
-            return new Object[]{input.get(0), input.get(1)};
-          }
-        }
+        combinations,
+        (Function<List, Object[]>) input -> new Object[]{input.get(0), input.get(1)}
     );
   }
 
@@ -120,10 +113,19 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
     try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium()) {
       int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
       CompressedColumnarIntsSerializer offsetWriter = new CompressedColumnarIntsSerializer(
-          segmentWriteOutMedium, "offset", offsetChunkFactor, byteOrder, compressionStrategy
+          segmentWriteOutMedium,
+          "offset",
+          offsetChunkFactor,
+          byteOrder,
+          compressionStrategy
       );
       CompressedVSizeColumnarIntsSerializer valueWriter = new CompressedVSizeColumnarIntsSerializer(
-          segmentWriteOutMedium, "value", maxValue, valueChunkFactor, byteOrder, compressionStrategy
+          segmentWriteOutMedium,
+          "value",
+          maxValue,
+          valueChunkFactor,
+          byteOrder,
+          compressionStrategy
       );
       V3CompressedVSizeColumnarMultiIntsSerializer writer =
           new V3CompressedVSizeColumnarMultiIntsSerializer(offsetWriter, valueWriter);
@@ -168,19 +170,11 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
 
   int getMaxValue(final List<int[]> vals)
   {
-    return Ordering.natural().max(
-        Iterables.transform(
-            vals, new Function<int[], Integer>()
-            {
-              @Nullable
-              @Override
-              public Integer apply(int[] input)
-              {
-                return input.length > 0 ? Ints.max(input) : 0;
-              }
-            }
-        )
-    );
+    return vals
+        .stream()
+        .mapToInt(array -> IntStream.of(array).max().orElse(0))
+        .max()
+        .orElseThrow(NoSuchElementException::new);
   }
 
   @Before

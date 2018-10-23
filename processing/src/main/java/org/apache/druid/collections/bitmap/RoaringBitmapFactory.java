@@ -165,16 +165,10 @@ public class RoaringBitmapFactory implements BitmapFactory
   }
 
   @Override
-  public ImmutableBitmap complement(
-      ImmutableBitmap b, int length
-  )
+  public ImmutableBitmap complement(ImmutableBitmap b, int length)
   {
     return new WrappedImmutableRoaringBitmap(
-        ImmutableRoaringBitmap.flip(
-            ((WrappedImmutableRoaringBitmap) b).getBitmap(),
-            0,
-            length
-        )
+        ImmutableRoaringBitmap.flip(((WrappedImmutableRoaringBitmap) b).getBitmap(), 0, length)
     );
   }
 }

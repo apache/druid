@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Duration;
@@ -180,8 +179,6 @@ public class ScheduledExecutors
 
   public static ScheduledExecutorService fixed(int corePoolSize, String nameFormat)
   {
-    return Executors.newScheduledThreadPool(
-        corePoolSize, new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build()
-    );
+    return Executors.newScheduledThreadPool(corePoolSize, Execs.makeThreadFactory(nameFormat));
   }
 }

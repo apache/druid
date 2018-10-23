@@ -111,9 +111,7 @@ public class DatasourcePathSpec implements PathSpec
   }
 
   @Override
-  public Job addInputPaths(
-      HadoopDruidIndexerConfig config, Job job
-  ) throws IOException
+  public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
     if (segments == null || segments.isEmpty()) {
       if (ingestionSpec.isIgnoreWhenNoSegments()) {

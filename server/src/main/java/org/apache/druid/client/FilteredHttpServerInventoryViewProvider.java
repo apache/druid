@@ -55,7 +55,8 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
   public HttpServerInventoryView get()
   {
     return new HttpServerInventoryView(
-        smileMapper, httpClient,
+        smileMapper,
+        httpClient,
         druidNodeDiscoveryProvider,
         Predicates.alwaysFalse(),
         config
