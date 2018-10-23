@@ -394,15 +394,14 @@ public class NestedQueryPushDownTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("metASum", "metA"),
-                new LongSumAggregatorFactory("metBSum", "metB")
-            ))
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
         .setGranularity(Granularities.ALL)
         .build();
 
@@ -410,11 +409,11 @@ public class NestedQueryPushDownTest
         .builder()
         .setDataSource(query)
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Collections.singletonList(
+        .setDimensions(
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory("totalSum", "metASum"))
+            new LongSumAggregatorFactory("totalSum", "metASum")
         )
         .setContext(
             ImmutableMap.of(
@@ -455,15 +454,14 @@ public class NestedQueryPushDownTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new DefaultDimensionSpec("dimB", "newDimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("metASum", "metA"),
-                new LongSumAggregatorFactory("metBSum", "metB")
-            ))
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
         .setGranularity(Granularities.ALL)
         .build();
 
@@ -471,11 +469,11 @@ public class NestedQueryPushDownTest
         .builder()
         .setDataSource(query)
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Collections.singletonList(
+        .setDimensions(
             new DefaultDimensionSpec("newDimB", "renamedDimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Collections.singletonList(new LongMaxAggregatorFactory("maxBSum", "metBSum"))
+            new LongMaxAggregatorFactory("maxBSum", "metBSum")
         )
         .setContext(
             ImmutableMap.of(
@@ -512,15 +510,14 @@ public class NestedQueryPushDownTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("blah")
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("metASum", "metA"),
-                new LongSumAggregatorFactory("metBSum", "metB")
-            ))
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(intervalSpec)
         .setDimFilter(new JavaScriptDimFilter(
@@ -534,12 +531,10 @@ public class NestedQueryPushDownTest
     GroupByQuery nestedQuery = GroupByQuery
         .builder()
         .setDataSource(query)
-        .setDimensions(Collections.singletonList(
-            new DefaultDimensionSpec("dimA", "newDimA")
-        ))
+        .setDimensions(
+            new DefaultDimensionSpec("dimA", "newDimA"))
         .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory("finalSum", "metASum"))
-        )
+            new LongSumAggregatorFactory("finalSum", "metASum"))
         .setContext(
             ImmutableMap.of(
                 GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
@@ -570,15 +565,14 @@ public class NestedQueryPushDownTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("blah")
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("metASum", "metA"),
-                new LongSumAggregatorFactory("metBSum", "metB")
-            ))
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(intervalSpec)
         .build();
@@ -586,11 +580,11 @@ public class NestedQueryPushDownTest
     GroupByQuery nestedQuery = GroupByQuery
         .builder()
         .setDataSource(query)
-        .setDimensions(Collections.singletonList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "newDimA")
-        ))
+        )
         .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory("finalSum", "metASum"))
+            new LongSumAggregatorFactory("finalSum", "metASum")
         )
         .setContext(
             ImmutableMap.of(
@@ -628,15 +622,14 @@ public class NestedQueryPushDownTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("blah")
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("metASum", "metA"),
-                new LongSumAggregatorFactory("metBSum", "metB")
-            ))
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(intervalSpec)
         .setDimFilter(new JavaScriptDimFilter(
@@ -650,11 +643,11 @@ public class NestedQueryPushDownTest
     GroupByQuery nestedQuery = GroupByQuery
         .builder()
         .setDataSource(query)
-        .setDimensions(Collections.singletonList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "newDimA")
-        ))
+        )
         .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory("finalSum", "metASum"))
+            new LongSumAggregatorFactory("finalSum", "metASum")
         )
         .setContext(
             ImmutableMap.of(
@@ -686,15 +679,14 @@ public class NestedQueryPushDownTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("blah")
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("metASum", "metA"),
-                new LongSumAggregatorFactory("metBSum", "metB")
-            ))
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(intervalSpec)
         .build();
@@ -702,19 +694,18 @@ public class NestedQueryPushDownTest
     GroupByQuery nestedQuery = GroupByQuery
         .builder()
         .setDataSource(query)
-        .setDimensions(Collections.singletonList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "newDimA")
-        ))
-        .setDimensions(Collections.singletonList(
+        )
+        .setDimensions(
             new ExtractionDimensionSpec(
                 "dimA",
                 "extractedDimA",
                 new RegexDimExtractionFn("^(p)", true, "replacement")
             )
-                       )
         )
         .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory("finalSum", "metASum"))
+            new LongSumAggregatorFactory("finalSum", "metASum")
         )
         .setContext(
             ImmutableMap.of(
@@ -752,15 +743,14 @@ public class NestedQueryPushDownTest
     GroupByQuery innerQuery = GroupByQuery
         .builder()
         .setDataSource("blah")
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("metASum", "metA"),
-                new LongSumAggregatorFactory("metBSum", "metB")
-            ))
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
         .setGranularity(Granularities.ALL)
         .setQuerySegmentSpec(intervalSpec)
         .build();
@@ -768,11 +758,11 @@ public class NestedQueryPushDownTest
     GroupByQuery nestedQuery = GroupByQuery
         .builder()
         .setDataSource(innerQuery)
-        .setDimensions(Collections.singletonList(
+        .setDimensions(
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory("finalSum", "metBSum"))
+            new LongSumAggregatorFactory("finalSum", "metBSum")
         )
         .setHavingSpec(new GreaterThanHavingSpec("finalSum", 70L))
         .setContext(
@@ -869,15 +859,14 @@ public class NestedQueryPushDownTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.newArrayList(
+        .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new DefaultDimensionSpec("dimB", "dimB")
-        ))
+        )
         .setAggregatorSpecs(
-            Arrays.asList(
-                new LongSumAggregatorFactory("metASum", "metA"),
-                new LongSumAggregatorFactory("metBSum", "metB")
-            ))
+            new LongSumAggregatorFactory("metASum", "metA"),
+            new LongSumAggregatorFactory("metBSum", "metB")
+        )
         .setGranularity(Granularities.ALL)
         .build();
 
@@ -885,11 +874,11 @@ public class NestedQueryPushDownTest
         .builder()
         .setDataSource(query)
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Collections.singletonList(
+        .setDimensions(
             new DefaultDimensionSpec("dimB", outputNameB)
-        ))
+        )
         .setAggregatorSpecs(
-            Collections.singletonList(new LongSumAggregatorFactory(outputNameAgg, "metASum"))
+            new LongSumAggregatorFactory(outputNameAgg, "metASum")
         )
         .setContext(
             ImmutableMap.of(
