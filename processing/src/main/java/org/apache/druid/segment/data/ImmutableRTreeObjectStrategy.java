@@ -32,9 +32,7 @@ public class ImmutableRTreeObjectStrategy implements ObjectStrategy<ImmutableRTr
   private static Ordering<ImmutableRTree> comparator = new Ordering<ImmutableRTree>()
   {
     @Override
-    public int compare(
-        ImmutableRTree tree, ImmutableRTree tree1
-    )
+    public int compare(ImmutableRTree tree, ImmutableRTree tree1)
     {
       if (tree.size() == 0 && tree1.size() == 0) {
         return 0;

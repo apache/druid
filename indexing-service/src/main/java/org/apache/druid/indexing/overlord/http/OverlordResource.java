@@ -698,9 +698,8 @@ public class OverlordResource
         final Interval theInterval = Intervals.of(interval.replace("_", "/"));
         duration = theInterval.toDuration();
       }
-      final List<TaskInfo<Task, TaskStatus>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
-          maxCompletedTasks, duration, dataSource
-      );
+      final List<TaskInfo<Task, TaskStatus>> taskInfoList =
+          taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(maxCompletedTasks, duration, dataSource);
       final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
                                                               .map(completeTaskTransformFunc::apply)
                                                               .collect(Collectors.toList());

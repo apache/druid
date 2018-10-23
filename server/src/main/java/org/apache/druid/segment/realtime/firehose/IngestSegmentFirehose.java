@@ -70,7 +70,8 @@ public class IngestSegmentFirehose implements Firehose
 
     Sequence<InputRow> rows = Sequences.concat(
         Iterables.transform(
-            adapters, new Function<WindowedStorageAdapter, Sequence<InputRow>>()
+            adapters,
+            new Function<WindowedStorageAdapter, Sequence<InputRow>>()
             {
               @Nullable
               @Override

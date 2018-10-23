@@ -22,7 +22,6 @@ package org.apache.druid.java.util.common.granularity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializable;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
@@ -428,9 +427,8 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   @Override
-  public void serialize(
-      JsonGenerator jsonGenerator, SerializerProvider serializerProvider
-  ) throws IOException, JsonProcessingException
+  public void serialize(JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+      throws IOException
   {
     // Retain the same behavior as before #3850.
     // i.e. when Granularity class was an enum.
@@ -448,8 +446,10 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
 
   @Override
   public void serializeWithType(
-      JsonGenerator jsonGenerator, SerializerProvider serializerProvider, TypeSerializer typeSerializer
-  ) throws IOException, JsonProcessingException
+      JsonGenerator jsonGenerator,
+      SerializerProvider serializerProvider,
+      TypeSerializer typeSerializer
+  ) throws IOException
   {
     serialize(jsonGenerator, serializerProvider);
   }

@@ -354,7 +354,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
   @Override
   public Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makePreComputeManipulatorFn(
-      final TimeseriesQuery query, final MetricManipulationFn fn
+      final TimeseriesQuery query,
+      final MetricManipulationFn fn
   )
   {
     return makeComputeManipulatorFn(query, fn, false);
@@ -362,14 +363,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
   @Override
   public Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makePostComputeManipulatorFn(
-      TimeseriesQuery query, MetricManipulationFn fn
+      TimeseriesQuery query,
+      MetricManipulationFn fn
   )
   {
     return makeComputeManipulatorFn(query, fn, true);
   }
 
   private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(
-      final TimeseriesQuery query, final MetricManipulationFn fn, final boolean calculatePostAggs
+      final TimeseriesQuery query,
+      final MetricManipulationFn fn,
+      final boolean calculatePostAggs
   )
   {
     return result -> {

@@ -63,9 +63,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
   }
 
   @Override
-  public Void perform(
-      Task task, TaskActionToolbox toolbox
-  )
+  public Void perform(Task task, TaskActionToolbox toolbox)
   {
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 

@@ -49,7 +49,9 @@ public class OnHeapNamespaceExtractionCacheManagerTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, false, null, null, true, false)
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("test-inject", null, false, null, null, true, false)
                 );
               }
             }

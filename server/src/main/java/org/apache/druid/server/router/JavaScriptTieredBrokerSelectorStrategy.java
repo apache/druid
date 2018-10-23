@@ -70,9 +70,7 @@ public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelec
   }
 
   @Override
-  public Optional<String> getBrokerServiceName(
-      TieredBrokerConfig config, Query query
-  )
+  public Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query query)
   {
     fnSelector = fnSelector == null ? compileSelectorFunction() : fnSelector;
     return Optional.fromNullable(fnSelector.apply(config, query));

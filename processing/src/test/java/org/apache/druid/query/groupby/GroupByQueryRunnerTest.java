@@ -2349,9 +2349,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -2635,9 +2633,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3372,9 +3368,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3672,9 +3666,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3776,9 +3768,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -8317,9 +8307,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -8389,9 +8377,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -8474,9 +8460,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(

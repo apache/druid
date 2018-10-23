@@ -937,10 +937,7 @@ public class NestedQueryPushDownTest
   )
   {
     return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }
@@ -1007,10 +1004,7 @@ public class NestedQueryPushDownTest
   )
   {
     return new FinalizeResultsQueryRunner<>(
-        new BySegmentQueryRunner<>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }

@@ -80,7 +80,10 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
 
   @Override
   public boolean checkRowIndexAndAddValueToGroupingKey(
-      int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
+      int keyBufferPosition,
+      Object rowObj,
+      int rowValIdx,
+      ByteBuffer keyBuffer
   )
   {
     // rows from a long column always have a single value, multi-value is not currently supported

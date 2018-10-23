@@ -316,9 +316,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<Row> applyPostProcessing(
-      Sequence<Row> results, GroupByQuery query
-  )
+  public Sequence<Row> applyPostProcessing(Sequence<Row> results, GroupByQuery query)
   {
     // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
     if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
@@ -463,10 +461,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public QueryRunner<Row> mergeRunners(
-      ListeningExecutorService exec,
-      Iterable<QueryRunner<Row>> queryRunners
-  )
+  public QueryRunner<Row> mergeRunners(ListeningExecutorService exec, Iterable<QueryRunner<Row>> queryRunners)
   {
     return new GroupByMergingQueryRunnerV2(
         configSupplier.get(),
@@ -482,10 +477,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<Row> process(
-      GroupByQuery query,
-      StorageAdapter storageAdapter
-  )
+  public Sequence<Row> process(GroupByQuery query, StorageAdapter storageAdapter)
   {
     return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get().withOverrides(query));
   }

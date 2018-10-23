@@ -115,10 +115,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       int sessionTimeoutMs = 10000;
       int connectionTimeoutMs = 10000;
       String zkHosts = config.getZookeeperHosts();
-      zkClient = new ZkClient(
-          zkHosts, sessionTimeoutMs, connectionTimeoutMs,
-          ZKStringSerializer$.MODULE$
-      );
+      zkClient = new ZkClient(zkHosts, sessionTimeoutMs, connectionTimeoutMs, ZKStringSerializer$.MODULE$);
       zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHosts, sessionTimeoutMs), false);
       if (config.manageKafkaTopic()) {
         int numPartitions = 4;

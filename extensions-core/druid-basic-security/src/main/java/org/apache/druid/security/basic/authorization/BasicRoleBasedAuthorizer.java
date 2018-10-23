@@ -67,9 +67,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   }
 
   @Override
-  public Access authorize(
-      AuthenticationResult authenticationResult, Resource resource, Action action
-  )
+  public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
     if (authenticationResult == null) {
       throw new IAE("WTF? authenticationResult should never be null.");

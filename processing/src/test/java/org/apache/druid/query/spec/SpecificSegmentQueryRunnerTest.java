@@ -79,9 +79,7 @@ public class SpecificSegmentQueryRunnerTest
               }
 
               @Override
-              public Yielder<Object> toYielder(
-                  Object initValue, YieldingAccumulator accumulator
-              )
+              public Yielder<Object> toYielder(Object initValue, YieldingAccumulator accumulator)
               {
                 throw new SegmentMissingException("FAILSAUCE");
               }
@@ -114,7 +112,8 @@ public class SpecificSegmentQueryRunnerTest
     responseContext = Maps.newHashMap();
     results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     results.toYielder(
-        null, new YieldingAccumulator()
+        null,
+        new YieldingAccumulator()
         {
           final List lists = Lists.newArrayList();
           @Override

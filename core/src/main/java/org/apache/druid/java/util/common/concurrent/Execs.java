@@ -131,7 +131,12 @@ public class Execs
       queue = new SynchronousQueue<>();
     }
     return new ThreadPoolExecutor(
-        1, 1, 0L, TimeUnit.MILLISECONDS, queue, makeThreadFactory(nameFormat, priority),
+        1,
+        1,
+        0L,
+        TimeUnit.MILLISECONDS,
+        queue,
+        makeThreadFactory(nameFormat, priority),
         new RejectedExecutionHandler()
         {
           @Override

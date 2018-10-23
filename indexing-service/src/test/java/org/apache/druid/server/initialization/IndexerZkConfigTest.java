@@ -65,10 +65,7 @@ public class IndexerZkConfigTest
       binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
       // See IndexingServiceModuleHelper
       JsonConfigProvider.bind(binder, indexerPropertyString, IndexerZkConfig.class);
-      JsonConfigProvider.bind(
-          binder, zkServiceConfigString,
-          ZkPathsConfig.class
-      );
+      JsonConfigProvider.bind(binder, zkServiceConfigString, ZkPathsConfig.class);
     }
   };
 

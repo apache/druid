@@ -2195,9 +2195,9 @@ public class KafkaSupervisor implements Supervisor
           Map<Integer, Long> currentOffsets = entry.getValue().currentOffsets;
           Long remainingSeconds = null;
           if (startTime != null) {
-            remainingSeconds = Math.max(
-                0, ioConfig.getTaskDuration().getMillis() - (System.currentTimeMillis() - startTime.getMillis())
-            ) / 1000;
+            long elapsedMillis = System.currentTimeMillis() - startTime.getMillis();
+            long remainingMillis = Math.max(0, ioConfig.getTaskDuration().getMillis() - elapsedMillis);
+            remainingSeconds = TimeUnit.MILLISECONDS.toSeconds(remainingMillis);
           }
 
           taskReports.add(

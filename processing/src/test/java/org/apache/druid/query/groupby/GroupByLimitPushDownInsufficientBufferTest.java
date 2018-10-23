@@ -664,11 +664,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+    return new FinalizeResultsQueryRunner<>(
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }
