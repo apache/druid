@@ -481,6 +481,7 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
   private final sequenceType END_OF_PARTITION;
   private final sequenceType NOT_SET;
   private final boolean useExclusiveStartingSequence;
+  private final boolean isCheckpointSupported;
   private boolean listenerRegistered = false;
   private long lastRunTime;
   private int initRetryCounter = 0;
@@ -502,7 +503,8 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
       final RowIngestionMetersFactory rowIngestionMetersFactory,
       final sequenceType NOT_SET,
       final sequenceType END_OF_PARTITION,
-      final boolean useExclusiveStartingSequence
+      final boolean useExclusiveStartingSequence,
+      final boolean isCheckpointSupported
   )
   {
     this.taskStorage = taskStorage;
@@ -514,6 +516,7 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
     this.NOT_SET = NOT_SET;
     this.END_OF_PARTITION = END_OF_PARTITION;
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
+    this.isCheckpointSupported = isCheckpointSupported;
 
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
@@ -1360,7 +1363,9 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
     log.debug("Found [%d] seekablestream indexing tasks for dataSource [%s]", taskCount, dataSource);
 
     // make sure the checkpoints are consistent with each other and with the metadata store
-    verifyAndMergeCheckpoints(taskGroupsToVerify.values());
+    if (isCheckpointSupported) {
+      verifyAndMergeCheckpoints(taskGroupsToVerify.values());
+    }
 
   }
 
@@ -2156,12 +2161,14 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
   private void createNewTasks() throws JsonProcessingException
   {
     // update the checkpoints in the taskGroup to latest ones so that new tasks do not read what is already published
-    verifyAndMergeCheckpoints(
-        taskGroups.values()
-                  .stream()
-                  .filter(taskGroup -> taskGroup.tasks.size() < ioConfig.getReplicas())
-                  .collect(Collectors.toList())
-    );
+    if (isCheckpointSupported) {
+      verifyAndMergeCheckpoints(
+          taskGroups.values()
+                    .stream()
+                    .filter(taskGroup -> taskGroup.tasks.size() < ioConfig.getReplicas())
+                    .collect(Collectors.toList())
+      );
+    }
 
     // check that there is a current task group for each group of partitions in [partitionGroups]
     for (Integer groupId : partitionGroups.keySet()) {

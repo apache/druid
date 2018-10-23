@@ -731,9 +731,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         getSequenceNumber(res, shardId1, 0)
     ));
 
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(2);
+            */
 
     replayAll();
     supervisor.start();
@@ -864,12 +866,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
     checkpoints1.put(0, ImmutableMap.of(shardId1, getSequenceNumber(res, shardId1, 0)));
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(shardId0, getSequenceNumber(res, shardId0, 0)));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(1);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints2))
             .times(1);
+            */
+
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     taskQueue.shutdown("id4");
@@ -919,12 +924,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
         shardId0,
         getSequenceNumber(res, shardId0, 0)
     ));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .anyTimes();
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints2))
             .anyTimes();
+            */
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -1035,9 +1042,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         shardId0,
         getSequenceNumber(res, shardId0, 0)
     ));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(2);
+            */
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -1058,12 +1067,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.reset(taskClient);
 
     // for the newly created replica task
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(2);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
+            */
+
 
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(captured.getValue())).anyTimes();
     EasyMock.expect(taskStorage.getStatus(iHaveFailed.getId()))
@@ -1158,12 +1170,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
         getSequenceNumber(res, shardId1, 0)
     ));
     // there would be 4 tasks, 2 for each task group
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(2);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints2))
             .times(2);
+            */
+
 
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
     for (Task task : tasks) {
@@ -1300,12 +1315,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
         shardId0,
         getSequenceNumber(res, shardId0, 0)
     ));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(2);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints2))
             .times(2);
+            */
 
     EasyMock.replay(taskStorage, taskRunner, taskClient, taskQueue);
 
@@ -1713,9 +1730,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         shardId0,
         getSequenceNumber(res, shardId0, 1)
     ));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
+            */
 
     replayAll();
 
@@ -1811,12 +1830,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ));
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(shardId0, getSequenceNumber(res, shardId0, 0)));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(2);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints2))
             .times(2);
+            */
+
 
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
     for (Task task : tasks) {
@@ -1878,12 +1900,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ));
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(shardId0, getSequenceNumber(res, shardId0, 0)));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(2);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints2))
             .times(2);
+            */
 
     captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
@@ -1968,12 +1992,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ));
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(shardId0, getSequenceNumber(res, shardId0, 0)));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-0"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(2);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("sequenceName-1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints2))
             .times(2);
+            */
 
     captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
@@ -2165,12 +2191,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
         shardId0,
         getSequenceNumber(res, shardId0, 1)
     ));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
+            */
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -2455,12 +2483,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
         getSequenceNumber(res, shardId0, 1)
     ));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
+            */
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -2590,6 +2620,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
         getSequenceNumber(res, shardId0, 1)
     ));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
@@ -2599,6 +2630,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
+            */
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
@@ -2759,12 +2791,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
         shardId0,
         getSequenceNumber(res, shardId0, 1)
     ));
+    /*
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id3"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .times(1);
+            */
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
 
