@@ -74,7 +74,9 @@ class HavingSpecMetricComparator
           return Double.compare(d, value.doubleValue());
         }
       } else {
-        throw new ISE("Unknown type of metric value: %s", metricValueObj);
+        //Default comparison for handling custom aggregator types
+        double d = ((Number) metricValueObj).doubleValue();
+        return Double.compare(d, value.doubleValue());
       }
     } else {
       return Double.compare(0, value.doubleValue());
