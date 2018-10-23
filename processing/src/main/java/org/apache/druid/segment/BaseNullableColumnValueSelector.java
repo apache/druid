@@ -32,7 +32,7 @@ import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 public interface BaseNullableColumnValueSelector
 {
   /**
-   * returns true if selected primitive value is null for {@link BaseFloatColumnValueSelector},
+   * Returns true if selected primitive value is null for {@link BaseFloatColumnValueSelector},
    * {@link BaseLongColumnValueSelector} and {@link BaseDoubleColumnValueSelector} otherwise false.
    */
   @CalledFromHotLoop

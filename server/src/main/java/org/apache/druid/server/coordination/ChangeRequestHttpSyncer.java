@@ -34,12 +34,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
-import org.apache.druid.java.util.http.client.response.ClientResponse;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
 import javax.servlet.http.HttpServletResponse;
@@ -233,11 +230,11 @@ public class ChangeRequestHttpSyncer<T>
                 }
 
                 try {
-                  if (responseHandler.status == HttpServletResponse.SC_NO_CONTENT) {
+                  if (responseHandler.getStatus() == HttpServletResponse.SC_NO_CONTENT) {
                     log.debug("Received NO CONTENT from server[%s]", logIdentity);
                     lastSuccessfulSyncTime = System.currentTimeMillis();
                     return;
-                  } else if (responseHandler.status != HttpServletResponse.SC_OK) {
+                  } else if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
                     handleFailure(new RE("Bad Sync Response."));
                     return;
                   }
@@ -326,8 +323,8 @@ public class ChangeRequestHttpSyncer<T>
               String logMsg = StringUtils.nonStrictFormat(
                   "failed to get sync response from [%s]. Return code [%s], Reason: [%s]",
                   logIdentity,
-                  responseHandler.status,
-                  responseHandler.description
+                  responseHandler.getStatus(),
+                  responseHandler.getDescription()
               );
 
               if (incrementFailedAttemptAndCheckUnstabilityTimeout()) {
@@ -418,20 +415,6 @@ public class ChangeRequestHttpSyncer<T>
     }
 
     return false;
-  }
-
-  private static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
-  {
-    private int status;
-    private String description;
-
-    @Override
-    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
-    {
-      status = response.getStatus().getCode();
-      description = response.getStatus().getReasonPhrase();
-      return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
-    }
   }
 
   public interface Listener<T>

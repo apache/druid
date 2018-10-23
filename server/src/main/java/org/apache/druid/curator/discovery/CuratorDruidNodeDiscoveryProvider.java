@@ -32,6 +32,7 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
@@ -65,7 +66,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
   private ExecutorService listenerExecutor;
 
-  private final Map<String, NodeTypeWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
+  private final Map<NodeType, NodeTypeWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
@@ -82,27 +83,23 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
   }
 
   @Override
-  public DruidNodeDiscovery getForNodeType(String nodeType)
+  public DruidNodeDiscovery getForNodeType(NodeType nodeType)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
-    return nodeTypeWatchers.compute(
+    return nodeTypeWatchers.computeIfAbsent(
         nodeType,
-        (k, v) -> {
-          if (v != null) {
-            return v;
-          }
-
-          log.info("Creating NodeTypeWatcher for nodeType [%s].", nodeType);
+        nType -> {
+          log.info("Creating NodeTypeWatcher for nodeType [%s].", nType);
           NodeTypeWatcher nodeTypeWatcher = new NodeTypeWatcher(
               listenerExecutor,
               curatorFramework,
               config.getInternalDiscoveryPath(),
               jsonMapper,
-              nodeType
+              nType
           );
           nodeTypeWatcher.start();
-          log.info("Created NodeTypeWatcher for nodeType [%s].", nodeType);
+          log.info("Created NodeTypeWatcher for nodeType [%s].", nType);
           return nodeTypeWatcher;
         }
     );
@@ -154,7 +151,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private final CuratorFramework curatorFramework;
 
-    private final String nodeType;
+    private final NodeType nodeType;
     private final ObjectMapper jsonMapper;
 
     // hostAndPort -> DiscoveryDruidNode
@@ -165,7 +162,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private final ExecutorService listenerExecutor;
 
-    private final List<DruidNodeDiscovery.Listener> nodeListeners = new ArrayList();
+    private final List<DruidNodeDiscovery.Listener> nodeListeners = new ArrayList<>();
 
     private final Object lock = new Object();
 
@@ -176,7 +173,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         CuratorFramework curatorFramework,
         String basePath,
         ObjectMapper jsonMapper,
-        String nodeType
+        NodeType nodeType
     )
     {
       this.listenerExecutor = listenerExecutor;
@@ -188,7 +185,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       this.cacheExecutor = Execs.singleThreaded(StringUtils.format("NodeTypeWatcher[%s]", nodeType));
       this.cache = new PathChildrenCache(
           curatorFramework,
-          ZKPaths.makePath(basePath, nodeType),
+          ZKPaths.makePath(basePath, nodeType.toString()),
           true,
           true,
           cacheExecutor
@@ -241,10 +238,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
                 return;
               }
 
-              DiscoveryDruidNode druidNode = jsonMapper.readValue(
-                  data,
-                  DiscoveryDruidNode.class
-              );
+              DiscoveryDruidNode druidNode = jsonMapper.readValue(data, DiscoveryDruidNode.class);
 
               if (!nodeType.equals(druidNode.getNodeType())) {
                 log.warn(
@@ -255,11 +249,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
                 return;
               }
 
-              log.info(
-                  "Node[%s:%s] appeared.",
-                  druidNode.getDruidNode().getHostAndPortToUse(),
-                  druidNode
-              );
+              log.info("Node[%s:%s] appeared.", druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
 
               addNode(druidNode);
 
@@ -330,10 +320,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       }
     }
 
-    private void safeSchedule(
-        Runnable runnable,
-        String errMsgFormat, Object... args
-    )
+    private void safeSchedule(Runnable runnable, String errMsgFormat, Object... args)
     {
       listenerExecutor.submit(() -> {
         try {

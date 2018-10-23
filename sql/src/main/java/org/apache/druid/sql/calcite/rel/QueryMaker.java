@@ -61,7 +61,9 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +71,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public class QueryMaker
 {
@@ -431,6 +434,18 @@ public class QueryMaker
         coercedValue = ((NlsString) value).getValue();
       } else if (value instanceof Number) {
         coercedValue = String.valueOf(value);
+      } else if (value instanceof Collection) {
+        // Iterate through the collection, coercing each value. Useful for handling selects of multi-value dimensions.
+        final List<String> valueStrings = ((Collection<?>) value).stream()
+                                                                 .map(v -> (String) coerce(v, sqlType))
+                                                                 .collect(Collectors.toList());
+
+        try {
+          coercedValue = jsonMapper.writeValueAsString(valueStrings);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       } else {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }

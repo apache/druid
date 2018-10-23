@@ -126,4 +126,14 @@ public interface Query<T>
   {
     return this;
   }
+
+  default List<Interval> getIntervalsOfInnerMostQuery()
+  {
+    if (getDataSource() instanceof QueryDataSource) {
+      //noinspection unchecked
+      return ((QueryDataSource) getDataSource()).getQuery().getIntervalsOfInnerMostQuery();
+    } else {
+      return getIntervals();
+    }
+  }
 }

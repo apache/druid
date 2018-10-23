@@ -71,12 +71,6 @@ public class FloatMinAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new FloatMinAggregator(selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

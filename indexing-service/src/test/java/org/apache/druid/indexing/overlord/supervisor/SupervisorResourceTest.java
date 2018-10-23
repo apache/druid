@@ -292,14 +292,6 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Test
   public void testSpecSuspend()
   {
-
-    TestSupervisorSpec running = new TestSupervisorSpec("my-id", null, null, false) {
-      @Override
-      public List<String> getDataSources()
-      {
-        return Collections.singletonList("datasource1");
-      }
-    };
     TestSupervisorSpec suspended = new TestSupervisorSpec("my-id", null, null, true) {
       @Override
       public List<String> getDataSources()
@@ -309,11 +301,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id"))
-            .andReturn(Optional.of(running)).times(1)
-            .andReturn(Optional.of(suspended)).times(1);
     EasyMock.expect(supervisorManager.suspendOrResumeSupervisor("my-id", true)).andReturn(true);
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id")).andReturn(Optional.of(suspended));
     replayAll();
 
     Response response = supervisorResource.specSuspend("my-id");
@@ -326,7 +315,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id")).andReturn(Optional.of(suspended)).atLeastOnce();
+    EasyMock.expect(supervisorManager.suspendOrResumeSupervisor("my-id", true)).andReturn(false);
+    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id")).andReturn(Optional.of(suspended));
     replayAll();
 
     response = supervisorResource.specSuspend("my-id");
@@ -336,18 +326,9 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(ImmutableMap.of("error", "[my-id] is already suspended"), response.getEntity());
   }
 
-
-
   @Test
   public void testSpecResume()
   {
-    TestSupervisorSpec suspended = new TestSupervisorSpec("my-id", null, null, true) {
-      @Override
-      public List<String> getDataSources()
-      {
-        return Collections.singletonList("datasource1");
-      }
-    };
     TestSupervisorSpec running = new TestSupervisorSpec("my-id", null, null, false) {
       @Override
       public List<String> getDataSources()
@@ -357,11 +338,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id"))
-            .andReturn(Optional.of(suspended)).times(1)
-            .andReturn(Optional.of(running)).times(1);
     EasyMock.expect(supervisorManager.suspendOrResumeSupervisor("my-id", false)).andReturn(true);
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id")).andReturn(Optional.of(running));
     replayAll();
 
     Response response = supervisorResource.specResume("my-id");
@@ -374,7 +352,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id")).andReturn(Optional.of(running)).atLeastOnce();
+    EasyMock.expect(supervisorManager.suspendOrResumeSupervisor("my-id", false)).andReturn(false);
+    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id")).andReturn(Optional.of(running));
     replayAll();
 
     response = supervisorResource.specResume("my-id");
@@ -385,19 +364,19 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testShutdown()
+  public void testTerminate()
   {
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(supervisorManager.stopAndRemoveSupervisor("my-id")).andReturn(true);
     EasyMock.expect(supervisorManager.stopAndRemoveSupervisor("my-id-2")).andReturn(false);
     replayAll();
 
-    Response response = supervisorResource.shutdown("my-id");
+    Response response = supervisorResource.terminate("my-id");
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
 
-    response = supervisorResource.shutdown("my-id-2");
+    response = supervisorResource.terminate("my-id-2");
 
     Assert.assertEquals(404, response.getStatus());
     verifyAll();
@@ -407,10 +386,52 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.shutdown("my-id");
+    response = supervisorResource.terminate("my-id");
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
+  }
+
+  @Test
+  public void testSuspendAll()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    supervisorManager.suspendOrResumeAllSupervisors(true);
+    EasyMock.expectLastCall();
+    replayAll();
+
+    Response response = supervisorResource.suspendAll();
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    verifyAll();
+  }
+
+  @Test
+  public void testResumeAll()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    supervisorManager.suspendOrResumeAllSupervisors(false);
+    EasyMock.expectLastCall();
+    replayAll();
+
+    Response response = supervisorResource.resumeAll();
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    verifyAll();
+  }
+
+  @Test
+  public void testTerminateAll()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    supervisorManager.stopAndRemoveAllSupervisors();
+    EasyMock.expectLastCall();
+    replayAll();
+
+    Response response = supervisorResource.terminateAll();
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    verifyAll();
   }
 
   @Test
@@ -872,7 +893,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.shutdown("my-id");
+    response = supervisorResource.terminate("my-id");
 
     Assert.assertEquals(503, response.getStatus());
     verifyAll();

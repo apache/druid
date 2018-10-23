@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -100,7 +101,7 @@ public class BasicAuthUtils
     }
     catch (NoSuchAlgorithmException nsae) {
       log.error("%s not supported on this system.", ALGORITHM);
-      throw new RuntimeException(StringUtils.format("%s not supported on this system.", ALGORITHM), nsae);
+      throw new RE(nsae, "%s not supported on this system.", ALGORITHM);
     }
   }
 
