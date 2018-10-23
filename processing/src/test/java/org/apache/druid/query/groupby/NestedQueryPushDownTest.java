@@ -82,6 +82,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -904,43 +905,14 @@ public class NestedQueryPushDownTest
     Assert.assertEquals(outputNameAgg, rewrittenQuery.getAggregatorSpecs().get(0).getName());
   }
 
-  private List<QueryRunner<Row>> getRunner1()
-  {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
-    QueryableIndex index = groupByIndices.get(0);
-    QueryRunner<Row> runner = makeQueryRunner(
-        groupByFactory,
-        index.toString(),
-        new QueryableIndexSegment(index.toString(), index)
-    );
-    runners.add(groupByFactory.getToolchest().preMergeQueryDecoration(runner));
-    return runners;
-  }
-
-  private List<QueryRunner<Row>> getRunner2()
-  {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
-    QueryableIndex index2 = groupByIndices.get(1);
-    QueryRunner<Row> tooSmallRunner = makeQueryRunner(
-        groupByFactory2,
-        index2.toString(),
-        new QueryableIndexSegment(index2.toString(), index2)
-    );
-    runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
-    return runners;
-  }
-
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+    return new FinalizeResultsQueryRunner<>(
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }
@@ -952,8 +924,8 @@ public class NestedQueryPushDownTest
     QueryableIndex index = groupByIndices.get(0);
     QueryRunner<Row> runner = makeQueryRunnerForSegment(
         groupByFactory,
-        index.toString(),
-        new QueryableIndexSegment(index.toString(), index)
+        SegmentId.dummy(index.toString()),
+        new QueryableIndexSegment(index, SegmentId.dummy(index.toString()))
     );
     runners.add(groupByFactory.getToolchest().preMergeQueryDecoration(runner));
     return runners;
@@ -965,8 +937,8 @@ public class NestedQueryPushDownTest
     QueryableIndex index2 = groupByIndices.get(1);
     QueryRunner<Row> tooSmallRunner = makeQueryRunnerForSegment(
         groupByFactory2,
-        index2.toString(),
-        new QueryableIndexSegment(index2.toString(), index2)
+        SegmentId.dummy(index2.toString()),
+        new QueryableIndexSegment(index2, SegmentId.dummy(index2.toString()))
     );
     runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
@@ -1000,17 +972,14 @@ public class NestedQueryPushDownTest
     }
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerForSegment(
+  private static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerForSegment(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
     return new FinalizeResultsQueryRunner<>(
-        new BySegmentQueryRunner<>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }
