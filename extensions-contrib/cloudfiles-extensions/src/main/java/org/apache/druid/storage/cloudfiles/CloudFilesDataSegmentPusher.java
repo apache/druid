@@ -92,7 +92,9 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
       return CloudFilesUtils.retryCloudFilesOperation(
           () -> {
             CloudFilesObject segmentData = new CloudFilesObject(
-                segmentPath, outFile, objectApi.getRegion(),
+                segmentPath,
+                outFile,
+                objectApi.getRegion(),
                 objectApi.getContainer()
             );
 
@@ -103,8 +105,10 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
             // runtime, and because Guava deletes methods over time, that causes incompatibilities.
             Files.write(descFile.toPath(), jsonMapper.writeValueAsBytes(inSegment));
             CloudFilesObject descriptorData = new CloudFilesObject(
-                segmentPath, descFile,
-                objectApi.getRegion(), objectApi.getContainer()
+                segmentPath,
+                descFile,
+                objectApi.getRegion(),
+                objectApi.getContainer()
             );
             log.info("Pushing %s.", descriptorData.getPath());
             objectApi.put(descriptorData);

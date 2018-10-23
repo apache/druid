@@ -49,7 +49,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -798,18 +797,14 @@ public class AppenderatorTest
   {
     final List<T> xsSorted = Lists.newArrayList(xs);
     Collections.sort(
-        xsSorted, new Comparator<T>()
-        {
-          @Override
-          public int compare(T a, T b)
-          {
-            if (a instanceof SegmentIdWithShardSpec && b instanceof SegmentIdWithShardSpec) {
-              return ((SegmentIdWithShardSpec) a).compareTo(((SegmentIdWithShardSpec) b));
-            } else if (a instanceof DataSegment && b instanceof DataSegment) {
-              return ((DataSegment) a).getId().compareTo(((DataSegment) b).getId());
-            } else {
-              throw new IllegalStateException("WTF??");
-            }
+        xsSorted,
+        (T a, T b) -> {
+          if (a instanceof SegmentIdWithShardSpec && b instanceof SegmentIdWithShardSpec) {
+            return ((SegmentIdWithShardSpec) a).compareTo(((SegmentIdWithShardSpec) b));
+          } else if (a instanceof DataSegment && b instanceof DataSegment) {
+            return ((DataSegment) a).getId().compareTo(((DataSegment) b).getId());
+          } else {
+            throw new IllegalStateException("WTF??");
           }
         }
     );

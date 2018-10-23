@@ -134,14 +134,17 @@ public class InitializationTest
   {
     Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(
-        startupInjector, ImmutableList.<com.google.inject.Module>of(
+        startupInjector,
+        ImmutableList.<com.google.inject.Module>of(
             new com.google.inject.Module()
             {
               @Override
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, false, null, null, true, false)
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("test-inject", null, false, null, null, true, false)
                 );
               }
             }
@@ -163,16 +166,7 @@ public class InitializationTest
     final URLClassLoader loader = Initialization.getClassLoaderForExtension(some_extension_dir, false);
     final URL[] expectedURLs = new URL[]{a_jar.toURI().toURL(), b_jar.toURI().toURL(), c_jar.toURI().toURL()};
     final URL[] actualURLs = loader.getURLs();
-    Arrays.sort(
-        actualURLs, new Comparator<URL>()
-        {
-          @Override
-          public int compare(URL o1, URL o2)
-          {
-            return o1.getPath().compareTo(o2.getPath());
-          }
-        }
-    );
+    Arrays.sort(actualURLs, Comparator.comparing(URL::getPath));
     Assert.assertArrayEquals(expectedURLs, actualURLs);
   }
 

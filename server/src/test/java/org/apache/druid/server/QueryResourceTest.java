@@ -87,9 +87,7 @@ public class QueryResourceTest
   public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()
   {
     @Override
-    public <T> QueryRunner<T> getQueryRunnerForIntervals(
-        Query<T> query, Iterable<Interval> intervals
-    )
+    public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
     {
       return new QueryRunner<T>()
       {
@@ -102,9 +100,7 @@ public class QueryResourceTest
     }
 
     @Override
-    public <T> QueryRunner<T> getQueryRunnerForSegments(
-        Query<T> query, Iterable<SegmentDescriptor> specs
-    )
+    public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
     {
       return getQueryRunnerForIntervals(null, null);
     }

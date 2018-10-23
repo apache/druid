@@ -93,7 +93,8 @@ public class S3DataSegmentMover implements DataSegmentMover
           ImmutableMap.<String, Object>builder()
               .putAll(
                   Maps.filterKeys(
-                      loadSpec, new Predicate<String>()
+                      loadSpec,
+                      new Predicate<String>()
                       {
                         @Override
                         public boolean apply(String input)

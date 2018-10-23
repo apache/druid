@@ -242,9 +242,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     RealtimeAppenderatorTuningConfig tuningConfig = spec.getTuningConfig()
                                                         .withBasePersistDirectory(toolbox.getPersistDir());
 
-    final FireDepartment fireDepartmentForMetrics = new FireDepartment(
-        dataSchema, new RealtimeIOConfig(null, null, null), null
-    );
+    final FireDepartment fireDepartmentForMetrics =
+        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null, null), null);
 
     final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
         this,

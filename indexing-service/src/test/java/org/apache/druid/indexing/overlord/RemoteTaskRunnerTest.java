@@ -791,7 +791,11 @@ public class RemoteTaskRunnerTest
     for (int i = 1; i < 13; i++) {
       String taskId = StringUtils.format("rt-%d", i);
       TestRealtimeTask task = new TestRealtimeTask(
-          taskId, new TaskResource(taskId, 1), "foo", TaskStatus.success(taskId), jsonMapper
+          taskId,
+          new TaskResource(taskId, 1),
+          "foo",
+          TaskStatus.success(taskId),
+          jsonMapper
       );
 
       Future<TaskStatus> taskFuture = remoteTaskRunner.run(task);
@@ -844,7 +848,11 @@ public class RemoteTaskRunnerTest
     for (int i = 1; i < 13; i++) {
       String taskId = StringUtils.format("rt-%d", i);
       TestRealtimeTask task = new TestRealtimeTask(
-          taskId, new TaskResource(taskId, 1), "foo", TaskStatus.success(taskId), jsonMapper
+          taskId,
+          new TaskResource(taskId, 1),
+          "foo",
+          TaskStatus.success(taskId),
+          jsonMapper
       );
 
       Future<TaskStatus> taskFuture = remoteTaskRunner.run(task);

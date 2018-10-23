@@ -274,7 +274,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         catch (IOException e) {
           removeSegment(segment, callback, false);
           throw new SegmentLoadingException(
-              e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+              e,
+              "Failed to write to disk segment info cache file[%s]",
+              segmentInfoCacheFile
           );
         }
       }

@@ -109,7 +109,9 @@ public class HadoopDruidIndexerConfig
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, false, null, null, true, false)
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("hadoop-indexer", null, false, null, null, true, false)
                 );
                 JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
               }
@@ -162,9 +164,7 @@ public class HadoopDruidIndexerConfig
   {
     try {
       return fromMap(
-          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-          )
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (IOException e) {
@@ -178,9 +178,7 @@ public class HadoopDruidIndexerConfig
     // This is a map to try and prevent dependency screwbally-ness
     try {
       return fromMap(
-          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              str, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-          )
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(str, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (IOException e) {
@@ -197,9 +195,7 @@ public class HadoopDruidIndexerConfig
       Reader reader = new InputStreamReader(fs.open(pt), StandardCharsets.UTF_8);
 
       return fromMap(
-          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              reader, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-          )
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(reader, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (Exception e) {

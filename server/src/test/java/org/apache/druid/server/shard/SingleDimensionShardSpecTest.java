@@ -50,7 +50,7 @@ public class SingleDimensionShardSpecTest
     Map<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>> tests = ImmutableMap.<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>>builder()
         .put(
             makeSpec(null, null),
-            makeList(
+            makeListOfPairs(
                 true, null,
                 true, "a",
                 true, "h",
@@ -60,7 +60,7 @@ public class SingleDimensionShardSpecTest
         )
         .put(
             makeSpec(null, "m"),
-            makeList(
+            makeListOfPairs(
                 true, null,
                 true, "a",
                 true, "h",
@@ -70,7 +70,7 @@ public class SingleDimensionShardSpecTest
         )
         .put(
             makeSpec("a", "h"),
-            makeList(
+            makeListOfPairs(
                 false, null,
                 true, "a",
                 false, "h",
@@ -80,7 +80,7 @@ public class SingleDimensionShardSpecTest
         )
         .put(
             makeSpec("d", "u"),
-            makeList(
+            makeListOfPairs(
                 false, null,
                 false, "a",
                 true, "h",
@@ -90,7 +90,7 @@ public class SingleDimensionShardSpecTest
         )
         .put(
             makeSpec("h", null),
-            makeList(
+            makeListOfPairs(
                 false, null,
                 false, "a",
                 true, "h",
@@ -167,7 +167,7 @@ public class SingleDimensionShardSpecTest
     return value == null ? ImmutableMap.of() : ImmutableMap.of("billy", value);
   }
 
-  private List<Pair<Boolean, Map<String, String>>> makeList(Object... arguments)
+  private List<Pair<Boolean, Map<String, String>>> makeListOfPairs(Object... arguments)
   {
     Preconditions.checkState(arguments.length % 2 == 0);
 

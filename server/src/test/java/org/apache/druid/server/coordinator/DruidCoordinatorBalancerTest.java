@@ -402,17 +402,13 @@ public class DruidCoordinatorBalancerTest
     }
 
     @Override
-    public ServerHolder findNewSegmentHomeBalancer(
-        DataSegment proposalSegment, List<ServerHolder> serverHolders
-    )
+    public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
     {
       return delegate.findNewSegmentHomeBalancer(proposalSegment, serverHolders);
     }
 
     @Override
-    public ServerHolder findNewSegmentHomeReplicator(
-        DataSegment proposalSegment, List<ServerHolder> serverHolders
-    )
+    public ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
     {
       return delegate.findNewSegmentHomeReplicator(proposalSegment, serverHolders);
     }
@@ -424,9 +420,7 @@ public class DruidCoordinatorBalancerTest
     }
 
     @Override
-    public void emitStats(
-        String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList
-    )
+    public void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList)
     {
       delegate.emitStats(tier, stats, serverHolderList);
     }

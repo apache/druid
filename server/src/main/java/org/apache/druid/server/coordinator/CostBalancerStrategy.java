@@ -185,9 +185,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public ServerHolder findNewSegmentHomeReplicator(
-      DataSegment proposalSegment, List<ServerHolder> serverHolders
-  )
+  public ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
     ServerHolder holder = chooseBestServer(proposalSegment, serverHolders, false).rhs;
     if (holder != null && !holder.isServingSegment(proposalSegment)) {
@@ -198,9 +196,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
 
   @Override
-  public ServerHolder findNewSegmentHomeBalancer(
-      DataSegment proposalSegment, List<ServerHolder> serverHolders
-  )
+  public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
     return chooseBestServer(proposalSegment, serverHolders, true).rhs;
   }
@@ -316,7 +312,9 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   protected double computeCost(
-      final DataSegment proposalSegment, final ServerHolder server, final boolean includeCurrentServer
+      final DataSegment proposalSegment,
+      final ServerHolder server,
+      final boolean includeCurrentServer
   )
   {
     final long proposalSegmentSize = proposalSegment.getSize();

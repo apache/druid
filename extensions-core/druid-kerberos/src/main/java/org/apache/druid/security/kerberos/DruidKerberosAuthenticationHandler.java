@@ -91,8 +91,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
       // specifically configured
       final String[] spnegoPrincipals;
       if ("*".equals(principal)) {
-        spnegoPrincipals = KerberosUtil.getPrincipalNames(
-            keytab, Pattern.compile("HTTP/.*"));
+        spnegoPrincipals = KerberosUtil.getPrincipalNames(keytab, Pattern.compile("HTTP/.*"));
         if (spnegoPrincipals.length == 0) {
           throw new ServletException("Principals do not exist in the keytab");
         }

@@ -30,23 +30,21 @@ import java.util.Set;
 
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
-  private static final Comparator<QueryableDruidServer> comparator =
+  private static final Comparator<QueryableDruidServer> COMPARATOR =
       Comparator.comparingInt(s -> s.getClient().getNumOpenConnections());
 
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
-    return Collections.min(servers, comparator);
+    return Collections.min(servers, COMPARATOR);
   }
 
   @Override
-  public List<QueryableDruidServer> pick(
-      Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick
-  )
+  public List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick)
   {
     if (servers.size() <= numServersToPick) {
       return ImmutableList.copyOf(servers);
     }
-    return Ordering.from(comparator).leastOf(servers, numServersToPick);
+    return Ordering.from(COMPARATOR).leastOf(servers, numServersToPick);
   }
 }

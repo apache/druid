@@ -48,8 +48,8 @@ import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.LogicalSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -142,7 +142,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
   @Override
   public Function<Result<SelectResultValue>, Result<SelectResultValue>> makePreComputeManipulatorFn(
-      final SelectQuery query, final MetricManipulationFn fn
+      final SelectQuery query,
+      final MetricManipulationFn fn
   )
   {
     return Functions.identity();
@@ -333,7 +334,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         {
           @Override
           public Sequence<Result<SelectResultValue>> run(
-              QueryPlus<Result<SelectResultValue>> queryPlus, Map<String, Object> responseContext
+              QueryPlus<Result<SelectResultValue>> queryPlus,
+              Map<String, Object> responseContext
           )
           {
             SelectQuery selectQuery = (SelectQuery) queryPlus.getQuery();

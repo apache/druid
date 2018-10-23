@@ -40,9 +40,7 @@ public class BloomFilterSerializersModule extends SimpleModule
 
   public BloomFilterSerializersModule()
   {
-    registerSubtypes(
-        new NamedType(BloomDimFilter.class, BLOOM_FILTER_TYPE_NAME)
-    );
+    registerSubtypes(new NamedType(BloomDimFilter.class, BLOOM_FILTER_TYPE_NAME));
     addSerializer(BloomKFilter.class, new BloomKFilterSerializer());
     addDeserializer(BloomKFilter.class, new BloomKFilterDeserializer());
     addDeserializer(BloomKFilterHolder.class, new BloomKFilterHolderDeserializer());
@@ -50,16 +48,14 @@ public class BloomFilterSerializersModule extends SimpleModule
 
   private static class BloomKFilterSerializer extends StdSerializer<BloomKFilter>
   {
-
     BloomKFilterSerializer()
     {
       super(BloomKFilter.class);
     }
 
     @Override
-    public void serialize(
-        BloomKFilter bloomKFilter, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
-    ) throws IOException
+    public void serialize(BloomKFilter bloomKFilter, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+        throws IOException
     {
       jsonGenerator.writeBinary(bloomKFilterToBytes(bloomKFilter));
     }
@@ -67,16 +63,14 @@ public class BloomFilterSerializersModule extends SimpleModule
 
   private static class BloomKFilterDeserializer extends StdDeserializer<BloomKFilter>
   {
-
     BloomKFilterDeserializer()
     {
       super(BloomKFilter.class);
     }
 
     @Override
-    public BloomKFilter deserialize(
-        JsonParser jsonParser, DeserializationContext deserializationContext
-    ) throws IOException
+    public BloomKFilter deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException
     {
       return bloomKFilterFromBytes(jsonParser.getBinaryValue());
     }
@@ -90,9 +84,8 @@ public class BloomFilterSerializersModule extends SimpleModule
     }
 
     @Override
-    public BloomKFilterHolder deserialize(
-        JsonParser jsonParser, DeserializationContext deserializationContext
-    ) throws IOException
+    public BloomKFilterHolder deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException
     {
       return BloomKFilterHolder.fromBytes(jsonParser.getBinaryValue());
     }

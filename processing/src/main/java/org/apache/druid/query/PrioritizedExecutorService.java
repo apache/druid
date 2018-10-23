@@ -210,9 +210,7 @@ class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
   private static final Comparator<PrioritizedListenableFutureTask> PRIORITY_COMPARATOR = new Ordering<PrioritizedListenableFutureTask>()
   {
     @Override
-    public int compare(
-        PrioritizedListenableFutureTask left, PrioritizedListenableFutureTask right
-    )
+    public int compare(PrioritizedListenableFutureTask left, PrioritizedListenableFutureTask right)
     {
       return Integer.compare(right.getPriority(), left.getPriority());
     }

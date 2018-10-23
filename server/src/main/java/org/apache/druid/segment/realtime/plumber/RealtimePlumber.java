@@ -334,9 +334,7 @@ public class RealtimePlumber implements Plumber
             try {
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(
-                    persistHydrant(
-                        pair.lhs, schema, pair.rhs, metadataElems
-                    )
+                    persistHydrant(pair.lhs, schema, pair.rhs, metadataElems)
                 );
               }
               committer.run();
@@ -696,7 +694,8 @@ public class RealtimePlumber implements Plumber
         hydrants.add(
             new FireHydrant(
                 new QueryableIndexSegment(
-                    queryableIndex, SegmentId.of(
+                    queryableIndex,
+                    SegmentId.of(
                         schema.getDataSource(),
                         sinkInterval,
                         versioningPolicy.getVersion(sinkInterval),

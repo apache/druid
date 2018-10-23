@@ -889,9 +889,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
   ) throws IOException, InterruptedException
   {
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    final FireDepartment fireDepartmentForMetrics = new FireDepartment(
-        dataSchema, new RealtimeIOConfig(null, null, null), null
-    );
+    final FireDepartment fireDepartmentForMetrics =
+        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null, null), null);
     buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
     if (toolbox.getMonitorScheduler() != null) {

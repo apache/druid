@@ -448,9 +448,7 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @Singleton
-  public JettyMonitor getJettyMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder
-  )
+  public JettyMonitor getJettyMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
   {
     return new JettyMonitor(dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId());
   }
@@ -468,9 +466,7 @@ public class JettyServerModule extends JerseyServletModule
     public boolean doMonitor(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-      MonitorUtils.addDimensionsToBuilder(
-          builder, dimensions
-      );
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       emitter.emit(builder.build("jetty/numOpenConnections", activeConnections.get()));
       return true;
     }

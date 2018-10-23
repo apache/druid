@@ -1551,7 +1551,8 @@ public class IndexTaskTest
 
         if (taskAction instanceof LockAcquireAction) {
           return (RetType) new TaskLock(
-              TaskLockType.EXCLUSIVE, "groupId",
+              TaskLockType.EXCLUSIVE,
+              "groupId",
               "test",
               ((LockAcquireAction) taskAction).getInterval(),
               DateTimes.nowUtc().toString(),

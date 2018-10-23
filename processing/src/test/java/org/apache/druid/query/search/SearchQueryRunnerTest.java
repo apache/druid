@@ -165,7 +165,8 @@ public class SearchQueryRunnerTest
         {
           @Override
           public Sequence<Result<SearchResultValue>> run(
-              QueryPlus<Result<SearchResultValue>> queryPlus, Map<String, Object> responseContext
+              QueryPlus<Result<SearchResultValue>> queryPlus,
+              Map<String, Object> responseContext
           )
           {
             final QueryPlus<Result<SearchResultValue>> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -622,7 +623,8 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(
                                         new DefaultDimensionSpec(
-                                            ColumnHolder.TIME_COLUMN_NAME, ColumnHolder.TIME_COLUMN_NAME,
+                                            ColumnHolder.TIME_COLUMN_NAME,
+                                            ColumnHolder.TIME_COLUMN_NAME,
                                             ValueType.LONG
                                         )
                                     )
@@ -646,7 +648,8 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(
                                         new ExtractionDimensionSpec(
-                                            ColumnHolder.TIME_COLUMN_NAME, ColumnHolder.TIME_COLUMN_NAME,
+                                            ColumnHolder.TIME_COLUMN_NAME,
+                                            ColumnHolder.TIME_COLUMN_NAME,
                                             jsExtractionFn
                                         )
                                     )
@@ -667,7 +670,8 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(
                                         new DefaultDimensionSpec(
-                                            QueryRunnerTestHelper.indexMetric, QueryRunnerTestHelper.indexMetric,
+                                            QueryRunnerTestHelper.indexMetric,
+                                            QueryRunnerTestHelper.indexMetric,
                                             ValueType.DOUBLE
                                         )
                                     )
@@ -692,7 +696,8 @@ public class SearchQueryRunnerTest
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(
                                         new ExtractionDimensionSpec(
-                                            QueryRunnerTestHelper.indexMetric, QueryRunnerTestHelper.indexMetric,
+                                            QueryRunnerTestHelper.indexMetric,
+                                            QueryRunnerTestHelper.indexMetric,
                                             jsExtractionFn
                                         )
                                     )
@@ -795,14 +800,16 @@ public class SearchQueryRunnerTest
         int index = copy.indexOf(resultValue);
         if (index < 0) {
           fail(
-              expectedResults, results,
+              expectedResults,
+              results,
               "No result found containing " + resultValue.getDimension() + " and " + resultValue.getValue()
           );
         }
         SearchHit expected = copy.remove(index);
         if (!resultValue.toString().equals(expected.toString())) {
           fail(
-              expectedResults, results,
+              expectedResults,
+              results,
               "Invalid count for " + resultValue + ".. which was expected to be " + expected.getCount()
           );
         }

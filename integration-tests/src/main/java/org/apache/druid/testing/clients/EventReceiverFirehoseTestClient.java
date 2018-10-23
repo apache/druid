@@ -88,12 +88,8 @@ public class EventReceiverFirehoseTestClient
   {
     try {
       StatusResponseHolder response = httpClient.go(
-          new Request(
-              HttpMethod.POST, new URL(getURL())
-          ).setContent(
-              mediaType,
-              objectMapper.writeValueAsBytes(events)
-          ),
+          new Request(HttpMethod.POST, new URL(getURL()))
+              .setContent(mediaType, objectMapper.writeValueAsBytes(events)),
           responseHandler
       ).get();
 
@@ -143,11 +139,7 @@ public class EventReceiverFirehoseTestClient
       int totalEventsPosted = 0;
       int expectedEventsPosted = 0;
       while ((s = reader.readLine()) != null) {
-        events.add(
-            this.jsonMapper.readValue(
-                s, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-            )
-        );
+        events.add(this.jsonMapper.readValue(s, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT));
         ObjectMapper mapper = (totalEventsPosted % 2 == 0) ? jsonMapper : smileMapper;
         String mediaType = (totalEventsPosted % 2 == 0)
                            ? MediaType.APPLICATION_JSON

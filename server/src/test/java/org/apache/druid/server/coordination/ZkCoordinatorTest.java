@@ -139,8 +139,11 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     String segmentZkPath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName(), segment.getId().toString());
 
-    curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
-        segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestLoad(segment)));
+    curator
+        .create()
+        .creatingParentsIfNeeded()
+        .withMode(CreateMode.EPHEMERAL)
+        .forPath(segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestLoad(segment)));
 
     loadLatch.await();
 
@@ -148,8 +151,11 @@ public class ZkCoordinatorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
-        segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestDrop(segment)));
+    curator
+        .create()
+        .creatingParentsIfNeeded()
+        .withMode(CreateMode.EPHEMERAL)
+        .forPath(segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestDrop(segment)));
 
     dropLatch.await();
 

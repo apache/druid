@@ -206,9 +206,7 @@ public class BatchServerInventoryViewTest
         }
     ) {
       @Override
-      protected DruidServer addInnerInventory(
-          DruidServer container, String inventoryKey, Set<DataSegment> inventory
-      )
+      protected DruidServer addInnerInventory(DruidServer container, String inventoryKey, Set<DataSegment> inventory)
       {
         DruidServer server = super.addInnerInventory(container, inventoryKey, inventory);
         inventoryUpdateCounter.incrementAndGet();

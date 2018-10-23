@@ -296,7 +296,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
       {
         super.registerSegmentCallback(
-            exec, new SegmentCallback()
+            exec,
+            new SegmentCallback()
             {
               @Override
               public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)

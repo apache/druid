@@ -58,9 +58,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public boolean resetDataSourceMetadata(
-      String dataSource, DataSourceMetadata dataSourceMetadata
-  )
+  public boolean resetDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
   {
     return false;
   }
@@ -84,9 +82,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
   
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(
-      String dataSource, List<Interval> intervals
-  )
+  public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
   {
     return ImmutableList.of();
   }

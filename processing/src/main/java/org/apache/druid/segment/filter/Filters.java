@@ -648,10 +648,7 @@ public class Filters
       }
     }
     if (andList.size() > 1) {
-      generateAllCombinations(
-          result, andList.subList(1, andList.size()),
-          nonAndList
-      );
+      generateAllCombinations(result, andList.subList(1, andList.size()), nonAndList);
     }
   }
 }

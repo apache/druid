@@ -649,7 +649,11 @@ public class SystemSchema extends AbstractSchema
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(task.getDataSource()));
 
       final Iterable<TaskStatusPlus> authorizedTasks = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult, () -> it, raGenerator, authorizerMapper);
+          authenticationResult,
+          () -> it,
+          raGenerator,
+          authorizerMapper
+      );
 
       return wrap(authorizedTasks.iterator(), it);
     }

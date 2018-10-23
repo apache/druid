@@ -176,9 +176,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
         new PathChildrenCacheListener()
         {
           @Override
-          public void childEvent(
-              CuratorFramework client, PathChildrenCacheEvent event
-          ) throws Exception
+          public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
           {
             if (event.getType() == PathChildrenCacheEvent.Type.CHILD_ADDED) {
               DataSegmentChangeRequest request = jsonMapper.readValue(
@@ -262,12 +260,10 @@ public class LoadQueuePeonTest extends CuratorTestBase
       Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestSignal[requestSignalIdx.get()]));
       Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));
       Assert.assertEquals(
-          segment, ((SegmentChangeRequestLoad) jsonMapper.readValue(
-              curator.getData()
-                     .decompressed()
-                     .forPath(loadRequestPath),
-              DataSegmentChangeRequest.class
-          )).getSegment()
+          segment,
+          ((SegmentChangeRequestLoad) jsonMapper
+              .readValue(curator.getData().decompressed().forPath(loadRequestPath), DataSegmentChangeRequest.class))
+              .getSegment()
       );
 
       requestSignalIdx.incrementAndGet();
@@ -307,9 +303,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
         new PathChildrenCacheListener()
         {
           @Override
-          public void childEvent(
-              CuratorFramework client, PathChildrenCacheEvent event
-          )
+          public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
           {
             if (event.getType() == PathChildrenCacheEvent.Type.CHILD_ADDED) {
               loadRequestSignal.countDown();
@@ -335,12 +329,10 @@ public class LoadQueuePeonTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestSignal));
     Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));
     Assert.assertEquals(
-        segment, ((SegmentChangeRequestLoad) jsonMapper.readValue(
-            curator.getData()
-                   .decompressed()
-                   .forPath(loadRequestPath),
-            DataSegmentChangeRequest.class
-        )).getSegment()
+        segment,
+        ((SegmentChangeRequestLoad) jsonMapper
+            .readValue(curator.getData().decompressed().forPath(loadRequestPath), DataSegmentChangeRequest.class))
+            .getSegment()
     );
 
     // don't simulate completion of load request here

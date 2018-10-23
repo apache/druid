@@ -231,9 +231,7 @@ public class CommonCacheNotifier
     }
 
     @Override
-    public void exceptionCaught(
-        ClientResponse<StatusResponseHolder> clientResponse, Throwable e
-    )
+    public void exceptionCaught(ClientResponse<StatusResponseHolder> clientResponse, Throwable e)
     {
       // Its safe to Ignore as the ClientResponse returned in handleChunk were unfinished
       log.error(e, "exceptionCaught in CommonCacheNotifier ResponseHandler.");

@@ -132,9 +132,7 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
   }
 
   @Override
-  protected DruidServer updateInnerInventory(
-      DruidServer container, String inventoryKey, Set<DataSegment> inventory
-  )
+  protected DruidServer updateInnerInventory(DruidServer container, String inventoryKey, Set<DataSegment> inventory)
   {
     Set<DataSegment> filteredInventory = filterInventory(container, inventory);
 

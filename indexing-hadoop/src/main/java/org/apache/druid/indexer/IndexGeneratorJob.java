@@ -420,11 +420,9 @@ public class IndexGeneratorJob implements Jobby
     }
 
     @Override
-    protected void reduce(
-        final BytesWritable key, Iterable<BytesWritable> values, final Context context
-    ) throws IOException, InterruptedException
+    protected void reduce(final BytesWritable key, Iterable<BytesWritable> values, final Context context)
+        throws IOException, InterruptedException
     {
-
       Iterator<BytesWritable> iter = values.iterator();
       BytesWritable first = iter.next();
 
@@ -587,9 +585,8 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
-          index, interval, file, config.getIndexSpec(), progressIndicator, null
-      );
+      return HadoopDruidIndexerConfig.INDEX_MERGER_V9
+          .persist(index, interval, file, config.getIndexSpec(), progressIndicator, null);
     }
 
     protected File mergeQueryableIndex(
@@ -600,9 +597,8 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
-      return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
-          indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator, null
-      );
+      return HadoopDruidIndexerConfig.INDEX_MERGER_V9
+          .mergeQueryableIndex(indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator, null);
     }
 
     @Override
@@ -624,9 +620,8 @@ public class IndexGeneratorJob implements Jobby
     }
 
     @Override
-    protected void reduce(
-        BytesWritable key, Iterable<BytesWritable> values, final Context context
-    ) throws IOException, InterruptedException
+    protected void reduce(BytesWritable key, Iterable<BytesWritable> values, final Context context)
+        throws IOException, InterruptedException
     {
       SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
@@ -775,9 +770,7 @@ public class IndexGeneratorJob implements Jobby
 
           log.info("starting merge of intermediate persisted segments.");
           long mergeStartTime = System.currentTimeMillis();
-          mergedBase = mergeQueryableIndex(
-              indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
-          );
+          mergedBase = mergeQueryableIndex(indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator);
           log.info(
               "finished merge of intermediate persisted segments. time taken [%d] ms.",
               (System.currentTimeMillis() - mergeStartTime)

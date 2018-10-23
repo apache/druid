@@ -283,10 +283,7 @@ public class LookupReferencesManager
           builder.addAll(oldState.pendingNotices);
           builder.add(notice);
 
-          return new LookupUpdateState(
-              oldState.lookupMap, builder.build(), oldState.noticesBeingHandled
-
-          );
+          return new LookupUpdateState(oldState.lookupMap, builder.build(), oldState.noticesBeingHandled);
         }
     );
     LockSupport.unpark(mainThread);

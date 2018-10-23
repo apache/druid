@@ -546,7 +546,8 @@ public class ScanQueryRunnerTest
     events.add(
         Lists.newArrayList(
             Iterables.transform(
-                values, new Function<String, Map<String, Object>>()
+                values,
+                new Function<String, Map<String, Object>>()
                 {
                   @Override
                   public Map<String, Object> apply(String input)

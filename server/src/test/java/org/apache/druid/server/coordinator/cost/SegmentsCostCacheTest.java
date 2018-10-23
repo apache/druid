@@ -95,13 +95,14 @@ public class SegmentsCostCacheTest
   {
     DataSegment segmentA = createSegment(DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, 0), 100);
     DataSegment segmentB = createSegment(
-        DATA_SOURCE, shifted1HInterval(REFERENCE_TIME, (int) TimeUnit.DAYS.toHours(50)), 100
+        DATA_SOURCE,
+        shifted1HInterval(REFERENCE_TIME, (int) TimeUnit.DAYS.toHours(50)),
+        100
     );
 
-    SegmentsCostCache.Bucket.Builder prototype = SegmentsCostCache.Bucket.builder(new Interval(
-        REFERENCE_TIME.minusHours(5),
-        REFERENCE_TIME.plusHours(5)
-    ));
+    SegmentsCostCache.Bucket.Builder prototype = SegmentsCostCache.Bucket.builder(
+        new Interval(REFERENCE_TIME.minusHours(5), REFERENCE_TIME.plusHours(5))
+    );
     prototype.addSegment(segmentA);
     SegmentsCostCache.Bucket bucket = prototype.build();
 
