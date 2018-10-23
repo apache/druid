@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -142,10 +143,7 @@ public class KafkaIndexTaskClient extends IndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException | InterruptedException e) {
-      throw new RuntimeException(
-          StringUtils.format("Exception [%s] while pausing Task [%s]", e.getMessage(), id),
-          e
-      );
+      throw new RE(e, "Exception [%s] while pausing Task [%s]", e.getMessage(), id);
     }
   }
 

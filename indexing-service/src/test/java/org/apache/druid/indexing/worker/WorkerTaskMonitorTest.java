@@ -73,7 +73,7 @@ public class WorkerTaskMonitorTest
   private static final String basePath = "/test/druid";
   private static final String tasksPath = StringUtils.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = StringUtils.format("%s/indexer/status/worker", basePath);
-  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000, null, true, false);
+  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", false, 9000, null, true, false);
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;

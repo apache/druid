@@ -46,6 +46,8 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -118,8 +120,11 @@ public class SqlBenchmark
         conglomerate,
         new ServiceEmitter("", "", new NoopEmitter())
     ).add(dataSegment, index);
+    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
     plannerFactory = new PlannerFactory(
-        CalciteTests.createMockSchema(conglomerate, walker, plannerConfig),
+        druidSchema,
+        systemSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),

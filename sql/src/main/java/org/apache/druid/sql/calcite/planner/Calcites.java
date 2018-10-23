@@ -27,7 +27,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
@@ -46,6 +45,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
@@ -98,11 +98,16 @@ public class Calcites
     return DEFAULT_CHARSET;
   }
 
-  public static SchemaPlus createRootSchema(final Schema druidSchema, final AuthorizerMapper authorizerMapper)
+  public static SchemaPlus createRootSchema(
+      final DruidSchema druidSchema,
+      final SystemSchema systemSchema,
+      final AuthorizerMapper authorizerMapper
+  )
   {
     final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     rootSchema.add(DruidSchema.NAME, druidSchema);
     rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema, authorizerMapper));
+    rootSchema.add(SystemSchema.NAME, systemSchema);
     return rootSchema;
   }
 

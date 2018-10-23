@@ -69,12 +69,6 @@ public class CountAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new CountAggregator();
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

@@ -18,11 +18,16 @@
  */
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -37,6 +42,7 @@ public class SQLMetadataConnectorTest
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
+  private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   @Before
   public void setUp()
@@ -139,5 +145,100 @@ public class SQLMetadataConnectorTest
           }
         }
     );
+  }
+
+  static class TestSQLMetadataConnector extends SQLMetadataConnector
+  {
+    public TestSQLMetadataConnector(
+        Supplier<MetadataStorageConnectorConfig> config,
+        Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
+    )
+    {
+      super(config, tablesConfigSupplier);
+    }
+
+    @Override
+    protected String getSerialType()
+    {
+      return null;
+    }
+
+    @Override
+    protected int getStreamingFetchSize()
+    {
+      return 0;
+    }
+
+    @Override
+    public String getQuoteString()
+    {
+      return null;
+    }
+
+    @Override
+    public boolean tableExists(Handle handle, String tableName)
+    {
+      return false;
+    }
+
+    @Override
+    public DBI getDBI()
+    {
+      return null;
+    }
+
+    @Override
+    protected BasicDataSource getDatasource()
+    {
+      return super.getDatasource();
+    }
+  }
+
+  private MetadataStorageConnectorConfig getDbcpPropertiesFile(
+      boolean createTables,
+      String host,
+      int port,
+      String connectURI,
+      String user,
+      String pwdString,
+      String pwd
+  ) throws Exception
+  {
+    return jsonMapper.readValue(
+        "{" +
+        "\"createTables\": \"" + createTables + "\"," +
+        "\"host\": \"" + host + "\"," +
+        "\"port\": \"" + port + "\"," +
+        "\"connectURI\": \"" + connectURI + "\"," +
+        "\"user\": \"" + user + "\"," +
+        "\"password\": " + pwdString + "," +
+        "\"dbcp\": {\n" +
+        "  \"maxConnLifetimeMillis\" : 1200000,\n" +
+        "  \"defaultQueryTimeout\" : \"30000\"\n" +
+        "}" +
+        "}",
+        MetadataStorageConnectorConfig.class
+    );
+  }
+
+  @Test
+  public void testBasicDataSourceCreation() throws Exception
+  {
+    MetadataStorageConnectorConfig config = getDbcpPropertiesFile(
+        true,
+        "host",
+        1234,
+        "connectURI",
+        "user",
+        "{\"type\":\"default\",\"password\":\"nothing\"}",
+        "nothing"
+    );
+    TestSQLMetadataConnector testSQLMetadataConnector = new TestSQLMetadataConnector(
+        Suppliers.ofInstance(config),
+        Suppliers.ofInstance(tablesConfig)
+    );
+    BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();
+    Assert.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
+    Assert.assertEquals((long) dataSource.getDefaultQueryTimeout(), 30000);
   }
 }

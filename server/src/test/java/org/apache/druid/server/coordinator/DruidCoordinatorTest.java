@@ -160,7 +160,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidCoordinatorConfig
     );
     loadQueuePeon.start();
-    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
+    druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = new ScheduledExecutorFactory()
     {
