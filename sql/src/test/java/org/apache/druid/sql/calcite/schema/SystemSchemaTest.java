@@ -59,6 +59,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -192,7 +193,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
+    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate, new NoopServiceEmitter())
         .add(segment1, index1)
         .add(segment2, index2)
         .add(segment2, index2)
