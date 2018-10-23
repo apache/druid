@@ -68,7 +68,7 @@ public final class QueryPlus<T>
 
   /**
    * Returns the same QueryPlus object with the identity replaced. This new identity will affect future calls to
-   * {@link #withQueryMetrics(QueryToolChest)} ()} but will not affect any currently-existing queryMetrics.
+   * {@link #withQueryMetrics(QueryToolChest)} but will not affect any currently existing queryMetrics.
    */
   public QueryPlus<T> withIdentity(String identity)
   {
@@ -103,6 +103,9 @@ public final class QueryPlus<T>
   /**
    * Returns the same QueryPlus object, if it doesn't have {@link QueryMetrics} ({@link #getQueryMetrics()} returns
    * null), or returns a new QueryPlus object with {@link Query} from this QueryPlus and null as QueryMetrics.
+   *
+   * When you pass QueryPlus to multiple threads, it is usually needed to strip off QueryMetrics component first so that
+   * each thread will create its own QueryMetrics. See {@link ChainedExecutionQueryRunner} for an example.
    */
   public QueryPlus<T> withoutQueryMetrics()
   {

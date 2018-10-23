@@ -516,8 +516,9 @@ public class CalciteTests
         .rows(FORBIDDEN_ROWS)
         .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate, new NoopServiceEmitter())
-        .add(
+    return new SpecificSegmentsQuerySegmentWalker(
+        conglomerate, new NoopServiceEmitter()
+    ).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
                    .interval(index1.getDataInterval())

@@ -55,27 +55,31 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   protected void setDimension(String dimension, String value)
   {
     synchronized (lock) {
-      String oldValue = singleValueDims.put(dimension, value);
-      if (oldValue != null && !oldValue.equals(value)) {
-        throw new ISE("Changing dimension values in QueryMetrics is not allowed: %s", dimension);
-      }
+      singleValueDims.compute(dimension, (key, oldValue) -> {
+        if (oldValue != null && !oldValue.equals(value)) {
+          throw new ISE("Changing dimension values in QueryMetrics is not allowed: %s", dimension);
+        }
+        return oldValue;
+      });
     }
   }
 
   protected void setDimensions(String dimension, String[] values)
   {
     synchronized (lock) {
-      String[] oldValues = multiValueDims.put(dimension, values);
-      if (oldValues != null && !Arrays.equals(oldValues, values)) {
-        throw new ISE("Changing dimension values in QueryMetrics is not allowed: %s", dimension);
-      }
+      multiValueDims.compute(dimension, (key, oldValues) -> {
+        if (oldValues != null && !Arrays.equals(oldValues, values)) {
+          throw new ISE("Changing dimension values in QueryMetrics is not allowed: %s", dimension);
+        }
+        return oldValues;
+      });
     }
   }
 
   protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
   {
     synchronized (lock) {
-      if (metrics.put(metricName, value) != null) {
+      if (metrics.putIfAbsent(metricName, value) != null) {
         // to prevent misuse of this class such as multiple threads override metrics of each other
         throw new ISE("Duplicate metric registration in QueryMetrics is not allowed: %s", metricName);
       }

@@ -63,7 +63,7 @@ import java.util.List;
  * ----------------------------------
  *  1. Methods, pulling some dimensions from the query object. These methods are used to populate the metric before the
  *  query is run. These methods accept a single `QueryType query` parameter. {@link #query(Query)} calls all methods
- *  of this type, hence pulling all available information from the query object as dimensions.  Once a value for a
+ *  of this type, hence pulling all available information from the query object as dimensions. Once a value for a
  *  dimension is set, it's illegal to change its value later.
  *
  *  2. Methods for setting dimensions, which become known in the process of the query execution or after the query is
@@ -94,8 +94,24 @@ import java.util.List;
  * 100% guarantee of compatibility, because methods could not only be added to QueryMetrics, existing methods could also
  * be changed or removed.
  *
- * <p><b>All implementations of QueryMetrics should be Thread-safe.</b>
+ * Thread safety consideration
+ * ---------------------------
+ * <p><b>All implementations of QueryMetrics must be Thread-safe.</b> This is to facilitate some use cases (like JDBC)
+ * that needs to use QueryMetrics from multiple threads.
  *
+ * <p>However, allowing multiple threads to use QueryMetrics can lead to bugs that could be difficult to notice. e.g.,
+ * Segment processing threads could erroneously share one QueryMetrics, overriding metrics of each other.
+ *
+ * <p>In order to catch such bugs ASAP, <b>all implementations should add the following checks.</b> (see
+ * {@link DefaultQueryMetrics} for an example)
+ *
+ * 1. For all methods that add dimension: if the value of one dimension is updated to another value, throws
+ * IllegalStateException.
+ * 2. For all methods that add metrics: if one metric is regitered more than once, throws IllegalStateException
+ * 3. For {@link #emit(ServiceEmitter)}: if it's been invoked by more than one threads, throws IllegalStateException
+ *
+ * <p>As a result, it's illegal for multiple threads to overwrite dimensions and metrics. And a single thread is
+ * allowed to emit metrics.
  *
  * Adding new methods to QueryMetrics
  * ----------------------------------
