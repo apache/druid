@@ -221,11 +221,16 @@ public class TLSUtils
       TrustManager[] newTrustManagers = new TrustManager[trustManagers.length];
 
       for (int i = 0; i < trustManagers.length; i++) {
-        newTrustManagers[i] = new CustomCheckX509TrustManager(
-            (X509ExtendedTrustManager) trustManagers[i],
-            tlsCertificateChecker,
-            validateHostnames == null ? true : validateHostnames
-        );
+        if (trustManagers[i] instanceof X509ExtendedTrustManager) {
+          newTrustManagers[i] = new CustomCheckX509TrustManager(
+              (X509ExtendedTrustManager) trustManagers[i],
+              tlsCertificateChecker,
+              validateHostnames == null ? true : validateHostnames
+          );
+        } else {
+          newTrustManagers[i] = trustManagers[i];
+          log.info("Encountered non-X509ExtendedTrustManager: " + trustManagers[i].getClass());
+        }
       }
 
       sslContext.init(

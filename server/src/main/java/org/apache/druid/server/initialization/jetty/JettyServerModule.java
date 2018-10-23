@@ -510,6 +510,9 @@ public class JettyServerModule extends JerseyServletModule
               certificateChecker,
               tlsServerConfig.isValidateHostnames()
           );
+        } else {
+          newTrustManagers[i] = trustManagers[i];
+          log.info("Encountered non-X509ExtendedTrustManager: " + trustManagers[i].getClass());
         }
       }
 
