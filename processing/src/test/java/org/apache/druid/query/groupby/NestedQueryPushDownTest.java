@@ -904,32 +904,6 @@ public class NestedQueryPushDownTest
     Assert.assertEquals(outputNameAgg, rewrittenQuery.getAggregatorSpecs().get(0).getName());
   }
 
-  private List<QueryRunner<Row>> getRunner1()
-  {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
-    QueryableIndex index = groupByIndices.get(0);
-    QueryRunner<Row> runner = makeQueryRunner(
-        groupByFactory,
-        index.toString(),
-        new QueryableIndexSegment(index.toString(), index)
-    );
-    runners.add(groupByFactory.getToolchest().preMergeQueryDecoration(runner));
-    return runners;
-  }
-
-  private List<QueryRunner<Row>> getRunner2()
-  {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
-    QueryableIndex index2 = groupByIndices.get(1);
-    QueryRunner<Row> tooSmallRunner = makeQueryRunner(
-        groupByFactory2,
-        index2.toString(),
-        new QueryableIndexSegment(index2.toString(), index2)
-    );
-    runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
-    return runners;
-  }
-
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       String segmentId,
