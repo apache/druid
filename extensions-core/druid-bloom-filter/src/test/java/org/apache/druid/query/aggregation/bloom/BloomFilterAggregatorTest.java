@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
+import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -53,7 +54,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -113,28 +113,8 @@ public class BloomFilterAggregatorTest
       filter2 = new BloomKFilter(maxNumValues);
       BloomKFilter combinedValuesFilter = new BloomKFilter(maxNumValues);
 
-      for (String[] values : values1) {
-        for (String val : values) {
-          if (!NullHandling.replaceWithDefault() && val == null) {
-            filter1.addBytes(null, 0, 0);
-            combinedValuesFilter.addBytes(null, 0, 0);
-          } else {
-            filter1.addString(NullHandling.nullToEmptyIfNeeded(val));
-            combinedValuesFilter.addString(NullHandling.nullToEmptyIfNeeded(val));
-          }
-        }
-      }
-      for (String[] values : values2) {
-        for (String val : values) {
-          if (!NullHandling.replaceWithDefault() && val == null) {
-            filter2.addBytes(null, 0, 0);
-            combinedValuesFilter.addBytes(null, 0, 0);
-          } else {
-            filter2.addString(NullHandling.nullToEmptyIfNeeded(val));
-            combinedValuesFilter.addString(NullHandling.nullToEmptyIfNeeded(val));
-          }
-        }
-      }
+      createStringFilter(values1, filter1, combinedValuesFilter);
+      createStringFilter(values2, filter2, combinedValuesFilter);
 
       serializedFilter1 = filterToString(filter1);
       serializedFilter2 = filterToString(filter2);
@@ -164,17 +144,19 @@ public class BloomFilterAggregatorTest
     }
   }
 
-  private final DimensionSpec dimSpec = new DefaultDimensionSpec("dim1", "dim1");
-  private BloomFilterAggregatorFactory valueAggregatorFactory;
-  public BloomFilterAggregatorTest()
+  private static void createStringFilter(List<String[]> values, BloomKFilter filter, BloomKFilter combinedValuesFilter)
   {
-
-    valueAggregatorFactory = new BloomFilterAggregatorFactory(
-        "billy",
-        dimSpec,
-        maxNumValues
-    );
-
+    for (String[] vals : values) {
+      for (String val : vals) {
+        if (!NullHandling.replaceWithDefault() && val == null) {
+          filter.addBytes(null, 0, 0);
+          combinedValuesFilter.addBytes(null, 0, 0);
+        } else {
+          filter.addString(NullHandling.nullToEmptyIfNeeded(val));
+          combinedValuesFilter.addString(NullHandling.nullToEmptyIfNeeded(val));
+        }
+      }
+    }
   }
 
   private static List<String[]> dimensionValues(Object... values)
@@ -244,11 +226,21 @@ public class BloomFilterAggregatorTest
 
   private static String filterToString(BloomKFilter bloomKFilter) throws IOException
   {
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    BloomKFilter.serialize(byteArrayOutputStream, bloomKFilter);
-    byte[] bytes = byteArrayOutputStream.toByteArray();
-    return Base64.encodeBase64String(bytes);
+    return Base64.encodeBase64String(BloomFilterSerializersModule.bloomKFilterToBytes(bloomKFilter));
   }
+
+  private final DimensionSpec dimSpec = new DefaultDimensionSpec("dim1", "dim1");
+  private BloomFilterAggregatorFactory valueAggregatorFactory;
+
+  public BloomFilterAggregatorTest()
+  {
+    valueAggregatorFactory = new BloomFilterAggregatorFactory(
+        "billy",
+        dimSpec,
+        maxNumValues
+    );
+  }
+
 
   @Test
   public void testAggregateValues() throws IOException
