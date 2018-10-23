@@ -53,7 +53,9 @@ public class LikeOperatorConversion extends DirectOperatorConversion
   @Nullable
   @Override
   public DimFilter toDruidFilter(
-      PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
