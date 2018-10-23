@@ -45,6 +45,41 @@
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>net.nicoulaj.maven.plugins</groupId>
+                <artifactId>checksum-maven-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <id>dist-checksum</id>
+                        <goals>
+                            <goal>files</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <algorithms>
+                        <algorithm>SHA-512</algorithm>
+                    </algorithms>
+                    <csvSummary>false</csvSummary>
+                    <fileSets>
+                        <fileSet>
+                            <directory>${project.build.directory}</directory>
+                            <includes>
+                                <include>*-src.tar.gz</include>
+                                <include>*-bin.tar.gz</include>
+                            </includes>
+                        </fileSet>
+                    </fileSets>
+                    <failIfNoFiles>false</failIfNoFiles>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
     <profiles>
         <profile>
             <id>dist</id>
@@ -129,25 +164,66 @@
                                     </arguments>
                                 </configuration>
                             </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
                             <execution>
-                                <id>mysql-tarball</id>
+                                <id>distro-assembly</id>
                                 <phase>package</phase>
                                 <goals>
-                                    <goal>exec</goal>
+                                    <goal>single</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>tar</executable>
-                                    <arguments>
-                                        <argument>-C</argument>
-                                        <argument>${project.build.directory}/extensions</argument>
-                                        <argument>-czvf</argument>
-                                        <argument>
-                                            ${project.build.directory}/mysql-metadata-storage-${project.parent.version}.tar.gz
-                                        </argument>
-                                        <argument>mysql-metadata-storage</argument>
-                                    </arguments>
+                                    <finalName>apache-druid-${project.parent.version}</finalName>
+                                    <tarLongFileMode>posix</tarLongFileMode>
+                                    <descriptors>
+                                        <descriptor>src/assembly/assembly.xml</descriptor>
+                                    </descriptors>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>source-release-assembly-druid</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <finalName>apache-druid-${project.version}-src</finalName>
+                                    <tarLongFileMode>posix</tarLongFileMode>
+                                    <descriptors>
+                                        <descriptor>src/assembly/source-assembly.xml</descriptor>
+                                    </descriptors>
+                                    <appendAssemblyId>false</appendAssemblyId>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-licenses</id>
+                                <goals>
+                                    <goal>download-licenses</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>bundle-contrib-exts</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
                             <execution>
                                 <id>pull-deps-contrib-exts</id>
                                 <phase>package</phase>
@@ -217,38 +293,6 @@
                                         <argument>org.apache.druid.extensions.contrib:materialized-view-selection</argument>
                                     </arguments>
                                 </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>distro-assembly</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <finalName>${project.parent.artifactId}-${project.parent.version}</finalName>
-                                    <tarLongFileMode>posix</tarLongFileMode>
-                                    <descriptors>
-                                        <descriptor>src/assembly/assembly.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>license-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>download-licenses</id>
-                                <goals>
-                                    <goal>download-licenses</goal>
-                                </goals>
                             </execution>
                         </executions>
                     </plugin>

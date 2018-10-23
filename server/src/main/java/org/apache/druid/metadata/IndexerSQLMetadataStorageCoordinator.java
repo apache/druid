@@ -76,6 +76,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  */
@@ -116,52 +118,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(
-      final String dataSource, final List<Interval> intervals
-  )
+  public List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
   {
     return connector.retryWithHandle(
-        new HandleCallback<List<DataSegment>>()
-        {
-          @Override
-          public List<DataSegment> withHandle(Handle handle)
-          {
-            final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalsWithHandle(
-                handle,
-                dataSource,
-                intervals
-            );
+        handle -> {
+          final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalsWithHandle(
+              handle,
+              dataSource,
+              intervals
+          );
 
-            Set<DataSegment> segments = Sets.newHashSet(
-                Iterables.concat(
-                    Iterables.transform(
-                        Iterables.concat(
-                            Iterables.transform(
-                                intervals,
-                                new Function<Interval, Iterable<TimelineObjectHolder<String, DataSegment>>>()
-                                {
-                                  @Override
-                                  public Iterable<TimelineObjectHolder<String, DataSegment>> apply(Interval interval)
-                                  {
-                                    return timeline.lookup(interval);
-                                  }
-                                }
-                            )
-                        ),
-                        new Function<TimelineObjectHolder<String, DataSegment>, Iterable<DataSegment>>()
-                        {
-                          @Override
-                          public Iterable<DataSegment> apply(TimelineObjectHolder<String, DataSegment> input)
-                          {
-                            return input.getObject().payloads();
-                          }
-                        }
-                    )
-                )
-            );
-
-            return new ArrayList<>(segments);
-          }
+          return intervals
+              .stream()
+              .flatMap((Interval interval) -> timeline.lookup(interval).stream())
+              .flatMap(timelineObjectHolder -> {
+                return StreamSupport.stream(timelineObjectHolder.getObject().payloads().spliterator(), false);
+              })
+              .distinct()
+              .collect(Collectors.toList());
         }
     );
   }
@@ -276,9 +250,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return result.getSegments();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public SegmentPublishResult announceHistoricalSegments(
       final Set<DataSegment> segments,
@@ -387,26 +358,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(interval, "interval");
     Preconditions.checkNotNull(maxVersion, "maxVersion");
 
-    return connector.retryTransaction(
-        new TransactionCallback<SegmentIdWithShardSpec>()
-        {
-          @Override
-          public SegmentIdWithShardSpec inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-          {
-            return skipSegmentLineageCheck ?
-                   allocatePendingSegment(handle, dataSource, sequenceName, interval, maxVersion) :
-                   allocatePendingSegmentWithSegmentLineageCheck(
-                       handle,
-                       dataSource,
-                       sequenceName,
-                       previousSegmentId,
-                       interval,
-                       maxVersion
-                   );
+    return connector.retryWithHandle(
+        handle -> {
+          if (skipSegmentLineageCheck) {
+            return allocatePendingSegment(handle, dataSource, sequenceName, interval, maxVersion);
+          } else {
+            return allocatePendingSegmentWithSegmentLineageCheck(
+                handle,
+                dataSource,
+                sequenceName,
+                previousSegmentId,
+                interval,
+                maxVersion
+            );
           }
-        },
-        ALLOCATE_SEGMENT_QUIET_TRIES,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+        }
     );
   }
 

@@ -166,7 +166,7 @@ public class OverlordTest
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
-    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
+    druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
     taskMaster = new TaskMaster(
         new TaskQueueConfig(null, new Period(1), null, new Period(10)),

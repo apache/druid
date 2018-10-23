@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,6 +33,7 @@ import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionCallback;
+import org.skife.jdbi.v2.TransactionIsolationLevel;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.exceptions.DBIException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
@@ -47,6 +49,7 @@ import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
@@ -142,7 +145,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public <T> T retryTransaction(final TransactionCallback<T> callback, final int quietTries, final int maxTries)
   {
     try {
-      return RetryUtils.retry(() -> getDBI().inTransaction(callback), shouldRetry, quietTries, maxTries);
+      return RetryUtils.retry(() -> getDBI().inTransaction(TransactionIsolationLevel.READ_COMMITTED, callback), shouldRetry, quietTries, maxTries);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -636,7 +639,20 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     MetadataStorageConnectorConfig connectorConfig = getConfig();
 
-    BasicDataSource dataSource = new BasicDataSource();
+    BasicDataSource dataSource = null;
+
+    try {
+      Properties dbcpProperties = connectorConfig.getDbcpProperties();
+      if (dbcpProperties != null) {
+        dataSource = BasicDataSourceFactory.createDataSource(dbcpProperties);
+      } else {
+        dataSource = new BasicDataSource();
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
     dataSource.setUsername(connectorConfig.getUser());
     dataSource.setPassword(connectorConfig.getPassword());
     String uri = connectorConfig.getConnectURI();

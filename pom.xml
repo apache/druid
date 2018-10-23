@@ -23,9 +23,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.druid</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>2</version>
+        <groupId>org.apache</groupId>
+        <artifactId>apache</artifactId>
+        <version>21</version>
     </parent>
 
     <groupId>org.apache.druid</groupId>
@@ -33,9 +33,9 @@
     <version>0.13.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>${project.groupId}:${project.artifactId}</name>
+    <name>Druid</name>
     <description>Druid - A Distributed Column Store</description>
-    <url>http://druid.io/</url>
+    <url>https://druid.apache.org/</url>
 
     <licenses>
         <license>
@@ -51,6 +51,16 @@
         </developer>
     </developers>
 
+    <mailingLists>
+        <mailingList>
+            <name>Apache Druid (incubating) developers list</name>
+            <subscribe>dev-subscribe@druid.apache.org</subscribe>
+            <unsubscribe>dev-unsubscribe@druid.apache.org</unsubscribe>
+            <post>dev@druid.apache.org</post>
+            <archive>https://mail-archives.apache.org/mod_mbox/druid-dev</archive>
+        </mailingList>
+    </mailingLists>
+
     <inceptionYear>2011</inceptionYear>
 
     <scm>
@@ -61,7 +71,9 @@
     </scm>
 
     <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <apache.curator.version>4.0.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.10.0</avatica.version>
@@ -84,13 +96,13 @@
         <hadoop.compile.version>2.8.3</hadoop.compile.version>
         <hive.version>2.0.0</hive.version>
         <powermock.version>1.6.6</powermock.version>
-        <aws.sdk.bundle.version>1.11.199</aws.sdk.bundle.version>
+        <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
-        <repoOrgId>org-apache-id</repoOrgId>
-        <repoOrgName>org-apache-name</repoOrgName>
-        <repoOrgUrl>https://repository.apache.org/content/repositories/public/</repoOrgUrl>
+        <repoOrgId>apache.snapshots</repoOrgId>
+        <repoOrgName>Apache Snapshot Repository</repoOrgName>
+        <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
@@ -157,13 +169,13 @@
         <module>distribution</module>
     </modules>
 
-  <repositories>
-    <repository>
-        <id>${repoOrgId}</id>
-        <name>${repoOrgName}</name>
-        <url>${repoOrgUrl}</url>
-    </repository>
-  </repositories>
+    <repositories>
+        <repository>
+            <id>${repoOrgId}</id>
+            <name>${repoOrgName}</name>
+            <url>${repoOrgUrl}</url>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -195,8 +207,13 @@
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bundle</artifactId>
-                <version>${aws.sdk.bundle.version}</version>
+                <artifactId>aws-java-sdk-ec2</artifactId>
+                <version>${aws.sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-s3</artifactId>
+                <version>${aws.sdk.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
@@ -569,7 +586,7 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.4.0</version>
+                <version>1.5.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -1012,6 +1029,60 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
+                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
+                            <Build-Timestamp>${git.build.time}</Build-Timestamp>
+                            <Build-Version>${git.build.version}</Build-Version>
+                            <Build-Revision>${git.commit.id}</Build-Revision>
+                            <Build-Revision-Describe>${git.commit.id.describe}</Build-Revision-Describe>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>2.2.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+                    <dateFormatTimeZone>Etc/UTC</dateFormatTimeZone>
+                    <skipPoms>false</skipPoms>
+                    <format>json</format>
+                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                    <generateGitPropertiesFilename>${project.build.directory}/git.version</generateGitPropertiesFilename>
+                    <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <excludeProperties>
+                        <excludeProperty>git.build.user.email</excludeProperty>
+                        <excludeProperty>git.build.host</excludeProperty>
+                        <excludeProperty>git.commit.id.describe-short</excludeProperty>
+                        <excludeProperty>git.commit.user.*</excludeProperty>
+                        <excludeProperty>git.commit.message.*</excludeProperty>
+                        <excludeProperty>git.closest.tag.*</excludeProperty>
+                        <excludeProperty>git.commit.id.abbrev</excludeProperty>
+                        <excludeProperty>git.dirty</excludeProperty>
+                    </excludeProperties>
+                    <gitDescribe>
+                        <skip>false</skip>
+                        <always>true</always>
+                        <abbrev>7</abbrev>
+                        <dirty>-dirty</dirty>
+                        <forceLongFormat>true</forceLongFormat>
+                    </gitDescribe>
+                </configuration>
+            </plugin>            
         </plugins>
         <pluginManagement>
             <plugins>
@@ -1106,7 +1177,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>2.5.5</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -1121,6 +1192,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.10.1</version>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
                         <additionalparam>-Xdoclint:none</additionalparam>
@@ -1151,9 +1223,19 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <source>${maven.compiler.target}</source>
+                        <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
                     </configuration>
+                </plugin>
+                <!-- Prevent the process-resource-bundles execution defined in the Apache parent POM from running -->
+                <plugin>
+                    <artifactId>maven-remote-resources-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>process-resource-bundles</id>
+                            <phase>none</phase>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -1173,7 +1255,7 @@
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
-                            <source>${maven.compiler.target}</source>
+                            <source>${maven.compiler.source}</source>
                             <target>${maven.compiler.target}</target>
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
@@ -1291,7 +1373,7 @@
                             <licenses>
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>MIT</licenseFamilyCategory>
-                                    <licenseFamilyName>MIT JQyery</licenseFamilyName>
+                                    <licenseFamilyName>MIT JQuery</licenseFamilyName>
                                     <notes></notes>
                                     <patterns>
                                         <pattern>Copyright 2012 jQuery Foundation and other contributors; Licensed MIT</pattern>
@@ -1328,7 +1410,7 @@
 
                             <licenseFamilies>
                                 <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
-                                    <familyName>MIT JQyery</familyName>
+                                    <familyName>MIT JQuery</familyName>
                                 </licenseFamily>
                                 <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
                                     <familyName>Underscore</familyName>
@@ -1371,6 +1453,23 @@
                                 <exclude>**/hs_err_pid*.log</exclude>
                             </excludes>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- Prevent the source-release-assembly execution defined in the Apache parent POM from running so we can control it ourselves -->
+        <profile>
+            <id>apache-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>source-release-assembly</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>

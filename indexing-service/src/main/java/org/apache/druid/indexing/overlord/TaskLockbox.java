@@ -607,11 +607,7 @@ public class TaskLockbox
    * @param intervals intervals
    * @param action    action to be performed inside of the critical section
    */
-  public <T> T doInCriticalSection(
-      Task task,
-      List<Interval> intervals,
-      CriticalAction<T> action
-  ) throws Exception
+  public <T> T doInCriticalSection(Task task, List<Interval> intervals, CriticalAction<T> action) throws Exception
   {
     giant.lockInterruptibly();
 
