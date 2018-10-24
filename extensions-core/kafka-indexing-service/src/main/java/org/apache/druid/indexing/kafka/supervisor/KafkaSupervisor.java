@@ -2465,7 +2465,12 @@ public class KafkaSupervisor implements Supervisor
         maxMsgTime
     );
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
-    taskGroups.putIfAbsent(taskGroupId, group);
+    if (taskGroups.putIfAbsent(taskGroupId, group) != null) {
+      throw new ISE(
+          "trying to add taskGroup with ID [%s] to actively reading task groups, but group already exists.",
+          taskGroupId
+      );
+    }
   }
 
   @VisibleForTesting
