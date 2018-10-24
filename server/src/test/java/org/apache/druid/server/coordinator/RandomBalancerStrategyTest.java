@@ -48,9 +48,9 @@ public class RandomBalancerStrategyTest
   /**
    * Create Druid cluster with serverCount servers having maxSegments segments each with currentSize per server is 3000L,
    * and 1 server with (maxSegments - 2) segment with currentSize is 1000L
-   *
+   * <p>
    * Random Balancer Strategy should rebalance the segment to the server with less PercentUsed.
-   *
+   * <p>
    * Avg used percent is 0.281818182
    * Used percent of BEST_SERVER is 0.1
    */
@@ -124,8 +124,15 @@ public class RandomBalancerStrategyTest
   {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
-        dataSource, interval, String.valueOf(index), new ConcurrentHashMap<>(),
-        new ArrayList<>(), new ArrayList<>(), null, 0, index * 100L
+        dataSource,
+        interval,
+        String.valueOf(index),
+        new ConcurrentHashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        null,
+        0,
+        index * 100L
     );
     return segment;
   }
