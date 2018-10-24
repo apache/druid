@@ -200,6 +200,7 @@ public class ArrayOfDoublesSketchAggregationTest
             "      \"name\": \"union\",",
             "      \"operation\": \"UNION\",",
             "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 2,",
             "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
             "    }},",
             "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
