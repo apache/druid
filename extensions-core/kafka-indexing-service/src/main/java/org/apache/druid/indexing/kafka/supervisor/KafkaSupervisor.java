@@ -2416,21 +2416,21 @@ public class KafkaSupervisor implements Supervisor
     }
 
     for (int groupId : pendingCompletionTaskGroups.keySet()) {
-      TaskGroup group = taskGroups.get(groupId);
-      for (String taskId : group.taskIds()) {
-        futures.add(
-            Futures.transform(
-                taskClient.getMovingAveragesAsync(taskId),
-                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
-                  return new StatsFromTaskResult(
+      List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
+      for (TaskGroup pendingGroup : pendingGroups) {
+        for (String taskId : pendingGroup.taskIds()) {
+          futures.add(
+              Futures.transform(
+                  taskClient.getMovingAveragesAsync(taskId),
+                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                       groupId,
                       taskId,
                       currentStats
-                  );
-                }
-            )
-        );
-        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+                  )
+              )
+          );
+          groupAndTaskIds.add(new Pair<>(groupId, taskId));
+        }
       }
     }
 
