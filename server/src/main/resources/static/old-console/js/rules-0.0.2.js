@@ -24,6 +24,7 @@ var ruleTypes = [
   "loadByPeriod",
   "dropByInterval",
   "dropByPeriod",
+  "dropBeforeByPeriod",
   "loadForever",
   "dropForever",
   "JSON"
@@ -83,6 +84,9 @@ function makeRuleBody(rule) {
         break;
       case "dropByPeriod":
         retVal += makeDropByPeriod(rule);
+        break;
+      case "dropBeforeByPeriod":
+        retVal += makeDropBeforeByPeriod(rule);
         break;
       case "dropForever":
         retVal += "";
@@ -148,6 +152,10 @@ function makeDropByInterval(rule) {
 }
 
 function makeDropByPeriod(rule) {
+  return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
+}
+
+function makeDropBeforeByPeriod(rule) {
   return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
 }
 
