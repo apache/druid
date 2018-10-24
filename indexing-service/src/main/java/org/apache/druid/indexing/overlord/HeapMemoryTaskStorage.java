@@ -183,7 +183,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     try {
       final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : tasks.values()) {
-        if (taskStuff.getStatus().isRunnable() && taskStuff.getTask() != null) {
+        if (taskStuff.getStatus().isRunnable()) {
           listBuilder.add(taskStuff.getTask());
         }
       }
