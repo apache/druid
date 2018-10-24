@@ -23,17 +23,15 @@ import argparse
 import base64
 import collections
 import csv
+import errno
 import json
 import numbers
 import re
 import ssl
-import urllib2
-
-import errno
 import sys
 import time
 import unicodedata
-
+import urllib2
 
 class DruidSqlException(Exception):
   def write_to(self, f):

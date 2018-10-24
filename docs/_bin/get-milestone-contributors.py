@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import json
+import sys
 
 import requests
-import sys
 
 # tested with python 3.6 and requests 2.13.0
 

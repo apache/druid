@@ -20,7 +20,6 @@
 package org.apache.druid.server.http;
 
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.annotations.Global;
@@ -28,6 +27,7 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.security.AuthConfig;
+import com.google.inject.Provider;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.proxy.ProxyServlet;

@@ -21,7 +21,6 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
-
 import java.util.Properties;
 
 /**
