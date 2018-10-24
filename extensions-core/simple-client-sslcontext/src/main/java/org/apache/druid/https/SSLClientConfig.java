@@ -57,6 +57,9 @@ public class SSLClientConfig
   @JsonProperty
   private String keyManagerFactoryAlgorithm;
 
+  @JsonProperty
+  private Boolean validateHostnames;
+
   public String getProtocol()
   {
     return protocol;
@@ -112,6 +115,11 @@ public class SSLClientConfig
     return keyManagerFactoryAlgorithm;
   }
 
+  public Boolean getValidateHostnames()
+  {
+    return validateHostnames;
+  }
+
   @Override
   public String toString()
   {
@@ -124,6 +132,7 @@ public class SSLClientConfig
            ", keyStoreType='" + keyStoreType + '\'' +
            ", certAlias='" + certAlias + '\'' +
            ", keyManagerFactoryAlgorithm='" + keyManagerFactoryAlgorithm + '\'' +
+           ", validateHostnames='" + validateHostnames + '\'' +
            '}';
   }
 }
