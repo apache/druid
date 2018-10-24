@@ -28,9 +28,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -63,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  */
@@ -192,7 +191,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
-        final Set<String> metrics = Sets.newTreeSet();
+        final Set<String> metrics = new TreeSet<>();
         if (query.getMetrics() != null) {
           metrics.addAll(query.getMetrics());
         }
@@ -394,7 +393,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     }
     Collections.sort(intervals, comparator);
 
-    TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();
+    TreeMap<Long, Long> granularThresholds = new TreeMap<>();
     for (Interval interval : intervals) {
       if (query.isDescending()) {
         long granularEnd = granularity.bucketStart(interval.getEnd()).getMillis();

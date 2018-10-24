@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -140,8 +138,10 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -607,7 +607,7 @@ public class RealtimeIndexTaskTest
       Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
       // Nothing should be published.
-      Assert.assertEquals(Sets.newHashSet(), mdc.getPublished());
+      Assert.assertEquals(new HashSet<>(), mdc.getPublished());
     }
 
     // Second run:
@@ -795,7 +795,7 @@ public class RealtimeIndexTaskTest
       Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
       // Nothing should be published.
-      Assert.assertEquals(Sets.newHashSet(), mdc.getPublished());
+      Assert.assertEquals(new HashSet<>(), mdc.getPublished());
     }
 
     // Corrupt the data:
@@ -1061,7 +1061,7 @@ public class RealtimeIndexTaskTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
     };
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(

@@ -21,10 +21,12 @@ import argparse
 import base64
 import json
 import re
-import sys
-import time
 import urllib2
 import urlparse
+
+import sys
+import time
+
 
 def read_task_file(args):
   with open(args.file, 'r') as f:

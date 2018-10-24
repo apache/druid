@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -80,8 +79,8 @@ public class LocalFirehoseFactoryTest
             ),
             new DimensionsSpec(
                 DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a")),
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             ",",
             Arrays.asList("timestamp", "a"),

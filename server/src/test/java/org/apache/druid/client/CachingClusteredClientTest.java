@@ -31,7 +31,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
@@ -651,7 +650,7 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09T00"), 18, 521,
             DateTimes.of("2011-01-09T02"), 181, 52
         ),
-        runner.run(QueryPlus.wrap(query), Maps.newHashMap())
+        runner.run(QueryPlus.wrap(query), new HashMap<>())
     );
   }
 
@@ -1847,7 +1846,7 @@ public class CachingClusteredClientTest
     parseResults(queryIntervals, expectedResults, args);
 
     for (int i = 0; i < queryIntervals.size(); ++i) {
-      List<Object> mocks = Lists.newArrayList();
+      List<Object> mocks = new ArrayList<>();
       mocks.add(serverView);
 
       final Interval actualQueryInterval = new Interval(
@@ -1877,8 +1876,8 @@ public class CachingClusteredClientTest
         QueryRunner queryable = expectations.getQueryRunner();
 
         if (query instanceof TimeseriesQuery) {
-          final List<String> segmentIds = Lists.newArrayList();
-          final List<Iterable<Result<TimeseriesResultValue>>> results = Lists.newArrayList();
+          final List<String> segmentIds = new ArrayList<>();
+          final List<Iterable<Result<TimeseriesResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
             segmentIds.add(expectation.getSegmentId());
             results.add(expectation.getResults());
@@ -1945,7 +1944,7 @@ public class CachingClusteredClientTest
   )
   {
     MultipleSpecificSegmentSpec spec = (MultipleSpecificSegmentSpec) query.getQuerySegmentSpec();
-    List<Result<TimeseriesResultValue>> ret = Lists.newArrayList();
+    List<Result<TimeseriesResultValue>> ret = new ArrayList<>();
     for (SegmentDescriptor descriptor : spec.getDescriptors()) {
       String id = StringUtils.format("%s_%s", queryIntervals.indexOf(descriptor.getInterval()), descriptor.getPartitionNumber());
       int index = segmentIds.indexOf(id);
@@ -1986,7 +1985,7 @@ public class CachingClusteredClientTest
     parseResults(queryIntervals, expectedResults, args);
 
     for (int i = 0; i < queryIntervals.size(); ++i) {
-      List<Object> mocks = Lists.newArrayList();
+      List<Object> mocks = new ArrayList<>();
       mocks.add(serverView);
 
       final Interval actualQueryInterval = new Interval(
@@ -2000,7 +1999,7 @@ public class CachingClusteredClientTest
           mocks
       );
 
-      List<Capture> queryCaptures = Lists.newArrayList();
+      List<Capture> queryCaptures = new ArrayList<>();
       final Map<DruidServer, ServerExpectations> finalExpectation = serverExpectationList.get(
           serverExpectationList.size() - 1
       );
@@ -2019,9 +2018,9 @@ public class CachingClusteredClientTest
         QueryRunner queryable = expectations.getQueryRunner();
 
         if (query instanceof TimeseriesQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<TimeseriesResultValue>>> results = Lists.newArrayList();
+          List<String> segmentIds = new ArrayList<>();
+          List<Interval> intervals = new ArrayList<>();
+          List<Iterable<Result<TimeseriesResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
             segmentIds.add(expectation.getSegmentId());
             intervals.add(expectation.getInterval());
@@ -2032,9 +2031,9 @@ public class CachingClusteredClientTest
                   .once();
 
         } else if (query instanceof TopNQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<TopNResultValue>>> results = Lists.newArrayList();
+          List<String> segmentIds = new ArrayList<>();
+          List<Interval> intervals = new ArrayList<>();
+          List<Iterable<Result<TopNResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
             segmentIds.add(expectation.getSegmentId());
             intervals.add(expectation.getInterval());
@@ -2044,9 +2043,9 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof SearchQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<SearchResultValue>>> results = Lists.newArrayList();
+          List<String> segmentIds = new ArrayList<>();
+          List<Interval> intervals = new ArrayList<>();
+          List<Iterable<Result<SearchResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
             segmentIds.add(expectation.getSegmentId());
             intervals.add(expectation.getInterval());
@@ -2056,9 +2055,9 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof SelectQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<SelectResultValue>>> results = Lists.newArrayList();
+          List<String> segmentIds = new ArrayList<>();
+          List<Interval> intervals = new ArrayList<>();
+          List<Iterable<Result<SelectResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
             segmentIds.add(expectation.getSegmentId());
             intervals.add(expectation.getInterval());
@@ -2068,9 +2067,9 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableSelectResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof GroupByQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Row>> results = Lists.newArrayList();
+          List<String> segmentIds = new ArrayList<>();
+          List<Interval> intervals = new ArrayList<>();
+          List<Iterable<Row>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
             segmentIds.add(expectation.getSegmentId());
             intervals.add(expectation.getInterval());
@@ -2080,9 +2079,9 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableGroupByResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof TimeBoundaryQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<TimeBoundaryResultValue>>> results = Lists.newArrayList();
+          List<String> segmentIds = new ArrayList<>();
+          List<Interval> intervals = new ArrayList<>();
+          List<Iterable<Result<TimeBoundaryResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
             segmentIds.add(expectation.getSegmentId());
             intervals.add(expectation.getInterval());
@@ -2125,7 +2124,7 @@ public class CachingClusteredClientTest
                                   @Override
                                   public Iterable<Iterable<Result<Object>>> apply(@Nullable Integer input)
                                   {
-                                    List<Iterable<Result<Object>>> retVal = Lists.newArrayList();
+                                    List<Iterable<Result<Object>>> retVal = new ArrayList<>();
 
                                     final Map<DruidServer, ServerExpectations> exps = serverExpectationList.get(input);
                                     for (ServerExpectations expectations : exps.values()) {
@@ -2182,11 +2181,11 @@ public class CachingClusteredClientTest
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());
 
-    final List<Map<DruidServer, ServerExpectations>> serverExpectationList = Lists.newArrayList();
+    final List<Map<DruidServer, ServerExpectations>> serverExpectationList = new ArrayList<>();
 
     for (int k = 0; k < numQueryIntervals + 1; ++k) {
       final int numChunks = expectedResults.get(k).size();
-      final TreeMap<DruidServer, ServerExpectations> serverExpectations = Maps.newTreeMap();
+      final TreeMap<DruidServer, ServerExpectations> serverExpectations = new TreeMap<>();
       serverExpectationList.add(serverExpectations);
       for (int j = 0; j < numChunks; ++j) {
         DruidServer lastServer = servers[random.nextInt(servers.length)];
@@ -2524,12 +2523,12 @@ public class CachingClusteredClientTest
   private Iterable<Result<TopNResultValue>> makeTopNResults(List<String> names, Object... objects)
   {
     Preconditions.checkArgument(names.size() == 7);
-    List<Result<TopNResultValue>> retVal = Lists.newArrayList();
+    List<Result<TopNResultValue>> retVal = new ArrayList<>();
     int index = 0;
     while (index < objects.length) {
       DateTime timestamp = (DateTime) objects[index++];
 
-      List<Map<String, Object>> values = Lists.newArrayList();
+      List<Map<String, Object>> values = new ArrayList<>();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
         if (objects.length - index < 3) {
           throw new ISE(
@@ -2575,12 +2574,12 @@ public class CachingClusteredClientTest
 
   private Iterable<Result<SearchResultValue>> makeSearchResults(String dim, Object... objects)
   {
-    List<Result<SearchResultValue>> retVal = Lists.newArrayList();
+    List<Result<SearchResultValue>> retVal = new ArrayList<>();
     int index = 0;
     while (index < objects.length) {
       DateTime timestamp = (DateTime) objects[index++];
 
-      List<SearchHit> values = Lists.newArrayList();
+      List<SearchHit> values = new ArrayList<>();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
         values.add(new SearchHit(dim, objects[index++].toString(), (Integer) objects[index++]));
       }
@@ -2596,12 +2595,12 @@ public class CachingClusteredClientTest
       Object... objects
   )
   {
-    List<Result<SelectResultValue>> retVal = Lists.newArrayList();
+    List<Result<SelectResultValue>> retVal = new ArrayList<>();
     int index = 0;
     while (index < objects.length) {
       DateTime timestamp = (DateTime) objects[index++];
 
-      List<EventHolder> values = Lists.newArrayList();
+      List<EventHolder> values = new ArrayList<>();
 
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
         values.add(new EventHolder(null, 0, (Map) objects[index++]));
@@ -2618,7 +2617,7 @@ public class CachingClusteredClientTest
 
   private Iterable<Row> makeGroupByResults(Object... objects)
   {
-    List<Row> retVal = Lists.newArrayList();
+    List<Row> retVal = new ArrayList<>();
     int index = 0;
     while (index < objects.length) {
       DateTime timestamp = (DateTime) objects[index++];
@@ -2897,7 +2896,7 @@ public class CachingClusteredClientTest
   {
     private final DruidServer server;
     private final QueryRunner queryRunner;
-    private final List<ServerExpectation> expectations = Lists.newArrayList();
+    private final List<ServerExpectation> expectations = new ArrayList<>();
 
     public ServerExpectations(
         DruidServer server,

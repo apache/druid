@@ -21,7 +21,6 @@ package org.apache.druid.security.basic;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,6 +40,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 
 public class BasicAuthUtils
@@ -150,7 +150,7 @@ public class BasicAuthUtils
   {
     Map<String, BasicAuthenticatorUser> userMap;
     if (userMapBytes == null) {
-      userMap = Maps.newHashMap();
+      userMap = new HashMap<>();
     } else {
       try {
         userMap = objectMapper.readValue(userMapBytes, AUTHENTICATOR_USER_MAP_TYPE_REFERENCE);
@@ -182,7 +182,7 @@ public class BasicAuthUtils
   {
     Map<String, BasicAuthorizerUser> userMap;
     if (userMapBytes == null) {
-      userMap = Maps.newHashMap();
+      userMap = new HashMap<>();
     } else {
       try {
         userMap = objectMapper.readValue(userMapBytes, BasicAuthUtils.AUTHORIZER_USER_MAP_TYPE_REFERENCE);
@@ -211,7 +211,7 @@ public class BasicAuthUtils
   {
     Map<String, BasicAuthorizerRole> roleMap;
     if (roleMapBytes == null) {
-      roleMap = Maps.newHashMap();
+      roleMap = new HashMap<>();
     } else {
       try {
         roleMap = objectMapper.readValue(roleMapBytes, BasicAuthUtils.AUTHORIZER_ROLE_MAP_TYPE_REFERENCE);

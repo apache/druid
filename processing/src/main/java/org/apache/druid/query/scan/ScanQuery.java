@@ -21,7 +21,6 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
@@ -31,6 +30,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -244,7 +244,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       batchSize = 0;
       limit = 0;
       dimFilter = null;
-      columns = Lists.newArrayList();
+      columns = new ArrayList<>();
       legacy = null;
     }
 

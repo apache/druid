@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -43,7 +44,7 @@ public class MappedSequenceTest
     };
 
     for (int i = 4; i < 5; ++i) {
-      List<Integer> vals = Lists.newArrayList();
+      List<Integer> vals = new ArrayList<>();
       for (int j = 0; j < i; ++j) {
         vals.add(j);
       }

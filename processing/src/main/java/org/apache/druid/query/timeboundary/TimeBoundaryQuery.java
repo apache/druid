@@ -21,8 +21,6 @@ package org.apache.druid.query.timeboundary;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -38,6 +36,8 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -128,8 +128,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   public Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
   {
-    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
-    Map<String, Object> result = Maps.newHashMap();
+    List<Result<TimeBoundaryResultValue>> results = new ArrayList<>();
+    Map<String, Object> result = new HashMap<>();
 
     if (min != null) {
       result.put(MIN_TIME, min);
@@ -147,7 +147,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   public Iterable<Result<TimeBoundaryResultValue>> mergeResults(List<Result<TimeBoundaryResultValue>> results)
   {
     if (results == null || results.isEmpty()) {
-      return Lists.newArrayList();
+      return new ArrayList<>();
     }
 
     DateTime min = DateTimes.MAX;

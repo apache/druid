@@ -20,8 +20,6 @@
 package org.apache.druid.java.util.http.client;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,8 +33,10 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,13 +49,13 @@ public class Request
   private final HttpMethod method;
   private final URL url;
   private final Multimap<String, String> headers = Multimaps.newListMultimap(
-      Maps.newHashMap(),
+      new HashMap<>(),
       new Supplier<List<String>>()
       {
         @Override
         public List<String> get()
         {
-          return Lists.newArrayList();
+          return new ArrayList<>();
         }
       }
   );

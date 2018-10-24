@@ -22,13 +22,13 @@ package org.apache.druid.query.aggregation.post;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,7 +52,7 @@ public class ConstantPostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    return Sets.newHashSet();
+    return new HashSet<>();
   }
 
   @Override

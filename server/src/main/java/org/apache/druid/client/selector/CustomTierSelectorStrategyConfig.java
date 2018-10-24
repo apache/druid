@@ -20,8 +20,8 @@
 package org.apache.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -29,7 +29,7 @@ import java.util.List;
 public class CustomTierSelectorStrategyConfig
 {
   @JsonProperty
-  private List<Integer> priorities = Lists.newArrayList();
+  private List<Integer> priorities = new ArrayList<>();
 
   public List<Integer> getPriorities()
   {

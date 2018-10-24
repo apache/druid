@@ -12,3 +12,16 @@ java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor w
 com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.databind.JavaType) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(java.lang.Class) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.core.type.TypeReference) @ Use ObjectMapper#readerFor instead
+com.google.common.collect.Lists#newArrayList() @ Create java.util.ArrayList directly
+com.google.common.collect.Maps#newHashMap() @ Create java.util.HashMap directly
+com.google.common.collect.Maps#newHashMap(java.util.Map) @ Create java.util.HashMap directly
+com.google.common.collect.Maps#newTreeMap() @ Create java.util.TreeMap directly
+com.google.common.collect.Maps#newTreeMap(java.util.Comparator) @ Create java.util.TreeMap directly
+com.google.common.collect.Maps#newTreeMap(java.util.SortedMap) @ Create java.util.TreeMap directly
+com.google.common.collect.Queues#newArrayDeque() @ Create java.util.ArrayDeque directly
+com.google.common.collect.Queues#newConcurrentLinkedQueue() @ Create java.util.concurrent.ConcurrentLinkedQueue directly
+com.google.common.collect.Queues#newLinkedBlockingQueue() @ Create java.util.concurrent.LinkedBlockingQueue directly
+com.google.common.collect.Sets#newHashSet() @ Create java.util.HashSet directly
+com.google.common.collect.Sets#newTreeSet() @ Create java.util.TreeSet directly
+com.google.common.collect.Sets#newTreeSet(java.util.Comparator) @ Create java.util.TreeSet directly
+com.google.common.collect.Sets#newLinkedHashSet() @ Create java.util.LinkedHashSet directly

@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -29,6 +28,7 @@ import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +41,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   private static final int GROUP_BY_MISSING_VALUE = -1;
 
   private int nextId = 0;
-  private final List<String> dictionary = Lists.newArrayList();
+  private final List<String> dictionary = new ArrayList<>();
   private final Object2IntOpenHashMap<String> reverseDictionary = new Object2IntOpenHashMap<>();
   {
     reverseDictionary.defaultReturnValue(-1);

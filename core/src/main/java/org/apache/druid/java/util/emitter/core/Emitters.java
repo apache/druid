@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -51,7 +50,7 @@ public class Emitters
       Lifecycle lifecycle
   )
   {
-    Map<String, Object> jsonified = Maps.newHashMap();
+    Map<String, Object> jsonified = new HashMap<>();
     if (props.getProperty(LOG_EMITTER_PROP) != null) {
       jsonified = makeLoggingMap(props);
       jsonified.put("type", "logging");
@@ -75,7 +74,7 @@ public class Emitters
 
   static Map<String, Object> makeHttpMap(Properties props)
   {
-    Map<String, Object> httpMap = Maps.newHashMap();
+    Map<String, Object> httpMap = new HashMap<>();
 
     final String urlProperty = "org.apache.druid.java.util.emitter.http.url";
 
@@ -133,7 +132,7 @@ public class Emitters
   // Package-visible for unit tests
   static Map<String, Object> makeLoggingMap(Properties props)
   {
-    Map<String, Object> loggingMap = Maps.newHashMap();
+    Map<String, Object> loggingMap = new HashMap<>();
 
     loggingMap.put(
         "loggerClass", props.getProperty("org.apache.druid.java.util.emitter.logging.class", LoggingEmitter.class.getName())
@@ -146,7 +145,7 @@ public class Emitters
 
   static Map<String, Object> makeCustomFactoryMap(Properties props)
   {
-    Map<String, Object> factoryMap = Maps.newHashMap();
+    Map<String, Object> factoryMap = new HashMap<>();
     String prefix = "org.apache.druid.java.util.emitter.";
 
     for (Map.Entry<Object, Object> entry : props.entrySet()) {

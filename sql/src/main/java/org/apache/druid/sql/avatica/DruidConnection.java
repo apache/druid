@@ -85,7 +85,7 @@ public class DruidConnection
 
       // remove sensitive fields from the context, only the connection's context needs to have authentication
       // credentials
-      Map<String, Object> sanitizedContext = Maps.newHashMap();
+      Map<String, Object> sanitizedContext = new HashMap<>();
       sanitizedContext = Maps.filterEntries(
           context,
           new Predicate<Map.Entry<String, Object>>()

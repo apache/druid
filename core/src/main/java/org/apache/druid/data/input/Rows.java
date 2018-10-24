@@ -21,7 +21,6 @@ package org.apache.druid.data.input;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -47,7 +47,7 @@ public class Rows
    */
   public static List<Object> toGroupKey(long timeStamp, InputRow inputRow)
   {
-    final Map<String, Set<String>> dims = Maps.newTreeMap();
+    final Map<String, Set<String>> dims = new TreeMap<>();
     for (final String dim : inputRow.getDimensions()) {
       final Set<String> dimValues = ImmutableSortedSet.copyOf(inputRow.getDimension(dim));
       if (dimValues.size() > 0) {

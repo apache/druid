@@ -24,8 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
@@ -75,10 +73,13 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -156,8 +157,8 @@ public class IndexMergerV9 implements IndexMerger
       log.info("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 
       progress.progress();
-      final Map<String, ValueType> metricsValueTypes = Maps.newTreeMap(Comparators.<String>naturalNullsFirst());
-      final Map<String, String> metricTypeNames = Maps.newTreeMap(Comparators.<String>naturalNullsFirst());
+      final Map<String, ValueType> metricsValueTypes = new TreeMap<>(Comparators.naturalNullsFirst());
+      final Map<String, String> metricTypeNames = new TreeMap<>(Comparators.naturalNullsFirst());
       final List<ColumnCapabilitiesImpl> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
       mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
 
@@ -270,8 +271,8 @@ public class IndexMergerV9 implements IndexMerger
     progress.startSection(section);
 
     long startTime = System.currentTimeMillis();
-    final Set<String> finalDimensions = Sets.newLinkedHashSet();
-    final Set<String> finalColumns = Sets.newLinkedHashSet();
+    final Set<String> finalDimensions = new LinkedHashSet<>();
+    final Set<String> finalColumns = new LinkedHashSet<>();
     finalColumns.addAll(mergedMetrics);
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       if (mergers.get(i).canSkip()) {
@@ -707,7 +708,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<ColumnCapabilitiesImpl> dimCapabilities
   )
   {
-    final Map<String, ColumnCapabilitiesImpl> capabilitiesMap = Maps.newHashMap();
+    final Map<String, ColumnCapabilitiesImpl> capabilitiesMap = new HashMap<>();
     for (IndexableAdapter adapter : adapters) {
       for (String dimension : adapter.getDimensionNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(dimension);

@@ -19,11 +19,11 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.collect.Lists;
 import junit.framework.Assert;
 import org.apache.druid.java.util.common.parsers.Parser;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -40,8 +40,8 @@ public class JSONLowercaseParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("A", "B")),
-            Lists.newArrayList(),
-            Lists.newArrayList()
+            new ArrayList<>(),
+            new ArrayList<>()
         )
     );
     Parser parser = spec.makeParser();

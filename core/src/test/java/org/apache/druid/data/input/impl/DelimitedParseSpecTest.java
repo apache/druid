@@ -20,12 +20,12 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import org.apache.druid.TestObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -70,8 +70,8 @@ public class DelimitedParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            Lists.newArrayList(),
-            Lists.newArrayList()
+            new ArrayList<>(),
+            new ArrayList<>()
         ),
         ",",
         " ",
@@ -93,8 +93,8 @@ public class DelimitedParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")),
-            Lists.newArrayList(),
-            Lists.newArrayList()
+            new ArrayList<>(),
+            new ArrayList<>()
         ),
         ",",
         null,
@@ -116,8 +116,8 @@ public class DelimitedParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            Lists.newArrayList(),
-            Lists.newArrayList()
+            new ArrayList<>(),
+            new ArrayList<>()
         ),
         ",",
         null,

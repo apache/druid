@@ -2,7 +2,9 @@
 
 import json
 import os
+
 import sys
+
 
 def normalize_target(redirect):
   dirname = os.path.dirname(redirect["source"])

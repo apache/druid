@@ -24,8 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
@@ -73,6 +71,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -167,7 +166,7 @@ public abstract class BaseFilterTest
 
   public static Collection<Object[]> makeConstructors()
   {
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
 
     final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.of(
         "concise", new ConciseBitmapSerdeFactory(),
@@ -274,7 +273,7 @@ public abstract class BaseFilterTest
                 .getColumnSelectorFactory()
                 .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-            final List<String> values = Lists.newArrayList();
+            final List<String> values = new ArrayList<>();
 
             while (!input.isDone()) {
               IndexedInts row = selector.getRow();
@@ -367,7 +366,7 @@ public abstract class BaseFilterTest
                 .getColumnSelectorFactory()
                 .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-            final List<String> values = Lists.newArrayList();
+            final List<String> values = new ArrayList<>();
 
             while (!input.isDone()) {
               IndexedInts row = selector.getRow();
@@ -389,7 +388,7 @@ public abstract class BaseFilterTest
   )
   {
     // Generate rowType
-    final Map<String, ValueType> rowSignature = Maps.newHashMap();
+    final Map<String, ValueType> rowSignature = new HashMap<>();
     for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
       rowSignature.put(columnName, adapter.getColumnCapabilities(columnName).getType());
     }
@@ -399,7 +398,7 @@ public abstract class BaseFilterTest
     final ValueMatcher matcher = makeFilter(filter).makeMatcher(
         VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature))
     );
-    final List<String> values = Lists.newArrayList();
+    final List<String> values = new ArrayList<>();
     for (InputRow row : rows) {
       rowSupplier.set(row);
       if (matcher.matches()) {

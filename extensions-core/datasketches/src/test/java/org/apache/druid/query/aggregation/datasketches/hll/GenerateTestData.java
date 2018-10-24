@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.yahoo.sketches.hll.HllSketch;
+import org.apache.commons.codec.binary.Base64;
+
 import java.io.BufferedWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
@@ -26,10 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
-import org.apache.commons.codec.binary.Base64;
-
-import com.yahoo.sketches.hll.HllSketch;
 
 // This is used for generating test data for HllSketchAggregatorTest
 class GenerateTestData

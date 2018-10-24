@@ -21,7 +21,6 @@ package org.apache.druid.indexer.hadoop;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +86,7 @@ public class DatasourceRecordReaderTest
 
     Assert.assertEquals(0, rr.getProgress(), 0.0001);
 
-    List<InputRow> rows = Lists.newArrayList();
+    List<InputRow> rows = new ArrayList<>();
     while (rr.nextKeyValue()) {
       rows.add(rr.getCurrentValue());
     }

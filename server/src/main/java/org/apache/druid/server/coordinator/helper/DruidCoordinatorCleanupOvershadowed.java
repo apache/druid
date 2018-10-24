@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.helper;
 
-import com.google.common.collect.Maps;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -31,6 +30,7 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
 
@@ -52,7 +52,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
     // Unservice old partitions if we've had enough time to make sure we aren't flapping with old data
     if (params.hasDeletionWaitTimeElapsed()) {
       DruidCluster cluster = params.getDruidCluster();
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = Maps.newHashMap();
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
 
       for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
         for (ServerHolder serverHolder : serverHolders) {

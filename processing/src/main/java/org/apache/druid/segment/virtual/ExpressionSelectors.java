@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -48,6 +47,7 @@ import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -237,7 +237,7 @@ public class ExpressionSelectors
 
   private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory)
   {
-    final Map<String, Supplier<Object>> suppliers = Maps.newHashMap();
+    final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     for (String columnName : Parser.findRequiredBindings(expression)) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);

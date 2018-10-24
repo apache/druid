@@ -22,7 +22,6 @@ package org.apache.druid.firehose.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.Committer;
@@ -38,6 +37,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -123,7 +123,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 
   private Map<Integer, Long> loadOffsetFromPreviousMetaData(Object lastCommit)
   {
-    Map<Integer, Long> offsetMap = Maps.newHashMap();
+    Map<Integer, Long> offsetMap = new HashMap<>();
     if (lastCommit == null) {
       return offsetMap;
     }
@@ -183,7 +183,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       private volatile Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       {
-        lastOffsetPartitions = Maps.newHashMap();
+        lastOffsetPartitions = new HashMap<>();
         lastOffsetPartitions.putAll(lastOffsets);
       }
 
@@ -250,7 +250,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       @Override
       public Committer makeCommitter()
       {
-        final Map<Integer, Long> offsets = Maps.newHashMap(lastOffsetPartitions);
+        final Map<Integer, Long> offsets = new HashMap<>(lastOffsetPartitions);
 
         return new Committer()
         {

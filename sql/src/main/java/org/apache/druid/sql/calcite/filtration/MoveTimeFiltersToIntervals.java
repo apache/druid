@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.Pair;
@@ -33,6 +32,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtration>
@@ -85,8 +85,8 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
   {
     if (filter instanceof AndDimFilter) {
       final List<DimFilter> children = ((AndDimFilter) filter).getFields();
-      final List<DimFilter> newChildren = Lists.newArrayList();
-      final List<RangeSet<Long>> rangeSets = Lists.newArrayList();
+      final List<DimFilter> newChildren = new ArrayList<>();
+      final List<RangeSet<Long>> rangeSets = new ArrayList<>();
 
       for (DimFilter child : children) {
         final Pair<DimFilter, RangeSet<Long>> pair = extractConvertibleTimeBounds(child);
@@ -113,7 +113,7 @@ public class MoveTimeFiltersToIntervals implements Function<Filtration, Filtrati
       );
     } else if (filter instanceof OrDimFilter) {
       final List<DimFilter> children = ((OrDimFilter) filter).getFields();
-      final List<RangeSet<Long>> rangeSets = Lists.newArrayList();
+      final List<RangeSet<Long>> rangeSets = new ArrayList<>();
 
       boolean allCompletelyConverted = true;
       boolean allHadIntervals = true;

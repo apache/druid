@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
@@ -72,6 +71,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -170,7 +170,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval
   ) throws IOException
   {
-    final List<SegmentIdentifier> identifiers = Lists.newArrayList();
+    final List<SegmentIdentifier> identifiers = new ArrayList<>();
 
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
@@ -300,7 +300,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // Find which segments are used (i.e. not overshadowed).
-    final Set<DataSegment> usedSegments = Sets.newHashSet();
+    final Set<DataSegment> usedSegments = new HashSet<>();
     List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
         VersionedIntervalTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
     for (TimelineObjectHolder<String, DataSegment> holder : segmentHolders) {
@@ -324,7 +324,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               // Set definitelyNotUpdated back to false upon retrying.
               definitelyNotUpdated.set(false);
 
-              final Set<DataSegment> inserted = Sets.newHashSet();
+              final Set<DataSegment> inserted = new HashSet<>();
 
               if (startMetadata != null) {
                 final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
@@ -1132,7 +1132,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 .bind("end", interval.getEnd().toString())
                 .map(ByteArrayMapper.FIRST)
                 .fold(
-                    Lists.newArrayList(),
+                    new ArrayList<>(),
                     new Folder3<List<DataSegment>, byte[]>()
                     {
                       @Override

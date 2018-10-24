@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -90,7 +91,7 @@ public class JSONToLowerParser implements Parser<String, Object>
     }
     this.exclude = exclude != null
                    ? Sets.newHashSet(Iterables.transform(exclude, StringUtils::toLowerCase))
-                   : Sets.newHashSet();
+                   : new HashSet<>();
   }
 
   @Override

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-import sys
 import json
 
+import sys
 from kafka import KafkaProducer
-from metrics_pb2 import Metrics
 
+from metrics_pb2 import Metrics
 
 producer = KafkaProducer(bootstrap_servers='localhost:9092')
 topic = 'metrics_pb'

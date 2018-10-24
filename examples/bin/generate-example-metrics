@@ -20,8 +20,10 @@
 import argparse
 import json
 import random
+
 import sys
 from datetime import datetime
+
 
 def main():
   parser = argparse.ArgumentParser(description='Generate example page request latency metrics.')

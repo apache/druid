@@ -166,8 +166,8 @@ public class LifecycleTest
   {
     Lifecycle lifecycle = new Lifecycle();
 
-    List<Integer> startOrder = Lists.newArrayList();
-    List<Integer> stopOrder = Lists.newArrayList();
+    List<Integer> startOrder = new ArrayList<>();
+    List<Integer> stopOrder = new ArrayList<>();
 
     lifecycle.addManagedInstance(new ObjectToBeLifecycled(0, startOrder, stopOrder));
     lifecycle.addManagedInstance(new ObjectToBeLifecycled(1, startOrder, stopOrder), Lifecycle.Stage.NORMAL);
@@ -198,8 +198,8 @@ public class LifecycleTest
   {
     final Lifecycle lifecycle = new Lifecycle();
 
-    final List<Integer> startOrder = Lists.newArrayList();
-    final List<Integer> stopOrder = Lists.newArrayList();
+    final List<Integer> startOrder = new ArrayList<>();
+    final List<Integer> stopOrder = new ArrayList<>();
 
     lifecycle.addManagedInstance(new ObjectToBeLifecycled(0, startOrder, stopOrder));
     lifecycle.addHandler(

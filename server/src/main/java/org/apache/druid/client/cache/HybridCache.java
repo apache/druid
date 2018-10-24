@@ -19,13 +19,13 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -108,7 +108,7 @@ public class HybridCache implements Cache
       missCount.addAndGet(remaining.size() - size);
 
       if (size != 0) {
-        res = Maps.newHashMap(res);
+        res = new HashMap<>(res);
         res.putAll(res2);
       }
     }
