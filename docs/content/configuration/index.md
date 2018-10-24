@@ -301,6 +301,7 @@ Daily request logs are stored on disk.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.dir`|Historical, Realtime and Broker nodes maintain request logs of all of the requests they get (interacton is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in|none|
+|`druid.request.logging.filePattern`|[Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file|"yyyy-MM-dd'.log'"|
 
 #### Emitter Request Logging
 

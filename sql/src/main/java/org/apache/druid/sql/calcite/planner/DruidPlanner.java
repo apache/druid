@@ -53,7 +53,6 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 
@@ -78,7 +77,7 @@ public class DruidPlanner implements Closeable
   }
 
   public PlannerResult plan(final String sql)
-      throws SqlParseException, ValidationException, RelConversionException, ForbiddenException
+      throws SqlParseException, ValidationException, RelConversionException
   {
     SqlExplain explain = null;
     SqlNode parsed = planner.parse(sql);
@@ -118,7 +117,7 @@ public class DruidPlanner implements Closeable
   private PlannerResult planWithDruidConvention(
       final SqlExplain explain,
       final RelRoot root
-  ) throws RelConversionException, ForbiddenException
+  ) throws RelConversionException
   {
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
         Rules.DRUID_CONVENTION_RULES,

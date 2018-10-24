@@ -80,6 +80,7 @@ public class DruidStatement implements Closeable
   private Yielder<Object[]> yielder;
   private int offset = 0;
   private Throwable throwable;
+
   public DruidStatement(
       final String connectionId,
       final int statementId,

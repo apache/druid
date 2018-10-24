@@ -52,7 +52,7 @@ public class FileRequestLoggerTest
     String nativeQueryLogString = dateTime.toString() + "\t" + HOST + "\t" + "native";
     String sqlQueryLogString = dateTime.toString() + "\t" + HOST + "\t" + "sql";
 
-    FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir);
+    FileRequestLogger fileRequestLogger = new FileRequestLogger(objectMapper, scheduler, logDir, "yyyy-MM-dd'.log'");
     fileRequestLogger.start();
 
     RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);

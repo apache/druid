@@ -21,6 +21,8 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.RequestLogLine;
 
@@ -71,6 +73,7 @@ public class SwitchingRequestLoggerProvider implements RequestLoggerProvider
       sqlQueryLogger.logSqlQuery(requestLogLine);
     }
 
+    @LifecycleStart
     @Override
     public void start() throws Exception
     {
@@ -78,6 +81,7 @@ public class SwitchingRequestLoggerProvider implements RequestLoggerProvider
       sqlQueryLogger.start();
     }
 
+    @LifecycleStop
     @Override
     public void stop()
     {

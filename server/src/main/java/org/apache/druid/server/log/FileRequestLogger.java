@@ -31,6 +31,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.MutableDateTime;
 import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -48,17 +50,19 @@ public class FileRequestLogger implements RequestLogger
   private final ObjectMapper objectMapper;
   private final ScheduledExecutorService exec;
   private final File baseDir;
+  private final DateTimeFormatter filePattern;
 
   private final Object lock = new Object();
 
   private DateTime currentDay;
   private OutputStreamWriter fileWriter;
 
-  public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
+  public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir, String filePattern)
   {
     this.exec = exec;
     this.objectMapper = objectMapper;
     this.baseDir = baseDir;
+    this.filePattern = DateTimeFormat.forPattern(filePattern);
   }
 
   @LifecycleStart
@@ -111,7 +115,7 @@ public class FileRequestLogger implements RequestLogger
   private OutputStreamWriter getFileWriter() throws FileNotFoundException
   {
     return new OutputStreamWriter(
-        new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
+        new FileOutputStream(new File(baseDir, filePattern.print(currentDay)), true),
         StandardCharsets.UTF_8
     );
   }
