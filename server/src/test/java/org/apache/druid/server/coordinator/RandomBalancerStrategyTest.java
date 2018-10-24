@@ -94,7 +94,7 @@ public class RandomBalancerStrategyTest
     EasyMock.expect(druidServer.getCurrSize()).andReturn(1000L).anyTimes();
     EasyMock.expect(druidServer.getMaxSize()).andReturn(MAX_SIZE_PER_HISTORICAL).anyTimes();
 
-    EasyMock.expect(druidServer.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(druidServer.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     Map<String, DataSegment> segments = Maps.newHashMap();
     for (int j = 0; j < (maxSegments - 2); j++) {
       DataSegment segment = getSegment(j);
