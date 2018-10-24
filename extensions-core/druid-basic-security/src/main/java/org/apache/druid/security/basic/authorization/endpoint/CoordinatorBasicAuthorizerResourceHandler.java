@@ -241,9 +241,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
   }
 
   @Override
-  public Response setRolePermissions(
-      String authorizerName, String roleName, List<ResourceAction> permissions
-  )
+  public Response setRolePermissions(String authorizerName, String roleName, List<ResourceAction> permissions)
   {
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {

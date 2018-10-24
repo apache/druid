@@ -64,12 +64,11 @@ public class DataSourceMetadataQueryRunnerFactory
 
   @Override
   public QueryRunner<Result<DataSourceMetadataResultValue>> mergeRunners(
-      ExecutorService queryExecutor, Iterable<QueryRunner<Result<DataSourceMetadataResultValue>>> queryRunners
+      ExecutorService queryExecutor,
+      Iterable<QueryRunner<Result<DataSourceMetadataResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<>(
-        queryExecutor, queryWatcher, queryRunners
-    );
+    return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
   }
 
   @Override

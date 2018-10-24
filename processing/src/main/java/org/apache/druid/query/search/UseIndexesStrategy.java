@@ -224,7 +224,8 @@ public class UseIndexesStrategy extends SearchStrategy
     private final ImmutableBitmap timeFilteredBitmap;
 
     public IndexOnlyExecutor(
-        SearchQuery query, Segment segment,
+        SearchQuery query,
+        Segment segment,
         ImmutableBitmap timeFilteredBitmap,
         List<DimensionSpec> dimensionSpecs
     )

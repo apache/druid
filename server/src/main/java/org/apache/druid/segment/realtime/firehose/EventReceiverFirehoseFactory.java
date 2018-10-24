@@ -245,7 +245,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       Collection<Map<String, Object>> events = null;
       try {
         events = objectMapper.readValue(
-            countingInputStream, new TypeReference<Collection<Map<String, Object>>>()
+            countingInputStream,
+            new TypeReference<Collection<Map<String, Object>>>()
             {
             }
         );

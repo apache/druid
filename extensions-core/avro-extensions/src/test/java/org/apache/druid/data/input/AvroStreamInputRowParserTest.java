@@ -281,7 +281,8 @@ public class AvroStreamInputRowParserTest
     // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
     assertEquals(1, inputRow.getDimension("someIntValueMap").size());
     assertEquals(
-        SOME_INT_VALUE_MAP_VALUE, new HashMap<CharSequence, Integer>(
+        SOME_INT_VALUE_MAP_VALUE,
+        new HashMap<CharSequence, Integer>(
             Maps.transformValues(
                 Splitter.on(",")
                         .withKeyValueSeparator("=")
@@ -299,7 +300,8 @@ public class AvroStreamInputRowParserTest
         )
     );
     assertEquals(
-        SOME_STRING_VALUE_MAP_VALUE, new HashMap<CharSequence, CharSequence>(
+        SOME_STRING_VALUE_MAP_VALUE,
+        new HashMap<CharSequence, CharSequence>(
             Splitter.on(",")
                     .withKeyValueSeparator("=")
                     .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", ""))

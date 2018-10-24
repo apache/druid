@@ -183,7 +183,13 @@ public class IncrementalIndexSchema
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
-          minTimestamp, timestampSpec, gran, virtualColumns, dimensionsSpec, metrics, rollup
+          minTimestamp,
+          timestampSpec,
+          gran,
+          virtualColumns,
+          dimensionsSpec,
+          metrics,
+          rollup
       );
     }
   }

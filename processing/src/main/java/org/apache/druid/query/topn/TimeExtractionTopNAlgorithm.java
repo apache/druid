@@ -69,9 +69,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
   }
 
   @Override
-  protected long scanAndAggregate(
-      TopNParams params, int[] dimValSelector, Map<String, Aggregator[]> aggregatesStore
-  )
+  protected long scanAndAggregate(TopNParams params, int[] dimValSelector, Map<String, Aggregator[]> aggregatesStore)
   {
     if (params.getCardinality() < 0) {
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");

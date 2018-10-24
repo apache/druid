@@ -95,8 +95,10 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
 
   @Override
   public RecordMaterializer<GenericRecord> prepareForRead(
-      Configuration configuration, Map<String, String> keyValueMetaData,
-      MessageType fileSchema, ReadContext readContext
+      Configuration configuration,
+      Map<String, String> keyValueMetaData,
+      MessageType fileSchema,
+      ReadContext readContext
   )
   {
     MessageType parquetSchema = readContext.getRequestedSchema();

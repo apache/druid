@@ -77,7 +77,9 @@ public class InsertSegment extends GuiceRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         binder -> JsonConfigProvider.bindInstance(
-            binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", false, -1, null, true, false)
+            binder,
+            Key.get(DruidNode.class, Self.class),
+            new DruidNode("tools", "localhost", false, -1, null, true, false)
         )
     );
   }

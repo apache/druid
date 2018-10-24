@@ -147,9 +147,7 @@ class LookupListeningResource extends ListenerResource
         })
         {
           @Override
-          public Response handleUpdates(
-              InputStream inputStream, ObjectMapper mapper
-          )
+          public Response handleUpdates(InputStream inputStream, ObjectMapper mapper)
           {
             final LookupsState<LookupExtractorFactoryContainer> state;
             try {

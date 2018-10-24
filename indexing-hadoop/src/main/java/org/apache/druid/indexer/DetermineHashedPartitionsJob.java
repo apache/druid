@@ -167,7 +167,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
           final Long numRows = config.JSON_MAPPER.readValue(
               Utils.openInputStream(groupByJob, partitionInfoPath),
-              new TypeReference<Long>() {}
+              Long.class
           );
 
           log.info("Found approximately [%,d] rows in data.", numRows);
@@ -381,19 +381,12 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
-      final OutputStream out = Utils.makePathAndOutputStream(
-          context, outPath, config.isOverwriteFiles()
-      );
+      final OutputStream out = Utils.makePathAndOutputStream(context, outPath, config.isOverwriteFiles());
 
       try {
-        HadoopDruidIndexerConfig.JSON_MAPPER.writerWithType(
-            new TypeReference<Long>()
-            {
-            }
-        ).writeValue(
-            out,
-            aggregate.estimateCardinalityRound()
-        );
+        HadoopDruidIndexerConfig.JSON_MAPPER
+            .writerWithType(Long.class)
+            .writeValue(out, aggregate.estimateCardinalityRound());
       }
       finally {
         Closeables.close(out, false);
@@ -407,9 +400,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       super.run(context);
       if (determineIntervals) {
         final Path outPath = config.makeIntervalInfoPath();
-        final OutputStream out = Utils.makePathAndOutputStream(
-            context, outPath, config.isOverwriteFiles()
-        );
+        final OutputStream out = Utils.makePathAndOutputStream(context, outPath, config.isOverwriteFiles());
 
         try {
           HadoopDruidIndexerConfig.JSON_MAPPER.writerWithType(

@@ -109,8 +109,15 @@ public class DiskNormalizedCostBalancerStrategyTest
   {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
-        dataSource, interval, String.valueOf(index), new ConcurrentHashMap<>(),
-        Lists.newArrayList(), Lists.newArrayList(), null, 0, index * 100L
+        dataSource,
+        interval,
+        String.valueOf(index),
+        new ConcurrentHashMap<>(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
+        null,
+        0,
+        index * 100L
     );
     return segment;
   }

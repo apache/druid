@@ -24,17 +24,13 @@ package org.apache.druid.java.util.common.guava;
 public class UnsupportedSequence implements Sequence<Integer>
 {
   @Override
-  public <OutType> OutType accumulate(
-      OutType initValue, Accumulator<OutType, Integer> accumulator
-  )
+  public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, Integer> accumulator)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public <OutType> Yielder<OutType> toYielder(
-      OutType initValue, YieldingAccumulator<OutType, Integer> accumulator
-  )
+  public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, Integer> accumulator)
   {
     throw new UnsupportedOperationException();
   }

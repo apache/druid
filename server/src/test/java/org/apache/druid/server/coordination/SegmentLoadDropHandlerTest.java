@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexIO;
@@ -179,14 +179,10 @@ public class SegmentLoadDropHandlerTest
                Override normal behavoir by adding the runnable to a list so that you can make sure
                all the shceduled runnables are executed by explicitly calling run() on each item in the list
              */
-            return new ScheduledThreadPoolExecutor(
-                corePoolSize, new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build()
-            )
+            return new ScheduledThreadPoolExecutor(corePoolSize, Execs.makeThreadFactory(nameFormat))
             {
               @Override
-              public ScheduledFuture<?> schedule(
-                  Runnable command, long delay, TimeUnit unit
-              )
+              public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)
               {
                 scheduledRunnable.add(command);
                 return null;

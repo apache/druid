@@ -39,10 +39,7 @@ public class LookupCacheStats
   /**
    * Constructs a new {@code CacheStats} instance.
    */
-  public LookupCacheStats(
-      long hitCount, long missCount,
-      long evictionCount
-  )
+  public LookupCacheStats(long hitCount, long missCount, long evictionCount)
   {
     Preconditions.checkArgument(hitCount >= 0);
     Preconditions.checkArgument(missCount >= 0);

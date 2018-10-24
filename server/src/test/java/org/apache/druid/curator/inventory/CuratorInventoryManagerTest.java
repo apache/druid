@@ -62,8 +62,11 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
   public void testSanity() throws Exception
   {
     final MapStrategy strategy = new MapStrategy();
-    CuratorInventoryManager<Map<String, Integer>, Integer> manager = new CuratorInventoryManager<Map<String, Integer>, Integer>(
-        curator, new StringInventoryManagerConfig("/container", "/inventory"), exec, strategy
+    CuratorInventoryManager<Map<String, Integer>, Integer> manager = new CuratorInventoryManager<>(
+        curator,
+        new StringInventoryManagerConfig("/container", "/inventory"),
+        exec,
+        strategy
     );
 
     curator.start();

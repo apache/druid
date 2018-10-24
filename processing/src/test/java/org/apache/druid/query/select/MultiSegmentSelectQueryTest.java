@@ -259,9 +259,7 @@ public class MultiSegmentSelectQueryTest
 
       for (int i = 0; i < 4; i++) {
         if (query.isDescending() ^ expected[i] >= 0) {
-          Assert.assertEquals(
-              expected[i], pagingIdentifiers.get(segmentIdentifiers.get(i)).intValue()
-          );
+          Assert.assertEquals(expected[i], pagingIdentifiers.get(segmentIdentifiers.get(i)).intValue());
         }
       }
       Assert.assertEquals(expected[4], value.getEvents().size());

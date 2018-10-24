@@ -32,8 +32,7 @@ public class DefaultTopNQueryMetricsFactory implements TopNQueryMetricsFactory
   private static final TopNQueryMetricsFactory INSTANCE = new DefaultTopNQueryMetricsFactory(new DefaultObjectMapper());
 
   /**
-   * Should be used only in tests, directly or indirectly (via {@link TopNQueryQueryToolChest#TopNQueryQueryToolChest(
-   * TopNQueryConfig, org.apache.druid.query.IntervalChunkingQueryRunnerDecorator)}).
+   * Should be used only in tests, directly or indirectly (via {@link TopNQueryQueryToolChest#TopNQueryQueryToolChest}).
    */
   @VisibleForTesting
   public static TopNQueryMetricsFactory instance()

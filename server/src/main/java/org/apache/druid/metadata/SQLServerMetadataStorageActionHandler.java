@@ -46,7 +46,10 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
 
   @Override
   protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
-      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
+      Handle handle,
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String dataSource
   )
   {
     String sql = maxNumStatuses == null ? "SELECT " : "SELECT TOP (:n) ";

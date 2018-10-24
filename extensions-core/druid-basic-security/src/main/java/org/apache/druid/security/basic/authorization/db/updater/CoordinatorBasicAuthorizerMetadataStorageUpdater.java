@@ -356,9 +356,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   }
 
   @Override
-  public void setPermissions(
-      String prefix, String roleName, List<ResourceAction> permissions
-  )
+  public void setPermissions(String prefix, String roleName, List<ResourceAction> permissions)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     setPermissionsInternal(prefix, roleName, permissions);

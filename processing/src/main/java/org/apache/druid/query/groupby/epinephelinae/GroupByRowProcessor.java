@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -65,7 +64,8 @@ public class GroupByRowProcessor
       final ObjectMapper spillMapper,
       final String processingTmpDir,
       final int mergeBufferSize,
-      final List<Closeable> closeOnExit
+      final List<Closeable> closeOnExit,
+      final boolean wasQueryPushedDown
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -76,50 +76,16 @@ public class GroupByRowProcessor
       aggregatorFactories[i] = query.getAggregatorSpecs().get(i);
     }
 
-
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
         StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    final List<Interval> queryIntervals = query.getIntervals();
-    final Filter filter = Filters.convertToCNFFromQueryContext(
-        query,
-        Filters.toFilter(query.getDimFilter())
-    );
-
-    final SettableSupplier<Row> rowSupplier = new SettableSupplier<>();
-    final RowBasedColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
-        rowSupplier,
-        rowSignature
-    );
-    final ValueMatcher filterMatcher = filter == null
-                                       ? BooleanValueMatcher.of(true)
-                                       : filter.makeMatcher(columnSelectorFactory);
-
-    final FilteredSequence<Row> filteredSequence = new FilteredSequence<>(
-        rows,
-        new Predicate<Row>()
-        {
-          @Override
-          public boolean apply(Row input)
-          {
-            boolean inInterval = false;
-            DateTime rowTime = input.getTimestamp();
-            for (Interval queryInterval : queryIntervals) {
-              if (queryInterval.contains(rowTime)) {
-                inInterval = true;
-                break;
-              }
-            }
-            if (!inInterval) {
-              return false;
-            }
-            rowSupplier.set(input);
-            return filterMatcher.matches();
-          }
-        }
-    );
+    Sequence<Row> sequenceToGroup = rows;
+    // When query is pushed down, rows have already been filtered
+    if (!wasQueryPushedDown) {
+      sequenceToGroup = getFilteredSequence(rows, rowSignature, query);
+    }
 
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
@@ -152,12 +118,54 @@ public class GroupByRowProcessor
     final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
     closeOnExit.add(grouper);
 
-    final AggregateResult retVal = filteredSequence.accumulate(AggregateResult.ok(), accumulator);
+    final AggregateResult retVal = sequenceToGroup.accumulate(AggregateResult.ok(), accumulator);
+
     if (!retVal.isOk()) {
       throw new ResourceLimitExceededException(retVal.getReason());
     }
 
     return grouper;
+  }
+
+  private static Sequence<Row> getFilteredSequence(
+      Sequence<Row> rows,
+      Map<String, ValueType> rowSignature,
+      GroupByQuery query
+  )
+  {
+    final List<Interval> queryIntervals = query.getIntervals();
+    final Filter filter = Filters.convertToCNFFromQueryContext(
+        query,
+        Filters.toFilter(query.getDimFilter())
+    );
+
+    final SettableSupplier<Row> rowSupplier = new SettableSupplier<>();
+    final RowBasedColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+        rowSupplier,
+        rowSignature
+    );
+    final ValueMatcher filterMatcher = filter == null
+                                       ? BooleanValueMatcher.of(true)
+                                       : filter.makeMatcher(columnSelectorFactory);
+
+    return new FilteredSequence<>(
+        rows,
+        input -> {
+          boolean inInterval = false;
+          DateTime rowTime = input.getTimestamp();
+          for (Interval queryInterval : queryIntervals) {
+            if (queryInterval.contains(rowTime)) {
+              inInterval = true;
+              break;
+            }
+          }
+          if (!inInterval) {
+            return false;
+          }
+          rowSupplier.set(input);
+          return filterMatcher.matches();
+        }
+    );
   }
 
   public static Sequence<Row> getRowsFromGrouper(GroupByQuery query, List<String> subtotalSpec, Supplier<Grouper> grouper)
@@ -183,5 +191,6 @@ public class GroupByRowProcessor
           }
         }
     );
+
   }
 }

@@ -343,9 +343,7 @@ public abstract class BaseFilterTest
       }
 
       @Override
-      public boolean supportsSelectivityEstimation(
-          ColumnSelector columnSelector, BitmapIndexSelector indexSelector
-      )
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
       {
         return false;
       }

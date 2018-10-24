@@ -20,7 +20,6 @@
 package org.apache.druid;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -55,12 +54,12 @@ public class TestObjectMapper extends ObjectMapper
     {
       addSerializer(Interval.class, ToStringSerializer.instance);
       addDeserializer(
-          Interval.class, new StdDeserializer<Interval>(Interval.class)
+          Interval.class,
+          new StdDeserializer<Interval>(Interval.class)
           {
             @Override
-            public Interval deserialize(
-                JsonParser jsonParser, DeserializationContext deserializationContext
-            ) throws IOException, JsonProcessingException
+            public Interval deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+                throws IOException
             {
               return Intervals.of(jsonParser.getText());
             }

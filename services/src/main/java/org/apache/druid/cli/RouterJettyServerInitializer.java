@@ -99,7 +99,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     if (managementProxyConfig.isEnabled()) {
       ServletHolder managementForwardingServletHolder = buildServletHolder(
-          asyncManagementForwardingServlet, globalHttpClientConfig
+          asyncManagementForwardingServlet,
+          globalHttpClientConfig
       );
       root.addServlet(managementForwardingServletHolder, "/druid/coordinator/*");
       root.addServlet(managementForwardingServletHolder, "/druid/indexer/*");
