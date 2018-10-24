@@ -79,8 +79,8 @@ To use a custom TLS certificate checker, specify the following property:
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
-|`druid.tls.certificateChecker`|Type name of custom TLS certificate checker, provided by extensions.|"default"|no|
+|`druid.tls.certificateChecker`|Type name of custom TLS certificate checker, provided by extensions. Please refer to extension documentation for the type name that should be specified.|"default"|no|
 
-The default checker delegates to the base trust manager and performs no additional actions or checks.
+The default checker delegates to the standard trust manager and performs no additional actions or checks.
 
 If using a non-default certificate checker, please refer to the extension documentation for additional configuration properties needed.

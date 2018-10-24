@@ -497,7 +497,8 @@ public class JettyServerModule extends JerseyServletModule
 
     @Override
     protected TrustManager[] getTrustManagers(
-        KeyStore trustStore, Collection<? extends CRL> crls
+        KeyStore trustStore,
+        Collection<? extends CRL> crls
     ) throws Exception
     {
       TrustManager[] trustManagers = super.getTrustManagers(trustStore, crls);

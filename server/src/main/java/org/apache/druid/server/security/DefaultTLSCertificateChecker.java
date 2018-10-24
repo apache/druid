@@ -32,7 +32,10 @@ public class DefaultTLSCertificateChecker implements TLSCertificateChecker
 
   @Override
   public void checkClient(
-      X509Certificate[] chain, String authType, SSLEngine engine, X509ExtendedTrustManager baseTrustManager
+      X509Certificate[] chain,
+      String authType,
+      SSLEngine engine,
+      X509ExtendedTrustManager baseTrustManager
   ) throws CertificateException
   {
     baseTrustManager.checkClientTrusted(chain, authType, engine);
@@ -40,7 +43,10 @@ public class DefaultTLSCertificateChecker implements TLSCertificateChecker
 
   @Override
   public void checkServer(
-      X509Certificate[] chain, String authType, SSLEngine engine, X509ExtendedTrustManager baseTrustManager
+      X509Certificate[] chain,
+      String authType,
+      SSLEngine engine,
+      X509ExtendedTrustManager baseTrustManager
   ) throws CertificateException
   {
     baseTrustManager.checkServerTrusted(chain, authType, engine);

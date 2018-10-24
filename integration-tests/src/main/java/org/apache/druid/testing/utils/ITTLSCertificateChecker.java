@@ -33,7 +33,10 @@ public class ITTLSCertificateChecker implements TLSCertificateChecker
 
   @Override
   public void checkClient(
-      X509Certificate[] chain, String authType, SSLEngine engine, X509ExtendedTrustManager baseTrustManager
+      X509Certificate[] chain,
+      String authType,
+      SSLEngine engine,
+      X509ExtendedTrustManager baseTrustManager
   ) throws CertificateException
   {
     // only the integration test client with "thisisprobablynottherighthostname" cert is allowed to talk to me
@@ -44,7 +47,10 @@ public class ITTLSCertificateChecker implements TLSCertificateChecker
 
   @Override
   public void checkServer(
-      X509Certificate[] chain, String authType, SSLEngine engine, X509ExtendedTrustManager baseTrustManager
+      X509Certificate[] chain,
+      String authType,
+      SSLEngine engine,
+      X509ExtendedTrustManager baseTrustManager
   ) throws CertificateException
   {
     baseTrustManager.checkServerTrusted(chain, authType, engine);
