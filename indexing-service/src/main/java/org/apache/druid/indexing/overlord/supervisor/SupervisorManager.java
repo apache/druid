@@ -136,8 +136,7 @@ public class SupervisorManager
           try {
             createAndStartSupervisorInternal(spec, false);
           }
-          catch (Exception ex)
-          {
+          catch (Exception ex) {
             log.error(ex, "Failed to start supervisor: [%s]", spec.getId());
           }
         }
