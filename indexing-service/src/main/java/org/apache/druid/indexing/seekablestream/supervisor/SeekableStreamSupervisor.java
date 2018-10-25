@@ -832,9 +832,9 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
           Map<partitionType, sequenceType> currentOffsets = entry.getValue().currentSequences;
           Long remainingSeconds = null;
           if (startTime != null) {
-            remainingSeconds = Math.max(
-                0, ioConfig.getTaskDuration().getMillis() - (System.currentTimeMillis() - startTime.getMillis())
-            ) / 1000;
+            long elapsedMillis = System.currentTimeMillis() - startTime.getMillis();
+            long remainingMillis = Math.max(0, ioConfig.getTaskDuration().getMillis() - elapsedMillis);
+            remainingSeconds = TimeUnit.MILLISECONDS.toSeconds(remainingMillis);
           }
 
           taskReports.add(
@@ -939,19 +939,21 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
     }
 
     for (int groupId : pendingCompletionTaskGroups.keySet()) {
-      TaskGroup group = taskGroups.get(groupId);
-      for (String taskId : group.taskIds()) {
-        futures.add(
-            Futures.transform(
-                taskClient.getMovingAveragesAsync(taskId),
-                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
-                    groupId,
-                    taskId,
-                    currentStats
-                )
-            )
-        );
-        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
+      for (TaskGroup pendingGroup : pendingGroups) {
+        for (String taskId : pendingGroup.taskIds()) {
+          futures.add(
+              Futures.transform(
+                  taskClient.getMovingAveragesAsync(taskId),
+                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  )
+              )
+          );
+          groupAndTaskIds.add(new Pair<>(groupId, taskId));
+        }
       }
     }
 
@@ -969,6 +971,55 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
     }
 
     return allStats;
+  }
+
+
+  @VisibleForTesting
+  protected void addTaskGroupToActivelyReadingTaskGroup(
+      int taskGroupId,
+      ImmutableMap<partitionType, sequenceType> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks,
+      Set<partitionType> exclusiveStartingSequencePartitions
+  )
+  {
+    TaskGroup group = new TaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime,
+        exclusiveStartingSequencePartitions
+    );
+    group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    if (taskGroups.putIfAbsent(taskGroupId, group) != null) {
+      throw new ISE(
+          "trying to add taskGroup with ID [%s] to actively reading task groups, but group already exists.",
+          taskGroupId
+      );
+    }
+  }
+
+  @VisibleForTesting
+  protected void addTaskGroupToPendingCompletionTaskGroup(
+      int taskGroupId,
+      ImmutableMap<partitionType, sequenceType> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks,
+      Set<partitionType> exclusiveStartingSequencePartitions
+  )
+  {
+    TaskGroup group = new TaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime,
+        exclusiveStartingSequencePartitions
+    );
+    group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    pendingCompletionTaskGroups.computeIfAbsent(taskGroupId, x -> new CopyOnWriteArrayList<>())
+                               .add(group);
   }
 
   @VisibleForTesting
@@ -1680,7 +1731,7 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
       return;
     }
 
-    if (partitionIds == null) {
+    if (partitionIds == null || partitionIds.size() == 0) {
       log.warn("No partitions found for stream[%s]", ioConfig.getId());
       return;
     }

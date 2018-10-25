@@ -37,7 +37,7 @@
 
   <properties>
     <kinesis.version>1.6.3</kinesis.version>
-    <aws.version>1.11.42</aws.version>
+    <aws.version>1.11.437</aws.version>
   </properties>
 
   <dependencies>

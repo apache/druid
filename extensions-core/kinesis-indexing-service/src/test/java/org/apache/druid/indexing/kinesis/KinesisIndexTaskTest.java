@@ -1851,7 +1851,8 @@ public class KinesisIndexTaskTest
     {
       @Override
       public <T> QueryRunner<T> decorate(
-          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
+          QueryRunner<T> delegate,
+          QueryToolChest<T, ? extends Query<T>> toolChest
       )
       {
         return delegate;
@@ -1953,7 +1954,9 @@ public class KinesisIndexTaskTest
     {
       @Override
       public boolean registerSegmentHandoffCallback(
-          SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+          SegmentDescriptor descriptor,
+          Executor exec,
+          Runnable handOffRunnable
       )
       {
         if (doHandoff) {

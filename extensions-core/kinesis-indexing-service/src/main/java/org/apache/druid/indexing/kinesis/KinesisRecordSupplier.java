@@ -68,6 +68,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
   private static final long EXCEPTION_RETRY_DELAY_MS = 10000;
+  private final String endpoint;
 
   private class PartitionResource
   {
@@ -268,6 +269,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.recordBufferOfferTimeout = recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait;
     this.fetchSequenceNumberTimeout = fetchSequenceNumberTimeout;
+    this.endpoint = endpoint;
 
     AWSCredentialsProvider awsCredentialsProvider = AWSCredentialsUtils.defaultAWSCredentialsProviderChain(
         new ConstructibleAWSCredentialsConfig(awsAccessKeyId, awsSecretAccessKey)
@@ -299,7 +301,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                                                    )
                                                ));
 
-
     records = new LinkedBlockingQueue<>(recordBufferSize);
 
     log.info(
@@ -309,7 +310,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     );
 
     scheduledExec = Executors.newScheduledThreadPool(
-        fetchThreads, Execs.makeThreadFactory("KinesisRecordSupplier-Worker-%d")
+        fetchThreads,
+        Execs.makeThreadFactory("KinesisRecordSupplier-Worker-%d")
     );
   }
 
@@ -459,7 +461,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private AmazonKinesis getKinesisProxy(String streamName)
   {
     if (!kinesisProxies.containsKey(streamName)) {
-      kinesisProxies.put(streamName, kinesisBuilder.build());
+      AmazonKinesis kinesis = kinesisBuilder.build();
+      kinesisProxies.put(streamName, kinesis);
     }
 
     return kinesisProxies.get(streamName);

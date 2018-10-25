@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -318,7 +319,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
   @Override
   protected KafkaDataSourceMetadata createDataSourceMetaData(
-      String topic, Map<Integer, Long> map
+      String topic,
+      Map<Integer, Long> map
   )
   {
     return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, map));
@@ -326,7 +328,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
   @Override
   protected OrderedSequenceNumber<Long> makeSequenceNumber(
-      Long seq, boolean useExclusive, boolean isExclusive
+      Long seq,
+      boolean useExclusive,
+      boolean isExclusive
   )
   {
     return KafkaSequenceNumber.of(seq);
@@ -370,7 +374,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
   @Override
   protected boolean checkSequenceAvailability(
-      @NotNull Integer partition, @NotNull Long sequenceFromMetadata
+      @NotNull Integer partition,
+      @NotNull Long sequenceFromMetadata
   ) throws TimeoutException
   {
     Long latestOffset = getOffsetFromStreamForPartition(partition, false);
@@ -435,5 +440,47 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   protected void tryInit()
   {
     super.tryInit();
+  }
+
+  @Override
+  @VisibleForTesting
+  protected void addTaskGroupToActivelyReadingTaskGroup(
+      int taskGroupId,
+      ImmutableMap<Integer, Long> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks,
+      Set<Integer> exclusiveStartingSequencePartitions
+  )
+  {
+    super.addTaskGroupToActivelyReadingTaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime,
+        tasks,
+        exclusiveStartingSequencePartitions
+    );
+  }
+
+  @Override
+  @VisibleForTesting
+  protected void addTaskGroupToPendingCompletionTaskGroup(
+      int taskGroupId,
+      ImmutableMap<Integer, Long> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks,
+      Set<Integer> exclusiveStartingSequencePartitions
+  )
+  {
+    super.addTaskGroupToPendingCompletionTaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime,
+        tasks,
+        exclusiveStartingSequencePartitions
+    );
   }
 }

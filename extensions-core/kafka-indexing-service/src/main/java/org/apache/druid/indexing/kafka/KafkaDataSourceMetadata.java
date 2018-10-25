@@ -45,7 +45,8 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
 
   @Override
   protected SeekableStreamDataSourceMetadata<Integer, Long> createConcretDataSourceMetaData(
-      String streamId, Map<Integer, Long> newMap
+      String streamId,
+      Map<Integer, Long> newMap
   )
   {
     return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(streamId, newMap));

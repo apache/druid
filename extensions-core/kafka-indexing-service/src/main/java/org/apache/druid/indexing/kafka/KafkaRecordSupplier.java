@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -158,13 +157,11 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public Set<Integer> getPartitionIds(String stream)
   {
-    final Map<String, List<PartitionInfo>> topics = consumer.listTopics();
-    if (!topics.containsKey(stream)) {
+    List<PartitionInfo> partitions = consumer.partitionsFor(stream);
+    if (partitions == null) {
       throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", stream);
     }
-    return topics == null
-           ? ImmutableSet.of()
-           : topics.get(stream).stream().map(PartitionInfo::partition).collect(Collectors.toSet());
+    return partitions.stream().map(PartitionInfo::partition).collect(Collectors.toSet());
   }
 
   @Override

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -241,7 +242,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
   @Override
   protected SeekableStreamSupervisorReportPayload<String, String> createReportPayload(
-      int numPartitions, boolean includeOffsets
+      int numPartitions,
+      boolean includeOffsets
   )
   {
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
@@ -264,7 +266,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
   @Override
   protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaData(
-      String stream, Map<String, String> map
+      String stream,
+      Map<String, String> map
   )
   {
     return new KinesisDataSourceMetadata(
@@ -274,7 +277,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
   @Override
   protected OrderedSequenceNumber<String> makeSequenceNumber(
-      String seq, boolean useExclusive, boolean isExclusive
+      String seq,
+      boolean useExclusive,
+      boolean isExclusive
   )
   {
     return KinesisSequenceNumber.of(seq, useExclusive, isExclusive);
@@ -333,6 +338,47 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
            && KinesisSequenceNumber.of(earliestSequence).compareTo(KinesisSequenceNumber.of(sequenceFromMetadata)) <= 0;
   }
 
+  @Override
+  @VisibleForTesting
+  protected void addTaskGroupToActivelyReadingTaskGroup(
+      int taskGroupId,
+      ImmutableMap<String, String> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks,
+      Set<String> exclusiveStartingSequencePartitions
+  )
+  {
+    super.addTaskGroupToActivelyReadingTaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime,
+        tasks,
+        exclusiveStartingSequencePartitions
+    );
+  }
+
+  @Override
+  @VisibleForTesting
+  protected void addTaskGroupToPendingCompletionTaskGroup(
+      int taskGroupId,
+      ImmutableMap<String, String> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks,
+      Set<String> exclusiveStartingSequencePartitions
+  )
+  {
+    super.addTaskGroupToPendingCompletionTaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime,
+        tasks,
+        exclusiveStartingSequencePartitions
+    );
+  }
 
 // Implement this for Kinesis which uses approximate time from latest instead of offset lag
 /*
