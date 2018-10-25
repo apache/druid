@@ -540,8 +540,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     if (shardIterator == null) {
-      log.info("Partition[%s] returned a null shard iterator", partition.getPartitionId());
-      return null;
+      log.info("Partition[%s] returned a null shard iterator, is the shard closed?", partition.getPartitionId());
+      return OrderedPartitionableRecord.END_OF_SHARD_MARKER;
     }
 
     throw new TimeoutException(

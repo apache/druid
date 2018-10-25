@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kinesis;
 
 
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
 import javax.validation.constraints.NotNull;
@@ -34,7 +35,9 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   private KinesisSequenceNumber(@NotNull String sequenceNumber, boolean useExclusive, boolean isExclusive)
   {
     super(sequenceNumber, useExclusive, isExclusive);
-    this.intSequence = "".equals(sequenceNumber) ? new BigInteger("-1") : new BigInteger(sequenceNumber);
+    this.intSequence = OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(sequenceNumber)
+                       ? new BigInteger("-1")
+                       : new BigInteger(sequenceNumber);
   }
 
   public static KinesisSequenceNumber of(String sequenceNumber)

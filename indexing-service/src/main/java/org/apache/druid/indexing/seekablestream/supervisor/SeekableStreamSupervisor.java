@@ -2300,7 +2300,7 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
         // get the offset from metadata storage (if available) or Kafka/Kinesis (otherwise)
         OrderedSequenceNumber<sequenceType> offsetFromStorage = getOffsetFromStorageForPartition(partition);
 
-        if (!OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(offset)) {
+        if (offsetFromStorage != null) {
           builder.put(partition, offsetFromStorage);
         }
       }
