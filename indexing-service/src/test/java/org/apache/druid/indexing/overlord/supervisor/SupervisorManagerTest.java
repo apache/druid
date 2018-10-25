@@ -229,6 +229,26 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testStartIndividualSupervisorsFailStart()
+  {
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", new TestSupervisorSpec("id1", supervisor1),
+        "id3", new TestSupervisorSpec("id3", supervisor3)
+    );
+
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor3.start();
+    supervisor1.start();
+    EasyMock.expectLastCall().andThrow(new RuntimeException("supervisor explosion"));
+    replayAll();
+
+    manager.start();
+
+    // if we get here, we are properly insulated from exploding supervisors
+  }
+
+  @Test
   public void testStopThrowsException()
   {
     Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
