@@ -129,6 +129,22 @@ Period drop rules are of the form:
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the current time. The rule matches if the period contains the interval.
 
+### Period Drop Before Rule
+
+Period drop before rules are of the form:
+
+```json
+{
+  "type" : "dropBeforeByPeriod",
+  "period" : "P1M"
+}
+```
+
+* `type` - this should always be "dropBeforeByPeriod"
+* `period` - A JSON Object representing ISO-8601 Periods
+
+The interval of a segment will be compared against the specified period. The period is from some time in the past to the current time. The rule matches if the interval before the period. If you just want to retain recent data, you can use this rule to drop the old data that before a specified period and add a `loadForever` rule to follow it. Notes, `dropBeforeByPeriod + loadForever` is equivalent to `loadByPeriod(includeFuture = true) + dropForever`.
+
 Broadcast Rules
 ---------------
 

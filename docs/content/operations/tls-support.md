@@ -71,3 +71,16 @@ to create your own extension.
 When Druid Coordinator/Overlord have both HTTP and HTTPS enabled and Client sends request to non-leader node, then Client is always redirected to the HTTPS endpoint on leader node.
 So, Clients should be first upgraded to be able to handle redirect to HTTPS. Then Druid Overlord/Coordinator should be upgraded and configured to run both HTTP and HTTPS ports. Then Client configuration should be changed to refer to Druid Coordinator/Overlord via the HTTPS endpoint and then HTTP port on Druid Coordinator/Overlord should be disabled.
 
+# Custom TLS certificate checks
+
+Druid supports custom certificate check extensions. Please refer to the `org.apache.druid.server.security.TLSCertificateChecker` interface for details on the methods to be implemented.
+
+To use a custom TLS certificate checker, specify the following property:
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|`druid.tls.certificateChecker`|Type name of custom TLS certificate checker, provided by extensions. Please refer to extension documentation for the type name that should be specified.|"default"|no|
+
+The default checker delegates to the standard trust manager and performs no additional actions or checks.
+
+If using a non-default certificate checker, please refer to the extension documentation for additional configuration properties needed.
