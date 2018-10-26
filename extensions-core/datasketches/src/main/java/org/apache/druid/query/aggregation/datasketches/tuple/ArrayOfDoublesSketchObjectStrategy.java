@@ -26,6 +26,7 @@ import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class ArrayOfDoublesSketchObjectStrategy implements ObjectStrategy<ArrayOfDoublesSketch>
 {
@@ -47,7 +48,7 @@ public class ArrayOfDoublesSketchObjectStrategy implements ObjectStrategy<ArrayO
   @Override
   public ArrayOfDoublesSketch fromByteBuffer(final ByteBuffer buffer, final int numBytes)
   {
-    return ArrayOfDoublesSketches.wrapSketch(Memory.wrap(buffer).region(buffer.position(), numBytes));
+    return ArrayOfDoublesSketches.wrapSketch(Memory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes));
   }
 
   @Override

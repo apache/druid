@@ -122,9 +122,7 @@ public class DimensionsSpec
   @JsonIgnore
   public List<SpatialDimensionSchema> getSpatialDimensions()
   {
-    Iterable<NewSpatialDimensionSchema> filteredList = Iterables.filter(
-        dimensions, NewSpatialDimensionSchema.class
-    );
+    Iterable<NewSpatialDimensionSchema> filteredList = Iterables.filter(dimensions, NewSpatialDimensionSchema.class);
 
     Iterable<SpatialDimensionSchema> transformedList = Iterables.transform(
         filteredList,

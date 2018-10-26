@@ -218,13 +218,14 @@ public class MultiSegmentScanQueryTest
         new QueryRunner<ScanResultValue>() {
           @Override
           public Sequence<ScanResultValue> run(
-              QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext
+              QueryPlus<ScanResultValue> queryPlus,
+              Map<String, Object> responseContext
           )
           {
             // simulate results back from 2 historicals
             List<Sequence<ScanResultValue>> sequences = Lists.newArrayListWithExpectedSize(2);
-            sequences.add(factory.createRunner(segment0).run(queryPlus, new HashMap<String, Object>()));
-            sequences.add(factory.createRunner(segment1).run(queryPlus, new HashMap<String, Object>()));
+            sequences.add(factory.createRunner(segment0).run(queryPlus, new HashMap<>()));
+            sequences.add(factory.createRunner(segment1).run(queryPlus, new HashMap<>()));
             return new MergeSequence<>(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(sequences)

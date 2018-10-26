@@ -155,7 +155,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
   @Override
   public Function<SegmentAnalysis, SegmentAnalysis> makePreComputeManipulatorFn(
-      SegmentMetadataQuery query, MetricManipulationFn fn
+      SegmentMetadataQuery query,
+      MetricManipulationFn fn
   )
   {
     return Functions.identity();

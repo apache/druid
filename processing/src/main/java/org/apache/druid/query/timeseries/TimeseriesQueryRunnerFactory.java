@@ -65,12 +65,11 @@ public class TimeseriesQueryRunnerFactory
 
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> mergeRunners(
-      ExecutorService queryExecutor, Iterable<QueryRunner<Result<TimeseriesResultValue>>> queryRunners
+      ExecutorService queryExecutor,
+      Iterable<QueryRunner<Result<TimeseriesResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<>(
-        queryExecutor, queryWatcher, queryRunners
-    );
+    return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
   }
 
   @Override

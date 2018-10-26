@@ -86,7 +86,8 @@ public class IntKeySerde implements Grouper.KeySerde<Integer>
 
   @Override
   public Grouper.BufferComparator bufferComparatorWithAggregators(
-      AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets
+      AggregatorFactory[] aggregatorFactories,
+      int[] aggregatorOffsets
   )
   {
     return KEY_COMPARATOR;

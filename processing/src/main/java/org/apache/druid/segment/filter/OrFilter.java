@@ -157,9 +157,7 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(
-      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
-  )
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     for (Filter filter : filters) {
       if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {

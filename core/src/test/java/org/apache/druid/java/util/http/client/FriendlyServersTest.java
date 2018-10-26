@@ -246,7 +246,8 @@ public class FriendlyServersTest
         final ListenableFuture<StatusResponseHolder> response2 = skepticalClient
             .go(
                 new Request(
-                    HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
+                    HttpMethod.GET,
+                    new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
                 new StatusResponseHandler(StandardCharsets.UTF_8)
             );

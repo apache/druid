@@ -257,9 +257,7 @@ public class TopNQueryRunnerTest
     return runWithMerge(query, ImmutableMap.of());
   }
 
-  private Sequence<Result<TopNResultValue>> runWithMerge(
-      TopNQuery query, Map<String, Object> context
-  )
+  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, Map<String, Object> context)
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
@@ -2375,7 +2373,8 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.qualityDimension,
+                QueryRunnerTestHelper.qualityDimension,
+                QueryRunnerTestHelper.qualityDimension,
                 new RegexDimExtractionFn(".(.)", false, null)
             )
         )
@@ -3146,7 +3145,8 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
                 new DimExtractionFn()
                 {
                   @Override
@@ -4241,7 +4241,8 @@ public class TopNQueryRunnerTest
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    commonAggregators, Lists.newArrayList(
+                    commonAggregators,
+                    Lists.newArrayList(
                         new FilteredAggregatorFactory(
                             new DoubleMaxAggregatorFactory("maxIndex", "index"),
                             extractionFilter

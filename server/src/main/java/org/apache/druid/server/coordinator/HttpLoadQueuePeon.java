@@ -207,9 +207,8 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                   log.debug("Received NO CONTENT reseponse from [%s]", serverId);
                 } else if (HttpServletResponse.SC_OK == responseHandler.getStatus()) {
                   try {
-                    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = jsonMapper.readValue(
-                        result, RESPONSE_ENTITY_TYPE_REF
-                    );
+                    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses =
+                        jsonMapper.readValue(result, RESPONSE_ENTITY_TYPE_REF);
                     log.debug("Server[%s] returned status response [%s].", serverId, statuses);
                     synchronized (lock) {
                       if (stopped) {

@@ -89,25 +89,14 @@ public class CardinalityAggregatorTest
 
       this.column = Lists.newArrayList(
           Iterables.transform(
-              values, new Function<String[], Integer[]>()
+              values,
+              new Function<String[], Integer[]>()
               {
                 @Nullable
                 @Override
                 public Integer[] apply(@Nullable String[] input)
                 {
-                  return Iterators.toArray(
-                      Iterators.transform(
-                          Iterators.forArray(input), new Function<String, Integer>()
-                          {
-                            @Nullable
-                            @Override
-                            public Integer apply(@Nullable String input)
-                            {
-                              return ids.get(input);
-                            }
-                          }
-                      ), Integer.class
-                  );
+                  return Iterators.toArray(Iterators.transform(Iterators.forArray(input), ids::get), Integer.class);
                 }
               }
           )

@@ -79,13 +79,9 @@ public class CloserRuleTest
     Exception ex = null;
     try {
       run(
-          closer, new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              throw new ArithmeticException(msg);
-            }
+          closer,
+          () -> {
+            throw new ArithmeticException(msg);
           }
       );
     }
@@ -133,13 +129,9 @@ public class CloserRuleTest
     Throwable ex = null;
     try {
       run(
-          closer, new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              throw arithmeticException;
-            }
+          closer,
+          () -> {
+            throw arithmeticException;
           }
       );
     }

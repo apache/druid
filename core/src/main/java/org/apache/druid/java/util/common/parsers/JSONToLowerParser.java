@@ -82,9 +82,7 @@ public class JSONToLowerParser implements Parser<String, Object>
 
   private ArrayList<String> fieldNames;
 
-  public JSONToLowerParser(
-      ObjectMapper objectMapper, Iterable<String> fieldNames, Iterable<String> exclude
-  )
+  public JSONToLowerParser(ObjectMapper objectMapper, Iterable<String> fieldNames, Iterable<String> exclude)
   {
     this.objectMapper = objectMapper;
     if (fieldNames != null) {

@@ -29,9 +29,7 @@ import java.util.Map;
 public class NoopDataSegmentMover implements DataSegmentMover
 {
   @Override
-  public DataSegment move(
-      DataSegment segment, Map<String, Object> targetLoadSpec
-  )
+  public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
   {
     return segment;
   }

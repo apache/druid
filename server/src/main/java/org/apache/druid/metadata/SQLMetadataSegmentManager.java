@@ -484,9 +484,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         return;
       }
 
-      final Collection<DataSegment> segmentsFinal = Collections2.filter(
-          segments, Predicates.notNull()
-      );
+      final Collection<DataSegment> segmentsFinal = Collections2.filter(segments, Predicates.notNull());
 
       log.info("Polled and found %,d segments in the database", segments.size());
 

@@ -2149,9 +2149,7 @@ public class KafkaIndexTaskTest
     )
     {
       @Override
-      public <T> QueryRunner<T> decorate(
-          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
-      )
+      public <T> QueryRunner<T> decorate(QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
       {
         return delegate;
       }
@@ -2268,7 +2266,9 @@ public class KafkaIndexTaskTest
     {
       @Override
       public boolean registerSegmentHandoffCallback(
-          SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+          SegmentDescriptor descriptor,
+          Executor exec,
+          Runnable handOffRunnable
       )
       {
         if (doHandoff) {

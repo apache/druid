@@ -180,7 +180,10 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   @Override
   public void fillBitmapsFromUnsortedEncodedKeyComponent(
-      Long key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
+      Long key,
+      int rowNum,
+      MutableBitmap[] bitmapIndexes,
+      BitmapFactory factory
   )
   {
     throw new UnsupportedOperationException("Numeric columns do not support bitmaps.");

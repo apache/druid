@@ -58,12 +58,11 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
 
   @Override
   public QueryRunner<Result<SearchResultValue>> mergeRunners(
-      ExecutorService queryExecutor, Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
+      ExecutorService queryExecutor,
+      Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<Result<SearchResultValue>>(
-        queryExecutor, queryWatcher, queryRunners
-    );
+    return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
   }
 
   @Override

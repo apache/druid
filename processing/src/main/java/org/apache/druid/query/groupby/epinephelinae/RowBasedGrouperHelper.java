@@ -568,7 +568,8 @@ public class RowBasedGrouperHelper
   {
     @Override
     public InputRawSupplierColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities, ColumnValueSelector selector
+        ColumnCapabilities capabilities,
+        ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();

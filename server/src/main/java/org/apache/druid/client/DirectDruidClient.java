@@ -162,7 +162,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       final TypeFactory typeFactory = objectMapper.getTypeFactory();
       JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
       JavaType bySegmentType = typeFactory.constructParametricType(
-          Result.class, typeFactory.constructParametricType(BySegmentResultValueClass.class, baseType)
+          Result.class,
+          typeFactory.constructParametricType(BySegmentResultValueClass.class, baseType)
       );
       types = Pair.of(baseType, bySegmentType);
       typesMap.put(query.getClass(), types);
@@ -261,7 +262,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (responseContext != null) {
               context.putAll(
                   objectMapper.<Map<String, Object>>readValue(
-                      responseContext, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+                      responseContext,
+                      JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
                   )
               );
             }
@@ -484,7 +486,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       openConnections.getAndIncrement();
       Futures.addCallback(
-          future, new FutureCallback<InputStream>()
+          future,
+          new FutureCallback<InputStream>()
           {
             @Override
             public void onSuccess(InputStream result)

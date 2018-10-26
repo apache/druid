@@ -151,7 +151,8 @@ public class AndFilter implements BooleanFilter
 
   @Override
   public boolean supportsSelectivityEstimation(
-      final ColumnSelector columnSelector, final BitmapIndexSelector indexSelector
+      final ColumnSelector columnSelector,
+      final BitmapIndexSelector indexSelector
   )
   {
     for (Filter filter : filters) {

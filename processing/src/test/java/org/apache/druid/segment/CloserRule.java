@@ -41,9 +41,7 @@ public class CloserRule implements TestRule
   private final Closer closer = Closer.create();
 
   @Override
-  public Statement apply(
-      final Statement base, Description description
-  )
+  public Statement apply(final Statement base, Description description)
   {
     return new Statement()
     {

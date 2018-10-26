@@ -68,9 +68,7 @@ public class SketchModule implements DruidModule
                 new NamedType(SketchSetPostAggregator.class, THETA_SKETCH_SET_OP_POST_AGG),
                 new NamedType(SketchConstantPostAggregator.class, THETA_SKETCH_CONSTANT_POST_AGG)
             )
-            .addSerializer(
-                SketchHolder.class, new SketchHolderJsonSerializer()
-            )
+            .addSerializer(SketchHolder.class, new SketchHolderJsonSerializer())
     );
   }
 }

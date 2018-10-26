@@ -945,9 +945,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(
-            null, schemalessIndexTest.getMergedIncrementalIndex(0, 0)
-        ),
+        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndex(0, 0)),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1030,9 +1028,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(
-            null, schemalessIndexTest.getMergedIncrementalIndex(1, 1)
-        ),
+        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndex(1, 1)),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,

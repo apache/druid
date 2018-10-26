@@ -536,23 +536,22 @@ public class ServerManagerTest
       Assert.assertTrue(segment.getNumReferences() > 0);
       segmentReferences.add(segment);
       adapters.add((SegmentForTesting) segment.getBaseSegment());
-      return new BlockingQueryRunner<Result<SearchResultValue>>(
-          new NoopQueryRunner<Result<SearchResultValue>>(), waitLatch, waitYieldLatch, notifyLatch
-      );
+      return new BlockingQueryRunner<>(new NoopQueryRunner<>(), waitLatch, waitYieldLatch, notifyLatch);
     }
 
     @Override
     public QueryRunner<Result<SearchResultValue>> mergeRunners(
-        ExecutorService queryExecutor, Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
+        ExecutorService queryExecutor,
+        Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
     )
     {
-      return new ConcatQueryRunner<Result<SearchResultValue>>(Sequences.simple(queryRunners));
+      return new ConcatQueryRunner<>(Sequences.simple(queryRunners));
     }
 
     @Override
     public QueryToolChest<Result<SearchResultValue>, SearchQuery> getToolchest()
     {
-      return new NoopQueryToolChest<Result<SearchResultValue>, SearchQuery>();
+      return new NoopQueryToolChest<>();
     }
 
     public List<SegmentForTesting> getAdapters()
@@ -714,7 +713,8 @@ public class ServerManagerTest
 
     @Override
     public <OutType> Yielder<OutType> toYielder(
-        final OutType initValue, final YieldingAccumulator<OutType, T> accumulator
+        final OutType initValue,
+        final YieldingAccumulator<OutType, T> accumulator
     )
     {
       notifyLatch.countDown();

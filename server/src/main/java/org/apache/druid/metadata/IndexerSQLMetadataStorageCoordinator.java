@@ -116,9 +116,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(
-      final String dataSource, final List<Interval> intervals
-  )
+  public List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
   {
     return connector.retryWithHandle(
         new HandleCallback<List<DataSegment>>()
@@ -387,11 +385,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(interval, "interval");
     Preconditions.checkNotNull(maxVersion, "maxVersion");
 
-    return connector.retryTransaction(
-        new TransactionCallback<SegmentIdentifier>()
+    return connector.retryWithHandle(
+        new HandleCallback<SegmentIdentifier>()
         {
           @Override
-          public SegmentIdentifier inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          public SegmentIdentifier withHandle(Handle handle) throws Exception
           {
             return skipSegmentLineageCheck ?
                    allocatePendingSegment(handle, dataSource, sequenceName, interval, maxVersion) :
@@ -404,9 +402,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        maxVersion
                    );
           }
-        },
-        ALLOCATE_SEGMENT_QUIET_TRIES,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+        }
     );
   }
 
@@ -1014,9 +1010,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public boolean resetDataSourceMetadata(
-      final String dataSource, final DataSourceMetadata dataSourceMetadata
-  ) throws IOException
+  public boolean resetDataSourceMetadata(final String dataSource, final DataSourceMetadata dataSourceMetadata)
+      throws IOException
   {
     final byte[] newCommitMetadataBytes = jsonMapper.writeValueAsBytes(dataSourceMetadata);
     final String newCommitMetadataSha1 = BaseEncoding.base16().encode(

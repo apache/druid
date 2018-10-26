@@ -48,7 +48,10 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
 
   @Override
   protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
-      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
+      Handle handle,
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String dataSource
   )
   {
     String sql = StringUtils.format(

@@ -41,6 +41,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
+    //CHECKSTYLE.OFF: Regexp
     ArrayList<Integer> values = Lists.newArrayList(
         30, 45, 81, 92, 68, 54, 66, 33, 89, 98,
         87, 62, 84, 39, 13, 32, 67, 50, 21, 53,
@@ -53,6 +54,7 @@ public class ByteBufferMinMaxOffsetHeapTest
         23, 70, 26, 8, 64, 16, 10, 74, 7, 25,
         5, 42, 47, 44, 1, 49, 99
     );
+    //CHECKSTYLE.ON: Regexp
 
     for (Integer value : values) {
       heap.addOffset(value);
