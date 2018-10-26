@@ -64,7 +64,7 @@ Period load rules are of the form:
 {
   "type" : "loadByPeriod",
   "period" : "P1M",
-  "includeFuture" : "true",
+  "includeFuture" : true,
   "tieredReplicants": {
       "hot": 1,
       "_default_tier" : 1
@@ -123,7 +123,7 @@ Period drop rules are of the form:
 {
   "type" : "dropByPeriod",
   "period" : "P1M",
-  "includeFuture" : "true"
+  "includeFuture" : true
 }
 ```
 
@@ -178,7 +178,7 @@ Period broadcast rules are of the form:
   "type" : "broadcastByPeriod",
   "colocatedDataSources" : [ "target_source1", "target_source2" ],
   "period" : "P1M",
-  "includeFuture" : "true"
+  "includeFuture" : true
 }
 ```
 
