@@ -28,13 +28,13 @@ import java.util.stream.Collectors;
 
 /**
  */
-public class BySegmentResultValueClass<T> implements BySegmentResultValue<T>
+public class BySegmentResultValueImpl<T> implements BySegmentResultValue<T>
 {
   private final List<T> results;
   private final String segmentId;
   private final Interval interval;
 
-  public BySegmentResultValueClass(
+  public BySegmentResultValueImpl(
       @JsonProperty("results") List<T> results,
       @JsonProperty("segment") String segmentId,
       @JsonProperty("interval") Interval interval
@@ -66,10 +66,10 @@ public class BySegmentResultValueClass<T> implements BySegmentResultValue<T>
     return interval;
   }
 
-  public <U> BySegmentResultValueClass<U> mapResults(Function<? super T, ? extends U> mapper)
+  public <U> BySegmentResultValueImpl<U> mapResults(Function<? super T, ? extends U> mapper)
   {
     List<U> mappedResults = results.stream().map(mapper).collect(Collectors.toList());
-    return new BySegmentResultValueClass<>(mappedResults, segmentId, interval);
+    return new BySegmentResultValueImpl<>(mappedResults, segmentId, interval);
   }
 
   @Override
@@ -92,7 +92,7 @@ public class BySegmentResultValueClass<T> implements BySegmentResultValue<T>
       return false;
     }
 
-    BySegmentResultValueClass that = (BySegmentResultValueClass) o;
+    BySegmentResultValueImpl that = (BySegmentResultValueImpl) o;
 
     if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
       return false;

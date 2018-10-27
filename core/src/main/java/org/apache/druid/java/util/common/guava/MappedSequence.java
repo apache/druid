@@ -28,10 +28,7 @@ public class MappedSequence<T, Out> implements Sequence<Out>
   private final Sequence<T> baseSequence;
   private final Function<? super T, ? extends Out> fn;
 
-  public MappedSequence(
-      Sequence<T> baseSequence,
-      Function<? super T, ? extends Out> fn
-  )
+  MappedSequence(Sequence<T> baseSequence, Function<? super T, ? extends Out> fn)
   {
     this.baseSequence = baseSequence;
     this.fn = fn;

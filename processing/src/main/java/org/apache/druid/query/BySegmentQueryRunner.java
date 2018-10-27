@@ -55,9 +55,9 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
       final List<T> results = baseSequence.toList();
       return Sequences.simple(
           Collections.singletonList(
-              (T) new Result<BySegmentResultValueClass<T>>(
+              (T) new Result<>(
                   timestamp,
-                  new BySegmentResultValueClass<T>(
+                  new BySegmentResultValueImpl<>(
                       results,
                       segmentIdentifier,
                       queryPlus.getQuery().getIntervals().get(0)

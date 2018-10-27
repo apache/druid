@@ -59,9 +59,9 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -816,26 +816,20 @@ public class NestedQueryPushDownTest
 
     QueryRunner<Row> queryRunnerForSegments = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            (queryPlus, responseContext) -> Sequences
-                .simple(
-                    ImmutableList.of(
-                        Sequences.map(
-                            segment1Runner.run(queryPlus, responseContext),
-                            toolChest.makePreComputeManipulatorFn(
-                                (GroupByQuery) queryPlus.getQuery(),
-                                MetricManipulatorFns.deserializing()
-                            )
-                        ),
-                        Sequences.map(
-                            segment2Runner.run(queryPlus, responseContext),
-                            toolChest.makePreComputeManipulatorFn(
-                                (GroupByQuery) queryPlus.getQuery(),
-                                MetricManipulatorFns.deserializing()
-                            )
-                        )
-                    )
-                )
-                .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering())
+            (queryPlus, responseContext) -> {
+              com.google.common.base.Function<Row, Row> deserializer = toolChest.makePreComputeManipulatorFn(
+                  (GroupByQuery) queryPlus.getQuery(),
+                  AggregatorFactory::deserialize
+              );
+              return Sequences
+                  .simple(
+                      ImmutableList.of(
+                          segment1Runner.run(queryPlus, responseContext).map(deserializer::apply),
+                          segment2Runner.run(queryPlus, responseContext).map(deserializer::apply)
+                      )
+                  )
+                  .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
+            }
         ),
         (QueryToolChest) toolChest
     );

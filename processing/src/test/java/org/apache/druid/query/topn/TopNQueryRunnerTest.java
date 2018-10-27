@@ -41,7 +41,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
-import org.apache.druid.query.BySegmentResultValueClass;
+import org.apache.druid.query.BySegmentResultValueImpl;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -3766,10 +3766,10 @@ public class TopNQueryRunnerTest
     );
 
     @SuppressWarnings("unused") // TODO: fix this test
-    List<Result<BySegmentResultValueClass>> expectedResults = Collections.singletonList(
-        new Result<BySegmentResultValueClass>(
+    List<Result<BySegmentResultValueImpl>> expectedResults = Collections.singletonList(
+        new Result<BySegmentResultValueImpl>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new BySegmentResultValueClass(
+            new BySegmentResultValueImpl(
                 Collections.singletonList(
                     new Result<TopNResultValue>(
                         DateTimes.of("2011-01-12T00:00:00.000Z"),

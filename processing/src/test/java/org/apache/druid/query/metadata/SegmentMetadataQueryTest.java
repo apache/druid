@@ -31,7 +31,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.BySegmentResultValue;
-import org.apache.druid.query.BySegmentResultValueClass;
+import org.apache.druid.query.BySegmentResultValueImpl;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -818,7 +818,7 @@ public class SegmentMetadataQueryTest
   {
     Result<BySegmentResultValue> bySegmentResult = new Result<BySegmentResultValue>(
         expectedSegmentAnalysis1.getIntervals().get(0).getStart(),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueImpl(
             Collections.singletonList(
                 expectedSegmentAnalysis1
             ), expectedSegmentAnalysis1.getId(), testQuery.getIntervals().get(0)

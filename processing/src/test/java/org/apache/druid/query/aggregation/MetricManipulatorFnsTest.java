@@ -152,23 +152,22 @@ public class MetricManipulatorFnsTest
   }
 
   @Test
-  public void testIdentity()
-  {
-    Assert.assertEquals(identity, agg);
-    Assert.assertEquals(identity, MetricManipulatorFns.identity().manipulate(aggregatorFactory, agg));
-  }
-
-  @Test
   public void testFinalize()
   {
     Assert.assertEquals(identity, agg);
-    Assert.assertEquals(finalize, MetricManipulatorFns.finalizing().manipulate(aggregatorFactory, agg));
+    Assert.assertEquals(
+        finalize,
+        ((MetricManipulationFn) AggregatorFactory::finalizeComputation).manipulate(aggregatorFactory, agg)
+    );
   }
 
   @Test
   public void testDeserialize()
   {
     Assert.assertEquals(identity, agg);
-    Assert.assertEquals(deserForm, MetricManipulatorFns.deserializing().manipulate(aggregatorFactory, serialForm));
+    Assert.assertEquals(
+        deserForm,
+        ((MetricManipulationFn) AggregatorFactory::deserialize).manipulate(aggregatorFactory, serialForm)
+    );
   }
 }

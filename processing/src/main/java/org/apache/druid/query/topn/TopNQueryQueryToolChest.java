@@ -561,7 +561,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                 BySegmentResultValue<Result<TopNResultValue>> value = (BySegmentResultValue<Result<TopNResultValue>>) input
                     .getValue();
 
-                return new Result<TopNResultValue>(
+                return new Result<>(
                     input.getTimestamp(),
                     new BySegmentTopNResultValue(
                         Lists.transform(

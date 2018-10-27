@@ -50,7 +50,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.BySegmentResultValue;
-import org.apache.druid.query.BySegmentResultValueClass;
+import org.apache.druid.query.BySegmentResultValueImpl;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -6271,7 +6271,7 @@ public class GroupByQueryRunnerTest
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueImpl(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -6328,7 +6328,7 @@ public class GroupByQueryRunnerTest
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueImpl(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -6388,7 +6388,7 @@ public class GroupByQueryRunnerTest
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueImpl(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -6862,7 +6862,7 @@ public class GroupByQueryRunnerTest
     int segmentCount = 32;
     Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueImpl(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",

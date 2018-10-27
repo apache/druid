@@ -36,7 +36,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.BySegmentSkippingQueryRunner;
@@ -58,7 +57,6 @@ import org.apache.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -71,14 +69,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
   };
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
-  private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN = new Function<SegmentAnalysis, SegmentAnalysis>()
-  {
-    @Override
-    public SegmentAnalysis apply(SegmentAnalysis analysis)
-    {
-      return finalizeAnalysis(analysis);
-    }
-  };
 
   private final SegmentMetadataQueryConfig config;
   private final GenericQueryMetricsFactory queryMetricsFactory;
@@ -111,16 +101,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           Map<String, Object> context
       )
       {
-        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(config);
+        SegmentMetadataQuery updatedQuery =
+            ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(config);
         QueryPlus<SegmentAnalysis> updatedQueryPlus = queryPlus.withQuery(updatedQuery);
-        return new MappedSequence<>(
-            CombiningSequence.create(
-                baseRunner.run(updatedQueryPlus, context),
-                makeOrdering(updatedQuery),
-                createMergeFn(updatedQuery)
-            ),
-            MERGE_TRANSFORM_FN::apply
-        );
+        return CombiningSequence
+            .create(baseRunner.run(updatedQueryPlus, context), makeOrdering(updatedQuery), createMergeFn(updatedQuery))
+            .map(SegmentMetadataQueryQueryToolChest::finalizeAnalysis);
       }
 
       private Ordering<SegmentAnalysis> makeOrdering(SegmentMetadataQuery query)
@@ -135,14 +121,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
       private BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis> createMergeFn(final SegmentMetadataQuery inQ)
       {
-        return new BinaryFn<SegmentAnalysis, SegmentAnalysis, SegmentAnalysis>()
-        {
-          @Override
-          public SegmentAnalysis apply(SegmentAnalysis arg1, SegmentAnalysis arg2)
-          {
-            return mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
-          }
-        };
+        return (SegmentAnalysis arg1, SegmentAnalysis arg2) ->
+            mergeAnalyses(arg1, arg2, inQ.isLenientAggregatorMerge());
       }
     };
   }
@@ -169,7 +149,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   @Override
-  public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(final SegmentMetadataQuery query)
+  public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(
+      final SegmentMetadataQuery query
+  )
   {
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
     {
@@ -201,27 +183,13 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Override
       public Function<SegmentAnalysis, SegmentAnalysis> prepareForCache(boolean isResultLevelCache)
       {
-        return new Function<SegmentAnalysis, SegmentAnalysis>()
-        {
-          @Override
-          public SegmentAnalysis apply(@Nullable SegmentAnalysis input)
-          {
-            return input;
-          }
-        };
+        return Functions.identity();
       }
 
       @Override
       public Function<SegmentAnalysis, SegmentAnalysis> pullFromCache(boolean isResultLevelCache)
       {
-        return new Function<SegmentAnalysis, SegmentAnalysis>()
-        {
-          @Override
-          public SegmentAnalysis apply(@Nullable SegmentAnalysis input)
-          {
-            return input;
-          }
-        };
+        return Functions.identity();
       }
     };
   }

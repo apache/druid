@@ -33,14 +33,7 @@ public class MappedSequenceTest
   @Test
   public void testSanity() throws Exception
   {
-    Function<Integer, Integer> fn = new Function<Integer, Integer>()
-    {
-      @Override
-      public Integer apply(Integer input)
-      {
-        return input + 2;
-      }
-    };
+    Function<Integer, Integer> fn = input -> input + 2;
 
     for (int i = 4; i < 5; ++i) {
       List<Integer> vals = Lists.newArrayList();
@@ -50,7 +43,7 @@ public class MappedSequenceTest
 
       SequenceTestHelper.testAll(
           StringUtils.format("Run %,d: ", i),
-          new MappedSequence<>(Sequences.simple(vals), fn),
+          Sequences.simple(vals).map(fn),
           Lists.transform(vals, fn::apply)
       );
     }

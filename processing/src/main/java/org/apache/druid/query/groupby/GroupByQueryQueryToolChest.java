@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
@@ -35,7 +34,6 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
@@ -49,7 +47,6 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SubqueryQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -69,6 +66,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -279,13 +277,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
     final Sequence<Row> finalizingResults;
     if (QueryContexts.isFinalize(subquery, false)) {
-      finalizingResults = new MappedSequence<>(
-          subqueryResult,
-          makePreComputeManipulatorFn(
-              subquery,
-              MetricManipulatorFns.finalizing()
-          )::apply
-      );
+      finalizingResults =
+          subqueryResult.map(makePreComputeManipulatorFn(subquery, AggregatorFactory::finalizeComputation)::apply);
     } else {
       finalizingResults = subqueryResult;
     }
@@ -309,52 +302,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   @Override
-  public Function<Row, Row> makePreComputeManipulatorFn(
-      final GroupByQuery query,
-      final MetricManipulationFn fn
-  )
+  public Function<Row, Row> makePreComputeManipulatorFn(final GroupByQuery query, final MetricManipulationFn fn)
   {
-    if (MetricManipulatorFns.identity().equals(fn)) {
-      return Functions.identity();
-    }
-
-    return new Function<Row, Row>()
-    {
-      @Override
-      public Row apply(Row input)
-      {
-        if (input instanceof MapBasedRow) {
-          final MapBasedRow inputRow = (MapBasedRow) input;
-          final Map<String, Object> values = Maps.newHashMap(inputRow.getEvent());
-          for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-            values.put(agg.getName(), fn.manipulate(agg, inputRow.getEvent().get(agg.getName())));
-          }
-          return new MapBasedRow(inputRow.getTimestamp(), values);
+    return (Row row) -> {
+      if (row instanceof MapBasedRow) {
+        final MapBasedRow inputRow = (MapBasedRow) row;
+        final Map<String, Object> values = Maps.newHashMap(inputRow.getEvent());
+        for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+          values.put(agg.getName(), fn.manipulate(agg, inputRow.getEvent().get(agg.getName())));
         }
-        return input;
+        return new MapBasedRow(inputRow.getTimestamp(), values);
       }
+      return row;
     };
   }
 
   @Override
-  public Function<Row, Row> makePostComputeManipulatorFn(
-      final GroupByQuery query,
-      final MetricManipulationFn fn
-  )
+  public Function<Row, Row> makePostComputeManipulatorFn(final GroupByQuery query, final MetricManipulationFn fn)
   {
-    final Set<String> optimizedDims = ImmutableSet.copyOf(
-        Iterables.transform(
-            extractionsToRewrite(query),
-            new Function<DimensionSpec, String>()
-            {
-              @Override
-              public String apply(DimensionSpec input)
-              {
-                return input.getOutputName();
-              }
-            }
-        )
-    );
+    final Set<String> optimizedDims = extractionsToRewrite(query)
+        .stream()
+        .map(DimensionSpec::getOutputName)
+        .collect(Collectors.toSet());
     final Function<Row, Row> preCompute = makePreComputeManipulatorFn(query, fn);
     if (optimizedDims.isEmpty()) {
       return preCompute;

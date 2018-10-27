@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -45,7 +44,7 @@ import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.query.BySegmentResultValueClass;
+import org.apache.druid.query.BySegmentResultValueImpl;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
@@ -55,7 +54,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -163,7 +162,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
       JavaType bySegmentType = typeFactory.constructParametricType(
           Result.class,
-          typeFactory.constructParametricType(BySegmentResultValueClass.class, baseType)
+          typeFactory.constructParametricType(BySegmentResultValueImpl.class, baseType)
       );
       types = Pair.of(baseType, bySegmentType);
       typesMap.put(query.getClass(), types);
@@ -557,13 +556,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     // bySegment queries are de-serialized after caching results in order to
     // avoid the cost of de-serializing and then re-serializing again when adding to cache
     if (!isBySegment) {
-      retVal = Sequences.map(
-          retVal,
-          toolChest.makePreComputeManipulatorFn(
-              query,
-              MetricManipulatorFns.deserializing()
-          )
-      );
+      retVal = retVal.map(toolChest.makePreComputeManipulatorFn(query, AggregatorFactory::deserialize)::apply);
     }
 
     return retVal;

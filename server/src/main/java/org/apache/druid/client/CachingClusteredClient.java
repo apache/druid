@@ -51,7 +51,7 @@ import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.BySegmentResultValueClass;
+import org.apache.druid.query.BySegmentResultValueImpl;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -62,7 +62,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.server.QueryResource;
@@ -574,18 +574,20 @@ public class CachingClusteredClient implements QuerySegmentWalker
         long maxQueuedBytesPerServer
     )
     {
-      Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner
+      Sequence<Result<BySegmentResultValueImpl<T>>> resultsBySegments = serverRunner
           .run(
               queryPlus.withQuerySegmentSpec(segmentsOfServerSpec).withMaxQueuedBytes(maxQueuedBytesPerServer),
               responseContext
           );
       // bySegment results need to be de-serialized, see DirectDruidClient.run()
-      return (Sequence<T>) resultsBySegments
-          .map(result -> result.map(
-              resultsOfSegment -> resultsOfSegment.mapResults(
-                  toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing())::apply
-              )
-          ));
+      Function<T, T> resultDeserializingFn =
+          toolChest.makePreComputeManipulatorFn(query, AggregatorFactory::deserialize);
+      return (Sequence<T>) resultsBySegments.map(
+          (Result<BySegmentResultValueImpl<T>> result) -> result.map(
+              (BySegmentResultValueImpl<T> resultsOfSegment) ->
+                  resultsOfSegment.mapResults(resultDeserializingFn::apply)
+          )
+      );
     }
 
     @SuppressWarnings("unchecked")
@@ -608,27 +610,26 @@ public class CachingClusteredClient implements QuerySegmentWalker
     )
     {
       @SuppressWarnings("unchecked")
-      final Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner.run(
+      final Sequence<Result<BySegmentResultValueImpl<T>>> resultsBySegments = serverRunner.run(
           queryPlus
-              .withQuery((Query<Result<BySegmentResultValueClass<T>>>) downstreamQuery)
+              .withQuery((Query<Result<BySegmentResultValueImpl<T>>>) downstreamQuery)
               .withQuerySegmentSpec(segmentsOfServerSpec)
               .withMaxQueuedBytes(maxQueuedBytesPerServer),
           responseContext
       );
       final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache();
-
+      Function<T, T> resultDeserializingFn =
+          toolChest.makePreComputeManipulatorFn(downstreamQuery, AggregatorFactory::deserialize);
       return resultsBySegments
           .map(result -> {
-            final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
+            final BySegmentResultValueImpl<T> resultsOfSegment = result.getValue();
             final Cache.NamedKey cachePopulatorKey =
                 getCachePopulatorKey(resultsOfSegment.getSegmentId(), resultsOfSegment.getInterval());
             Sequence<T> res = Sequences.simple(resultsOfSegment.getResults());
             if (cachePopulatorKey != null) {
               res = cachePopulator.wrap(res, cacheFn::apply, cache, cachePopulatorKey);
             }
-            return res.map(
-                toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
-            );
+            return res.map(resultDeserializingFn::apply);
           })
           .flatMerge(seq -> seq, query.getResultOrdering());
     }

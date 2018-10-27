@@ -21,8 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.PublicApi;
 
-/**
-*/
+@FunctionalInterface
 @PublicApi
 public interface MetricManipulationFn
 {

@@ -667,10 +667,7 @@ public class AggregationTestHelper implements Closeable
 
           List resultRows = Lists.transform(
               readQueryResultArrayFromString(resultStr),
-              toolChest.makePreComputeManipulatorFn(
-                  queryPlus.getQuery(),
-                  MetricManipulatorFns.deserializing()
-              )
+              toolChest.makePreComputeManipulatorFn(queryPlus.getQuery(), AggregatorFactory::deserialize)
           );
           return Sequences.simple(resultRows);
         }

@@ -73,7 +73,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.BySegmentResultValueClass;
+import org.apache.druid.query.BySegmentResultValueImpl;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -1952,7 +1952,7 @@ public class CachingClusteredClientTest
       if (index != -1) {
         ret.add(new Result(
             results.get(index).iterator().next().getTimestamp(),
-            new BySegmentResultValueClass(
+            new BySegmentResultValueImpl(
                 Lists.newArrayList(results.get(index)),
                 id,
                 descriptor.getInterval()
@@ -2258,7 +2258,7 @@ public class CachingClusteredClientTest
                     {
                       return new Result(
                           results.iterator().next().getTimestamp(),
-                          new BySegmentResultValueClass(
+                          new BySegmentResultValueImpl(
                               Lists.newArrayList(results),
                               segmentId,
                               interval
@@ -2297,7 +2297,7 @@ public class CachingClusteredClientTest
                   {
                     return new Result(
                         interval.getStart(),
-                        new BySegmentResultValueClass(
+                        new BySegmentResultValueImpl(
                             Lists.newArrayList(results),
                             segmentId,
                             interval
@@ -2333,7 +2333,7 @@ public class CachingClusteredClientTest
                   {
                     return new Result(
                         results.iterator().next().getTimestamp(),
-                        new BySegmentResultValueClass(
+                        new BySegmentResultValueImpl(
                             Lists.newArrayList(results),
                             segmentId,
                             interval
@@ -2369,7 +2369,7 @@ public class CachingClusteredClientTest
                   {
                     return new Result(
                         results.iterator().next().getTimestamp(),
-                        new BySegmentResultValueClass(
+                        new BySegmentResultValueImpl(
                             Lists.newArrayList(results),
                             segmentId,
                             interval
@@ -2405,7 +2405,7 @@ public class CachingClusteredClientTest
                   {
                     return new Result(
                         results.iterator().next().getTimestamp(),
-                        new BySegmentResultValueClass(
+                        new BySegmentResultValueImpl(
                             Lists.newArrayList(results),
                             segmentId,
                             interval
@@ -2441,7 +2441,7 @@ public class CachingClusteredClientTest
                   {
                     return new Result(
                         results.iterator().next().getTimestamp(),
-                        new BySegmentResultValueClass(
+                        new BySegmentResultValueImpl(
                             Lists.newArrayList(results),
                             segmentId,
                             interval

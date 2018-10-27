@@ -22,11 +22,8 @@ package org.apache.druid.query;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.util.Map;
 
@@ -50,60 +47,33 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
     final Query<T> query = queryPlus.getQuery();
-    final boolean isBySegment = QueryContexts.isBySegment(query);
     final boolean shouldFinalize = QueryContexts.isFinalize(query, true);
-
-    final Query<T> queryToRun;
-    final Function<T, T> finalizerFn;
-    final MetricManipulationFn metricManipulationFn;
-
-    if (shouldFinalize) {
-      queryToRun = query.withOverriddenContext(ImmutableMap.of("finalize", false));
-      metricManipulationFn = MetricManipulatorFns.finalizing();
-
-    } else {
-      queryToRun = query;
-      metricManipulationFn = MetricManipulatorFns.identity();
-    }
-    if (isBySegment) {
-      finalizerFn = new Function<T, T>()
-      {
-        final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
-            query,
-            metricManipulationFn
-        );
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public T apply(T input)
-        {
-          Result<BySegmentResultValueClass<T>> result = (Result<BySegmentResultValueClass<T>>) input;
-
-          if (input == null) {
-            throw new ISE("Cannot have a null result!");
-          }
-
-          BySegmentResultValue<T> resultsClass = result.getValue();
-
-          return (T) new Result<BySegmentResultValueClass>(
-              result.getTimestamp(),
-              new BySegmentResultValueClass(
-                  Lists.transform(resultsClass.getResults(), baseFinalizer),
-                  resultsClass.getSegmentId(),
-                  resultsClass.getInterval()
-              )
-          );
-        }
-      };
-    } else {
-      finalizerFn = toolChest.makePostComputeManipulatorFn(query, metricManipulationFn);
+    if (!shouldFinalize) {
+      return baseRunner.run(queryPlus.withQuery(query), responseContext);
     }
 
+    final boolean isBySegment = QueryContexts.isBySegment(query);
 
-    return Sequences.map(
-        baseRunner.run(queryPlus.withQuery(queryToRun), responseContext),
-        finalizerFn
+    Function<T, T> finalizerFn = toolChest.makePostComputeManipulatorFn(
+        query,
+        AggregatorFactory::finalizeComputation
     );
 
+    final Query<T> queryToRun = query.withOverriddenContext(ImmutableMap.of("finalize", false));
+    if (isBySegment) {
+      Function<T, T> perSegmentResultFinalizerFn = finalizerFn;
+      finalizerFn = (T input) -> {
+        @SuppressWarnings("unchecked")
+        Result<BySegmentResultValue<T>> result = (Result<BySegmentResultValue<T>>) input;
+        return (T) result.map(
+            (BySegmentResultValue<T> bySegmentResults) -> new BySegmentResultValueImpl(
+                Lists.transform(bySegmentResults.getResults(), perSegmentResultFinalizerFn),
+                bySegmentResults.getSegmentId(),
+                bySegmentResults.getInterval()
+            )
+        );
+      };
+    }
+    return baseRunner.run(queryPlus.withQuery(queryToRun), responseContext).map(finalizerFn::apply);
   }
 }

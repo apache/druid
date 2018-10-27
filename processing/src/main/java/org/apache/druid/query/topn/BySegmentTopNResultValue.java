@@ -57,7 +57,6 @@ public class BySegmentTopNResultValue extends TopNResultValue implements BySegme
     throw new UnsupportedOperationException();
   }
 
-
   @Override
   @JsonProperty("results")
   public List<Result<TopNResultValue>> getResults()
