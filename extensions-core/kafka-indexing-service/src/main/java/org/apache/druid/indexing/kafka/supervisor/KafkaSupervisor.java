@@ -2416,21 +2416,21 @@ public class KafkaSupervisor implements Supervisor
     }
 
     for (int groupId : pendingCompletionTaskGroups.keySet()) {
-      TaskGroup group = taskGroups.get(groupId);
-      for (String taskId : group.taskIds()) {
-        futures.add(
-            Futures.transform(
-                taskClient.getMovingAveragesAsync(taskId),
-                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
-                  return new StatsFromTaskResult(
+      List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
+      for (TaskGroup pendingGroup : pendingGroups) {
+        for (String taskId : pendingGroup.taskIds()) {
+          futures.add(
+              Futures.transform(
+                  taskClient.getMovingAveragesAsync(taskId),
+                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                       groupId,
                       taskId,
                       currentStats
-                  );
-                }
-            )
-        );
-        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+                  )
+              )
+          );
+          groupAndTaskIds.add(new Pair<>(groupId, taskId));
+        }
       }
     }
 
@@ -2447,6 +2447,50 @@ public class KafkaSupervisor implements Supervisor
     }
 
     return allStats;
+  }
+
+  @VisibleForTesting
+  void addTaskGroupToActivelyReadingTaskGroup(
+      int taskGroupId,
+      ImmutableMap<Integer, Long> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks
+  )
+  {
+    TaskGroup group = new TaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime
+    );
+    group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    if (taskGroups.putIfAbsent(taskGroupId, group) != null) {
+      throw new ISE(
+          "trying to add taskGroup with ID [%s] to actively reading task groups, but group already exists.",
+          taskGroupId
+      );
+    }
+  }
+
+  @VisibleForTesting
+  void addTaskGroupToPendingCompletionTaskGroup(
+      int taskGroupId,
+      ImmutableMap<Integer, Long> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks
+  )
+  {
+    TaskGroup group = new TaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime
+    );
+    group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    pendingCompletionTaskGroups.computeIfAbsent(taskGroupId, x -> new CopyOnWriteArrayList<>())
+                               .add(group);
   }
 
   @VisibleForTesting

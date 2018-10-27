@@ -21,6 +21,7 @@ package org.apache.druid.server.security;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
 
 import org.eclipse.jetty.util.ssl.AliasedX509ExtendedKeyManager;
@@ -29,8 +30,10 @@ import javax.annotation.Nullable;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
@@ -42,6 +45,8 @@ import java.security.cert.CertificateException;
 
 public class TLSUtils
 {
+  private static final Logger log = new Logger(TLSUtils.class);
+
   public static class ClientSSLContextBuilder
   {
     private String protocol;
@@ -55,6 +60,8 @@ public class TLSUtils
     private String certAlias;
     private PasswordProvider keyStorePasswordProvider;
     private PasswordProvider keyManagerFactoryPasswordProvider;
+    private Boolean validateHostnames;
+    private TLSCertificateChecker certificateChecker;
 
     public ClientSSLContextBuilder setProtocol(String protocol)
     {
@@ -122,6 +129,18 @@ public class TLSUtils
       return this;
     }
 
+    public ClientSSLContextBuilder setValidateHostnames(Boolean validateHostnames)
+    {
+      this.validateHostnames = validateHostnames;
+      return this;
+    }
+
+    public ClientSSLContextBuilder setCertificateChecker(TLSCertificateChecker certificateChecker)
+    {
+      this.certificateChecker = certificateChecker;
+      return this;
+    }
+
     public SSLContext build()
     {
       Preconditions.checkNotNull(trustStorePath, "must specify a trustStorePath");
@@ -137,7 +156,9 @@ public class TLSUtils
         keyStoreAlgorithm,
         certAlias,
         keyStorePasswordProvider,
-        keyManagerFactoryPasswordProvider
+        keyManagerFactoryPasswordProvider,
+        validateHostnames,
+        certificateChecker
       );
     }
   }
@@ -153,7 +174,9 @@ public class TLSUtils
       @Nullable String keyStoreAlgorithm,
       @Nullable String certAlias,
       @Nullable PasswordProvider keyStorePasswordProvider,
-      @Nullable PasswordProvider keyManagerFactoryPasswordProvider
+      @Nullable PasswordProvider keyManagerFactoryPasswordProvider,
+      @Nullable Boolean validateHostnames,
+      TLSCertificateChecker tlsCertificateChecker
   )
   {
     SSLContext sslContext = null;
@@ -170,7 +193,6 @@ public class TLSUtils
                                                                                 ? TrustManagerFactory.getDefaultAlgorithm()
                                                                                 : trustStoreAlgorithm);
       trustManagerFactory.init(trustStore);
-
 
       KeyManager[] keyManagers;
       if (keyStorePath != null) {
@@ -195,9 +217,25 @@ public class TLSUtils
         keyManagers = null;
       }
 
+      TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
+      TrustManager[] newTrustManagers = new TrustManager[trustManagers.length];
+
+      for (int i = 0; i < trustManagers.length; i++) {
+        if (trustManagers[i] instanceof X509ExtendedTrustManager) {
+          newTrustManagers[i] = new CustomCheckX509TrustManager(
+              (X509ExtendedTrustManager) trustManagers[i],
+              tlsCertificateChecker,
+              validateHostnames == null ? true : validateHostnames
+          );
+        } else {
+          newTrustManagers[i] = trustManagers[i];
+          log.info("Encountered non-X509ExtendedTrustManager: " + trustManagers[i].getClass());
+        }
+      }
+
       sslContext.init(
           keyManagers,
-          trustManagerFactory.getTrustManagers(),
+          newTrustManagers,
           null
       );
     }

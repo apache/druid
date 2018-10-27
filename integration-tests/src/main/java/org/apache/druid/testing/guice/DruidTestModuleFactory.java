@@ -59,5 +59,4 @@ public class DruidTestModuleFactory implements IModuleFactory
     context.addInjector(Collections.singletonList(module), injector);
     return module;
   }
-
 }

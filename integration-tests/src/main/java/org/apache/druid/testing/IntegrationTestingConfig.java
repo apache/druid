@@ -45,6 +45,10 @@ public interface IntegrationTestingConfig
 
   String getNoClientAuthRouterTLSUrl();
 
+  String getCustomCertCheckRouterUrl();
+
+  String getCustomCertCheckRouterTLSUrl();
+
   String getBrokerUrl();
 
   String getBrokerTLSUrl();
