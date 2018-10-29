@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
-import cloud.localstack.Localstack;
+import cloud.localstack.LocalstackTestRunner;
 import cloud.localstack.docker.LocalstackDockerTestRunner;
 import cloud.localstack.docker.annotation.LocalstackDockerProperties;
 import com.amazonaws.http.SdkHttpMetadata;
@@ -216,7 +216,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     cloud.localstack.TestUtils.setEnv("AWS_CBOR_DISABLE", "1");
     /* Disable SSL certificate checks for local testing */
-    if (Localstack.useSSL()) {
+    if (LocalstackTestRunner.useSSL()) {
       cloud.localstack.TestUtils.disableSslCertChecking();
     }
 
@@ -1469,7 +1469,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     KinesisIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(cloud.localstack.TestUtils.TEST_ACCESS_KEY, capturedTaskConfig.getAwsAccessKeyId());
     Assert.assertEquals(cloud.localstack.TestUtils.TEST_SECRET_KEY, capturedTaskConfig.getAwsSecretAccessKey());
-    Assert.assertEquals(Localstack.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
+    Assert.assertEquals(LocalstackTestRunner.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
 
@@ -1600,7 +1600,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     KinesisIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(cloud.localstack.TestUtils.TEST_ACCESS_KEY, capturedTaskConfig.getAwsAccessKeyId());
     Assert.assertEquals(cloud.localstack.TestUtils.TEST_SECRET_KEY, capturedTaskConfig.getAwsSecretAccessKey());
-    Assert.assertEquals(Localstack.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
+    Assert.assertEquals(LocalstackTestRunner.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
 
@@ -2960,7 +2960,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
-        Localstack.getEndpointKinesis(),
+        LocalstackTestRunner.getEndpointKinesis(),
         null,
         replicas,
         taskCount,
@@ -3132,7 +3132,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             minimumMessageTime,
             maximumMessageTime,
-            Localstack.getEndpointKinesis(),
+            LocalstackTestRunner.getEndpointKinesis(),
             null,
             null,
             cloud.localstack.TestUtils.TEST_ACCESS_KEY,
@@ -3161,7 +3161,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
-        Localstack.getEndpointKinesis(),
+        LocalstackTestRunner.getEndpointKinesis(),
         null,
         replicas,
         taskCount,

@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import cloud.localstack.Localstack;
+import cloud.localstack.LocalstackTestRunner;
 import cloud.localstack.TestUtils;
 import cloud.localstack.docker.LocalstackDockerTestRunner;
 import cloud.localstack.docker.annotation.LocalstackDockerProperties;
@@ -44,7 +44,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashSet;
@@ -59,9 +58,6 @@ public class KinesisRecordSupplierTest
 {
   static {
     TestUtils.setEnv("AWS_CBOR_DISABLE", "1");
-    if (Localstack.useSSL()) {
-      TestUtils.disableSslCertChecking();
-    }
   }
 
   private static final Logger log = new Logger(KinesisRecordSupplierTest.class);
@@ -180,7 +176,7 @@ public class KinesisRecordSupplierTest
   }
 
   @Before
-  public void setupTest() throws IOException, InterruptedException
+  public void setupTest()
   {
     stream = getStreamName();
   }
@@ -197,7 +193,7 @@ public class KinesisRecordSupplierTest
     );
 
     KinesisRecordSupplier recordSupplier = new KinesisRecordSupplier(
-        Localstack.getEndpointKinesis(),
+        LocalstackTestRunner.getEndpointKinesis(),
         TestUtils.TEST_ACCESS_KEY,
         TestUtils.TEST_SECRET_KEY,
         1,
@@ -243,7 +239,7 @@ public class KinesisRecordSupplierTest
     );
 
     KinesisRecordSupplier recordSupplier = new KinesisRecordSupplier(
-        Localstack.getEndpointKinesis(),
+        LocalstackTestRunner.getEndpointKinesis(),
         TestUtils.TEST_ACCESS_KEY,
         TestUtils.TEST_SECRET_KEY,
         1,
@@ -295,7 +291,7 @@ public class KinesisRecordSupplierTest
     );
 
     KinesisRecordSupplier recordSupplier = new KinesisRecordSupplier(
-        Localstack.getEndpointKinesis(),
+        LocalstackTestRunner.getEndpointKinesis(),
         TestUtils.TEST_ACCESS_KEY,
         TestUtils.TEST_SECRET_KEY,
         1,
@@ -355,7 +351,7 @@ public class KinesisRecordSupplierTest
     );
 
     KinesisRecordSupplier recordSupplier = new KinesisRecordSupplier(
-        Localstack.getEndpointKinesis(),
+        LocalstackTestRunner.getEndpointKinesis(),
         TestUtils.TEST_ACCESS_KEY,
         TestUtils.TEST_SECRET_KEY,
         1,
@@ -426,7 +422,7 @@ public class KinesisRecordSupplierTest
     );
 
     KinesisRecordSupplier recordSupplier = new KinesisRecordSupplier(
-        Localstack.getEndpointKinesis(),
+        LocalstackTestRunner.getEndpointKinesis(),
         TestUtils.TEST_ACCESS_KEY,
         TestUtils.TEST_SECRET_KEY,
         1,
@@ -465,7 +461,7 @@ public class KinesisRecordSupplierTest
     );
 
     KinesisRecordSupplier recordSupplier = new KinesisRecordSupplier(
-        Localstack.getEndpointKinesis(),
+        LocalstackTestRunner.getEndpointKinesis(),
         TestUtils.TEST_ACCESS_KEY,
         TestUtils.TEST_SECRET_KEY,
         1,

@@ -274,8 +274,14 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
       if (restoredMetadata == null) {
+        log.info(
+            "no restored metadata found for [%s], using starting sequences[%s] from ioConfig",
+            topic,
+            ioConfig.getStartPartitions()
+        );
         lastOffsets.putAll(ioConfig.getStartPartitions().getMap());
       } else {
+        log.info("found meatadata [%s] for [%s]", restoredMetadata, topic);
         @SuppressWarnings("unchecked")
         final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
         final SeekableStreamPartitions<String, String> restoredNextPartitions = toolbox
@@ -541,7 +547,11 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
         // Sanity check, we should only be publishing things that match our desired end state.
         if (!endOffsets.equals(finalPartitions.getMap())) {
-          throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
+          throw new ISE(
+              "WTF?! Driver attempted to publish invalid metadata[%s], final sequences are [%s]",
+              commitMetadata,
+              endOffsets
+          );
         }
 
         final SegmentTransactionalInsertAction action;
@@ -806,27 +816,13 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         pauseRequested = true;
       }
       */
-
       if (pauseRequested) {
         status = Status.PAUSED;
-        long nanos = 0;
         hasPaused.signalAll();
 
         while (pauseRequested) {
-          if (pauseMillis == PAUSE_FOREVER) {
-            log.info("Pausing ingestion until resumed");
-            shouldResume.await();
-          } else {
-            if (pauseMillis > 0) {
-              log.info("Pausing ingestion for [%,d] ms", pauseMillis);
-              nanos = TimeUnit.MILLISECONDS.toNanos(pauseMillis);
-              pauseMillis = 0;
-            }
-            if (nanos <= 0L) {
-              pauseRequested = false; // timeout elapsed
-            }
-            nanos = shouldResume.awaitNanos(nanos);
-          }
+          log.info("Pausing ingestion until resumed");
+          shouldResume.await();
         }
 
         status = Status.READING;
@@ -1237,9 +1233,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       pauseLock.unlock();
     }
 
-    if (resume) {
-      resume();
-    }
+    resume();
 
     return Response.ok(endOffsets).build();
   }

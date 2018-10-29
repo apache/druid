@@ -34,12 +34,6 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-
-  <properties>
-    <kinesis.version>1.6.3</kinesis.version>
-    <aws.version>1.11.437</aws.version>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -75,13 +69,13 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-kinesis</artifactId>
-      <version>${aws.version}</version>
+      <version>${aws.sdk.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-sts</artifactId>
-      <version>${aws.version}</version>
+      <version>${aws.sdk.version}</version>
     </dependency>
 
     <!-- Tests -->
@@ -119,7 +113,7 @@
     <dependency>
       <groupId>cloud.localstack</groupId>
       <artifactId>localstack-utils</artifactId>
-      <version>0.1.14</version>
+      <version>0.1.13</version>
     </dependency>
   </dependencies>
 

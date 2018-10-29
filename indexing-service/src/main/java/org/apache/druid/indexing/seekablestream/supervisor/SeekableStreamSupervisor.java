@@ -1058,29 +1058,33 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
 
     Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
     if (taskRunner.isPresent()) {
-      taskRunner.get().registerListener(
-          new TaskRunnerListener()
-          {
-            @Override
-            public String getListenerId()
+      try {
+        taskRunner.get().registerListener(
+            new TaskRunnerListener()
             {
-              return supervisorId;
-            }
+              @Override
+              public String getListenerId()
+              {
+                return supervisorId;
+              }
 
-            @Override
-            public void locationChanged(final String taskId, final TaskLocation newLocation)
-            {
-              // do nothing
-            }
+              @Override
+              public void locationChanged(final String taskId, final TaskLocation newLocation)
+              {
+                // do nothing
+              }
 
-            @Override
-            public void statusChanged(String taskId, TaskStatus status)
-            {
-              notices.add(new RunNotice());
-            }
-          }, MoreExecutors.sameThreadExecutor()
-      );
-
+              @Override
+              public void statusChanged(String taskId, TaskStatus status)
+              {
+                notices.add(new RunNotice());
+              }
+            }, MoreExecutors.sameThreadExecutor()
+        );
+      }
+      catch (ISE e) {
+        log.info("listener already registered with taskrunner.");
+      }
       listenerRegistered = true;
     }
   }
@@ -1748,6 +1752,7 @@ public abstract class SeekableStreamSupervisor<partitionType, sequenceType>
     boolean initialPartitionDiscovery = this.partitionIds.isEmpty();
     for (partitionType partitionId : partitionIds) {
       if (closedPartitions.contains(partitionId)) {
+        log.info("partition [%s] is closed and has no more data, skipping.", partitionId);
         continue;
       }
 
