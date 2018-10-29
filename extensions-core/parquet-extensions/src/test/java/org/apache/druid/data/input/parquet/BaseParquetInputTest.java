@@ -20,7 +20,6 @@
 package org.apache.druid.data.input.parquet;
 
 import avro.shaded.com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.directory.api.util.Strings;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -44,6 +43,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -125,7 +125,7 @@ class BaseParquetInputTest
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
 
     try (RecordReader reader = inputFormat.createRecordReader(split, context)) {
-      List<InputRow> records = Lists.newArrayList();
+      List<InputRow> records = new ArrayList<>();
       InputRowParser parser = config.getParser();
 
       reader.initialize(split, context);

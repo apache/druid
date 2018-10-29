@@ -19,8 +19,6 @@
 
 package org.apache.druid.data.input.parquet.simple;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -30,6 +28,8 @@ import org.apache.parquet.hadoop.example.GroupReadSupport;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -62,17 +62,17 @@ public class DruidParquetReadSupport extends GroupReadSupport
     String tsField = parseSpec.getTimestampSpec().getTimestampColumn();
 
     List<DimensionSchema> dimensionSchema = parseSpec.getDimensionsSpec().getDimensions();
-    Set<String> dimensions = Sets.newHashSet();
+    Set<String> dimensions = new HashSet<>();
     for (DimensionSchema dim : dimensionSchema) {
       dimensions.add(dim.getName());
     }
 
-    Set<String> metricsFields = Sets.newHashSet();
+    Set<String> metricsFields = new HashSet<>();
     for (AggregatorFactory agg : config.getSchema().getDataSchema().getAggregators()) {
       metricsFields.addAll(agg.requiredFields());
     }
 
-    List<Type> partialFields = Lists.newArrayList();
+    List<Type> partialFields = new ArrayList<>();
 
     for (Type type : fullSchema.getFields()) {
       if (tsField.equals(type.getName())

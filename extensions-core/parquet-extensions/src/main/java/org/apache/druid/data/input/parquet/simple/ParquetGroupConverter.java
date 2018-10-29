@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.parquet.simple;
 
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.RE;
@@ -70,7 +69,7 @@ class ParquetGroupConverter
       // primitive list
       if (fieldType.getRepetition().equals(Type.Repetition.REPEATED)) {
         int repeated = g.getFieldRepetitionCount(fieldIndex);
-        List<Object> vals = Lists.newArrayList();
+        List<Object> vals = new ArrayList<>();
         for (int i = 0; i < repeated; i++) {
           vals.add(convertPrimitiveField(g, fieldIndex, i, binaryAsString));
         }
@@ -104,7 +103,7 @@ class ParquetGroupConverter
     Type t = g.getType().getFields().get(fieldIndex);
     assert t.getRepetition().equals(Type.Repetition.REPEATED);
     int repeated = g.getFieldRepetitionCount(fieldIndex);
-    List<Object> vals = Lists.newArrayList();
+    List<Object> vals = new ArrayList<>();
     for (int i = 0; i < repeated; i++) {
       if (t.isPrimitive()) {
         vals.add(convertPrimitiveField(g, fieldIndex, i, binaryAsString));
@@ -163,7 +162,7 @@ class ParquetGroupConverter
     assert isLogicalListType(g.getType());
     int repeated = g.getFieldRepetitionCount(0);
     boolean isListItemPrimitive = g.getType().getFields().get(0).isPrimitive();
-    List<Object> vals = Lists.newArrayList();
+    List<Object> vals = new ArrayList<>();
 
     for (int i = 0; i < repeated; i++) {
       if (isListItemPrimitive) {
