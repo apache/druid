@@ -20,7 +20,6 @@
 package org.apache.druid.security.basic.authorization.endpoint;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -51,7 +50,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   {
     this.cacheManager = cacheManager;
 
-    this.authorizerMap = Maps.newHashMap();
+    this.authorizerMap = new HashMap<>();
     for (Map.Entry<String, Authorizer> authorizerEntry : authorizerMapper.getAuthorizerMap().entrySet()) {
       final String authorizerName = authorizerEntry.getKey();
       final Authorizer authorizer = authorizerEntry.getValue();

@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.guava.MergeSequence;
@@ -64,7 +63,7 @@ public class MergeSequenceBenchmark
   public void setup()
   {
     Random rand = ThreadLocalRandom.current();
-    sequences = Lists.newArrayList();
+    sequences = new ArrayList<>();
     for (int i = 0; i < count; i++) {
       int[] sequence = new int[sequenceLength];
       for (int j = 0; j < sequenceLength; j++) {

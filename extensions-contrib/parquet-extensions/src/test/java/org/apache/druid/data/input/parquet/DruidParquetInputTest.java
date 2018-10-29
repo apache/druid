@@ -18,7 +18,6 @@
  */
 package org.apache.druid.data.input.parquet;
 
-import com.google.common.collect.Lists;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.druid.data.input.InputRow;
@@ -38,6 +37,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -129,7 +129,7 @@ public class DruidParquetInputTest
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
 
     try (RecordReader reader = inputFormat.createRecordReader(split, context)) {
-      List<InputRow> records = Lists.newArrayList();
+      List<InputRow> records = new ArrayList<>();
       InputRowParser parser = config.getParser();
 
       reader.initialize(split, context);

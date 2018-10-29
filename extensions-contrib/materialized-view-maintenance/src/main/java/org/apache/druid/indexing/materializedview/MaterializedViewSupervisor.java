@@ -22,10 +22,8 @@ package org.apache.druid.indexing.materializedview;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -55,10 +53,14 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 public class MaterializedViewSupervisor implements Supervisor
@@ -79,8 +81,8 @@ public class MaterializedViewSupervisor implements Supervisor
   private final String supervisorId;
   private final int maxTaskCount;
   private final long minDataLagMs;
-  private final Map<Interval, HadoopIndexTask> runningTasks = Maps.newHashMap();
-  private final Map<Interval, String> runningVersion = Maps.newHashMap();
+  private final Map<Interval, HadoopIndexTask> runningTasks = new HashMap<>();
+  private final Map<Interval, String> runningVersion = new HashMap<>();
   // taskLock is used to synchronize runningTask and runningVersion
   private final Object taskLock = new Object();
   // stateLock is used to synchronize materializedViewSupervisor's status
@@ -90,7 +92,7 @@ public class MaterializedViewSupervisor implements Supervisor
   private ListeningScheduledExecutorService exec = null;
   // In the missing intervals, baseDataSource has data but derivedDataSource does not, which means
   // data in these intervals of derivedDataSource needs to be rebuilt.
-  private Set<Interval> missInterval = Sets.newHashSet();
+  private Set<Interval> missInterval = new HashSet<>();
   
   public MaterializedViewSupervisor(
       TaskMaster taskMaster,
@@ -325,13 +327,11 @@ public class MaterializedViewSupervisor implements Supervisor
     // use max created_date of base segments as the version of derivative segments
     Map<Interval, String> maxCreatedDate = baseSegmentsSnapshot.lhs;
     Map<Interval, String> derivativeVersion = derivativeSegmentsSnapshot.lhs;
-    SortedMap<Interval, String> sortedToBuildInterval = Maps.newTreeMap(
-        Comparators.inverse(Comparators.intervalsByStartThenEnd())
-    );
+    SortedMap<Interval, String> sortedToBuildInterval = new TreeMap<>(Comparators.inverse(Comparators.intervalsByStartThenEnd()));
     // find the intervals to drop and to build
     MapDifference<Interval, String> difference = Maps.difference(maxCreatedDate, derivativeVersion);
-    Map<Interval, String> toBuildInterval = Maps.newHashMap(difference.entriesOnlyOnLeft());
-    Map<Interval, String> toDropInterval = Maps.newHashMap(difference.entriesOnlyOnRight());
+    Map<Interval, String> toBuildInterval = new HashMap<>(difference.entriesOnlyOnLeft());
+    Map<Interval, String> toDropInterval = new HashMap<>(difference.entriesOnlyOnRight());
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
     for (Interval interval : runningVersion.keySet()) {
@@ -390,12 +390,12 @@ public class MaterializedViewSupervisor implements Supervisor
       List<DataSegment> snapshot
   )
   {
-    Map<Interval, String> versions = Maps.newHashMap();
-    Map<Interval, List<DataSegment>> segments = Maps.newHashMap();
+    Map<Interval, String> versions = new HashMap<>();
+    Map<Interval, List<DataSegment>> segments = new HashMap<>();
     for (DataSegment segment : snapshot) {
       Interval interval = segment.getInterval();
       versions.put(interval, segment.getVersion());
-      segments.putIfAbsent(interval, Lists.newArrayList());
+      segments.putIfAbsent(interval, new ArrayList<>());
       segments.get(interval).add(segment);
     }
     return new Pair<>(versions, segments);
@@ -410,8 +410,8 @@ public class MaterializedViewSupervisor implements Supervisor
         .map(DataSegment::getInterval)
         .max(Comparators.intervalsByStartThenEnd())
         .get();
-    Map<Interval, String> maxCreatedDate = Maps.newHashMap();
-    Map<Interval, List<DataSegment>> segments = Maps.newHashMap();
+    Map<Interval, String> maxCreatedDate = new HashMap<>();
+    Map<Interval, List<DataSegment>> segments = new HashMap<>();
     for (Pair<DataSegment, String> entry : snapshot) {
       DataSegment segment = entry.lhs;
       String createDate = entry.rhs;
@@ -426,7 +426,7 @@ public class MaterializedViewSupervisor implements Supervisor
               DateTimes.of(maxCreatedDate.getOrDefault(interval, DateTimes.MIN.toString()))
           ).toString()
       );
-      segments.putIfAbsent(interval, Lists.newArrayList());
+      segments.putIfAbsent(interval, new ArrayList<>());
       segments.get(interval).add(segment);
     }
     return new Pair<>(maxCreatedDate, segments);

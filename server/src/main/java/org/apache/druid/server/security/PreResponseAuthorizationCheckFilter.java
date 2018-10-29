@@ -20,7 +20,6 @@
 package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.QueryInterruptedException;
@@ -38,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -116,7 +116,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     // Since this is the last filter in the chain, some previous authentication filter
     // should have placed an authentication result in the request.
     // If not, send an authentication challenge.
-    Set<String> supportedAuthSchemes = Sets.newHashSet();
+    Set<String> supportedAuthSchemes = new HashSet<>();
     for (Authenticator authenticator : authenticators) {
       String challengeHeader = authenticator.getAuthChallengeHeader();
       if (challengeHeader != null) {

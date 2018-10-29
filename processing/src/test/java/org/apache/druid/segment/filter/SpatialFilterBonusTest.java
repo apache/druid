@@ -22,7 +22,6 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.collections.spatial.search.RadiusBound;
 import org.apache.druid.collections.spatial.search.RectangularBound;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -71,6 +70,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -129,7 +129,7 @@ public class SpatialFilterBonusTest
                         Collections.singletonList(
                             new SpatialDimensionSchema(
                                 "dim.geo",
-                                Lists.newArrayList()
+                                new ArrayList<>()
                             )
                         )
                     )
@@ -213,7 +213,7 @@ public class SpatialFilterBonusTest
     );
 
     // Add a bunch of random points, without replacement
-    Set<String> alreadyChosen = Sets.newHashSet();
+    Set<String> alreadyChosen = new HashSet<>();
     Random rand = ThreadLocalRandom.current();
     for (int i = 6; i < NUM_POINTS; i++) {
       String coord = null;
@@ -277,7 +277,7 @@ public class SpatialFilterBonusTest
                           Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
-                                  Lists.newArrayList()
+                                  new ArrayList<>()
                               )
                           )
                       )
@@ -301,7 +301,7 @@ public class SpatialFilterBonusTest
                           Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
-                                  Lists.newArrayList()
+                                  new ArrayList<>()
                               )
                           )
                       )
@@ -324,7 +324,7 @@ public class SpatialFilterBonusTest
                           Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
-                                  Lists.newArrayList()
+                                  new ArrayList<>()
                               )
                           )
                       )

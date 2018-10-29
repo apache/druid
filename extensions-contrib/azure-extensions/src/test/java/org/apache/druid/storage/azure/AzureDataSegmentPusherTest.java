@@ -21,8 +21,6 @@ package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -41,6 +39,8 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.easymock.EasyMock.expectLastCall;
@@ -107,9 +107,9 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         size

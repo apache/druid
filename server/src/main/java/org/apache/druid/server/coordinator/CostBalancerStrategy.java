@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -221,7 +220,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   @Override
   public Iterator<ServerHolder> pickServersToDrop(DataSegment toDrop, NavigableSet<ServerHolder> serverHolders)
   {
-    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
+    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
 
     for (final ServerHolder server : serverHolders) {
       futures.add(
@@ -368,7 +367,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
 
-    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
+    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
 
     for (final ServerHolder server : serverHolders) {
       futures.add(

@@ -21,9 +21,6 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.CoordinatorServerView;
@@ -65,8 +62,10 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +73,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -279,11 +279,11 @@ public class DatasourcesResource
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
 
     if (full != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
+      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         Map<String, Object> segments = retVal.get(dataSegment.getInterval());
         if (segments == null) {
-          segments = Maps.newHashMap();
+          segments = new HashMap<>();
           retVal.put(dataSegment.getInterval(), segments);
         }
 
@@ -298,11 +298,11 @@ public class DatasourcesResource
     }
 
     if (simple != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
+      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         Map<String, Object> properties = retVal.get(dataSegment.getInterval());
         if (properties == null) {
-          properties = Maps.newHashMap();
+          properties = new HashMap<>();
           properties.put("size", dataSegment.getSize());
           properties.put("count", 1);
 
@@ -316,7 +316,7 @@ public class DatasourcesResource
       return Response.ok(retVal).build();
     }
 
-    final Set<Interval> intervals = Sets.newTreeSet(comparator);
+    final Set<Interval> intervals = new TreeSet<>(comparator);
     for (DataSegment dataSegment : dataSource.getSegments()) {
       intervals.add(dataSegment.getInterval());
     }
@@ -344,12 +344,12 @@ public class DatasourcesResource
 
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
     if (full != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
+      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (theInterval.contains(dataSegment.getInterval())) {
           Map<String, Object> segments = retVal.get(dataSegment.getInterval());
           if (segments == null) {
-            segments = Maps.newHashMap();
+            segments = new HashMap<>();
             retVal.put(dataSegment.getInterval(), segments);
           }
 
@@ -365,12 +365,12 @@ public class DatasourcesResource
     }
 
     if (simple != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newHashMap();
+      final Map<Interval, Map<String, Object>> retVal = new HashMap<>();
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (theInterval.contains(dataSegment.getInterval())) {
           Map<String, Object> properties = retVal.get(dataSegment.getInterval());
           if (properties == null) {
-            properties = Maps.newHashMap();
+            properties = new HashMap<>();
             properties.put("size", dataSegment.getSize());
             properties.put("count", 1);
 
@@ -385,7 +385,7 @@ public class DatasourcesResource
       return Response.ok(retVal).build();
     }
 
-    final Set<String> retVal = Sets.newTreeSet(Comparators.inverse(String.CASE_INSENSITIVE_ORDER));
+    final Set<String> retVal = new TreeSet<>(Comparators.inverse(String.CASE_INSENSITIVE_ORDER));
     for (DataSegment dataSegment : dataSource.getSegments()) {
       if (theInterval.contains(dataSegment.getInterval())) {
         retVal.add(dataSegment.getIdentifier());
@@ -486,7 +486,7 @@ public class DatasourcesResource
       @PathParam("dataSourceName") String dataSourceName
   )
   {
-    Set<String> retVal = Sets.newHashSet();
+    Set<String> retVal = new HashSet<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       if (druidServer.getDataSource(dataSourceName) != null) {
         retVal.add(druidServer.getTier());
@@ -525,7 +525,7 @@ public class DatasourcesResource
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)
   {
     DataSegment theSegment = null;
-    Set<String> servers = Sets.newHashSet();
+    Set<String> servers = new HashSet<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       DataSegment currSegment = druidServer.getSegments().get(segmentId);
       if (currSegment != null) {
@@ -551,14 +551,14 @@ public class DatasourcesResource
 
   private Map<String, Map<String, Object>> getSimpleDatasource(String dataSourceName)
   {
-    Map<String, Object> tiers = Maps.newHashMap();
-    Map<String, Object> segments = Maps.newHashMap();
+    Map<String, Object> tiers = new HashMap<>();
+    Map<String, Object> segments = new HashMap<>();
     Map<String, Map<String, Object>> retVal = ImmutableMap.of(
         "tiers", tiers,
         "segments", segments
     );
-    Set<String> totalDistinctSegments = Sets.newHashSet();
-    Map<String, HashSet<Object>> tierDistinctSegments = Maps.newHashMap();
+    Set<String> totalDistinctSegments = new HashSet<>();
+    Map<String, HashSet<Object>> tierDistinctSegments = new HashMap<>();
 
     long totalSegmentSize = 0;
     DateTime minTime = DateTimes.MAX;
@@ -573,7 +573,7 @@ public class DatasourcesResource
       }
 
       if (!tierDistinctSegments.containsKey(tier)) {
-        tierDistinctSegments.put(tier, Sets.newHashSet());
+        tierDistinctSegments.put(tier, new HashSet<>());
       }
 
       long dataSourceSegmentSize = 0;
@@ -596,7 +596,7 @@ public class DatasourcesResource
       // tier stats
       Map<String, Object> tierStats = (Map) tiers.get(tier);
       if (tierStats == null) {
-        tierStats = Maps.newHashMap();
+        tierStats = new HashMap<>();
         tiers.put(druidServer.getTier(), tierStats);
       }
       tierStats.put("segmentCount", tierDistinctSegments.get(tier).size());
@@ -632,7 +632,7 @@ public class DatasourcesResource
     final Interval theInterval = Intervals.of(interval.replace("_", "/"));
     if (timeline == null) {
       log.debug("No timeline found for datasource[%s]", dataSourceName);
-      return Response.ok(Lists.<ImmutableSegmentLoadInfo>newArrayList()).build();
+      return Response.ok(new ArrayList<ImmutableSegmentLoadInfo>()).build();
     }
 
     Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(theInterval);

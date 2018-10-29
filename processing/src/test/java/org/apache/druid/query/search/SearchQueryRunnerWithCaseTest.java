@@ -20,8 +20,6 @@
 package org.apache.druid.query.search;
 
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharSource;
 import org.apache.druid.java.util.common.DateTimes;
@@ -40,12 +38,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import static org.apache.druid.query.QueryRunnerTestHelper.NOOP_QUERYWATCHER;
 import static org.apache.druid.query.QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator;
@@ -88,7 +89,7 @@ public class SearchQueryRunnerWithCaseTest
     QueryableIndex index3 = TestIndex.persistRealtimeAndLoadMMapped(index1);
     QueryableIndex index4 = TestIndex.persistRealtimeAndLoadMMapped(index2);
 
-    final List<QueryRunner<Result<SearchResultValue>>> runners = Lists.newArrayList();
+    final List<QueryRunner<Result<SearchResultValue>>> runners = new ArrayList<>();
     for (SearchQueryConfig config : configs) {
       runners.addAll(Arrays.asList(
           makeQueryRunner(
@@ -154,7 +155,7 @@ public class SearchQueryRunnerWithCaseTest
   public void testSearch()
   {
     Druids.SearchQueryBuilder builder = testBuilder();
-    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     SearchQuery searchQuery;
 
     searchQuery = builder.query("SPOT").build();
@@ -176,7 +177,7 @@ public class SearchQueryRunnerWithCaseTest
     SearchQuery searchQuery;
     Druids.SearchQueryBuilder builder = testBuilder()
         .dimensions(Arrays.asList(placementDimension, placementishDimension));
-    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("PREFERRED").build();
     expectedResults.put(placementDimension, Sets.newHashSet("PREFERRED", "preferred", "PREFERRed"));
@@ -196,7 +197,7 @@ public class SearchQueryRunnerWithCaseTest
     Druids.SearchQueryBuilder builder = testBuilder()
         .dimensions(Collections.singletonList(qualityDimension))
         .intervals("2011-01-12T00:00:00.000Z/2011-01-13T00:00:00.000Z");
-    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("otive").build();
     expectedResults.put(qualityDimension, Sets.newHashSet("AutoMotive"));
@@ -210,10 +211,10 @@ public class SearchQueryRunnerWithCaseTest
     Druids.SearchQueryBuilder builder = testBuilder()
         .dimensions(Collections.singletonList(qualityDimension))
         .intervals("2011-01-10T00:00:00.000Z/2011-01-11T00:00:00.000Z");
-    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("business").build();
-    expectedResults.put(qualityDimension, Sets.newHashSet());
+    expectedResults.put(qualityDimension, new HashSet<>());
     checkSearchQuery(searchQuery, expectedResults);
   }
 
@@ -221,7 +222,7 @@ public class SearchQueryRunnerWithCaseTest
   public void testFragmentSearch()
   {
     Druids.SearchQueryBuilder builder = testBuilder();
-    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     SearchQuery searchQuery;
 
     searchQuery = builder.fragments(Arrays.asList("auto", "ve")).build();

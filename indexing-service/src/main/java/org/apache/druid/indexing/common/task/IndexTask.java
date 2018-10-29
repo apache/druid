@@ -31,7 +31,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -298,7 +297,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, List<String>> events = Maps.newHashMap();
+    Map<String, List<String>> events = new HashMap<>();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
@@ -346,9 +345,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, Object> returnMap = Maps.newHashMap();
-    Map<String, Object> totalsMap = Maps.newHashMap();
-    Map<String, Object> averagesMap = Maps.newHashMap();
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> totalsMap = new HashMap<>();
+    Map<String, Object> averagesMap = new HashMap<>();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
@@ -527,7 +526,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
-    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         determinePartitionsSavedParseExceptions);
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
@@ -543,7 +542,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
   private Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metrics = Maps.newHashMap();
+    Map<String, Object> metrics = new HashMap<>();
     metrics.put(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         determinePartitionsMeters.getTotals()

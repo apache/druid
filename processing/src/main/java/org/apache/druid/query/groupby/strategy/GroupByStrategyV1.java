@@ -25,8 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
@@ -56,6 +54,8 @@ import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -164,7 +164,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
       boolean wasQueryPushedDown
   )
   {
-    final Set<AggregatorFactory> aggs = Sets.newHashSet();
+    final Set<AggregatorFactory> aggs = new HashSet<>();
 
     // Nested group-bys work by first running the inner query and then materializing the results in an incremental
     // index which the outer query is then run against. To build the incremental index, we use the fieldNames from
@@ -173,7 +173,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
     // multiple columns of the same name using different aggregator types and will fail. Here, we permit multiple
     // aggregators of the same type referencing the same fieldName (and skip creating identical columns for the
     // subsequent ones) and return an error if the aggregator types are different.
-    final Set<String> dimensionNames = Sets.newHashSet();
+    final Set<String> dimensionNames = new HashSet<>();
     for (DimensionSpec dimension : subquery.getDimensions()) {
       dimensionNames.add(dimension.getOutputName());
     }
@@ -208,7 +208,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
     final GroupByQuery innerQuery = new GroupByQuery.Builder(subquery)
         .setAggregatorSpecs(ImmutableList.copyOf(aggs))
         .setInterval(subquery.getIntervals())
-        .setPostAggregatorSpecs(Lists.newArrayList())
+        .setPostAggregatorSpecs(new ArrayList<>())
         .build();
 
     final GroupByQuery outerQuery = new GroupByQuery.Builder(query)

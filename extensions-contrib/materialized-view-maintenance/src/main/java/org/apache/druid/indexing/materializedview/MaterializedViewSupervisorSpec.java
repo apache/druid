@@ -25,8 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -54,6 +52,8 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -131,7 +131,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     this.hadoopCoordinates = hadoopCoordinates;
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
     this.classpathPrefix = classpathPrefix;
-    this.context = context == null ? Maps.newHashMap() : context;
+    this.context = context == null ? new HashMap<>() : context;
     this.objectMapper = objectMapper;
     this.taskMaster = taskMaster;
     this.taskStorage = taskStorage;
@@ -143,11 +143,11 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     this.config = config;
     this.suspended = suspended != null ? suspended : false;
 
-    this.metrics = Sets.newHashSet();
+    this.metrics = new HashSet<>();
     for (AggregatorFactory aggregatorFactory : aggregators) {
       metrics.add(aggregatorFactory.getName());
     }
-    this.dimensions = Sets.newHashSet();
+    this.dimensions = new HashSet<>();
     for (DimensionSchema schema : dimensionsSpec.getDimensions()) {
       dimensions.add(schema.getName());
     }
@@ -158,10 +158,10 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     String taskId = StringUtils.format("%s_%s_%s", TASK_PREFIX, dataSourceName, DateTimes.nowUtc());
     
     // generate parser
-    Map<String, Object> parseSpec = Maps.newHashMap();
+    Map<String, Object> parseSpec = new HashMap<>();
     parseSpec.put("format", "timeAndDims");
     parseSpec.put("dimensionsSpec", dimensionsSpec);
-    Map<String, Object> parser = Maps.newHashMap();
+    Map<String, Object> parser = new HashMap<>();
     parser.put("type", "map");
     parser.put("parseSpec", parseSpec);
     
@@ -221,7 +221,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     );
 
     // generate HadoopIOConfig
-    Map<String, Object> inputSpec = Maps.newHashMap();
+    Map<String, Object> inputSpec = new HashMap<>();
     inputSpec.put("type", "dataSource");
     inputSpec.put("ingestionSpec", datasourceIngestionSpec);
     HadoopIOConfig hadoopIOConfig = new HadoopIOConfig(inputSpec, null, null);

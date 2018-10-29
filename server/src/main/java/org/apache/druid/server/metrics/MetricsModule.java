@@ -21,7 +21,6 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -43,6 +42,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -89,7 +89,7 @@ public class MetricsModule implements Module
       Injector injector
   )
   {
-    List<Monitor> monitors = Lists.newArrayList();
+    List<Monitor> monitors = new ArrayList<>();
 
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
       final Monitor monitor = injector.getInstance(monitorClass);

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -56,6 +55,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -156,7 +156,7 @@ public class MaterializedViewSupervisorTest
     expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = supervisor.checkSegments();
-    Map<Interval, List<DataSegment>> expectedSegments = Maps.newHashMap();
+    Map<Interval, List<DataSegment>> expectedSegments = new HashMap<>();
     expectedSegments.put(
         Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
         Collections.singletonList(

@@ -21,7 +21,6 @@ package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
 
 import java.util.Iterator;
 import java.util.List;
@@ -38,13 +37,13 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
   {
-    this.holderSet = Sets.newTreeSet();
+    this.holderSet = new TreeSet<>();
     add(initialChunk);
   }
 
   public PartitionHolder(List<PartitionChunk<T>> initialChunks)
   {
-    this.holderSet = Sets.newTreeSet();
+    this.holderSet = new TreeSet<>();
     for (PartitionChunk<T> chunk : initialChunks) {
       add(chunk);
     }
@@ -52,7 +51,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
   public PartitionHolder(PartitionHolder partitionHolder)
   {
-    this.holderSet = Sets.newTreeSet();
+    this.holderSet = new TreeSet<>();
     this.holderSet.addAll(partitionHolder.holderSet);
   }
 

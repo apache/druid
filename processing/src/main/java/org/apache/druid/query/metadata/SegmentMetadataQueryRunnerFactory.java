@@ -21,7 +21,6 @@ package org.apache.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -51,8 +50,10 @@ import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -97,7 +98,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           totalSize = analyzedColumns.size() * numRows;
         }
 
-        Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
+        Map<String, ColumnAnalysis> columns = new TreeMap<>();
         ColumnIncluderator includerator = updatedQuery.getToInclude();
         for (Map.Entry<String, ColumnAnalysis> entry : analyzedColumns.entrySet()) {
           final String columnName = entry.getKey();
@@ -118,7 +119,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         if (updatedQuery.hasAggregators()) {
           metadata = segment.asStorageAdapter().getMetadata();
           if (metadata != null && metadata.getAggregators() != null) {
-            aggregators = Maps.newHashMap();
+            aggregators = new HashMap<>();
             for (AggregatorFactory aggregator : metadata.getAggregators()) {
               aggregators.put(aggregator.getName(), aggregator);
             }

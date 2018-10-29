@@ -25,8 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
@@ -89,6 +87,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -106,8 +105,8 @@ public class NestedQueryPushDownTest
   private File tmpDir;
   private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
   private QueryRunnerFactory<Row, GroupByQuery> groupByFactory2;
-  private List<IncrementalIndex> incrementalIndices = Lists.newArrayList();
-  private List<QueryableIndex> groupByIndices = Lists.newArrayList();
+  private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
+  private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
 
   static {
@@ -416,7 +415,7 @@ public class NestedQueryPushDownTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, Maps.newHashMap());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -469,7 +468,7 @@ public class NestedQueryPushDownTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, Maps.newHashMap());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -531,7 +530,7 @@ public class NestedQueryPushDownTest
         .setQuerySegmentSpec(intervalSpec)
         .build();
 
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, Maps.newHashMap());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(0, results.size());
@@ -580,7 +579,7 @@ public class NestedQueryPushDownTest
         "finalSum", 4000L,
         "newDimA", "mango"
     );
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, Maps.newHashMap());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(1, results.size());
@@ -630,7 +629,7 @@ public class NestedQueryPushDownTest
         "finalSum", 4000L,
         "newDimA", "mango"
     );
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, Maps.newHashMap());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(1, results.size());
@@ -681,7 +680,7 @@ public class NestedQueryPushDownTest
         "finalSum", 4000L,
         "extractedDimA", "replacement"
     );
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, Maps.newHashMap());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(2, results.size());
@@ -727,7 +726,7 @@ public class NestedQueryPushDownTest
         "dimB", "sweet",
         "finalSum", 90L
     );
-    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, Maps.newHashMap());
+    Sequence<Row> queryResult = runNestedQueryWithForcePushDown(nestedQuery, new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Assert.assertEquals(1, results.size());
@@ -849,7 +848,7 @@ public class NestedQueryPushDownTest
 
   private List<QueryRunner<Row>> getQueryRunnerForSegment1()
   {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryableIndex index = groupByIndices.get(0);
     QueryRunner<Row> runner = makeQueryRunnerForSegment(
         groupByFactory,
@@ -862,7 +861,7 @@ public class NestedQueryPushDownTest
 
   private List<QueryRunner<Row>> getQueryRunnerForSegment2()
   {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryableIndex index2 = groupByIndices.get(1);
     QueryRunner<Row> tooSmallRunner = makeQueryRunnerForSegment(
         groupByFactory2,

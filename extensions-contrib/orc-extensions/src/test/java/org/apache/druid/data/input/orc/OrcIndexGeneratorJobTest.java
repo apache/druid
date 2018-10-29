@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -75,10 +74,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -322,11 +323,11 @@ public class OrcIndexGeneratorJobTest
       Integer[][][] shardInfoForEachShard
   )
   {
-    Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
     int shardCount = 0;
     int segmentNum = 0;
     for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
-      List<ShardSpec> specs = Lists.newArrayList();
+      List<ShardSpec> specs = new ArrayList<>();
       for (Integer[] shardInfo : shardInfoForEachShard[segmentNum++]) {
         specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], null, HadoopDruidIndexerConfig.JSON_MAPPER));
       }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.collect.Maps;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -99,7 +98,7 @@ public class GenericIndexedTest
     }
 
     if (allowReverseLookup) {
-      HashMap<String, Integer> mixedUp = Maps.newHashMap();
+      HashMap<String, Integer> mixedUp = new HashMap<>();
       for (int i = 0; i < strings.length; i++) {
         mixedUp.put(strings[i], i);
       }

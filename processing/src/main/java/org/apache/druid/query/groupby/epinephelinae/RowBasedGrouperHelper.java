@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -749,11 +748,11 @@ public class RowBasedGrouperHelper
     private Comparator<Grouper.Entry<RowBasedKey>> objectComparatorWithAggs()
     {
       // use the actual sort order from the limitspec if pushing down to merge partial results correctly
-      final List<Boolean> needsReverses = Lists.newArrayList();
-      final List<Boolean> aggFlags = Lists.newArrayList();
-      final List<Boolean> isNumericField = Lists.newArrayList();
-      final List<StringComparator> comparators = Lists.newArrayList();
-      final List<Integer> fieldIndices = Lists.newArrayList();
+      final List<Boolean> needsReverses = new ArrayList<>();
+      final List<Boolean> aggFlags = new ArrayList<>();
+      final List<Boolean> isNumericField = new ArrayList<>();
+      final List<StringComparator> comparators = new ArrayList<>();
+      final List<Integer> fieldIndices = new ArrayList<>();
       final Set<Integer> orderByIndices = new HashSet<>();
 
       for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
@@ -1175,7 +1174,7 @@ public class RowBasedGrouperHelper
     )
     {
       final List<RowBasedKeySerdeHelper> adjustedSerdeHelpers;
-      final List<Boolean> needsReverses = Lists.newArrayList();
+      final List<Boolean> needsReverses = new ArrayList<>();
       List<RowBasedKeySerdeHelper> orderByHelpers = new ArrayList<>();
       List<RowBasedKeySerdeHelper> otherDimHelpers = new ArrayList<>();
       Set<Integer> orderByIndices = new HashSet<>();

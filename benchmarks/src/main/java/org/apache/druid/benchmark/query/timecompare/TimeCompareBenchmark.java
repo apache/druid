@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.query.timecompare;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
@@ -353,7 +352,7 @@ public class TimeCompareBenchmark
       qIndexes.add(qIndex);
     }
 
-    List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = Lists.newArrayList();
+    List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = topNFactory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
       String segmentName = "qIndex" + i;
@@ -379,7 +378,7 @@ public class TimeCompareBenchmark
         )
     );
 
-    List<QueryRunner<Result<TimeseriesResultValue>>> singleSegmentRunnersT = Lists.newArrayList();
+    List<QueryRunner<Result<TimeseriesResultValue>>> singleSegmentRunnersT = new ArrayList<>();
     QueryToolChest toolChestT = timeseriesFactory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
       String segmentName = "qIndex" + i;

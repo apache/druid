@@ -30,7 +30,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopDruidIndexerJob;
@@ -73,6 +72,7 @@ import javax.ws.rs.core.Response;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -421,8 +421,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, Object> returnMap = Maps.newHashMap();
-    Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> totalsMap = new HashMap<>();
 
     if (determinePartitionsStatsGetter != null) {
       totalsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsStatsGetter.getTotalMetrics());
@@ -453,7 +453,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   private Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metrics = Maps.newHashMap();
+    Map<String, Object> metrics = new HashMap<>();
     if (determineConfigStatus != null) {
       metrics.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,

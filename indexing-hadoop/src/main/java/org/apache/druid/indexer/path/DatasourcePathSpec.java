@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -164,7 +165,7 @@ public class DatasourcePathSpec implements PathSpec
     }
 
     if (updatedIngestionSpec.getMetrics() == null) {
-      Set<String> metrics = Sets.newHashSet();
+      Set<String> metrics = new HashSet<>();
       final AggregatorFactory[] cols = config.getSchema().getDataSchema().getAggregators();
       if (cols != null) {
         if (useNewAggs) {

@@ -73,10 +73,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class IndexIO
 {
@@ -347,9 +349,9 @@ public class IndexIO
         metrics.put(metric, holder);
       }
 
-      Map<String, GenericIndexed<String>> dimValueLookups = Maps.newHashMap();
-      Map<String, VSizeColumnarMultiInts> dimColumns = Maps.newHashMap();
-      Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = Maps.newHashMap();
+      Map<String, GenericIndexed<String>> dimValueLookups = new HashMap<>();
+      Map<String, VSizeColumnarMultiInts> dimColumns = new HashMap<>();
+      Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = new HashMap<>();
 
       for (String dimension : IndexedIterable.create(availableDimensions)) {
         ByteBuffer dimBuffer = smooshedFiles.mapFile(makeDimFile(inDir, dimension).getName());
@@ -373,7 +375,7 @@ public class IndexIO
         );
       }
 
-      Map<String, ImmutableRTree> spatialIndexed = Maps.newHashMap();
+      Map<String, ImmutableRTree> spatialIndexed = new HashMap<>();
       ByteBuffer spatialBuffer = smooshedFiles.mapFile("spatial.drd");
       while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
         spatialIndexed.put(
@@ -424,7 +426,7 @@ public class IndexIO
     {
       MMappedIndex index = legacyHandler.mapDir(inDir);
 
-      Map<String, ColumnHolder> columns = Maps.newHashMap();
+      Map<String, ColumnHolder> columns = new HashMap<>();
 
       for (String dimension : index.getAvailableDimensions()) {
         ColumnBuilder builder = new ColumnBuilder()
@@ -482,7 +484,7 @@ public class IndexIO
         }
       }
 
-      Set<String> colSet = Sets.newTreeSet();
+      Set<String> colSet = new TreeSet<>();
       for (String dimension : index.getAvailableDimensions()) {
         colSet.add(dimension);
       }
@@ -583,7 +585,7 @@ public class IndexIO
         }
       }
 
-      Map<String, ColumnHolder> columns = Maps.newHashMap();
+      Map<String, ColumnHolder> columns = new HashMap<>();
 
       for (String columnName : cols) {
         if (Strings.isNullOrEmpty(columnName)) {
