@@ -130,12 +130,13 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     implements Supervisor
 {
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
-  private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
   private static final Random RANDOM = ThreadLocalRandom.current();
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
   private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
+
+  private final EmittingLogger log = new EmittingLogger(this.getClass());
 
   // Internal data structures
   // --------------------------------------------------------
