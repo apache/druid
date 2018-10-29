@@ -23,25 +23,25 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a generic record with a partitionType (partition id) and sequenceType (sequence number) and data
+ * Represents a generic record with a PartitionType (partition id) and SequenceType (sequence number) and data
  * from a Kafka/Kinesis stream
  *
- * @param <partitionType> partition id
- * @param <sequenceType>  sequence number
+ * @param <PartitionType> partition id
+ * @param <SequenceType>  sequence number
  */
-public class OrderedPartitionableRecord<partitionType, sequenceType>
+public class OrderedPartitionableRecord<PartitionType, SequenceType>
 {
   public static final String END_OF_SHARD_MARKER = "EOS";
 
   private final String stream;
-  private final partitionType partitionId;
-  private final sequenceType sequenceNumber;
+  private final PartitionType partitionId;
+  private final SequenceType sequenceNumber;
   private final List<byte[]> data;
 
   public OrderedPartitionableRecord(
       String stream,
-      partitionType partitionId,
-      sequenceType sequenceNumber,
+      PartitionType partitionId,
+      SequenceType sequenceNumber,
       List<byte[]> data
   )
   {
@@ -56,12 +56,12 @@ public class OrderedPartitionableRecord<partitionType, sequenceType>
     return stream;
   }
 
-  public partitionType getPartitionId()
+  public PartitionType getPartitionId()
   {
     return partitionId;
   }
 
-  public sequenceType getSequenceNumber()
+  public SequenceType getSequenceNumber()
   {
     return sequenceNumber;
   }

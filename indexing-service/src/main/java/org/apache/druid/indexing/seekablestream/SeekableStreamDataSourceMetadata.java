@@ -28,20 +28,20 @@ import org.apache.druid.java.util.common.IAE;
 import java.util.Map;
 import java.util.Objects;
 
-public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceType> implements DataSourceMetadata
+public abstract class SeekableStreamDataSourceMetadata<PartitionType, SequenceType> implements DataSourceMetadata
 {
-  private final SeekableStreamPartitions<partitionType, sequenceType> seekableStreamPartitions;
+  private final SeekableStreamPartitions<PartitionType, SequenceType> seekableStreamPartitions;
 
   @JsonCreator
   public SeekableStreamDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamPartitions<partitionType, sequenceType> seekableStreamPartitions
+      @JsonProperty("partitions") SeekableStreamPartitions<PartitionType, SequenceType> seekableStreamPartitions
   )
   {
     this.seekableStreamPartitions = seekableStreamPartitions;
   }
 
   @JsonProperty("partitions")
-  public SeekableStreamPartitions<partitionType, sequenceType> getSeekableStreamPartitions()
+  public SeekableStreamPartitions<PartitionType, SequenceType> getSeekableStreamPartitions()
   {
     return seekableStreamPartitions;
   }
@@ -75,17 +75,17 @@ public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceTy
     }
 
     @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<partitionType, sequenceType> that = (SeekableStreamDataSourceMetadata<partitionType, sequenceType>) other;
+    final SeekableStreamDataSourceMetadata<PartitionType, SequenceType> that = (SeekableStreamDataSourceMetadata<PartitionType, SequenceType>) other;
 
     if (that.getSeekableStreamPartitions().getName().equals(seekableStreamPartitions.getName())) {
       // Same topic, merge offsets.
-      final Map<partitionType, sequenceType> newMap = Maps.newHashMap();
+      final Map<PartitionType, SequenceType> newMap = Maps.newHashMap();
 
-      for (Map.Entry<partitionType, sequenceType> entry : seekableStreamPartitions.getMap().entrySet()) {
+      for (Map.Entry<PartitionType, SequenceType> entry : seekableStreamPartitions.getMap().entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
       }
 
-      for (Map.Entry<partitionType, sequenceType> entry : that.getSeekableStreamPartitions().getMap().entrySet()) {
+      for (Map.Entry<PartitionType, SequenceType> entry : that.getSeekableStreamPartitions().getMap().entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
       }
 
@@ -109,13 +109,13 @@ public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceTy
     }
 
     @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<partitionType, sequenceType> that = (SeekableStreamDataSourceMetadata<partitionType, sequenceType>) other;
+    final SeekableStreamDataSourceMetadata<PartitionType, SequenceType> that = (SeekableStreamDataSourceMetadata<PartitionType, SequenceType>) other;
 
     if (that.getSeekableStreamPartitions().getName().equals(seekableStreamPartitions.getName())) {
       // Same stream, remove partitions present in "that" from "this"
-      final Map<partitionType, sequenceType> newMap = Maps.newHashMap();
+      final Map<PartitionType, SequenceType> newMap = Maps.newHashMap();
 
-      for (Map.Entry<partitionType, sequenceType> entry : seekableStreamPartitions.getMap().entrySet()) {
+      for (Map.Entry<PartitionType, SequenceType> entry : seekableStreamPartitions.getMap().entrySet()) {
         if (!that.getSeekableStreamPartitions().getMap().containsKey(entry.getKey())) {
           newMap.put(entry.getKey(), entry.getValue());
         }
@@ -155,8 +155,8 @@ public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceTy
            '}';
   }
 
-  protected abstract SeekableStreamDataSourceMetadata<partitionType, sequenceType> createConcretDataSourceMetaData(
+  protected abstract SeekableStreamDataSourceMetadata<PartitionType, SequenceType> createConcretDataSourceMetaData(
       String streamId,
-      Map<partitionType, sequenceType> newMap
+      Map<PartitionType, SequenceType> newMap
   );
 }

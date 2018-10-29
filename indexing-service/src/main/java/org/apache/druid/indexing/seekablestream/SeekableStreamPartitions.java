@@ -40,24 +40,24 @@ import java.util.Objects;
  * are used for proper Jackson serialization/deserialization when processing terminologies
  * used by Kafka and kinesis (i.e. topic vs. name)
  *
- * @param <partitionType> partition id type
- * @param <sequenceType> sequence number type
+ * @param <PartitionType> partition id type
+ * @param <SequenceType> sequence number type
  */
-public class SeekableStreamPartitions<partitionType, sequenceType>
+public class SeekableStreamPartitions<PartitionType, SequenceType>
 {
   public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
 
   // stream/topic
   private final String name;
   // partitionId -> sequence number
-  private final Map<partitionType, sequenceType> map;
+  private final Map<PartitionType, SequenceType> map;
 
   @JsonCreator
   public SeekableStreamPartitions(
       @JsonProperty("stream") final String stream,
       @JsonProperty("topic") final String topic,
-      @JsonProperty("partitionSequenceNumberMap") final Map<partitionType, sequenceType> partitionSequenceNumberMap,
-      @JsonProperty("partitionOffsetMap") final Map<partitionType, sequenceType> partitionOffsetMap
+      @JsonProperty("partitionSequenceNumberMap") final Map<PartitionType, SequenceType> partitionSequenceNumberMap,
+      @JsonProperty("partitionOffsetMap") final Map<PartitionType, SequenceType> partitionOffsetMap
   )
   {
     this.name = stream == null ? topic : stream;
@@ -69,7 +69,7 @@ public class SeekableStreamPartitions<partitionType, sequenceType>
   }
 
   // constructor for backward compatibility
-  public SeekableStreamPartitions(@NotNull final String id, final Map<partitionType, sequenceType> partitionOffsetMap)
+  public SeekableStreamPartitions(@NotNull final String id, final Map<PartitionType, SequenceType> partitionOffsetMap)
   {
     this(id, null, partitionOffsetMap, null);
   }
@@ -86,19 +86,19 @@ public class SeekableStreamPartitions<partitionType, sequenceType>
     return name;
   }
 
-  public Map<partitionType, sequenceType> getMap()
+  public Map<PartitionType, SequenceType> getMap()
   {
     return map;
   }
 
   @JsonProperty
-  public Map<partitionType, sequenceType> getPartitionSequenceNumberMap()
+  public Map<PartitionType, SequenceType> getPartitionSequenceNumberMap()
   {
     return map;
   }
 
   @JsonProperty
-  public Map<partitionType, sequenceType> getPartitionOffsetMap()
+  public Map<PartitionType, SequenceType> getPartitionOffsetMap()
   {
     return map;
   }

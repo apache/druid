@@ -48,14 +48,14 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 
-public abstract class SeekableStreamIndexTask<partitionType, sequenceType> extends AbstractTask
+public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> extends AbstractTask
     implements ChatHandler
 {
   private static final Random RANDOM = ThreadLocalRandom.current();
   protected final DataSchema dataSchema;
   protected final InputRowParser<ByteBuffer> parser;
   protected final SeekableStreamTuningConfig tuningConfig;
-  protected final SeekableStreamIOConfig<partitionType, sequenceType> ioConfig;
+  protected final SeekableStreamIOConfig<PartitionType, SequenceType> ioConfig;
   protected final Optional<ChatHandlerProvider> chatHandlerProvider;
   protected final String type;
   protected CircularBuffer<Throwable> savedParseExceptions;
@@ -134,7 +134,7 @@ public abstract class SeekableStreamIndexTask<partitionType, sequenceType> exten
   }
 
   @JsonProperty("ioConfig")
-  public SeekableStreamIOConfig<partitionType, sequenceType> getIOConfig()
+  public SeekableStreamIOConfig<PartitionType, SequenceType> getIOConfig()
   {
     return ioConfig;
   }

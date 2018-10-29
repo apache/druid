@@ -26,24 +26,24 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class TaskReportData<partitionType, sequenceType>
+public class TaskReportData<PartitionType, SequenceType>
 {
   private final String id;
-  private final Map<partitionType, sequenceType> startingOffsets;
+  private final Map<PartitionType, SequenceType> startingOffsets;
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
-  private Map<partitionType, sequenceType> currentOffsets;
-  private final Map<partitionType, sequenceType> lag;
+  private Map<PartitionType, SequenceType> currentOffsets;
+  private final Map<PartitionType, SequenceType> lag;
 
   public TaskReportData(
       String id,
-      @Nullable Map<partitionType, sequenceType> startingOffsets,
-      @Nullable Map<partitionType, sequenceType> currentOffsets,
+      @Nullable Map<PartitionType, SequenceType> startingOffsets,
+      @Nullable Map<PartitionType, SequenceType> currentOffsets,
       @Nullable DateTime startTime,
       Long remainingSeconds,
       TaskType type,
-      @Nullable Map<partitionType, sequenceType> lag
+      @Nullable Map<PartitionType, SequenceType> lag
   )
   {
     this.id = id;
@@ -63,14 +63,14 @@ public class TaskReportData<partitionType, sequenceType>
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<partitionType, sequenceType> getStartingOffsets()
+  public Map<PartitionType, SequenceType> getStartingOffsets()
   {
     return startingOffsets;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<partitionType, sequenceType> getCurrentOffsets()
+  public Map<PartitionType, SequenceType> getCurrentOffsets()
   {
     return currentOffsets;
   }
@@ -95,12 +95,12 @@ public class TaskReportData<partitionType, sequenceType>
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<partitionType, sequenceType> getLag()
+  public Map<PartitionType, SequenceType> getLag()
   {
     return lag;
   }
 
-  public void setCurrentSequenceNumbers(Map<partitionType, sequenceType> currentOffsets)
+  public void setCurrentSequenceNumbers(Map<PartitionType, SequenceType> currentOffsets)
   {
     this.currentOffsets = currentOffsets;
   }

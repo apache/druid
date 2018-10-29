@@ -33,10 +33,10 @@ import java.util.Map;
  * Interface for abstracting the indexing task run logic. Only used by Kafka indexing tasks,
  * but will also be used by Kinesis indexing tasks once implemented
  *
- * @param <partitionType> Partition Number Type
- * @param <sequenceType> Sequence Number Type
+ * @param <PartitionType> Partition Number Type
+ * @param <SequenceType> Sequence Number Type
  */
-public interface SeekableStreamIndexTaskRunner<partitionType, sequenceType> extends ChatHandler
+public interface SeekableStreamIndexTaskRunner<PartitionType, SequenceType> extends ChatHandler
 {
   Appenderator getAppenderator();
 
@@ -51,14 +51,14 @@ public interface SeekableStreamIndexTaskRunner<partitionType, sequenceType> exte
   SeekableStreamIndexTask.Status getStatus();
 
   @VisibleForTesting
-  Map<partitionType, sequenceType> getCurrentOffsets();
+  Map<PartitionType, SequenceType> getCurrentOffsets();
 
   @VisibleForTesting
-  Map<partitionType, sequenceType> getEndOffsets();
+  Map<PartitionType, SequenceType> getEndOffsets();
 
   @VisibleForTesting
   Response setEndOffsets(
-      Map<partitionType, sequenceType> offsets,
+      Map<PartitionType, SequenceType> offsets,
       boolean finish // this field is only for internal purposes, shouldn't be usually set by users
   ) throws InterruptedException;
 

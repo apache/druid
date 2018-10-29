@@ -29,15 +29,15 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-public abstract class SeekableStreamIOConfig<partitionType, sequenceType> implements IOConfig
+public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
 
   @Nullable
   private final Integer taskGroupId;
   private final String baseSequenceName;
-  private final SeekableStreamPartitions<partitionType, sequenceType> startPartitions;
-  private final SeekableStreamPartitions<partitionType, sequenceType> endPartitions;
+  private final SeekableStreamPartitions<PartitionType, SequenceType> startPartitions;
+  private final SeekableStreamPartitions<PartitionType, SequenceType> endPartitions;
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
@@ -46,8 +46,8 @@ public abstract class SeekableStreamIOConfig<partitionType, sequenceType> implem
   public SeekableStreamIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
       @JsonProperty("baseSequenceName") String baseSequenceName,
-      @JsonProperty("startPartitions") SeekableStreamPartitions<partitionType, sequenceType> startPartitions,
-      @JsonProperty("endPartitions") SeekableStreamPartitions<partitionType, sequenceType> endPartitions,
+      @JsonProperty("startPartitions") SeekableStreamPartitions<PartitionType, SequenceType> startPartitions,
+      @JsonProperty("endPartitions") SeekableStreamPartitions<PartitionType, SequenceType> endPartitions,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime
@@ -86,13 +86,13 @@ public abstract class SeekableStreamIOConfig<partitionType, sequenceType> implem
   }
 
   @JsonProperty
-  public SeekableStreamPartitions<partitionType, sequenceType> getStartPartitions()
+  public SeekableStreamPartitions<PartitionType, SequenceType> getStartPartitions()
   {
     return startPartitions;
   }
 
   @JsonProperty
-  public SeekableStreamPartitions<partitionType, sequenceType> getEndPartitions()
+  public SeekableStreamPartitions<PartitionType, SequenceType> getEndPartitions()
   {
     return endPartitions;
   }
@@ -116,7 +116,7 @@ public abstract class SeekableStreamIOConfig<partitionType, sequenceType> implem
   }
 
   @JsonProperty
-  public abstract Set<partitionType> getExclusiveStartSequenceNumberPartitions();
+  public abstract Set<PartitionType> getExclusiveStartSequenceNumberPartitions();
 
   @Override
   public abstract String toString();
