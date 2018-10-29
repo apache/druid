@@ -27,7 +27,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
@@ -92,6 +91,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -793,7 +793,7 @@ public class RealtimeManagerTest
         @Override
         public List<String> getDimension(String dimension)
         {
-          return Lists.newArrayList();
+          return new ArrayList<>();
         }
 
         @Override

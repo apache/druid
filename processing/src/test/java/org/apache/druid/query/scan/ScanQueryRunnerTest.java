@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
@@ -418,10 +417,10 @@ public class ScanQueryRunnerTest
         .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
     Iterable<ScanResultValue> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), Maps.newHashMap())
+        .run(QueryPlus.wrap(query), new HashMap<>())
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -477,7 +476,7 @@ public class ScanQueryRunnerTest
         )
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
 
     List<ScanResultValue> expectedResults = Collections.emptyList();
 
@@ -492,7 +491,7 @@ public class ScanQueryRunnerTest
         .columns("foo", "foo2")
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         legacy ? new String[]{getTimestampName() + ":TIME"} : new String[0],
@@ -538,11 +537,11 @@ public class ScanQueryRunnerTest
 
   private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
   {
-    List<String> values = Lists.newArrayList();
+    List<String> values = new ArrayList<>();
     for (String[] vSet : valueSet) {
       values.addAll(Arrays.asList(vSet));
     }
-    List<List<Map<String, Object>>> events = Lists.newArrayList();
+    List<List<Map<String, Object>>> events = new ArrayList<>();
     events.add(
         Lists.newArrayList(
             Iterables.transform(
@@ -552,7 +551,7 @@ public class ScanQueryRunnerTest
                   @Override
                   public Map<String, Object> apply(String input)
                   {
-                    Map<String, Object> event = Maps.newHashMap();
+                    Map<String, Object> event = new HashMap<>();
                     String[] values = input.split("\\t");
                     for (int i = 0; i < dimSpecs.length; i++) {
                       if (dimSpecs[i] == null || i >= dimSpecs.length) {

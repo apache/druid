@@ -20,12 +20,12 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
 
@@ -80,7 +80,7 @@ public class SegmentReplicantLookup
   public Map<String, Integer> getClusterTiers(SegmentId segmentId)
   {
     Map<String, Integer> retVal = segmentsInCluster.row(segmentId);
-    return (retVal == null) ? Maps.newHashMap() : retVal;
+    return (retVal == null) ? new HashMap<>() : retVal;
   }
 
   int getLoadedReplicants(SegmentId segmentId)

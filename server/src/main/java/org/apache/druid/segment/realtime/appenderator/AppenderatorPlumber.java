@@ -62,6 +62,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -396,7 +397,7 @@ public class AppenderatorPlumber implements Plumber
     long minTimestamp = minTimestampAsDate.getMillis();
 
     final List<SegmentIdWithShardSpec> appenderatorSegments = appenderator.getSegments();
-    final List<SegmentIdWithShardSpec> segmentsToPush = Lists.newArrayList();
+    final List<SegmentIdWithShardSpec> segmentsToPush = new ArrayList<>();
 
     if (shuttingDown) {
       log.info("Found [%,d] segments. Attempting to hand off all of them.", appenderatorSegments.size());

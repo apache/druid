@@ -20,7 +20,6 @@
 package org.apache.druid.collections;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import org.junit.Assert;
@@ -42,7 +41,7 @@ public class CombiningIterableTest
     Set<Integer> mergedLists = new HashSet<>();
     mergedLists.addAll(firstList);
     mergedLists.addAll(secondList);
-    ArrayList<Iterable<Integer>> iterators = Lists.newArrayList();
+    ArrayList<Iterable<Integer>> iterators = new ArrayList<>();
     iterators.add(firstList);
     iterators.add(secondList);
     CombiningIterable<Integer> actualIterable = CombiningIterable.createSplatted(

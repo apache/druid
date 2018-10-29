@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.utils.ZKPaths;
@@ -37,6 +36,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -409,7 +409,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     private final DataSegment segment;
     private final DataSegmentChangeRequest changeRequest;
     private final int type;
-    private final List<LoadPeonCallback> callbacks = Lists.newArrayList();
+    private final List<LoadPeonCallback> callbacks = new ArrayList<>();
 
     private SegmentHolder(DataSegment segment, int type, Collection<LoadPeonCallback> callbacks)
     {

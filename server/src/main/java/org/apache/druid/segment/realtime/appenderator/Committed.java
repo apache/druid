@@ -22,8 +22,8 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -77,7 +77,7 @@ public class Committed
 
   public Committed without(final String identifierAsString)
   {
-    final Map<String, Integer> newHydrants = Maps.newHashMap();
+    final Map<String, Integer> newHydrants = new HashMap<>();
     newHydrants.putAll(hydrants);
     newHydrants.remove(identifierAsString);
     return new Committed(newHydrants, metadata);
@@ -85,7 +85,7 @@ public class Committed
 
   public Committed with(final Map<String, Integer> hydrantsToAdd)
   {
-    final Map<String, Integer> newHydrants = Maps.newHashMap();
+    final Map<String, Integer> newHydrants = new HashMap<>();
     newHydrants.putAll(hydrants);
     newHydrants.putAll(hydrantsToAdd);
     return new Committed(newHydrants, metadata);

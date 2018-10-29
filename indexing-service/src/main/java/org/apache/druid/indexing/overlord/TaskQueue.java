@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -47,7 +46,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,8 +73,8 @@ public class TaskQueue
 {
   private final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
 
-  private final List<Task> tasks = Lists.newArrayList();
-  private final Map<String, ListenableFuture<TaskStatus>> taskFutures = Maps.newHashMap();
+  private final List<Task> tasks = new ArrayList<>();
+  private final Map<String, ListenableFuture<TaskStatus>> taskFutures = new HashMap<>();
 
   private final TaskQueueConfig config;
   private final TaskStorage taskStorage;
@@ -232,7 +233,7 @@ public class TaskQueue
 
       try {
         // Task futures available from the taskRunner
-        final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = Maps.newHashMap();
+        final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = new HashMap<>();
         for (final TaskRunnerWorkItem workItem : taskRunner.getKnownTasks()) {
           runnerTaskFutures.put(workItem.getTaskId(), workItem.getResult());
         }
@@ -574,7 +575,7 @@ public class TaskQueue
 
   private static Map<String, Task> toTaskIDMap(List<Task> taskList)
   {
-    Map<String, Task> rv = Maps.newHashMap();
+    Map<String, Task> rv = new HashMap<>();
     for (Task task : taskList) {
       rv.put(task.getId(), task);
     }

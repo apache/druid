@@ -65,6 +65,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -446,7 +447,7 @@ public class AppendTest
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Lists.<Map<String, Object>>newArrayList()
+                new ArrayList<Map<String, Object>>()
             )
         )
     );

@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.indexer;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
@@ -46,6 +45,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -84,7 +84,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
           getTaskAsString(UNION_TASK_RESOURCE),
           DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
-      List<String> taskIDs = Lists.newArrayList();
+      List<String> taskIDs = new ArrayList<>();
       for (int i = 0; i < numTasks; i++) {
         taskIDs.add(
             indexer.submitTask(

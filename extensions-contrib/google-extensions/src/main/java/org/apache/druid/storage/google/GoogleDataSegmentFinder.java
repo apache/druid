@@ -25,7 +25,6 @@ import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentFinder;
@@ -36,6 +35,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +63,7 @@ public class GoogleDataSegmentFinder implements DataSegmentFinder
   @Override
   public Set<DataSegment> findSegments(String workingDirPath, boolean updateDescriptor) throws SegmentLoadingException
   {
-    final Set<DataSegment> segments = Sets.newHashSet();
+    final Set<DataSegment> segments = new HashSet<>();
 
     try {
       Storage.Objects.List listObjects = storage.list(config.getBucket());

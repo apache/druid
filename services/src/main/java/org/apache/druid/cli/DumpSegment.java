@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -91,7 +90,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -143,7 +144,7 @@ public class DumpSegment extends GuiceRunnable
       title = "column",
       description = "Column to include, specify multiple times for multiple columns, or omit to include all columns.",
       required = false)
-  public List<String> columnNamesFromCli = Lists.newArrayList();
+  public List<String> columnNamesFromCli = new ArrayList<>();
 
   @Option(
       name = "--time-iso8601",
@@ -487,7 +488,7 @@ public class DumpSegment extends GuiceRunnable
     return factory
         .getToolchest()
         .mergeResults(factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner)))
-        .run(QueryPlus.wrap(query), Maps.newHashMap());
+        .run(QueryPlus.wrap(query), new HashMap<>());
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)

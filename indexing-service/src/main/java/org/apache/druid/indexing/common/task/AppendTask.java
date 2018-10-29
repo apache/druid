@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -43,6 +42,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -109,7 +109,7 @@ public class AppendTask extends MergeTaskBase
         )
     );
 
-    List<IndexableAdapter> adapters = Lists.newArrayList();
+    List<IndexableAdapter> adapters = new ArrayList<>();
     for (final SegmentToMergeHolder holder : segmentsToMerge) {
       adapters.add(
           new RowFilteringIndexAdapter(

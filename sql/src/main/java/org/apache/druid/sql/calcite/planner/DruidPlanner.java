@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.interpreter.BindableConvention;
@@ -68,6 +67,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -232,7 +232,7 @@ public class DruidPlanner implements Closeable
       final AuthenticationResult authenticationResult
   )
   {
-    Set<String> datasourceNames = Sets.newHashSet();
+    Set<String> datasourceNames = new HashSet<>();
     rel.childrenAccept(
         new RelVisitor()
         {

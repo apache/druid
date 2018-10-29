@@ -22,7 +22,6 @@ package org.apache.druid.query.topn;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -55,6 +54,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class TopNQueryQueryToolChestTest
@@ -150,7 +150,7 @@ public class TopNQueryQueryToolChestTest
           null
       );
 
-      Map<String, Object> context = Maps.newHashMap();
+      Map<String, Object> context = new HashMap<>();
       context.put("minTopNThreshold", 500);
 
       TopNQueryBuilder builder = new TopNQueryBuilder()

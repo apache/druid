@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.setup;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
@@ -29,6 +28,8 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.HashSet;
 
 public class FillCapacityWithAffinityWorkerSelectStrategyTest
 {
@@ -45,15 +46,15 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
             "lhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "lhost", "lhost", 1, "v1"), 0,
-                Sets.newHashSet(),
-                Sets.newHashSet(),
+                new HashSet<>(),
+                new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
-                Sets.newHashSet(),
-                Sets.newHashSet(),
+                new HashSet<>(),
+                new HashSet<>(),
                 DateTimes.nowUtc()
             )
         ),
@@ -82,15 +83,15 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
             "lhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "lhost", "lhost", 1, "v1"), 0,
-                Sets.newHashSet(),
-                Sets.newHashSet(),
+                new HashSet<>(),
+                new HashSet<>(),
                 DateTimes.nowUtc()
             ),
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
-                Sets.newHashSet(),
-                Sets.newHashSet(),
+                new HashSet<>(),
+                new HashSet<>(),
                 DateTimes.nowUtc()
             )
         ),
@@ -112,8 +113,8 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
             "localhost",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost", "localhost", 1, "v1"), 0,
-                Sets.newHashSet(),
-                Sets.newHashSet(),
+                new HashSet<>(),
+                new HashSet<>(),
                 DateTimes.nowUtc()
             )
         ),

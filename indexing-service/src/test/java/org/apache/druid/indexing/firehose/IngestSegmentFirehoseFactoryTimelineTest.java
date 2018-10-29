@@ -24,8 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Firehose;
@@ -80,8 +78,10 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -173,7 +173,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   )
   {
     final File tmpDir = Files.createTempDir();
-    final Set<DataSegment> segments = Sets.newHashSet();
+    final Set<DataSegment> segments = new HashSet<>();
     for (DataSegmentMaker segmentMaker : segmentMakers) {
       segments.add(segmentMaker.make(tmpDir));
     }
@@ -280,7 +280,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         ) /* Segment intersecting desired interval */
     );
 
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
 
     for (final TestCase testCase : testCases) {
       final TaskActionClient taskActionClient = new TaskActionClient()
@@ -310,7 +310,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         @Override
         public List<StorageLocationConfig> getLocations()
         {
-          return Lists.newArrayList();
+          return new ArrayList<>();
         }
       };
       final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
@@ -399,7 +399,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     @Override
     public String toString()
     {
-      final List<SegmentId> segmentIds = Lists.newArrayList();
+      final List<SegmentId> segmentIds = new ArrayList<>();
       for (DataSegment segment : segments) {
         segmentIds.add(segment.getId());
       }

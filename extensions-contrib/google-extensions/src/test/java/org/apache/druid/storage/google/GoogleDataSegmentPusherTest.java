@@ -21,8 +21,6 @@ package org.apache.druid.storage.google;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -37,6 +35,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import static org.easymock.EasyMock.expectLastCall;
 
@@ -78,9 +78,9 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         new NoneShardSpec(),
         0,
         size

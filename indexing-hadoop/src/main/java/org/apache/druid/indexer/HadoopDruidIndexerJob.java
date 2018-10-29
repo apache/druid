@@ -20,12 +20,12 @@
 package org.apache.druid.indexer;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -66,7 +66,7 @@ public class HadoopDruidIndexerJob implements Jobby
   @Override
   public boolean run()
   {
-    List<Jobby> jobs = Lists.newArrayList();
+    List<Jobby> jobs = new ArrayList<>();
     JobHelper.ensurePaths(config);
 
     indexJob = new IndexGeneratorJob(config);

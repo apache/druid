@@ -24,9 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -35,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -54,10 +53,10 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   {
     this.queryGranularity = queryGranularity == null ? Granularities.NONE : queryGranularity;
     this.rollup = rollup == null ? Boolean.TRUE : rollup;
-    this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    this.intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
 
     if (inputIntervals == null) {
-      inputIntervals = Lists.newArrayList();
+      inputIntervals = new ArrayList<>();
     }
 
     // Insert all intervals

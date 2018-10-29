@@ -21,7 +21,6 @@ package org.apache.druid.query.search;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -44,6 +43,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.NumericColumn;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -114,8 +114,8 @@ public class UseIndexesStrategy extends SearchStrategy
       List<DimensionSpec> dimensions
   )
   {
-    final List<DimensionSpec> bitmapDims = Lists.newArrayList();
-    final List<DimensionSpec> nonBitmapDims = Lists.newArrayList();
+    final List<DimensionSpec> bitmapDims = new ArrayList<>();
+    final List<DimensionSpec> nonBitmapDims = new ArrayList<>();
     final List<DimensionSpec> dimsToSearch = getDimsToSearch(
         adapter.getAvailableDimensions(),
         dimensions

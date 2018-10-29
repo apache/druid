@@ -19,12 +19,12 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -58,7 +58,7 @@ class StorageLocation
       this.freeSpaceToKeep = 0;
     }
 
-    this.segments = Sets.newHashSet();
+    this.segments = new HashSet<>();
   }
 
   File getPath()

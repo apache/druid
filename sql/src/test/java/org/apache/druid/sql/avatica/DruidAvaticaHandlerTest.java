@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -87,6 +85,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -840,9 +839,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     try {
       final ResultSetMetaData metaData = resultSet.getMetaData();
-      final List<Map<String, Object>> rows = Lists.newArrayList();
+      final List<Map<String, Object>> rows = new ArrayList<>();
       while (resultSet.next()) {
-        final Map<String, Object> row = Maps.newHashMap();
+        final Map<String, Object> row = new HashMap<>();
         for (int i = 0; i < metaData.getColumnCount(); i++) {
           if (returnKeys == null || returnKeys.contains(metaData.getColumnLabel(i + 1))) {
             row.put(metaData.getColumnLabel(i + 1), resultSet.getObject(i + 1));
@@ -859,7 +858,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
   private static Map<String, Object> ROW(final Pair<String, ?>... entries)
   {
-    final Map<String, Object> m = Maps.newHashMap();
+    final Map<String, Object> m = new HashMap<>();
     for (Pair<String, ?> entry : entries) {
       m.put(entry.lhs, entry.rhs);
     }

@@ -22,8 +22,6 @@ package org.apache.druid.benchmark.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
@@ -267,7 +265,7 @@ public class SelectBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     return queryResult.toList();
   }
 
@@ -355,7 +353,7 @@ public class SelectBenchmark
   {
     SelectQuery queryCopy = query.withPagingSpec(PagingSpec.newSpec(pagingThreshold));
 
-    List<QueryRunner<Result<SelectResultValue>>> singleSegmentRunners = Lists.newArrayList();
+    List<QueryRunner<Result<SelectResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
       SegmentId segmentId = SegmentId.dummy("qIndex" + i);
@@ -377,7 +375,7 @@ public class SelectBenchmark
 
     boolean done = false;
     while (!done) {
-      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), Maps.newHashMap());
+      Sequence<Result<SelectResultValue>> queryResult = theRunner.run(QueryPlus.wrap(queryCopy), new HashMap<>());
       List<Result<SelectResultValue>> results = queryResult.toList();
       
       SelectResultValue result = results.get(0).getValue();

@@ -20,12 +20,12 @@
 package org.apache.druid.guice;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.jackson.JacksonModule;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -57,7 +57,7 @@ public class GuiceInjectors
 
   public static Injector makeStartupInjectorWithModules(Iterable<? extends Module> modules)
   {
-    List<Module> theModules = Lists.newArrayList();
+    List<Module> theModules = new ArrayList<>();
     theModules.addAll(makeDefaultStartupModules());
     for (Module theModule : modules) {
       theModules.add(theModule);

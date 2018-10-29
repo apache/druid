@@ -22,9 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -43,6 +40,7 @@ import org.junit.Before;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -91,9 +89,8 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
 
-    List<DruidServer> serverList = Lists.newArrayList();
-    Map<String, LoadQueuePeon> peonMap = Maps.newHashMap();
-    List<ServerHolder> serverHolderList = Lists.newArrayList();
+    Map<String, LoadQueuePeon> peonMap = new HashMap<>();
+    List<ServerHolder> serverHolderList = new ArrayList<>();
     List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       segments.add(
@@ -101,9 +98,9 @@ public class DruidCoordinatorBalancerProfiler
               "datasource" + i,
               new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)),
               (DateTimes.of("2012-03-01")).toString(),
-              Maps.newHashMap(),
-              Lists.newArrayList(),
-              Lists.newArrayList(),
+              new HashMap<>(),
+              new ArrayList<>(),
+              new ArrayList<>(),
               NoneShardSpec.instance(),
               0,
               4L

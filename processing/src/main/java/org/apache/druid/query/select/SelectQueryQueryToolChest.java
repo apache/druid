@@ -27,9 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -61,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  */
@@ -190,7 +189,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
-        final Set<String> metrics = Sets.newTreeSet();
+        final Set<String> metrics = new TreeSet<>();
         if (query.getMetrics() != null) {
           metrics.addAll(query.getMetrics());
         }
@@ -362,7 +361,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
     final Granularity granularity = query.getGranularity();
 
-    TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();
+    TreeMap<Long, Long> granularThresholds = new TreeMap<>();
 
     // A paged select query using a UnionDataSource will return pagingIdentifiers from segments in more than one
     // dataSource which confuses subsequent queries and causes a failure. To avoid this, filter only the paging keys

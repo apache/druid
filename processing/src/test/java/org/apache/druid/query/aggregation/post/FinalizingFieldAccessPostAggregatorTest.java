@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.post;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.AggregatorsModule;
@@ -45,7 +44,9 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -63,7 +64,7 @@ public class FinalizingFieldAccessPostAggregatorTest
     agg.aggregate();
     agg.aggregate();
 
-    Map<String, Object> metricValues = Maps.newHashMap();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
 
     FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", aggName);
@@ -86,7 +87,7 @@ public class FinalizingFieldAccessPostAggregatorTest
     // Check that the class matches exactly; see https://github.com/apache/incubator-druid/issues/6063
     Assert.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
 
-    Map<String, Object> metricValues = Maps.newHashMap();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, "test");
 
     Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
@@ -106,7 +107,7 @@ public class FinalizingFieldAccessPostAggregatorTest
         "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
 
-    Map<String, Object> metricValues = Maps.newHashMap();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, "test");
 
     List<PostAggregator> postAggsList = Lists.newArrayList(
@@ -144,7 +145,7 @@ public class FinalizingFieldAccessPostAggregatorTest
         "final_billy", aggName, ImmutableMap.of(aggName, aggFactory)
     );
 
-    List<Object> computedValues = Lists.newArrayList();
+    List<Object> computedValues = new ArrayList<>();
     computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val1")));
     computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val2")));
     computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val3")));
@@ -168,8 +169,8 @@ public class FinalizingFieldAccessPostAggregatorTest
     FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
         "final_billy", "joe", ImmutableMap.of(aggName, aggFactory));
 
-    List<Object> computedValues = Lists.newArrayList();
-    Map<String, Object> forNull = Maps.newHashMap();
+    List<Object> computedValues = new ArrayList<>();
+    Map<String, Object> forNull = new HashMap<>();
     forNull.put("joe", null); // guava does not allow the value to be null.
     computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val1")));
     computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val2")));

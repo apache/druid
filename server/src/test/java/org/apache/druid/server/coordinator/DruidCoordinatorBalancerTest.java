@@ -21,8 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -40,6 +38,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
@@ -91,9 +90,9 @@ public class DruidCoordinatorBalancerTest
         "datasource1",
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         11L
@@ -102,9 +101,9 @@ public class DruidCoordinatorBalancerTest
         "datasource1",
         new Interval(start2, start2.plusHours(1)),
         version.toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         7L
@@ -113,9 +112,9 @@ public class DruidCoordinatorBalancerTest
         "datasource2",
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         4L
@@ -124,9 +123,9 @@ public class DruidCoordinatorBalancerTest
         "datasource2",
         new Interval(start2, start2.plusHours(1)),
         version.toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         8L

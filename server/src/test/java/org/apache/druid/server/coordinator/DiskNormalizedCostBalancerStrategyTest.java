@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -51,7 +50,7 @@ public class DiskNormalizedCostBalancerStrategyTest
    */
   public static List<ServerHolder> setupDummyCluster(int serverCount, int maxSegments)
   {
-    List<ServerHolder> serverHolderList = Lists.newArrayList();
+    List<ServerHolder> serverHolderList = new ArrayList<>();
     // Create 10 servers with current size being 3K & max size being 10K
     // Each having having 100 segments
     for (int i = 0; i < serverCount; i++) {
@@ -116,8 +115,8 @@ public class DiskNormalizedCostBalancerStrategyTest
         interval,
         String.valueOf(index),
         new ConcurrentHashMap<>(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         null,
         0,
         index * 100L

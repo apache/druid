@@ -21,13 +21,13 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class CommittedTest
@@ -61,7 +61,7 @@ public class CommittedTest
 
   private static Committed fixedInstance()
   {
-    final Map<String, Integer> hydrants = Maps.newHashMap();
+    final Map<String, Integer> hydrants = new HashMap<>();
     hydrants.put(IDENTIFIER1, 3);
     hydrants.put(IDENTIFIER2, 2);
     return new Committed(hydrants, ImmutableMap.of("metadata", "foo"));

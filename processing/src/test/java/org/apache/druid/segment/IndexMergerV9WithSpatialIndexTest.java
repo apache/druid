@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.spatial.search.RadiusBound;
 import org.apache.druid.collections.spatial.search.RectangularBound;
@@ -61,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -585,7 +585,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -639,7 +639,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -728,7 +728,7 @@ public class IndexMergerV9WithSpatialIndexTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), Maps.newHashMap()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

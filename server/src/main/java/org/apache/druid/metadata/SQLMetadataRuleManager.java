@@ -25,8 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
@@ -57,7 +55,9 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -284,7 +284,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                       }
                   )
                                .fold(
-                                   Maps.newHashMap(),
+                                   new HashMap<>(),
                                    new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
                                    {
                                      @Override
@@ -341,13 +341,13 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public List<Rule> getRules(final String dataSource)
   {
     List<Rule> retVal = rules.get().get(dataSource);
-    return retVal == null ? Lists.newArrayList() : retVal;
+    return retVal == null ? new ArrayList<>() : retVal;
   }
 
   @Override
   public List<Rule> getRulesWithDefault(final String dataSource)
   {
-    List<Rule> retVal = Lists.newArrayList();
+    List<Rule> retVal = new ArrayList<>();
     Map<String, List<Rule>> theRules = rules.get();
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -137,8 +136,8 @@ public class IndexTaskTest
       ),
       new DimensionsSpec(
           DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-          Lists.newArrayList(),
-          Lists.newArrayList()
+          new ArrayList<>(),
+          new ArrayList<>()
       ),
       null,
       Arrays.asList("ts", "dim", "val"),
@@ -672,8 +671,8 @@ public class IndexTaskTest
                 ),
                 new DimensionsSpec(
                     null,
-                    Lists.newArrayList(),
-                    Lists.newArrayList()
+                    new ArrayList<>(),
+                    new ArrayList<>()
                 ),
                 null,
                 null,
@@ -724,8 +723,8 @@ public class IndexTaskTest
                 ),
                 new DimensionsSpec(
                     null,
-                    Lists.newArrayList(),
-                    Lists.newArrayList()
+                    new ArrayList<>(),
+                    new ArrayList<>()
                 ),
                 null,
                 Arrays.asList("time", "dim", "val"),
@@ -933,8 +932,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "dim", "val"),
@@ -986,8 +985,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "dim", "val"),
@@ -1078,8 +1077,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             null
@@ -1200,8 +1199,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
@@ -1315,8 +1314,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
@@ -1484,8 +1483,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "", ""),

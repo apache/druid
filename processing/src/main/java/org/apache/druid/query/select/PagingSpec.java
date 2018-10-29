@@ -22,10 +22,10 @@ package org.apache.druid.query.select;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -39,7 +39,7 @@ public class PagingSpec
 
   public static Map<String, Integer> merge(Iterable<Map<String, Integer>> cursors)
   {
-    Map<String, Integer> next = Maps.newHashMap();
+    Map<String, Integer> next = new HashMap<>();
     for (Map<String, Integer> cursor : cursors) {
       for (Map.Entry<String, Integer> entry : cursor.entrySet()) {
         next.put(entry.getKey(), entry.getValue());
@@ -68,7 +68,7 @@ public class PagingSpec
       @JacksonInject SelectQueryConfig config
   )
   {
-    this.pagingIdentifiers = pagingIdentifiers == null ? Maps.newHashMap() : pagingIdentifiers;
+    this.pagingIdentifiers = pagingIdentifiers == null ? new HashMap<>() : pagingIdentifiers;
     this.threshold = threshold;
 
     boolean defaultFromNext = config.getEnableFromNextDefault();

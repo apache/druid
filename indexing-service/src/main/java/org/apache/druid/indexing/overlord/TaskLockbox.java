@@ -27,9 +27,7 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -46,6 +44,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +70,7 @@ public class TaskLockbox
   // Multiple shared locks can be acquired for the same dataSource and interval.
   // Note that revoked locks are also maintained in this map to notify that those locks are revoked to the callers when
   // they acquire the same locks again.
-  private final Map<String, NavigableMap<Interval, List<TaskLockPosse>>> running = Maps.newHashMap();
+  private final Map<String, NavigableMap<Interval, List<TaskLockPosse>>> running = new HashMap<>();
   private final TaskStorage taskStorage;
   private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition lockReleaseCondition = giant.newCondition();
@@ -80,7 +79,7 @@ public class TaskLockbox
 
   // Stores List of Active Tasks. TaskLockbox will only grant locks to active activeTasks.
   // this set should be accessed under the giant lock.
-  private final Set<String> activeTasks = Sets.newHashSet();
+  private final Set<String> activeTasks = new HashSet<>();
 
   @Inject
   public TaskLockbox(
@@ -99,8 +98,8 @@ public class TaskLockbox
 
     try {
       // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
-      final Set<String> storedActiveTasks = Sets.newHashSet();
-      final List<Pair<Task, TaskLock>> storedLocks = Lists.newArrayList();
+      final Set<String> storedActiveTasks = new HashSet<>();
+      final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
       for (final Task task : taskStorage.getActiveTasks()) {
         storedActiveTasks.add(task.getId());
         for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {

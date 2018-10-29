@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
@@ -154,7 +153,7 @@ public class TopNQueryRunnerTest
         () -> ByteBuffer.allocate(20000)
     );
 
-    List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();
+    List<QueryRunner<Result<TopNResultValue>>> retVal = new ArrayList<>();
     retVal.addAll(
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
@@ -3913,7 +3912,7 @@ public class TopNQueryRunnerTest
         .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
-    Map<String, Object> map = Maps.newHashMap();
+    Map<String, Object> map = new HashMap<>();
     map.put("null_column", null);
     map.put("rows", 1209L);
     map.put("index", 503332.5071372986D);
@@ -3961,7 +3960,7 @@ public class TopNQueryRunnerTest
         .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
-    Map<String, Object> map = Maps.newHashMap();
+    Map<String, Object> map = new HashMap<>();
     map.put("null_column", null);
     map.put("rows", 1209L);
     map.put("index", 503332.5071372986D);
@@ -3995,7 +3994,7 @@ public class TopNQueryRunnerTest
         .aggregators(commonAggregators)
         .build();
 
-    Map<String, Object> map = Maps.newHashMap();
+    Map<String, Object> map = new HashMap<>();
     map.put("partial_null_column", null);
     map.put("rows", 22L);
     map.put("index", 7583.691513061523D);
@@ -4033,7 +4032,7 @@ public class TopNQueryRunnerTest
         .aggregators(commonAggregators)
         .build();
 
-    Map<String, Object> map = Maps.newHashMap();
+    Map<String, Object> map = new HashMap<>();
     map.put("partial_null_column", null);
     map.put("rows", 22L);
     map.put("index", 7583.691513061523D);
@@ -4252,7 +4251,7 @@ public class TopNQueryRunnerTest
         .filters(extractionFilter)
         .build();
 
-    Map<String, Object> map = Maps.newHashMap();
+    Map<String, Object> map = new HashMap<>();
     map.put("null_column", null);
     map.put("rows", 1209L);
     map.put("index", 503332.5071372986D);
@@ -4323,7 +4322,7 @@ public class TopNQueryRunnerTest
         .filters(extractionFilter)
         .build();
 
-    Map<String, Object> map = Maps.newHashMap();
+    Map<String, Object> map = new HashMap<>();
     map.put("null_column", null);
     map.put("rows", 1209L);
     map.put("index", 503332.5071372986D);

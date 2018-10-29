@@ -21,7 +21,6 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -125,7 +124,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       final boolean concurrentEventAdd
   )
   {
-    selectors = Maps.newHashMap();
+    selectors = new HashMap<>();
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),

@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
@@ -70,7 +69,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     this.config = config;
     this.jsonMapper = mapper;
 
-    this.locations = Lists.newArrayList();
+    this.locations = new ArrayList<>();
     for (StorageLocationConfig locationConfig : config.getLocations()) {
       locations.add(new StorageLocation(
           locationConfig.getPath(),

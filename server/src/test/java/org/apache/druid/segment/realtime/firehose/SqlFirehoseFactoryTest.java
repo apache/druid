@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Firehose;
@@ -73,8 +72,8 @@ public class SqlFirehoseFactoryTest
           new TimestampSpec("timestamp", "auto", null),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-              Lists.newArrayList(),
-              Lists.newArrayList()
+              new ArrayList<>(),
+              new ArrayList<>()
           )
       )
   );

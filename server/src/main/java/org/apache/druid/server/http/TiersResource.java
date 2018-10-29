@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidDataSource;
@@ -70,7 +69,7 @@ public class TiersResource
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
     if (simple != null) {
-      Map<String, Map<TierMetadataKeys, Long>> metadata = Maps.newHashMap();
+      Map<String, Map<TierMetadataKeys, Long>> metadata = new HashMap<>();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
         Map<TierMetadataKeys, Long> tierMetadata = metadata
             .computeIfAbsent(druidServer.getTier(), tier -> new EnumMap<>(TierMetadataKeys.class));

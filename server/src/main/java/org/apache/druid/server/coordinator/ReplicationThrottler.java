@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,7 +36,7 @@ public class ReplicationThrottler
 {
   private static final EmittingLogger log = new EmittingLogger(ReplicationThrottler.class);
 
-  private final Map<String, Boolean> replicatingLookup = Maps.newHashMap();
+  private final Map<String, Boolean> replicatingLookup = new HashMap<>();
   private final ReplicatorSegmentHolder currentlyReplicating = new ReplicatorSegmentHolder();
 
   private volatile int maxReplicants;
@@ -102,8 +102,8 @@ public class ReplicationThrottler
 
   private class ReplicatorSegmentHolder
   {
-    private final Map<String, ConcurrentHashMap<SegmentId, String>> currentlyProcessingSegments = Maps.newHashMap();
-    private final Map<String, Integer> lifetimes = Maps.newHashMap();
+    private final Map<String, ConcurrentHashMap<SegmentId, String>> currentlyProcessingSegments = new HashMap<>();
+    private final Map<String, Integer> lifetimes = new HashMap<>();
 
     public boolean isAtMaxReplicants(String tier)
     {
@@ -162,7 +162,7 @@ public class ReplicationThrottler
     public List<String> getCurrentlyProcessingSegmentsAndHosts(String tier)
     {
       Map<SegmentId, String> segments = currentlyProcessingSegments.get(tier);
-      List<String> retVal = Lists.newArrayList();
+      List<String> retVal = new ArrayList<>();
       segments.forEach((segmentId, serverId) -> retVal.add(StringUtils.format("%s ON %s", segmentId, serverId)));
       return retVal;
     }

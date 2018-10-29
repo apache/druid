@@ -20,13 +20,13 @@
 package org.apache.druid.curator.discovery;
 
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -40,7 +40,7 @@ public class CuratorServiceAnnouncer implements ServiceAnnouncer
   private static final EmittingLogger log = new EmittingLogger(CuratorServiceAnnouncer.class);
 
   private final ServiceDiscovery<Void> discovery;
-  private final Map<String, ServiceInstance<Void>> instanceMap = Maps.newHashMap();
+  private final Map<String, ServiceInstance<Void>> instanceMap = new HashMap<>();
   private final Object monitor = new Object();
 
   @Inject

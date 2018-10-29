@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
@@ -55,8 +56,8 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   private long rowNum;
   private Row currRow;
 
-  private List<QueryableIndex> indexes = Lists.newArrayList();
-  private List<File> tmpSegmentDirs = Lists.newArrayList();
+  private List<QueryableIndex> indexes = new ArrayList<>();
+  private List<File> tmpSegmentDirs = new ArrayList<>();
   private long numRows;
 
   @Override

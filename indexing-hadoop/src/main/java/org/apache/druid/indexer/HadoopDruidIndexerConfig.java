@@ -31,7 +31,6 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -75,6 +74,7 @@ import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -212,8 +212,8 @@ public class HadoopDruidIndexerConfig
 
   private HadoopIngestionSpec schema;
   private PathSpec pathSpec;
-  private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
-  private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
+  private final Map<Long, ShardSpecLookup> shardSpecLookups = new HashMap<>();
+  private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = new HashMap<>();
   private final Granularity rollupGran;
   private final List<String> allowedHadoopPrefix;
 
@@ -244,7 +244,7 @@ public class HadoopDruidIndexerConfig
           )
       );
 
-      Map<ShardSpec, HadoopyShardSpec> innerHadoopShardSpecLookup = Maps.newHashMap();
+      Map<ShardSpec, HadoopyShardSpec> innerHadoopShardSpecLookup = new HashMap<>();
       for (HadoopyShardSpec hadoopyShardSpec : entry.getValue()) {
         innerHadoopShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
       }

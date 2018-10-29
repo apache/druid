@@ -22,7 +22,6 @@ package org.apache.druid.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -38,6 +37,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -356,7 +356,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.of("metric", 3))
             )
         ),
-        queryRunner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList()
+        queryRunner.run(QueryPlus.wrap(query), new HashMap<>()).toList()
     );
   }
 }

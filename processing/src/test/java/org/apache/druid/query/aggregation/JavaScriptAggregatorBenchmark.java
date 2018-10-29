@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation;
 
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
-import com.google.common.collect.Maps;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -33,7 +33,7 @@ import java.util.Map;
 public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
 {
 
-  protected static final Map<String, String> scriptDoubleSum = Maps.newHashMap();
+  protected static final Map<String, String> scriptDoubleSum = new HashMap<>();
   static {
     scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
     scriptDoubleSum.put("fnReset", "function reset() { return 0 }");

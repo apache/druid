@@ -20,8 +20,6 @@
 package org.apache.druid.indexing.appenderator;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -31,9 +29,11 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
 {
@@ -48,15 +48,15 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
   public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException
   {
     // Group by dataSource
-    final Map<String, Set<SegmentIdWithShardSpec>> identifiersByDataSource = Maps.newTreeMap();
+    final Map<String, Set<SegmentIdWithShardSpec>> identifiersByDataSource = new TreeMap<>();
     for (SegmentIdWithShardSpec identifier : identifiers) {
       if (!identifiersByDataSource.containsKey(identifier.getDataSource())) {
-        identifiersByDataSource.put(identifier.getDataSource(), Sets.newHashSet());
+        identifiersByDataSource.put(identifier.getDataSource(), new HashSet<>());
       }
       identifiersByDataSource.get(identifier.getDataSource()).add(identifier);
     }
 
-    final Set<DataSegment> retVal = Sets.newHashSet();
+    final Set<DataSegment> retVal = new HashSet<>();
 
     for (Map.Entry<String, Set<SegmentIdWithShardSpec>> entry : identifiersByDataSource.entrySet()) {
       final List<Interval> intervals = JodaUtils.condenseIntervals(

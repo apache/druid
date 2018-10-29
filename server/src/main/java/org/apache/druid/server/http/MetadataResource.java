@@ -56,6 +56,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 /**
@@ -97,14 +98,14 @@ public class MetadataResource
     final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
     final Set<String> dataSourceNamesPreAuth;
     if (includeDisabled != null) {
-      dataSourceNamesPreAuth = Sets.newTreeSet(metadataSegmentManager.getAllDataSourceNames());
+      dataSourceNamesPreAuth = new TreeSet<>(metadataSegmentManager.getAllDataSourceNames());
     } else {
       dataSourceNamesPreAuth = Sets.newTreeSet(
           Iterables.transform(druidDataSources, ImmutableDruidDataSource::getName)
       );
     }
 
-    final Set<String> dataSourceNamesPostAuth = Sets.newTreeSet();
+    final Set<String> dataSourceNamesPostAuth = new TreeSet<>();
     Function<String, Iterable<ResourceAction>> raGenerator = datasourceName -> {
       return Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
     };

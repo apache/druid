@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 
 
@@ -43,7 +44,7 @@ public class MapLookupExtractorTest
     if (NullHandling.sqlCompatible()) {
       Assert.assertEquals(
           "Null value should be equal to empty list",
-          Sets.newHashSet(),
+          new HashSet<>(),
           Sets.newHashSet(fn.unapply((String) null))
       );
     } else {

@@ -21,7 +21,6 @@ package org.apache.druid.data.input.parquet;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.avro.LogicalType;
 import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
@@ -36,6 +35,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -57,7 +57,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
 
     List<DimensionSchema> dimensionSchema = parseSpec.getDimensionsSpec().getDimensions();
-    this.dimensions = Lists.newArrayList();
+    this.dimensions = new ArrayList<>();
     for (DimensionSchema dim : dimensionSchema) {
       this.dimensions.add(dim.getName());
     }
