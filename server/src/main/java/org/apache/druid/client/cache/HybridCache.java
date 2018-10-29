@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -137,8 +138,9 @@ public class HybridCache implements Cache
   @LifecycleStop
   public void close() throws IOException
   {
-    level1.close();
-    level2.close();
+    try (Closeable closeable1 = level1; Closeable closeable2 = level2) {
+      // Just for closing
+    }
   }
 
   @Override

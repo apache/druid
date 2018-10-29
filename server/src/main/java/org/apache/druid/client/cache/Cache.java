@@ -49,7 +49,7 @@ public interface Cache extends Closeable
   void close(String namespace);
 
   @Override
-  default void close() throws IOException {}
+  void close() throws IOException;
 
   CacheStats getStats();
 
