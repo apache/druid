@@ -152,6 +152,7 @@ public class MapCache implements Cache
   {
     baseMap.clear();
     byteCountingLRUMap.clear();
+    namespaceId.clear();
   }
 
   private byte[] getNamespaceId(final String identifier)

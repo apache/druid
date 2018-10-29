@@ -25,7 +25,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
@@ -47,9 +46,6 @@ public interface Cache extends Closeable
   Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
 
   void close(String namespace);
-
-  @Override
-  void close() throws IOException;
 
   CacheStats getStats();
 

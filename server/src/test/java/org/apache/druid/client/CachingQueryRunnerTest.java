@@ -253,6 +253,11 @@ public class CachingQueryRunnerTest
       }
 
       @Override
+      public void close() throws IOException
+      {
+      }
+
+      @Override
       public CacheStats getStats()
       {
         return null;
