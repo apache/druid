@@ -46,8 +46,8 @@ public class KerberosEscalator implements Escalator
     this.authorizerName = authorizerName;
     this.internalClientPrincipal = internalClientPrincipal;
     this.internalClientKeytab = internalClientKeytab;
-
   }
+
   @Override
   public HttpClient createEscalatedClient(HttpClient baseClient)
   {

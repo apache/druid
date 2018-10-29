@@ -133,8 +133,8 @@ public class IngestSegmentFirehoseTest
                     .withMetrics(AGGREGATORS_REINDEX.toArray(new AggregatorFactory[0]))
                     .build()
             )
-        .setMaxRowCount(5000)
-        .buildOnheap()
+            .setMaxRowCount(5000)
+            .buildOnheap()
     ) {
       final StorageAdapter sa = new QueryableIndexStorageAdapter(qi);
       final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
@@ -223,8 +223,8 @@ public class IngestSegmentFirehoseTest
                     .withMetrics(AGGREGATORS.toArray(new AggregatorFactory[0]))
                     .build()
             )
-        .setMaxRowCount(5000)
-        .buildOnheap()
+            .setMaxRowCount(5000)
+            .buildOnheap()
     ) {
       for (String line : rows) {
         index.add(parser.parse(line));

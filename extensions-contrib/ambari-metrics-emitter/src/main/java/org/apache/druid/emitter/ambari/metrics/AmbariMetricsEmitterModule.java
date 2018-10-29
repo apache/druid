@@ -39,10 +39,11 @@ import java.util.List;
 public class AmbariMetricsEmitterModule implements DruidModule
 {
   private static final String EMITTER_TYPE = "ambari-metrics";
+
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   @Override
