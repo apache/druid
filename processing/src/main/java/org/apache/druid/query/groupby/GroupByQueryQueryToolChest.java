@@ -69,6 +69,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  */
@@ -173,7 +174,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       try {
         // Inject outer query context keys into subquery if they don't already exist in the subquery context.
         // Unlike withOverriddenContext's normal behavior, we want keys present in the subquery to win.
-        final Map<String, Object> subqueryContext = Maps.newTreeMap();
+        final Map<String, Object> subqueryContext = new TreeMap<>();
         if (query.getContext() != null) {
           for (Map.Entry<String, Object> entry : query.getContext().entrySet()) {
             if (entry.getValue() != null) {
@@ -325,7 +326,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       {
         if (input instanceof MapBasedRow) {
           final MapBasedRow inputRow = (MapBasedRow) input;
-          final Map<String, Object> values = Maps.newHashMap(inputRow.getEvent());
+          final Map<String, Object> values = new HashMap<>(inputRow.getEvent());
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
             values.put(agg.getName(), fn.manipulate(agg, inputRow.getEvent().get(agg.getName())));
           }
@@ -379,7 +380,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         Row preRow = preCompute.apply(input);
         if (preRow instanceof MapBasedRow) {
           MapBasedRow preMapRow = (MapBasedRow) preRow;
-          Map<String, Object> event = Maps.newHashMap(preMapRow.getEvent());
+          Map<String, Object> event = new HashMap<>(preMapRow.getEvent());
           for (String dim : optimizedDims) {
             final Object eventVal = event.get(dim);
             event.put(dim, extractionFnMap.get(dim).apply(eventVal));

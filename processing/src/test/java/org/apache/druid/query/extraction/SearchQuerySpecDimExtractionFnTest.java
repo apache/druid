@@ -21,13 +21,13 @@ package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.search.FragmentSearchQuerySpec;
 import org.apache.druid.query.search.SearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -54,7 +54,7 @@ public class SearchQuerySpecDimExtractionFnTest
     );
     ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
     List<String> expected = ImmutableList.of("Kyoto", "Tokyo", "Toyokawa", "Yorktown");
-    List<String> extracted = Lists.newArrayList();
+    List<String> extracted = new ArrayList<>();
 
     for (String str : testStrings) {
       String res = extractionFn.apply(str);
@@ -75,7 +75,7 @@ public class SearchQuerySpecDimExtractionFnTest
     );
     ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
     List<String> expected = ImmutableList.of("Kyoto");
-    List<String> extracted = Lists.newArrayList();
+    List<String> extracted = new ArrayList<>();
 
     for (String str : testStrings) {
       String res = extractionFn.apply(str);
@@ -96,7 +96,7 @@ public class SearchQuerySpecDimExtractionFnTest
     );
     ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
     List<String> expected = ImmutableList.of("Tokyo", "Toyokawa");
-    List<String> extracted = Lists.newArrayList();
+    List<String> extracted = new ArrayList<>();
 
     for (String str : testStrings) {
       String res = extractionFn.apply(str);

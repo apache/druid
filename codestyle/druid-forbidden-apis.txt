@@ -1,14 +1,27 @@
-com.google.common.collect.MapMaker @ Create java.util.concurrent.ConcurrentHashMap directly
-com.google.common.collect.Maps#newConcurrentMap() @ Create java.util.concurrent.ConcurrentHashMap directly
-com.google.common.util.concurrent.Futures#transform(com.google.common.util.concurrent.ListenableFuture, com.google.common.util.concurrent.AsyncFunction) @ Use org.apache.druid.java.util.common.concurrent.ListenableFutures#transformAsync
-com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#emptyIterator()
-com.google.common.base.Charsets @ Use java.nio.charset.StandardCharsets instead
-java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
-org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
-java.util.LinkedList @ Use ArrayList or ArrayDeque instead
-com.google.common.collect.Lists#newLinkedList() @ Use ArrayList or ArrayDeque instead
-com.google.common.collect.Lists#newLinkedList(java.lang.Iterable) @ Use ArrayList or ArrayDeque instead
-java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)
+com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.core.type.TypeReference) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.databind.JavaType) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(java.lang.Class) @ Use ObjectMapper#readerFor instead
-com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.core.type.TypeReference) @ Use ObjectMapper#readerFor instead
+com.google.common.base.Charsets @ Use java.nio.charset.StandardCharsets instead
+com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#emptyIterator()
+com.google.common.collect.Lists#newArrayList() @ Create java.util.ArrayList directly
+com.google.common.collect.Lists#newLinkedList() @ Use ArrayList or ArrayDeque instead
+com.google.common.collect.Lists#newLinkedList(java.lang.Iterable) @ Use ArrayList or ArrayDeque instead
+com.google.common.collect.MapMaker @ Create java.util.concurrent.ConcurrentHashMap directly
+com.google.common.collect.Maps#newConcurrentMap() @ Create java.util.concurrent.ConcurrentHashMap directly
+com.google.common.collect.Maps#newHashMap() @ Create java.util.HashMap directly
+com.google.common.collect.Maps#newHashMap(java.util.Map) @ Create java.util.HashMap directly
+com.google.common.collect.Maps#newTreeMap() @ Create java.util.TreeMap directly
+com.google.common.collect.Maps#newTreeMap(java.util.Comparator) @ Create java.util.TreeMap directly
+com.google.common.collect.Maps#newTreeMap(java.util.SortedMap) @ Create java.util.TreeMap directly
+com.google.common.collect.Queues#newArrayDeque() @ Create java.util.ArrayDeque directly
+com.google.common.collect.Queues#newConcurrentLinkedQueue() @ Create java.util.concurrent.ConcurrentLinkedQueue directly
+com.google.common.collect.Queues#newLinkedBlockingQueue() @ Create java.util.concurrent.LinkedBlockingQueue directly
+com.google.common.collect.Sets#newHashSet() @ Create java.util.HashSet directly
+com.google.common.collect.Sets#newLinkedHashSet() @ Create java.util.LinkedHashSet directly
+com.google.common.collect.Sets#newTreeSet() @ Create java.util.TreeSet directly
+com.google.common.collect.Sets#newTreeSet(java.util.Comparator) @ Create java.util.TreeSet directly
+com.google.common.util.concurrent.Futures#transform(com.google.common.util.concurrent.ListenableFuture, com.google.common.util.concurrent.AsyncFunction) @ Use org.apache.druid.java.util.common.concurrent.ListenableFutures#transformAsync
+java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
+java.util.LinkedList @ Use ArrayList or ArrayDeque instead
+java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)
+org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead

@@ -21,7 +21,6 @@ package org.apache.druid.query.timeboundary;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
@@ -51,6 +50,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -225,7 +225,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
     Map<String, Object> context = new ConcurrentHashMap<>();
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
@@ -244,7 +244,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
     Map<String, Object> context = new ConcurrentHashMap<>();
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
@@ -287,7 +287,7 @@ public class TimeBoundaryQueryRunnerTest
   @Test
   public void testMergeResultsEmptyResults()
   {
-    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
+    List<Result<TimeBoundaryResultValue>> results = new ArrayList<>();
 
     TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null, null);
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);

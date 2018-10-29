@@ -21,8 +21,6 @@
 package org.apache.parquet.avro;
 //CHECKSTYLE.ON: PackageName
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -35,6 +33,8 @@ import org.apache.parquet.io.api.RecordMaterializer;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,17 +62,17 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
     String tsField = config.getParser().getParseSpec().getTimestampSpec().getTimestampColumn();
 
     List<DimensionSchema> dimensionSchema = config.getParser().getParseSpec().getDimensionsSpec().getDimensions();
-    Set<String> dimensions = Sets.newHashSet();
+    Set<String> dimensions = new HashSet<>();
     for (DimensionSchema dim : dimensionSchema) {
       dimensions.add(dim.getName());
     }
 
-    Set<String> metricsFields = Sets.newHashSet();
+    Set<String> metricsFields = new HashSet<>();
     for (AggregatorFactory agg : config.getSchema().getDataSchema().getAggregators()) {
       metricsFields.addAll(agg.requiredFields());
     }
 
-    List<Type> partialFields = Lists.newArrayList();
+    List<Type> partialFields = new ArrayList<>();
 
     for (Type type : fullSchema.getFields()) {
       if (tsField.equals(type.getName())

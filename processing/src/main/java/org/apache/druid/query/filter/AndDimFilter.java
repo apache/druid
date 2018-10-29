@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.filter.AndFilter;
@@ -102,7 +101,7 @@ public class AndDimFilter implements DimFilter
   @Override
   public HashSet<String> getRequiredColumns()
   {
-    HashSet<String> requiredColumns = Sets.newHashSet();
+    HashSet<String> requiredColumns = new HashSet<>();
     fields.stream()
         .forEach(field -> requiredColumns.addAll(field.getRequiredColumns()));
     return requiredColumns;

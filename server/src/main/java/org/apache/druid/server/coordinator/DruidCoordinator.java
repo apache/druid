@@ -22,8 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -78,11 +76,14 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -229,7 +230,7 @@ public class DruidCoordinator
 
   public Map<String, ? extends Object2LongMap<String>> getReplicationStatus()
   {
-    final Map<String, Object2LongOpenHashMap<String>> retVal = Maps.newHashMap();
+    final Map<String, Object2LongOpenHashMap<String>> retVal = new HashMap<>();
 
     if (segmentReplicantLookup == null) {
       return retVal;
@@ -290,7 +291,7 @@ public class DruidCoordinator
 
   public Map<String, Double> getLoadStatus()
   {
-    Map<String, Double> loadStatus = Maps.newHashMap();
+    Map<String, Double> loadStatus = new HashMap<>();
     for (ImmutableDruidDataSource dataSource : metadataSegmentManager.getInventory()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int availableSegmentSize = segments.size();
@@ -454,7 +455,7 @@ public class DruidCoordinator
 
   public Set<DataSegment> getOrderedAvailableDataSegments()
   {
-    Set<DataSegment> availableSegments = Sets.newTreeSet(SEGMENT_COMPARATOR);
+    Set<DataSegment> availableSegments = new TreeSet<>(SEGMENT_COMPARATOR);
 
     Iterable<DataSegment> dataSegments = getAvailableDataSegments();
 
@@ -538,7 +539,7 @@ public class DruidCoordinator
       serviceAnnouncer.announce(self);
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
-      final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = Lists.newArrayList();
+      final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = new ArrayList<>();
       coordinatorRunnables.add(
           Pair.of(
               new CoordinatorHistoricalManagerRunnable(startingLeaderCounter),
@@ -606,7 +607,7 @@ public class DruidCoordinator
 
   private List<DruidCoordinatorHelper> makeIndexingServiceHelpers()
   {
-    List<DruidCoordinatorHelper> helpers = Lists.newArrayList();
+    List<DruidCoordinatorHelper> helpers = new ArrayList<>();
     helpers.add(new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this));
     helpers.add(segmentCompactor);
     helpers.addAll(indexingServiceHelpers);

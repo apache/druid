@@ -21,7 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
@@ -45,6 +44,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
@@ -73,7 +73,7 @@ public class CompressedVSizeColumnarMultiIntsBenchmark
   public void setup() throws IOException
   {
     Random rand = ThreadLocalRandom.current();
-    List<int[]> rows = Lists.newArrayList();
+    List<int[]> rows = new ArrayList<>();
     final int bound = 1 << bytes;
     for (int i = 0; i < 0x100000; i++) {
       int count = rand.nextInt(valuesPerRowBound) + 1;

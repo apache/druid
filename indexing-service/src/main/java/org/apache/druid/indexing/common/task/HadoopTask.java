@@ -143,7 +143,7 @@ public abstract class HadoopTask extends AbstractTask
         Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs())
     );
 
-    final List<URL> extensionURLs = Lists.newArrayList();
+    final List<URL> extensionURLs = new ArrayList<>();
     for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
       final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
       extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));

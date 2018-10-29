@@ -32,6 +32,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -132,7 +133,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
       return Collections.singletonList(interval);
     }
 
-    List<Interval> intervals = Lists.newArrayList();
+    List<Interval> intervals = new ArrayList<>();
     Iterator<Interval> timestamps = new PeriodGranularity(period, null, null).getIterable(interval).iterator();
 
     DateTime start = DateTimes.max(timestamps.next().getStart(), interval.getStart());

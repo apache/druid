@@ -23,7 +23,6 @@ import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Lists;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -34,6 +33,7 @@ import net.spy.memcached.transcoders.SerializingTranscoder;
 import org.apache.druid.collections.StupidResourceHolder;
 import org.apache.druid.java.util.common.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -147,7 +147,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
   {
     long count = 0;
     for (int i = 0; i < reps; i++) {
-      List<Cache.NamedKey> keys = Lists.newArrayList();
+      List<Cache.NamedKey> keys = new ArrayList<>();
       for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
         keys.add(new Cache.NamedKey(NAMESPACE, StringUtils.toUtf8(key)));

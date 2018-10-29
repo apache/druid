@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
@@ -33,6 +32,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -81,9 +82,9 @@ public class ReservoirSegmentSamplerTest
         "datasource1",
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         11L
@@ -92,9 +93,9 @@ public class ReservoirSegmentSamplerTest
         "datasource1",
         new Interval(start2, start2.plusHours(1)),
         version.toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         7L
@@ -103,9 +104,9 @@ public class ReservoirSegmentSamplerTest
         "datasource2",
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         4L
@@ -114,9 +115,9 @@ public class ReservoirSegmentSamplerTest
         "datasource2",
         new Interval(start2, start2.plusHours(1)),
         version.toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         8L
@@ -188,13 +189,13 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(holder4.getServer()).andReturn(druidServer4).anyTimes();
     EasyMock.replay(holder4);
 
-    List<ServerHolder> holderList = Lists.newArrayList();
+    List<ServerHolder> holderList = new ArrayList<>();
     holderList.add(holder1);
     holderList.add(holder2);
     holderList.add(holder3);
     holderList.add(holder4);
 
-    Map<DataSegment, Integer> segmentCountMap = Maps.newHashMap();
+    Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
     for (int i = 0; i < 5000; i++) {
       segmentCountMap.put(ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList).getSegment(), 1);
     }

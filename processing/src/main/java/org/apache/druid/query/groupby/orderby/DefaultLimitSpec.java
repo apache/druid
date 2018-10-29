@@ -25,9 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
@@ -47,6 +45,8 @@ import org.apache.druid.segment.column.ValueType;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -131,7 +131,7 @@ public class DefaultLimitSpec implements LimitSpec
 
     boolean sortingNeeded = dimensions.size() < columns.size();
 
-    final Set<String> aggAndPostAggNames = Sets.newHashSet();
+    final Set<String> aggAndPostAggNames = new HashSet<>();
     for (AggregatorFactory agg : aggs) {
       aggAndPostAggNames.add(agg.getName());
     }
@@ -220,17 +220,17 @@ public class DefaultLimitSpec implements LimitSpec
       }
     };
 
-    Map<String, DimensionSpec> dimensionsMap = Maps.newHashMap();
+    Map<String, DimensionSpec> dimensionsMap = new HashMap<>();
     for (DimensionSpec spec : dimensions) {
       dimensionsMap.put(spec.getOutputName(), spec);
     }
 
-    Map<String, AggregatorFactory> aggregatorsMap = Maps.newHashMap();
+    Map<String, AggregatorFactory> aggregatorsMap = new HashMap<>();
     for (final AggregatorFactory agg : aggs) {
       aggregatorsMap.put(agg.getName(), agg);
     }
 
-    Map<String, PostAggregator> postAggregatorsMap = Maps.newHashMap();
+    Map<String, PostAggregator> postAggregatorsMap = new HashMap<>();
     for (PostAggregator postAgg : postAggs) {
       postAggregatorsMap.put(postAgg.getName(), postAgg);
     }

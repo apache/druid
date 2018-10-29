@@ -35,7 +35,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -1090,8 +1089,8 @@ public class KafkaSupervisor implements Supervisor
   private void discoverTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
     int taskCount = 0;
-    List<String> futureTaskIds = Lists.newArrayList();
-    List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    List<String> futureTaskIds = new ArrayList<>();
+    List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     List<Task> tasks = taskStorage.getActiveTasks();
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
@@ -1447,8 +1446,8 @@ public class KafkaSupervisor implements Supervisor
 
   private void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException
   {
-    final List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
-    final List<String> futureTaskIds = Lists.newArrayList();
+    final List<ListenableFuture<Boolean>> futures = new ArrayList<>();
+    final List<String> futureTaskIds = new ArrayList<>();
 
     // update status (and startTime if unknown) of current tasks in taskGroups
     for (TaskGroup group : taskGroups.values()) {
@@ -1515,8 +1514,8 @@ public class KafkaSupervisor implements Supervisor
 
   private void checkTaskDuration() throws InterruptedException, ExecutionException, TimeoutException
   {
-    final List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
-    final List<Integer> futureGroupIds = Lists.newArrayList();
+    final List<ListenableFuture<Map<Integer, Long>>> futures = new ArrayList<>();
+    final List<Integer> futureGroupIds = new ArrayList<>();
 
     for (Entry<Integer, TaskGroup> entry : taskGroups.entrySet()) {
       Integer groupId = entry.getKey();
@@ -1616,7 +1615,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     // 2) Pause running tasks
-    final List<ListenableFuture<Map<Integer, Long>>> pauseFutures = Lists.newArrayList();
+    final List<ListenableFuture<Map<Integer, Long>>> pauseFutures = new ArrayList<>();
     final List<String> pauseTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
     for (final String taskId : pauseTaskIds) {
       pauseFutures.add(taskClient.pauseAsync(taskId));
@@ -1652,7 +1651,7 @@ public class KafkaSupervisor implements Supervisor
 
             // 4) Set the end offsets for each task to the values from step 3 and resume the tasks. All the tasks should
             //    finish reading and start publishing within a short period, depending on how in sync the tasks were.
-            final List<ListenableFuture<Boolean>> setEndOffsetFutures = Lists.newArrayList();
+            final List<ListenableFuture<Boolean>> setEndOffsetFutures = new ArrayList<>();
             final List<String> setEndOffsetTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
 
             if (setEndOffsetTaskIds.isEmpty()) {
@@ -1717,14 +1716,14 @@ public class KafkaSupervisor implements Supervisor
    */
   private void checkPendingCompletionTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<?>> futures = Lists.newArrayList();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
 
     for (Entry<Integer, CopyOnWriteArrayList<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
 
       boolean stopTasksInTaskGroup = false;
       Integer groupId = pendingGroupList.getKey();
       CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingGroupList.getValue();
-      List<TaskGroup> toRemove = Lists.newArrayList();
+      List<TaskGroup> toRemove = new ArrayList<>();
 
       for (TaskGroup group : taskGroupList) {
         boolean foundSuccess = false, entireTaskGroupFailed = false;
@@ -1799,7 +1798,7 @@ public class KafkaSupervisor implements Supervisor
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<?>> futures = Lists.newArrayList();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
     Iterator<Entry<Integer, TaskGroup>> iTaskGroups = taskGroups.entrySet().iterator();
     while (iTaskGroups.hasNext()) {
       Entry<Integer, TaskGroup> taskGroupEntry = iTaskGroups.next();
@@ -1920,7 +1919,7 @@ public class KafkaSupervisor implements Supervisor
     }
     TaskGroup group = taskGroups.get(groupId);
 
-    Map<String, Object> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
+    Map<String, Object> consumerProperties = new HashMap<>(ioConfig.getConsumerProperties());
     DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
     DateTime maximumMessageTime = taskGroups.get(groupId).maximumMessageTime.orNull();
 
@@ -2107,7 +2106,7 @@ public class KafkaSupervisor implements Supervisor
       return Futures.immediateFuture(null);
     }
 
-    final List<ListenableFuture<Void>> futures = Lists.newArrayList();
+    final List<ListenableFuture<Void>> futures = new ArrayList<>();
     for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
       final String taskId = entry.getKey();
       final TaskData taskData = entry.getValue();
@@ -2190,7 +2189,7 @@ public class KafkaSupervisor implements Supervisor
         payload
     );
 
-    List<TaskReportData> taskReports = Lists.newArrayList();
+    List<TaskReportData> taskReports = new ArrayList<>();
 
     try {
       for (TaskGroup taskGroup : taskGroups.values()) {
@@ -2398,7 +2397,7 @@ public class KafkaSupervisor implements Supervisor
   private Map<String, Map<String, Object>> getCurrentTotalStats()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    Map<String, Map<String, Object>> allStats = Maps.newHashMap();
+    Map<String, Map<String, Object>> allStats = new HashMap<>();
     final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
     final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
 
@@ -2422,21 +2421,21 @@ public class KafkaSupervisor implements Supervisor
     }
 
     for (int groupId : pendingCompletionTaskGroups.keySet()) {
-      TaskGroup group = taskGroups.get(groupId);
-      for (String taskId : group.taskIds()) {
-        futures.add(
-            Futures.transform(
-                taskClient.getMovingAveragesAsync(taskId),
-                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
-                  return new StatsFromTaskResult(
+      List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
+      for (TaskGroup pendingGroup : pendingGroups) {
+        for (String taskId : pendingGroup.taskIds()) {
+          futures.add(
+              Futures.transform(
+                  taskClient.getMovingAveragesAsync(taskId),
+                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                       groupId,
                       taskId,
                       currentStats
-                  );
-                }
-            )
-        );
-        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+                  )
+              )
+          );
+          groupAndTaskIds.add(new Pair<>(groupId, taskId));
+        }
       }
     }
 
@@ -2444,7 +2443,7 @@ public class KafkaSupervisor implements Supervisor
     for (int i = 0; i < results.size(); i++) {
       StatsFromTaskResult result = results.get(i);
       if (result != null) {
-        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> Maps.newHashMap());
+        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> new HashMap<>());
         groupMap.put(result.getTaskId(), result.getStats());
       } else {
         Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
@@ -2453,6 +2452,50 @@ public class KafkaSupervisor implements Supervisor
     }
 
     return allStats;
+  }
+
+  @VisibleForTesting
+  void addTaskGroupToActivelyReadingTaskGroup(
+      int taskGroupId,
+      ImmutableMap<Integer, Long> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks
+  )
+  {
+    TaskGroup group = new TaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime
+    );
+    group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    if (taskGroups.putIfAbsent(taskGroupId, group) != null) {
+      throw new ISE(
+          "trying to add taskGroup with ID [%s] to actively reading task groups, but group already exists.",
+          taskGroupId
+      );
+    }
+  }
+
+  @VisibleForTesting
+  void addTaskGroupToPendingCompletionTaskGroup(
+      int taskGroupId,
+      ImmutableMap<Integer, Long> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks
+  )
+  {
+    TaskGroup group = new TaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime
+    );
+    group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    pendingCompletionTaskGroups.computeIfAbsent(taskGroupId, x -> new CopyOnWriteArrayList<>())
+                               .add(group);
   }
 
   @VisibleForTesting

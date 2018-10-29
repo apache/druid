@@ -21,10 +21,10 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Maps;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.IAE;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -77,7 +77,7 @@ public class KafkaDataSourceMetadata implements DataSourceMetadata
 
     if (that.getKafkaPartitions().getTopic().equals(kafkaPartitions.getTopic())) {
       // Same topic, merge offsets.
-      final Map<Integer, Long> newMap = Maps.newHashMap();
+      final Map<Integer, Long> newMap = new HashMap<>();
 
       for (Map.Entry<Integer, Long> entry : kafkaPartitions.getPartitionOffsetMap().entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
@@ -109,7 +109,7 @@ public class KafkaDataSourceMetadata implements DataSourceMetadata
 
     if (that.getKafkaPartitions().getTopic().equals(kafkaPartitions.getTopic())) {
       // Same topic, remove partitions present in "that" from "this"
-      final Map<Integer, Long> newMap = Maps.newHashMap();
+      final Map<Integer, Long> newMap = new HashMap<>();
 
       for (Map.Entry<Integer, Long> entry : kafkaPartitions.getPartitionOffsetMap().entrySet()) {
         if (!that.getKafkaPartitions().getPartitionOffsetMap().containsKey(entry.getKey())) {

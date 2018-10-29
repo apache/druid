@@ -504,14 +504,14 @@ public class Filters
         return pushDownNot(((NotFilter) child).getBaseFilter());
       }
       if (child instanceof AndFilter) {
-        List<Filter> children = Lists.newArrayList();
+        List<Filter> children = new ArrayList<>();
         for (Filter grandChild : ((AndFilter) child).getFilters()) {
           children.add(pushDownNot(new NotFilter(grandChild)));
         }
         return new OrFilter(children);
       }
       if (child instanceof OrFilter) {
-        List<Filter> children = Lists.newArrayList();
+        List<Filter> children = new ArrayList<>();
         for (Filter grandChild : ((OrFilter) child).getFilters()) {
           children.add(pushDownNot(new NotFilter(grandChild)));
         }
@@ -521,7 +521,7 @@ public class Filters
 
 
     if (current instanceof AndFilter) {
-      List<Filter> children = Lists.newArrayList();
+      List<Filter> children = new ArrayList<>();
       for (Filter child : ((AndFilter) current).getFilters()) {
         children.add(pushDownNot(child));
       }
@@ -530,7 +530,7 @@ public class Filters
 
 
     if (current instanceof OrFilter) {
-      List<Filter> children = Lists.newArrayList();
+      List<Filter> children = new ArrayList<>();
       for (Filter child : ((OrFilter) current).getFilters()) {
         children.add(pushDownNot(child));
       }
@@ -547,7 +547,7 @@ public class Filters
       return new NotFilter(convertToCNFInternal(((NotFilter) current).getBaseFilter()));
     }
     if (current instanceof AndFilter) {
-      List<Filter> children = Lists.newArrayList();
+      List<Filter> children = new ArrayList<>();
       for (Filter child : ((AndFilter) current).getFilters()) {
         children.add(convertToCNFInternal(child));
       }
@@ -571,7 +571,7 @@ public class Filters
         }
       }
       if (!andList.isEmpty()) {
-        List<Filter> result = Lists.newArrayList();
+        List<Filter> result = new ArrayList<>();
         generateAllCombinations(result, andList, nonAndList);
         return new AndFilter(result);
       }

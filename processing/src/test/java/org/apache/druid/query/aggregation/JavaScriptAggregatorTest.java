@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -36,12 +35,13 @@ import org.junit.rules.ExpectedException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class JavaScriptAggregatorTest
 {
-  protected static final Map<String, String> sumLogATimesBPlusTen = Maps.newHashMap();
-  protected static final Map<String, String> scriptDoubleSum = Maps.newHashMap();
+  protected static final Map<String, String> sumLogATimesBPlusTen = new HashMap<>();
+  protected static final Map<String, String> scriptDoubleSum = new HashMap<>();
 
   final ColumnSelectorFactory DUMMY_COLUMN_SELECTOR_FACTORY = new ColumnSelectorFactory()
   {

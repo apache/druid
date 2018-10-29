@@ -19,12 +19,12 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ExecutorServiceMonitor extends AbstractMonitor
@@ -36,7 +36,7 @@ public class ExecutorServiceMonitor extends AbstractMonitor
   @Inject
   public ExecutorServiceMonitor()
   {
-    this.metricEmitters = Lists.newArrayList();
+    this.metricEmitters = new ArrayList<>();
     this.metricBuilder = new ServiceMetricEvent.Builder();
   }
 

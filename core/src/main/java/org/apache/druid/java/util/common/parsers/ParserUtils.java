@@ -21,7 +21,6 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
-import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTimeZone;
@@ -29,6 +28,7 @@ import org.joda.time.DateTimeZone;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -79,8 +79,8 @@ public class ParserUtils
 
   public static Set<String> findDuplicates(Iterable<String> fieldNames)
   {
-    Set<String> duplicates = Sets.newHashSet();
-    Set<String> uniqueNames = Sets.newHashSet();
+    Set<String> duplicates = new HashSet<>();
+    Set<String> uniqueNames = new HashSet<>();
 
     for (String fieldName : fieldNames) {
       String next = StringUtils.toLowerCase(fieldName);

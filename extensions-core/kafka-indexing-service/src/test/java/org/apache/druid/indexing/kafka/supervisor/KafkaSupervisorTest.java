@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import kafka.admin.AdminUtils;
@@ -2544,6 +2545,48 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(0));
     Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(1));
     Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(2));
+  }
+
+  @Test
+  public void testGetCurrentTotalStats() throws Exception
+  {
+    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition(0),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1")
+    );
+
+    supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        supervisor.getTaskGroupIdForPartition(1),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2")
+    );
+
+    expect(taskClient.getMovingAveragesAsync("task1")).andReturn(Futures.immediateFuture(ImmutableMap.of(
+        "prop1",
+        "val1"
+    ))).times(1);
+
+    expect(taskClient.getMovingAveragesAsync("task2")).andReturn(Futures.immediateFuture(ImmutableMap.of(
+        "prop2",
+        "val2"
+    ))).times(1);
+
+    replayAll();
+
+    Map<String, Map<String, Object>> stats = supervisor.getStats();
+
+    verifyAll();
+
+    Assert.assertEquals(2, stats.size());
+    Assert.assertEquals(ImmutableSet.of("0", "1"), stats.keySet());
+    Assert.assertEquals(ImmutableMap.of("task1", ImmutableMap.of("prop1", "val1")), stats.get("0"));
+    Assert.assertEquals(ImmutableMap.of("task2", ImmutableMap.of("prop2", "val2")), stats.get("1"));
   }
 
 

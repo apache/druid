@@ -19,8 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import com.google.common.collect.Lists;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -39,7 +38,7 @@ public class RuleMap
 
   public List<Rule> getRules(String dataSource)
   {
-    List<Rule> retVal = Lists.newArrayList();
+    List<Rule> retVal = new ArrayList<>();
     if (dataSource != null) {
       retVal.addAll(rules.get(dataSource));
     }

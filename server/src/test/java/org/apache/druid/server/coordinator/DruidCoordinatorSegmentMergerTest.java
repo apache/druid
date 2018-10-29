@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -34,6 +33,7 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -455,7 +455,7 @@ public class DruidCoordinatorSegmentMergerTest
             .andReturn(new AtomicReference<DatasourceWhitelist>(null)).anyTimes();
     EasyMock.replay(configManager);
 
-    final List<List<DataSegment>> retVal = Lists.newArrayList();
+    final List<List<DataSegment>> retVal = new ArrayList<>();
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
     {
       @Override

@@ -28,6 +28,7 @@ The following table contains optional parameters for supporting client certifica
 |`druid.client.https.keyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Store.|none|no|
 |`druid.client.https.keyManagerFactoryAlgorithm`|Algorithm to use for creating KeyManager, more details [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#KeyManager).|`javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.client.https.keyManagerPassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Manager.|none|no|
+|`druid.client.https.validateHostnames`|Validate the hostname of the server. This should not be disabled unless you are using [custom TLS certificate checks](../../operations/tls-support.html#custom-tls-certificate-checks) and know that standard hostname validation is not needed.|true|no|
 
 This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.

@@ -21,9 +21,9 @@ package org.apache.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.Maps;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -40,7 +40,7 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
   {
     super(serverSelectorStrategy);
 
-    final Map<Integer, Integer> lookup = Maps.newHashMap();
+    final Map<Integer, Integer> lookup = new HashMap<>();
     int pos = 0;
     for (Integer integer : config.getPriorities()) {
       lookup.put(integer, pos);

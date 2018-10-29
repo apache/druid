@@ -20,7 +20,6 @@
 package org.apache.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.hadoop.FSSpideringIterator;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -38,6 +37,7 @@ import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 /**
@@ -110,7 +110,7 @@ public class GranularityPathSpec implements PathSpec
   @Override
   public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
-    final Set<Interval> intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    final Set<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
     for (Interval inputInterval : config.getInputIntervals()) {
       for (Interval interval : dataGranularity.getIterable(inputInterval)) {
         intervals.add(trim(inputInterval, interval));
@@ -119,7 +119,7 @@ public class GranularityPathSpec implements PathSpec
 
     Path betaInput = new Path(inputPath);
     FileSystem fs = betaInput.getFileSystem(job.getConfiguration());
-    Set<String> paths = Sets.newTreeSet();
+    Set<String> paths = new TreeSet<>();
     Pattern fileMatcher = Pattern.compile(filePattern);
 
     DateTimeFormatter customFormatter = null;

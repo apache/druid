@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.hll.HllSketch;
@@ -46,7 +47,7 @@ public class HllSketchObjectStrategy implements ObjectStrategy<HllSketch>
   @Override
   public HllSketch fromByteBuffer(final ByteBuffer buf, final int size)
   {
-    return HllSketch.wrap(Memory.wrap(buf).region(buf.position(), size));
+    return HllSketch.wrap(Memory.wrap(buf, ByteOrder.LITTLE_ENDIAN).region(buf.position(), size));
   }
 
   @Override

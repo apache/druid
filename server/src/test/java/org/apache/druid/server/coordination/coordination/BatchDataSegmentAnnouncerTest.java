@@ -51,6 +51,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -151,7 +152,7 @@ public class BatchDataSegmentAnnouncerTest
         jsonMapper
     );
 
-    testSegments = Sets.newHashSet();
+    testSegments = new HashSet<>();
     for (int i = 0; i < 100; i++) {
       testSegments.add(makeSegment(i));
     }
@@ -305,7 +306,7 @@ public class BatchDataSegmentAnnouncerTest
 
     Assert.assertEquals(2, zNodes.size());
 
-    Set<DataSegment> allSegments = Sets.newHashSet();
+    Set<DataSegment> allSegments = new HashSet<>();
     for (String zNode : zNodes) {
       allSegments.addAll(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
     }
@@ -391,7 +392,7 @@ public class BatchDataSegmentAnnouncerTest
         throw Throwables.propagate(e);
       }
 
-      return Sets.newHashSet();
+      return new HashSet<>();
     }
   }
 }

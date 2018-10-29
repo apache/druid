@@ -22,11 +22,11 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,8 +58,8 @@ public class AppenderatorDriverMetadata
     );
     if (segments == null) {
       // convert old metadata to new one
-      final Map<String, List<SegmentWithState>> newMetadata = Maps.newHashMap();
-      final Set<String> activeSegmentsAlreadySeen = Sets.newHashSet(); // temp data structure
+      final Map<String, List<SegmentWithState>> newMetadata = new HashMap<>();
+      final Set<String> activeSegmentsAlreadySeen = new HashSet<>(); // temp data structure
 
       activeSegments.entrySet()
                     .forEach(sequenceSegments -> newMetadata.put(
