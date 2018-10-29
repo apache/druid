@@ -21,10 +21,12 @@ package org.apache.druid.client.cache;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -129,6 +131,14 @@ public class HybridCache implements Cache
   {
     level1.close(namespace);
     level2.close(namespace);
+  }
+
+  @Override
+  @LifecycleStop
+  public void close() throws IOException
+  {
+    level1.close();
+    level2.close();
   }
 
   @Override

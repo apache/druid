@@ -24,13 +24,15 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
 
 /**
  */
-public interface Cache
+public interface Cache extends Closeable
 {
   @Nullable
   byte[] get(NamedKey key);
@@ -45,6 +47,9 @@ public interface Cache
   Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
 
   void close(String namespace);
+
+  @Override
+  default void close() throws IOException {}
 
   CacheStats getStats();
 
