@@ -67,6 +67,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -402,7 +403,8 @@ public class SystemSchema extends AbstractSchema
     try {
       request = coordinatorClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/coordinator/v1/metadata/segments")
+          StringUtils.format("/druid/coordinator/v1/metadata/segments"),
+          false
       );
     }
     catch (IOException e) {
@@ -412,6 +414,14 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
+    if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
+      throw new RE(
+          "Unexpected response status [%s] description [%s] from request url [%s]",
+          responseHandler.getStatus(),
+          responseHandler.getDescription(),
+          request.getUrl()
+      );
+    }
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
     {
     });
@@ -659,7 +669,8 @@ public class SystemSchema extends AbstractSchema
     try {
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/indexer/v1/tasks")
+          StringUtils.format("/druid/indexer/v1/tasks"),
+          false
       );
     }
     catch (IOException e) {
@@ -669,6 +680,14 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
+    if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
+      throw new RE(
+          "Unexpected response status [%s] description [%s] from request url [%s]",
+          responseHandler.getStatus(),
+          responseHandler.getDescription(),
+          request.getUrl()
+      );
+    }
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
     {
     });
