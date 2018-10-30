@@ -390,6 +390,113 @@ Shuts down a task.
 
 Shuts down all tasks for a dataSource.
 
+### Supervisors
+
+#### GET
+
+* `/druid/indexer/v1/supervisor`
+
+Returns a list of strings of the currently active supervisor ids.
+
+* `/druid/indexer/v1/supervisor?full`
+
+Returns a list of objects of the currently active supervisors.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+
+* `/druid/indexer/v1/supervisor/<supervisorId>`
+
+Returns the current spec for the supervisor with the provided ID.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/status`
+
+Returns a snapshot report of the current state of the tasks managed by the given supervisor. This includes the latest
+offsets as reported by Kafka, the consumer lag per partition, as well as the aggregate lag of all partitions. The
+consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
+response from Kafka. The aggregate lag value will always be >= 0.
+
+* `/druid/indexer/v1/supervisor/history`
+
+Returns an audit history of specs for all supervisors (current and past).
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/history`
+
+Returns an audit history of specs for the supervisor with the provided ID.
+
+#### POST
+
+* `/druid/indexer/v1/supervisor`
+
+Create a new supervisor or update an existing one.
+
+Use `Content-Type: application/json` and provide a supervisor spec in the request body.
+
+Calling this endpoint when there is already an existing supervisor for the same dataSource will cause:
+
+- The running supervisor to signal its managed tasks to stop reading and begin publishing.
+- The running supervisor to exit.
+- A new supervisor to be created using the configuration provided in the request body. This supervisor will retain the
+existing publishing tasks and will create new tasks starting at the offsets the publishing tasks ended on.
+
+Seamless schema migrations can thus be achieved by simply submitting the new schema using this endpoint.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/suspend`
+
+Suspend indexing tasks associated with a supervisor. Note that the supervisor itself will still be
+operating and emitting logs and metrics, it will just ensure that no indexing tasks are running until the supervisor
+is resumed. Responds with updated SupervisorSpec.
+
+* `/druid/indexer/v1/supervisor/suspendAll`
+
+Suspend all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/resume`
+
+Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
+
+* `/druid/indexer/v1/supervisor/resumeAll`
+
+Resume all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/reset`
+
+Reset the specified supervisor.
+
+The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
+guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
+generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
+(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
+refuse to start and in-flight tasks will fail.
+
+This endpoint can be used to clear the stored offsets which will cause the supervisor to start reading from
+either the earliest or latest offsets in Kafka (depending on the value of `useEarliestOffset`). The supervisor must be
+running for this endpoint to be available. After the stored offsets are cleared, the supervisor will automatically kill
+and re-create any active tasks so that tasks begin reading from valid offsets.
+
+Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
+may cause some Kafka messages to be skipped or to be read twice.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/terminate`
+
+Terminate a supervisor and cause all associated indexing tasks managed by this supervisor to immediately stop and begin
+publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved
+with the supervisor history api, but will not be listed in the 'get supervisors' api response nor can it's configuration
+or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
+spec to the create api.
+
+* `/druid/indexer/v1/supervisor/terminateAll`
+
+Terminate all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/shutdown`
+
+Shutdown a supervisor.
+
+_Deprecated: use the equivalent 'terminate' instead_
+
 ## MiddleManager
 
 The MiddleManager does not have any API endpoints beyond the [common endpoints](#common).

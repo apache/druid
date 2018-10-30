@@ -99,6 +99,8 @@ A sample supervisor spec is shown below:
 }
 ```
 
+For other supervisor APIs, please check [Supervisor APIs](../../operations/api-reference.html#supervisors).
+
 ## Supervisor Configuration
 
 |Field|Description|Required|
@@ -177,140 +179,6 @@ For Roaring bitmaps:
 |`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped.|no (default == none)|
 |`skipOffsetGaps`|Boolean|Whether or not to allow gaps of missing offsets in the Kafka stream. This is required for compatibility with implementations such as MapR Streams which does not guarantee consecutive offsets. If this is false, an exception will be thrown if offsets are not consecutive.|no (default == false)|
-
-## Supervisor API
-
-The following endpoints are available on the Overlord:
-
-#### Create Supervisor
-```
-POST /druid/indexer/v1/supervisor
-```
-Use `Content-Type: application/json` and provide a supervisor spec in the request body.
-
-Calling this endpoint when there is already an existing supervisor for the same dataSource will cause:
-
-- The running supervisor to signal its managed tasks to stop reading and begin publishing.
-- The running supervisor to exit.
-- A new supervisor to be created using the configuration provided in the request body. This supervisor will retain the
-existing publishing tasks and will create new tasks starting at the offsets the publishing tasks ended on.
-
-Seamless schema migrations can thus be achieved by simply submitting the new schema using this endpoint.
-
-#### Suspend Supervisor 
-
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/suspend
-```
-Suspend indexing tasks associated with a supervisor. Note that the supervisor itself will still be
-operating and emitting logs and metrics, it will just ensure that no indexing tasks are running until the supervisor
-is resumed. Responds with updated SupervisorSpec.
-
-#### Suspend All Supervisors
-
-```
-POST /druid/indexer/v1/supervisor/suspendAll
-```
-Suspend all supervisors at once.
-
-#### Resume Supervisor
-
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/resume
-```
-Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
-
-#### Resume All Supervisors
-
-```
-POST /druid/indexer/v1/supervisor/resumeAll
-```
-Resume all supervisors at once.
-
-#### Reset Supervisor
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/reset
-```
-The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
-guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
-generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
-(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
-refuse to start and in-flight tasks will fail.
-
-This endpoint can be used to clear the stored offsets which will cause the supervisor to start reading from
-either the earliest or latest offsets in Kafka (depending on the value of `useEarliestOffset`). The supervisor must be
-running for this endpoint to be available. After the stored offsets are cleared, the supervisor will automatically kill
-and re-create any active tasks so that tasks begin reading from valid offsets.
-
-Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
-may cause some Kafka messages to be skipped or to be read twice.
-
-#### Terminate Supervisor 
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/terminate
-```
-Terminate a supervisor and cause all associated indexing tasks managed by this supervisor to immediately stop and begin 
-publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved 
-with the supervisor history api, but will not be listed in the 'get supervisors' api response nor can it's configuration
-or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
-spec to the create api.
-
-#### Terminate All Supervisors
-```
-POST /druid/indexer/v1/supervisor/terminateAll
-```
-Terminate all supervisors at once.
-
-#### Shutdown Supervisor
-_Deprecated: use the equivalent 'terminate' instead_
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown
-```
-
-#### Get Supervisor IDs
-```
-GET /druid/indexer/v1/supervisor
-```
-Returns a list of strings of the currently active supervisor ids.
-
-#### Get Supervisors
-```
-GET /druid/indexer/v1/supervisor?full
-```
-Returns a list of objects of the currently active supervisors.
-
-|Field|Type|Description|
-|---|---|---|
-|`id`|String|supervisor unique identifier|
-|`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
-
-
-#### Get Supervisor Spec
-```
-GET /druid/indexer/v1/supervisor/<supervisorId>
-```
-Returns the current spec for the supervisor with the provided ID.
-
-#### Get Supervisor Status Report
-```
-GET /druid/indexer/v1/supervisor/<supervisorId>/status
-```
-Returns a snapshot report of the current state of the tasks managed by the given supervisor. This includes the latest
-offsets as reported by Kafka, the consumer lag per partition, as well as the aggregate lag of all partitions. The
-consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
-response from Kafka. The aggregate lag value will always be >= 0.
-
-#### Get All Supervisor History
-```
-GET /druid/indexer/v1/supervisor/history
-```
-Returns an audit history of specs for all supervisors (current and past).
-
-#### Get Supervisor History
-```
-GET /druid/indexer/v1/supervisor/<supervisorId>/history
-```
-Returns an audit history of specs for the supervisor with the provided ID.
 
 ## Capacity Planning
 
