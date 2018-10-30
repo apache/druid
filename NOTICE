@@ -92,3 +92,9 @@ This product contains modified versions of the Dockerfile and related configurat
     * https://github.com/sequenceiq/hadoop-docker/
   * COMMIT TAG:
     * update this when this patch is committed
+
+This product contains code adapted from Apache Hive
+  * LICENSE:
+    * https://github.com/apache/hive/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://hive.apache.org/

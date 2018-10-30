@@ -22,7 +22,6 @@ package org.apache.druid.query.filter;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import org.apache.druid.guice.BloomFilterSerializersModule;
-import org.apache.hive.common.util.BloomKFilter;
 
 import java.io.IOException;
 import java.util.Objects;
