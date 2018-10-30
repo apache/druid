@@ -339,7 +339,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(segmentsTable);
 
     EasyMock
-        .expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments"))
+        .expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments", false))
         .andReturn(request)
         .anyTimes();
     SettableFuture<InputStream> future = SettableFuture.create();
@@ -599,7 +599,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                                  .withConstructor(client, mapper, responseHandler, authMapper)
                                                  .createMock();
     EasyMock.replay(tasksTable);
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks")).andReturn(request).anyTimes();
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks", false)).andReturn(request).anyTimes();
     SettableFuture<InputStream> future = SettableFuture.create();
     EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
     final int ok = HttpServletResponse.SC_OK;
