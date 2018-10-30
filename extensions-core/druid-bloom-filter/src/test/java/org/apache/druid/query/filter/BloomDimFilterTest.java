@@ -41,7 +41,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.filter.BaseFilterTest;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.hive.common.util.BloomKFilter;
+import org.apache.hive.common.util.BloomFilter;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -128,9 +128,9 @@ public class BloomDimFilterTest extends BaseFilterTest
   @Test
   public void testSerde() throws IOException
   {
-    BloomKFilter bloomFilter = new BloomKFilter(1500);
+    BloomFilter bloomFilter = new BloomFilter(1500);
     bloomFilter.addString("myTestString");
-    BloomKFilterHolder holder = new BloomKFilterHolder(bloomFilter, null);
+    BloomFilterHolder holder = new BloomFilterHolder(bloomFilter, null);
     BloomDimFilter bloomDimFilter = new BloomDimFilter(
         "abc",
         holder,
@@ -141,8 +141,8 @@ public class BloomDimFilterTest extends BaseFilterTest
     BloomDimFilter serde = (BloomDimFilter) filter;
     Assert.assertEquals(bloomDimFilter.getDimension(), serde.getDimension());
     Assert.assertEquals(bloomDimFilter.getExtractionFn(), serde.getExtractionFn());
-    Assert.assertTrue(bloomDimFilter.getBloomKFilter().testString("myTestString"));
-    Assert.assertFalse(bloomDimFilter.getBloomKFilter().testString("not_match"));
+    Assert.assertTrue(bloomDimFilter.getBloomFilter().testString("myTestString"));
+    Assert.assertFalse(bloomDimFilter.getBloomFilter().testString("not_match"));
   }
 
   @Test
@@ -338,11 +338,11 @@ public class BloomDimFilterTest extends BaseFilterTest
   @Test
   public void testCacheKeyIsNotGiantIfFilterIsGiant() throws IOException
   {
-    BloomKFilter bloomFilter = new BloomKFilter(10_000_000);
+    BloomFilter bloomFilter = new BloomFilter(10_000_000);
     // FILL IT UP!
     bloomFilter.addString("myTestString");
 
-    BloomKFilterHolder holder = BloomKFilterHolder.fromBloomKFilter(bloomFilter);
+    BloomFilterHolder holder = BloomFilterHolder.fromBloomFilter(bloomFilter);
 
     BloomDimFilter bloomDimFilter = new BloomDimFilter(
         "abc",
@@ -350,7 +350,7 @@ public class BloomDimFilterTest extends BaseFilterTest
         new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
     );
 
-    byte[] bloomFilterBytes = BloomFilterSerializersModule.bloomKFilterToBytes(bloomFilter);
+    byte[] bloomFilterBytes = BloomFilterSerializersModule.bloomFilterToBytes(bloomFilter);
 
     // serialized filter can be quite large for high capacity bloom filters...
     Assert.assertTrue(bloomFilterBytes.length > 7794000);
@@ -360,9 +360,9 @@ public class BloomDimFilterTest extends BaseFilterTest
     Assert.assertTrue(actualSize < 100);
   }
 
-  private static BloomKFilterHolder bloomKFilter(int expectedEntries, String... values) throws IOException
+  private static BloomFilterHolder bloomKFilter(int expectedEntries, String... values) throws IOException
   {
-    BloomKFilter filter = new BloomKFilter(expectedEntries);
+    BloomFilter filter = new BloomFilter(expectedEntries);
     for (String value : values) {
       if (value == null) {
         filter.addBytes(null, 0, 0);
@@ -371,25 +371,25 @@ public class BloomDimFilterTest extends BaseFilterTest
       }
     }
 
-    return BloomKFilterHolder.fromBloomKFilter(filter);
+    return BloomFilterHolder.fromBloomFilter(filter);
   }
 
-  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Float... values) throws IOException
+  private static BloomFilterHolder bloomKFilter(int expectedEntries, Float... values) throws IOException
   {
-    BloomKFilter filter = new BloomKFilter(expectedEntries);
+    BloomFilter filter = new BloomFilter(expectedEntries);
     for (Float value : values) {
       if (value == null) {
         filter.addBytes(null, 0, 0);
       } else {
-        filter.addFloat(value);
+        filter.addDouble(value);
       }
     }
-    return BloomKFilterHolder.fromBloomKFilter(filter);
+    return BloomFilterHolder.fromBloomFilter(filter);
   }
 
-  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Double... values) throws IOException
+  private static BloomFilterHolder bloomKFilter(int expectedEntries, Double... values) throws IOException
   {
-    BloomKFilter filter = new BloomKFilter(expectedEntries);
+    BloomFilter filter = new BloomFilter(expectedEntries);
     for (Double value : values) {
       if (value == null) {
         filter.addBytes(null, 0, 0);
@@ -397,12 +397,12 @@ public class BloomDimFilterTest extends BaseFilterTest
         filter.addDouble(value);
       }
     }
-    return BloomKFilterHolder.fromBloomKFilter(filter);
+    return BloomFilterHolder.fromBloomFilter(filter);
   }
 
-  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Long... values) throws IOException
+  private static BloomFilterHolder bloomKFilter(int expectedEntries, Long... values) throws IOException
   {
-    BloomKFilter filter = new BloomKFilter(expectedEntries);
+    BloomFilter filter = new BloomFilter(expectedEntries);
     for (Long value : values) {
       if (value == null) {
         filter.addBytes(null, 0, 0);
@@ -410,6 +410,6 @@ public class BloomDimFilterTest extends BaseFilterTest
         filter.addLong(value);
       }
     }
-    return BloomKFilterHolder.fromBloomKFilter(filter);
+    return BloomFilterHolder.fromBloomFilter(filter);
   }
 }

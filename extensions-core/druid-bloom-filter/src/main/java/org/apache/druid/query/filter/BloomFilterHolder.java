@@ -22,23 +22,23 @@ package org.apache.druid.query.filter;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import org.apache.druid.guice.BloomFilterSerializersModule;
-import org.apache.hive.common.util.BloomKFilter;
+import org.apache.hive.common.util.BloomFilter;
 
 import java.io.IOException;
 import java.util.Objects;
 
-public class BloomKFilterHolder
+public class BloomFilterHolder
 {
-  private final BloomKFilter filter;
+  private final BloomFilter filter;
   private final HashCode hash;
 
-  public BloomKFilterHolder(BloomKFilter filter, HashCode hash)
+  public BloomFilterHolder(BloomFilter filter, HashCode hash)
   {
     this.filter = filter;
     this.hash = hash;
   }
 
-  BloomKFilter getFilter()
+  BloomFilter getFilter()
   {
     return filter;
   }
@@ -48,17 +48,17 @@ public class BloomKFilterHolder
     return hash;
   }
 
-  public static BloomKFilterHolder fromBloomKFilter(BloomKFilter filter) throws IOException
+  public static BloomFilterHolder fromBloomFilter(BloomFilter filter) throws IOException
   {
-    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    byte[] bytes = BloomFilterSerializersModule.bloomFilterToBytes(filter);
 
-    return new BloomKFilterHolder(filter, Hashing.sha512().hashBytes(bytes));
+    return new BloomFilterHolder(filter, Hashing.sha512().hashBytes(bytes));
   }
 
-  public static BloomKFilterHolder fromBytes(byte[] bytes) throws IOException
+  public static BloomFilterHolder fromBytes(byte[] bytes) throws IOException
   {
-    return new BloomKFilterHolder(
-        BloomFilterSerializersModule.bloomKFilterFromBytes(bytes),
+    return new BloomFilterHolder(
+        BloomFilterSerializersModule.bloomFilterFromBytes(bytes),
         Hashing.sha512().hashBytes(bytes)
     );
   }
@@ -73,7 +73,7 @@ public class BloomKFilterHolder
       return false;
     }
 
-    BloomKFilterHolder that = (BloomKFilterHolder) o;
+    BloomFilterHolder that = (BloomFilterHolder) o;
     return Objects.equals(this.hash, that.hash);
   }
 
