@@ -42,7 +42,7 @@ public class BloomFilterSerializersModule extends SimpleModule
   {
     registerSubtypes(new NamedType(BloomDimFilter.class, BLOOM_FILTER_TYPE_NAME));
     addSerializer(BloomFilter.class, new BloomFilterSerializer());
-    addDeserializer(BloomFilter.class, new BloomKFilterDeserializer());
+    addDeserializer(BloomFilter.class, new BloomFilterDeserializer());
     addDeserializer(BloomFilterHolder.class, new BloomFilterHolderDeserializer());
   }
 
@@ -61,9 +61,9 @@ public class BloomFilterSerializersModule extends SimpleModule
     }
   }
 
-  private static class BloomKFilterDeserializer extends StdDeserializer<BloomFilter>
+  private static class BloomFilterDeserializer extends StdDeserializer<BloomFilter>
   {
-    BloomKFilterDeserializer()
+    BloomFilterDeserializer()
     {
       super(BloomFilter.class);
     }
@@ -87,7 +87,8 @@ public class BloomFilterSerializersModule extends SimpleModule
     public BloomFilterHolder deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
         throws IOException
     {
-      return BloomFilterHolder.fromBytes(jsonParser.getBinaryValue());
+      byte[] bytes = jsonParser.getBinaryValue();
+      return BloomFilterHolder.fromBytes(bytes);
     }
   }
 

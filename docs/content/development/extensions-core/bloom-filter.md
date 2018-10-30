@@ -23,7 +23,7 @@ Internally, this implementation of bloom filter uses Murmur3 fast non-cryptograp
 {
   "type" : "bloom",
   "dimension" : <dimension_name>,
-  "bloomKFilter" : <serialized_bytes_for_BloomKFilter>,
+  "bloomFilter" : <serialized_bytes_for_BloomFilter>,
   "extractionFn" : <extraction_fn>
 }
 ```
@@ -32,14 +32,14 @@ Internally, this implementation of bloom filter uses Murmur3 fast non-cryptograp
 |-------------------------|------------------------------|----------------------------------|
 |`type`                   |Filter Type. Should always be `bloom`|yes|
 |`dimension`              |The dimension to filter over. | yes |
-|`bloomKFilter`           |Base64 encoded Binary representation of `org.apache.hive.common.util.BloomKFilter`| yes |
+|`bloomFilter`           |Base64 encoded Binary representation of `org.apache.hive.common.util.BloomFilter`| yes |
 |`extractionFn`|[Extraction function](./../dimensionspecs.html#extraction-functions) to apply to the dimension values |no|
 
 
-### Serialized Format for BloomKFilter
- Serialized BloomKFilter format:
+### Serialized Format for BloomFilter
+ Serialized BloomFilter format:
  - 1 byte for the number of hash functions.
  - 1 big endian int(That is how OutputStream works) for the number of longs in the bitset
- - big endian longs in the BloomKFilter bitset
+ - big endian longs in the BloomFilter bitset
      
-Note: `org.apache.hive.common.util.BloomKFilter` provides a serialize method which can be used to serialize bloom filters to outputStream.
+Note: `org.apache.hive.common.util.BloomFilter` provides a serialize method which can be used to serialize bloom filters to outputStream.
