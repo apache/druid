@@ -190,6 +190,12 @@ offsets as reported by Kafka, the consumer lag per partition, as well as the agg
 consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
 response from Kafka. The aggregate lag value will always be >= 0.
 
+### Getting Supervisor Ingestion Stats Report
+
+`GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
+
+See [Task Reports: Row Stats](../../ingestion/reports.html#row-stats) for more information.
+
 ### Updating Existing Supervisors
 
 `POST /druid/indexer/v1/supervisor` can be used to update existing supervisor spec.
