@@ -29,7 +29,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
@@ -701,7 +700,7 @@ public class GroupByQuery extends BaseQuery<Row>
       List<PostAggregator> postAggregators
   )
   {
-    final Set<String> outputNames = Sets.newHashSet();
+    final Set<String> outputNames = new HashSet<>();
     for (DimensionSpec dimension : dimensions) {
       if (!outputNames.add(dimension.getOutputName())) {
         throw new IAE("Duplicate output name[%s]", dimension.getOutputName());
@@ -752,7 +751,7 @@ public class GroupByQuery extends BaseQuery<Row>
     private List<List<String>> subtotalsSpec = null;
     private LimitSpec limitSpec = null;
     private Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
-    private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
+    private List<OrderByColumnSpec> orderByColumnSpecs = new ArrayList<>();
     private int limit = Integer.MAX_VALUE;
 
     public Builder()
@@ -930,7 +929,7 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder addDimension(DimensionSpec dimension)
     {
       if (dimensions == null) {
-        dimensions = Lists.newArrayList();
+        dimensions = new ArrayList<>();
       }
 
       dimensions.add(dimension);
@@ -955,7 +954,7 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder addAggregator(AggregatorFactory aggregator)
     {
       if (aggregatorSpecs == null) {
-        aggregatorSpecs = Lists.newArrayList();
+        aggregatorSpecs = new ArrayList<>();
       }
 
       aggregatorSpecs.add(aggregator);

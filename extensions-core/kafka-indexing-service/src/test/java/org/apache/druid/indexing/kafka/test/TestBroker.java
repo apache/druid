@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.kafka.test;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
@@ -38,6 +37,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
@@ -102,7 +102,7 @@ public class TestBroker implements Closeable
 
   public Map<String, String> producerProperties()
   {
-    final Map<String, String> props = Maps.newHashMap();
+    final Map<String, String> props = new HashMap<>();
     props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
     props.put("key.serializer", ByteArraySerializer.class.getName());
     props.put("value.serializer", ByteArraySerializer.class.getName());
@@ -112,7 +112,7 @@ public class TestBroker implements Closeable
 
   public Map<String, Object> consumerProperties()
   {
-    final Map<String, Object> props = Maps.newHashMap();
+    final Map<String, Object> props = new HashMap<>();
     props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
     props.put("key.deserializer", ByteArrayDeserializer.class.getName());
     props.put("value.deserializer", ByteArrayDeserializer.class.getName());

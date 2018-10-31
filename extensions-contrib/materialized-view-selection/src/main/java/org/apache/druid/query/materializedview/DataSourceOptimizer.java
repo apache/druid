@@ -21,9 +21,6 @@ package org.apache.druid.query.materializedview;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.query.Query;
@@ -35,7 +32,10 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -100,7 +100,7 @@ public class DataSourceOptimizer
       // get all fields which the query required
       Set<String> requiredFields = MaterializedViewUtils.getRequiredFields(query);
       
-      Set<DerivativeDataSource> derivativesWithRequiredFields = Sets.newHashSet();
+      Set<DerivativeDataSource> derivativesWithRequiredFields = new HashSet<>();
       for (DerivativeDataSource derivativeDataSource : derivatives) {
         derivativesHitCount.putIfAbsent(derivativeDataSource.getName(), new AtomicLong(0));
         if (derivativeDataSource.getColumns().containsAll(requiredFields)) {
@@ -116,7 +116,7 @@ public class DataSourceOptimizer
         return Collections.singletonList(query);
       }
       
-      List<Query> queries = Lists.newArrayList();
+      List<Query> queries = new ArrayList<>();
       List<Interval> remainingQueryIntervals = (List<Interval>) query.getIntervals();
       
       for (DerivativeDataSource derivativeDataSource : ImmutableSortedSet.copyOf(derivativesWithRequiredFields)) {
@@ -187,10 +187,10 @@ public class DataSourceOptimizer
     finally {
       lock.writeLock().unlock();
     }
-    List<DataSourceOptimizerStats> stats = Lists.newArrayList();
+    List<DataSourceOptimizerStats> stats = new ArrayList<>();
     Map<String, Set<DerivativeDataSource>> baseToDerivatives = DerivativeDataSourceManager.getAllDerivatives();
     for (Map.Entry<String, Set<DerivativeDataSource>> entry : baseToDerivatives.entrySet()) {
-      Map<String, Long> derivativesStat = Maps.newHashMap();
+      Map<String, Long> derivativesStat = new HashMap<>();
       for (DerivativeDataSource derivative : entry.getValue()) {
         derivativesStat.put(
             derivative.getName(),

@@ -40,6 +40,7 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   private String indexerUrl;
   private String permissiveRouterUrl;
   private String noClientAuthRouterUrl;
+  private String customCertCheckRouterUrl;
   private String routerTLSUrl;
   private String brokerTLSUrl;
   private String historicalTLSUrl;
@@ -47,6 +48,7 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   private String indexerTLSUrl;
   private String permissiveRouterTLSUrl;
   private String noClientAuthRouterTLSUrl;
+  private String customCertCheckRouterTLSUrl;
   private String middleManagerHost;
   private String zookeeperHosts;        // comma-separated list of host:port
   private String kafkaHost;
@@ -114,6 +116,21 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
         noClientAuthRouterTLSUrl = StringUtils.format("https://%s:%s", noClientAuthRouterHost, props.get("router_no_client_auth_tls_port"));
       }
     }
+    customCertCheckRouterUrl = props.get("router_no_client_auth_url");
+    if (customCertCheckRouterUrl == null) {
+      String customCertCheckRouterHost = props.get("router_no_client_auth_host");
+      if (null != customCertCheckRouterHost) {
+        customCertCheckRouterUrl = StringUtils.format("http://%s:%s", customCertCheckRouterHost, props.get("router_no_client_auth_port"));
+      }
+    }
+    customCertCheckRouterTLSUrl = props.get("router_no_client_auth_tls_url");
+    if (customCertCheckRouterTLSUrl == null) {
+      String customCertCheckRouterHost = props.get("router_no_client_auth_host");
+      if (null != customCertCheckRouterHost) {
+        customCertCheckRouterTLSUrl = StringUtils.format("https://%s:%s", customCertCheckRouterHost, props.get("router_no_client_auth_tls_port"));
+      }
+    }
+
     brokerUrl = props.get("broker_url");
     if (brokerUrl == null) {
       brokerUrl = StringUtils.format("http://%s:%s", props.get("broker_host"), props.get("broker_port"));
@@ -246,6 +263,18 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getNoClientAuthRouterTLSUrl()
       {
         return noClientAuthRouterTLSUrl;
+      }
+
+      @Override
+      public String getCustomCertCheckRouterUrl()
+      {
+        return customCertCheckRouterUrl;
+      }
+
+      @Override
+      public String getCustomCertCheckRouterTLSUrl()
+      {
+        return customCertCheckRouterTLSUrl;
       }
 
       @Override

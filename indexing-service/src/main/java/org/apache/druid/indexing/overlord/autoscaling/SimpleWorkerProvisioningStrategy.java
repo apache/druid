@@ -42,6 +42,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -101,8 +102,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     private final WorkerTaskRunner runner;
     private final ScalingStats scalingStats = new ScalingStats(config.getNumEventsToTrack());
 
-    private final Set<String> currentlyProvisioning = Sets.newHashSet();
-    private final Set<String> currentlyTerminating = Sets.newHashSet();
+    private final Set<String> currentlyProvisioning = new HashSet<>();
+    private final Set<String> currentlyTerminating = new HashSet<>();
 
     private int targetWorkerCount = -1;
     private DateTime lastProvisionTime = DateTimes.nowUtc();

@@ -24,7 +24,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
@@ -60,9 +59,12 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Determines appropriate ShardSpecs for a job by determining approximate cardinality of data set using HyperLogLog
@@ -155,7 +157,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         );
         log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
-      Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+      Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
@@ -277,7 +279,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         hyperLogLogs = builder.build();
       } else {
         determineIntervals = true;
-        hyperLogLogs = Maps.newHashMap();
+        hyperLogLogs = new HashMap<>();
       }
     }
 
@@ -341,7 +343,7 @@ public class DetermineHashedPartitionsJob implements Jobby
   public static class DetermineCardinalityReducer
       extends Reducer<LongWritable, BytesWritable, NullWritable, NullWritable>
   {
-    private final List<Interval> intervals = Lists.newArrayList();
+    private final List<Interval> intervals = new ArrayList<>();
     protected HadoopDruidIndexerConfig config = null;
     private boolean determineIntervals;
 

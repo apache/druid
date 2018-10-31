@@ -19,7 +19,6 @@
 
 package org.apache.druid.extendedset.intset;
 
-import com.google.common.collect.Lists;
 import junit.framework.Assert;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Test;
@@ -476,7 +475,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion3()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 62; i < 10001; i++) {
       set1.add(i);
@@ -506,7 +505,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion4()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 63; i < 1001; i++) {
       set1.add(i);
@@ -578,7 +577,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion6()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 0; i < 30; i++) {
       if (i != 28) {
@@ -612,7 +611,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion7()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 64; i < 1005; i++) {
       set1.add(i);
@@ -642,7 +641,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion8()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 0; i < 1000; i++) {
       if (i != 27) {
@@ -676,7 +675,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion9()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 0; i < 1000; i++) {
       if (!(i == 27 || i == 28)) {
@@ -712,7 +711,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion10()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 0; i < 1000; i += 2) {
       set1.add(i);
@@ -742,7 +741,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion11()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 0; i < 1000; i += 2) {
       set1.add(i);
@@ -802,7 +801,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion13()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int[] ints1 = {0};
 
     ConciseSet set1 = new ConciseSet();
@@ -835,7 +834,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion14()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int[] ints1 = {0, 100};
 
     ConciseSet set1 = new ConciseSet();
@@ -869,7 +868,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion15()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int[] ints1 = {1, 100};
     final int[] ints2 = {0};
 
@@ -956,7 +955,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion18()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 0; i < 1000; i++) {
       set1.add(i);
@@ -985,7 +984,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion19()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 0; i < 93; i++) {
       set1.add(i);
@@ -1014,7 +1013,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testUnion20()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     ConciseSet set1 = new ConciseSet();
     for (int i = 0; i < 5; i++) {
       set1.add(i);
@@ -1064,7 +1063,7 @@ public class ImmutableConciseSetTest
         ImmutableConciseSet.newImmutableFromMutable(set2)
     );
 
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     for (int i = 0; i < 93; i++) {
       expected.add(i);
     }
@@ -1090,7 +1089,7 @@ public class ImmutableConciseSetTest
         ImmutableConciseSet.newImmutableFromMutable(set2)
     );
 
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     for (int i = 0; i < 32; i++) {
       expected.add(i);
     }
@@ -1130,7 +1129,7 @@ public class ImmutableConciseSetTest
 
   private void verifyUnion(List<Integer> expected, List<ImmutableConciseSet> sets)
   {
-    List<Integer> actual = Lists.newArrayList();
+    List<Integer> actual = new ArrayList<>();
     ImmutableConciseSet set = ImmutableConciseSet.union(sets);
     IntSet.IntIterator itr = set.iterator();
     while (itr.hasNext()) {
@@ -1146,7 +1145,7 @@ public class ImmutableConciseSetTest
   public void testComplement1()
   {
     final int[] ints = {1, 100};
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
 
     ConciseSet set = new ConciseSet();
     for (int i : ints) {
@@ -1170,7 +1169,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement2()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
 
     ConciseSet set = new ConciseSet();
     for (int i = 0; i < 15; i++) {
@@ -1188,7 +1187,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement3()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int length = 21;
 
     ConciseSet set = new ConciseSet();
@@ -1210,7 +1209,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement4()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int length = 41;
 
     ConciseSet set = new ConciseSet();
@@ -1232,7 +1231,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement5()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int length = 1001;
 
     ConciseSet set = new ConciseSet();
@@ -1254,7 +1253,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement6()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int length = 1001;
 
     ConciseSet set = new ConciseSet();
@@ -1278,7 +1277,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement7()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int length = 37;
 
     ConciseSet set = new ConciseSet();
@@ -1298,7 +1297,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement8()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int length = 32;
 
     ConciseSet set = new ConciseSet();
@@ -1362,7 +1361,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement10()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     final int length = 93;
 
     for (int i = 0; i < length; i++) {
@@ -1380,7 +1379,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement11()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     int length = 18930;
     for (int i = 0; i < 500; i++) {
       expected.add(i);
@@ -1404,7 +1403,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement12()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     int length = 10;
     for (int i = 0; i < 10; i++) {
       expected.add(i);
@@ -1421,7 +1420,7 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement13()
   {
-    List<Integer> expected = Lists.newArrayList();
+    List<Integer> expected = new ArrayList<>();
     int length = 10;
     for (int i = 0; i < length; i++) {
       expected.add(i);
@@ -1433,7 +1432,7 @@ public class ImmutableConciseSetTest
 
   private void verifyComplement(List<Integer> expected, ImmutableConciseSet set, int endIndex)
   {
-    List<Integer> actual = Lists.newArrayList();
+    List<Integer> actual = new ArrayList<>();
 
     ImmutableConciseSet res;
     if (endIndex == NO_COMPLEMENT_LENGTH) {

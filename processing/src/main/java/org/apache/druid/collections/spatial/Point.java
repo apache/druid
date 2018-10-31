@@ -19,10 +19,10 @@
 
 package org.apache.druid.collections.spatial;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -83,7 +83,7 @@ public class Point extends Node
   @Override
   public List<Node> getChildren()
   {
-    return Lists.newArrayList();
+    return new ArrayList<>();
   }
 
   @Override

@@ -120,7 +120,7 @@ public class InitializationTest
 
     Collection<DruidModule> modules = Initialization.getFromExtensions(new ExtensionsConfig(), DruidModule.class);
 
-    Set<String> loadedModuleNames = Sets.newHashSet();
+    Set<String> loadedModuleNames = new HashSet<>();
     for (DruidModule module : modules) {
       Assert.assertFalse("Duplicate extensions are loaded", loadedModuleNames.contains(module.getClass().getName()));
       loadedModuleNames.add(module.getClass().getName());

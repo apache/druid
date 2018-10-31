@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -50,7 +50,7 @@ public class LimitedTemporaryStorage implements Closeable
   private final long maxBytesUsed;
 
   private final AtomicLong bytesUsed = new AtomicLong();
-  private final Set<File> files = Sets.newTreeSet();
+  private final Set<File> files = new TreeSet<>();
 
   private volatile boolean closed = false;
 

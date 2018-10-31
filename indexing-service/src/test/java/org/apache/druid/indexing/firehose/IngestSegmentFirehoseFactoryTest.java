@@ -26,8 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -111,6 +109,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -174,8 +173,8 @@ public class IngestSegmentFirehoseFactoryTest
 
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {
-      private final Set<DataSegment> published = Sets.newHashSet();
-      private final Set<DataSegment> nuked = Sets.newHashSet();
+      private final Set<DataSegment> published = new HashSet<>();
+      private final Set<DataSegment> nuked = new HashSet<>();
 
       @Override
       public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
@@ -198,7 +197,7 @@ public class IngestSegmentFirehoseFactoryTest
       @Override
       public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
       {
-        Set<DataSegment> added = Sets.newHashSet();
+        Set<DataSegment> added = new HashSet<>();
         for (final DataSegment segment : segments) {
           if (published.add(segment)) {
             added.add(segment);
@@ -234,7 +233,7 @@ public class IngestSegmentFirehoseFactoryTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
     };
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(

@@ -43,6 +43,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipFile;
 
@@ -62,7 +63,7 @@ public class TimestampGroupByAggregationTest
   @Parameterized.Parameters(name = "{index}: Test for {0}, config = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
 
     final List<List<Object>> partialConstructors = ImmutableList.of(
         ImmutableList.of("timeMin", "tmin", "time_min", DateTimes.of("2011-01-12T01:00:00.000Z")),

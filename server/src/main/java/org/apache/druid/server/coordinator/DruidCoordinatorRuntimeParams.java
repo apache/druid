@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -196,7 +194,7 @@ public class DruidCoordinatorRuntimeParams
         databaseRuleManager,
         segmentReplicantLookup,
         dataSources,
-        Sets.newTreeSet(DruidCoordinator.SEGMENT_COMPARATOR),
+        new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR),
         loadManagementPeons,
         replicationManager,
         emitter,
@@ -233,7 +231,7 @@ public class DruidCoordinatorRuntimeParams
       this.segmentReplicantLookup = null;
       this.dataSources = new HashMap<>();
       this.availableSegments = new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR);
-      this.loadManagementPeons = Maps.newHashMap();
+      this.loadManagementPeons = new HashMap<>();
       this.replicationManager = null;
       this.emitter = null;
       this.stats = new CoordinatorStats();

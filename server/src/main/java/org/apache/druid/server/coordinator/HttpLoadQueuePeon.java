@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -470,7 +469,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   {
     private final DataSegment segment;
     private final DataSegmentChangeRequest changeRequest;
-    private final List<LoadPeonCallback> callbacks = Lists.newArrayList();
+    private final List<LoadPeonCallback> callbacks = new ArrayList<>();
 
     // Time when this request was sent to target server the first time.
     private volatile long scheduleTime = -1;

@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -49,6 +48,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -67,8 +67,8 @@ public class ParallelIndexSupervisorTaskSerdeTest
       ),
       new DimensionsSpec(
           DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-          Lists.newArrayList(),
-          Lists.newArrayList()
+          new ArrayList<>(),
+          new ArrayList<>()
       ),
       null,
       Arrays.asList("ts", "dim", "val"),

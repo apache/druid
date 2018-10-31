@@ -27,7 +27,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -60,10 +59,13 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
@@ -273,19 +275,19 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     List<Interval> newIntervals = null;
     if (arg1.getIntervals() != null) {
-      newIntervals = Lists.newArrayList();
+      newIntervals = new ArrayList<>();
       newIntervals.addAll(arg1.getIntervals());
     }
     if (arg2.getIntervals() != null) {
       if (newIntervals == null) {
-        newIntervals = Lists.newArrayList();
+        newIntervals = new ArrayList<>();
       }
       newIntervals.addAll(arg2.getIntervals());
     }
 
     final Map<String, ColumnAnalysis> leftColumns = arg1.getColumns();
     final Map<String, ColumnAnalysis> rightColumns = arg2.getColumns();
-    Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
+    Map<String, ColumnAnalysis> columns = new TreeMap<>();
 
     Set<String> rightColumnNames = Sets.newHashSet(rightColumns.keySet());
     for (Map.Entry<String, ColumnAnalysis> entry : leftColumns.entrySet()) {
@@ -298,7 +300,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       columns.put(columnName, rightColumns.get(columnName));
     }
 
-    final Map<String, AggregatorFactory> aggregators = Maps.newHashMap();
+    final Map<String, AggregatorFactory> aggregators = new HashMap<>();
 
     if (lenientAggregatorMerge) {
       // Merge each aggregator individually, ignoring nulls

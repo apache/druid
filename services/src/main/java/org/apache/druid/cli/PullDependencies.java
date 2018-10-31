@@ -22,8 +22,6 @@ package org.apache.druid.cli;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
@@ -60,6 +58,8 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -73,7 +73,7 @@ public class PullDependencies implements Runnable
 {
   private static final Logger log = new Logger(PullDependencies.class);
 
-  private static final Set<String> exclusions = Sets.newHashSet(
+  private static final Set<String> exclusions = new HashSet<>(
       /*
 
       // It is possible that extensions will pull down a lot of jars that are either
@@ -157,14 +157,14 @@ public class PullDependencies implements Runnable
       title = "coordinate",
       description = "Extension coordinate to pull down, followed by a maven coordinate, e.g. org.apache.druid.extensions:mysql-metadata-storage",
       required = false)
-  public List<String> coordinates = Lists.newArrayList();
+  public List<String> coordinates = new ArrayList<>();
 
   @Option(
       name = {"-h", "--hadoop-coordinate"},
       title = "hadoop coordinate",
       description = "Hadoop dependency to pull down, followed by a maven coordinate, e.g. org.apache.hadoop:hadoop-client:2.4.0",
       required = false)
-  public List<String> hadoopCoordinates = Lists.newArrayList();
+  public List<String> hadoopCoordinates = new ArrayList<>();
 
   @Option(
       name = "--no-default-hadoop",
@@ -190,7 +190,7 @@ public class PullDependencies implements Runnable
       title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/",
       required = false
   )
-  List<String> remoteRepositories = Lists.newArrayList();
+  List<String> remoteRepositories = new ArrayList<>();
 
   @Option(
       name = "--no-default-remote-repositories",
@@ -430,13 +430,13 @@ public class PullDependencies implements Runnable
     alongside anything else that's grabbing System.out.  But who knows.
     */
 
-    final List<String> remoteUriList = Lists.newArrayList();
+    final List<String> remoteUriList = new ArrayList<>();
     if (!noDefaultRemoteRepositories) {
       remoteUriList.addAll(DEFAULT_REMOTE_REPOSITORIES);
     }
     remoteUriList.addAll(remoteRepositories);
 
-    List<Repository> remoteRepositories = Lists.newArrayList();
+    List<Repository> remoteRepositories = new ArrayList<>();
     for (String uri : remoteUriList) {
       try {
         URI u = new URI(uri);

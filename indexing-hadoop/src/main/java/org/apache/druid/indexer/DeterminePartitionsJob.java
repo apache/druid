@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.io.Closeables;
 import org.apache.druid.collections.CombiningIterable;
@@ -75,10 +74,13 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Determines appropriate ShardSpecs for a job by determining whether or not partitioning is necessary, and if so,
@@ -228,7 +230,7 @@ public class DeterminePartitionsJob implements Jobby
 
       log.info("Job completed, loading up partitions for intervals[%s].", config.getSegmentGranularIntervals());
       FileSystem fileSystem = null;
-      Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap();
+      Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>();
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         final Path partitionInfoPath = config.makeSegmentPartitionInfoPath(segmentGranularity);
@@ -395,7 +397,7 @@ public class DeterminePartitionsJob implements Jobby
         Context context
     ) throws IOException, InterruptedException
     {
-      final Map<String, Iterable<String>> dims = Maps.newHashMap();
+      final Map<String, Iterable<String>> dims = new HashMap<>();
       for (final String dim : inputRow.getDimensions()) {
         dims.put(dim, inputRow.getDimension(dim));
       }
@@ -628,7 +630,7 @@ public class DeterminePartitionsJob implements Jobby
       boolean currentDimSkip = false;
 
       // We'll store possible partitions in here
-      final Map<String, DimPartitions> dimPartitionss = Maps.newHashMap();
+      final Map<String, DimPartitions> dimPartitionss = new HashMap<>();
 
       while (iterator.hasNext()) {
         final DimValueCount dvc = iterator.next();
@@ -861,7 +863,7 @@ public class DeterminePartitionsJob implements Jobby
   private static class DimPartitions
   {
     public final String dim;
-    public final List<DimPartition> partitions = Lists.newArrayList();
+    public final List<DimPartition> partitions = new ArrayList<>();
 
     private DimPartitions(String dim)
     {

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.InventoryView;
@@ -41,8 +40,10 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  */
@@ -76,12 +77,12 @@ public class IntervalsResource
         authorizerMapper
     );
 
-    final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
+    final Map<Interval, Map<String, Map<String, Object>>> retVal = new TreeMap<>(comparator);
     for (ImmutableDruidDataSource dataSource : datasources) {
       for (DataSegment dataSegment : dataSource.getSegments()) {
         Map<String, Map<String, Object>> interval = retVal.get(dataSegment.getInterval());
         if (interval == null) {
-          Map<String, Map<String, Object>> tmp = Maps.newHashMap();
+          Map<String, Map<String, Object>> tmp = new HashMap<>();
           retVal.put(dataSegment.getInterval(), tmp);
         }
         setProperties(retVal, dataSource, dataSegment);
@@ -111,13 +112,13 @@ public class IntervalsResource
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
 
     if (full != null) {
-      final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
+      final Map<Interval, Map<String, Map<String, Object>>> retVal = new TreeMap<>(comparator);
       for (ImmutableDruidDataSource dataSource : datasources) {
         for (DataSegment dataSegment : dataSource.getSegments()) {
           if (theInterval.contains(dataSegment.getInterval())) {
             Map<String, Map<String, Object>> dataSourceInterval = retVal.get(dataSegment.getInterval());
             if (dataSourceInterval == null) {
-              Map<String, Map<String, Object>> tmp = Maps.newHashMap();
+              Map<String, Map<String, Object>> tmp = new HashMap<>();
               retVal.put(dataSegment.getInterval(), tmp);
             }
             setProperties(retVal, dataSource, dataSegment);
@@ -129,13 +130,13 @@ public class IntervalsResource
     }
 
     if (simple != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newHashMap();
+      final Map<Interval, Map<String, Object>> retVal = new HashMap<>();
       for (ImmutableDruidDataSource dataSource : datasources) {
         for (DataSegment dataSegment : dataSource.getSegments()) {
           if (theInterval.contains(dataSegment.getInterval())) {
             Map<String, Object> properties = retVal.get(dataSegment.getInterval());
             if (properties == null) {
-              properties = Maps.newHashMap();
+              properties = new HashMap<>();
               properties.put("size", dataSegment.getSize());
               properties.put("count", 1);
 
@@ -151,7 +152,7 @@ public class IntervalsResource
       return Response.ok(retVal).build();
     }
 
-    final Map<String, Object> retVal = Maps.newHashMap();
+    final Map<String, Object> retVal = new HashMap<>();
     for (ImmutableDruidDataSource dataSource : datasources) {
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (theInterval.contains(dataSegment.getInterval())) {
@@ -171,7 +172,7 @@ public class IntervalsResource
   {
     Map<String, Object> properties = retVal.get(dataSegment.getInterval()).get(dataSource.getName());
     if (properties == null) {
-      properties = Maps.newHashMap();
+      properties = new HashMap<>();
       properties.put("size", dataSegment.getSize());
       properties.put("count", 1);
 

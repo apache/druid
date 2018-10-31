@@ -19,7 +19,6 @@
 
 package org.apache.druid.realtime.firehose;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
@@ -36,6 +35,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -90,7 +90,7 @@ public class CombiningFirehoseFactoryTest
       @Override
       public List<String> getDimension(String dimension)
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
 
       @Override

@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -554,7 +553,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         @Override
         public void fullSync(List<DataSegmentChangeRequest> changes)
         {
-          Map<String, DataSegment> toRemove = Maps.newHashMap(druidServer.getSegments());
+          Map<String, DataSegment> toRemove = new HashMap<>(druidServer.getSegments());
 
           for (DataSegmentChangeRequest request : changes) {
             if (request instanceof SegmentChangeRequestLoad) {

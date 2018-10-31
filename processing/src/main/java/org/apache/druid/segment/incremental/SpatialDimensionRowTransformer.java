@@ -26,7 +26,6 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
@@ -34,7 +33,9 @@ import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,7 +53,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
 
   public SpatialDimensionRowTransformer(List<SpatialDimensionSchema> spatialDimensions)
   {
-    this.spatialDimensionMap = Maps.newHashMap();
+    this.spatialDimensionMap = new HashMap<>();
     for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
       if (this.spatialDimensionMap.put(spatialDimension.getDimName(), spatialDimension) != null) {
         throw new ISE("Duplicate spatial dimension names found! Check your schema yo!");
@@ -78,7 +79,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
   @Override
   public InputRow apply(final InputRow row)
   {
-    final Map<String, List<String>> spatialLookup = Maps.newHashMap();
+    final Map<String, List<String>> spatialLookup = new HashMap<>();
 
     // remove all spatial dimensions
     final List<String> finalDims = Lists.newArrayList(
@@ -162,7 +163,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
           finalDims.add(spatialDimName);
         }
       } else {
-        List<String> spatialDimVals = Lists.newArrayList();
+        List<String> spatialDimVals = new ArrayList<>();
         for (String dim : spatialDim.getDims()) {
           List<String> partialDimVals = row.getDimension(dim);
           if (isSpatialDimValsValid(partialDimVals)) {

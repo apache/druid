@@ -21,9 +21,9 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -39,9 +39,9 @@ public class MetadataStorageTablesConfig
 
   private static final String DEFAULT_BASE = "druid";
 
-  private final Map<String, String> entryTables = Maps.newHashMap();
-  private final Map<String, String> logTables = Maps.newHashMap();
-  private final Map<String, String> lockTables = Maps.newHashMap();
+  private final Map<String, String> entryTables = new HashMap<>();
+  private final Map<String, String> logTables = new HashMap<>();
+  private final Map<String, String> lockTables = new HashMap<>();
 
   @JsonProperty("base")
   private final String base;

@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
@@ -34,6 +33,7 @@ import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -70,7 +70,7 @@ public class CliHadoopIndexer implements Runnable
   public void run()
   {
     try {
-      final List<String> allCoordinates = Lists.newArrayList();
+      final List<String> allCoordinates = new ArrayList<>();
       if (coordinates != null) {
         allCoordinates.addAll(coordinates);
       }
@@ -78,16 +78,16 @@ public class CliHadoopIndexer implements Runnable
         allCoordinates.addAll(DEFAULT_HADOOP_COORDINATES);
       }
 
-      final List<URL> extensionURLs = Lists.newArrayList();
+      final List<URL> extensionURLs = new ArrayList<>();
       for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
         final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
         extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
       }
 
-      final List<URL> nonHadoopURLs = Lists.newArrayList();
+      final List<URL> nonHadoopURLs = new ArrayList<>();
       nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()));
 
-      final List<URL> driverURLs = Lists.newArrayList();
+      final List<URL> driverURLs = new ArrayList<>();
       driverURLs.addAll(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
       for (File hadoopDependency : Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extensionsConfig)) {
@@ -98,7 +98,7 @@ public class CliHadoopIndexer implements Runnable
       final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[0]), null);
       Thread.currentThread().setContextClassLoader(loader);
 
-      final List<URL> jobUrls = Lists.newArrayList();
+      final List<URL> jobUrls = new ArrayList<>();
       jobUrls.addAll(nonHadoopURLs);
       jobUrls.addAll(extensionURLs);
 

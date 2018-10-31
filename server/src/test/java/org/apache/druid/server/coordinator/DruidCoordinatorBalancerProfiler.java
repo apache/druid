@@ -22,8 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -41,6 +39,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Before;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +53,7 @@ public class DruidCoordinatorBalancerProfiler
   private DruidCoordinator coordinator;
   private ImmutableDruidServer druidServer1;
   private ImmutableDruidServer druidServer2;
-  Map<String, DataSegment> segments = Maps.newHashMap();
+  Map<String, DataSegment> segments = new HashMap<>();
   ServiceEmitter emitter;
   MetadataRuleManager manager;
   PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), ImmutableMap.of("normal", 3));
@@ -90,10 +89,10 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
 
-    List<DruidServer> serverList = Lists.newArrayList();
-    Map<String, LoadQueuePeon> peonMap = Maps.newHashMap();
-    List<ServerHolder> serverHolderList = Lists.newArrayList();
-    Map<String, DataSegment> segmentMap = Maps.newHashMap();
+    List<DruidServer> serverList = new ArrayList<>();
+    Map<String, LoadQueuePeon> peonMap = new HashMap<>();
+    List<ServerHolder> serverHolderList = new ArrayList<>();
+    Map<String, DataSegment> segmentMap = new HashMap<>();
     for (int i = 0; i < numSegments; i++) {
       segmentMap.put(
           "segment" + i,
@@ -101,9 +100,9 @@ public class DruidCoordinatorBalancerProfiler
               "datasource" + i,
               new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)),
               (DateTimes.of("2012-03-01")).toString(),
-              Maps.newHashMap(),
-              Lists.newArrayList(),
-              Lists.newArrayList(),
+              new HashMap<>(),
+              new ArrayList<>(),
+              new ArrayList<>(),
               NoneShardSpec.instance(),
               0,
               4L

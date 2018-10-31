@@ -32,7 +32,9 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,15 +77,15 @@ public class DimensionsSpec
   )
   {
     this.dimensions = dimensions == null
-                      ? Lists.newArrayList()
+                      ? new ArrayList<>()
                       : Lists.newArrayList(dimensions);
 
     this.dimensionExclusions = (dimensionExclusions == null)
-                               ? Sets.newHashSet()
+                               ? new HashSet<>()
                                : Sets.newHashSet(dimensionExclusions);
 
     List<SpatialDimensionSchema> spatialDims = (spatialDimensions == null)
-                                               ? Lists.newArrayList()
+                                               ? new ArrayList<>()
                                                : spatialDimensions;
 
     verify(spatialDims);

@@ -22,6 +22,7 @@ package org.apache.druid.https;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.security.TLSCertificateChecker;
 import org.apache.druid.server.security.TLSUtils;
 
 import javax.net.ssl.SSLContext;
@@ -31,11 +32,16 @@ public class SSLContextProvider implements Provider<SSLContext>
   private static final EmittingLogger log = new EmittingLogger(SSLContextProvider.class);
 
   private SSLClientConfig config;
+  private TLSCertificateChecker certificateChecker;
 
   @Inject
-  public SSLContextProvider(SSLClientConfig config)
+  public SSLContextProvider(
+      SSLClientConfig config,
+      TLSCertificateChecker certificateChecker
+  )
   {
     this.config = config;
+    this.certificateChecker = certificateChecker;
   }
 
   @Override
@@ -55,6 +61,8 @@ public class SSLContextProvider implements Provider<SSLContext>
         .setCertAlias(config.getCertAlias())
         .setKeyStorePasswordProvider(config.getKeyStorePasswordProvider())
         .setKeyManagerFactoryPasswordProvider(config.getKeyManagerPasswordProvider())
+        .setValidateHostnames(config.getValidateHostnames())
+        .setCertificateChecker(certificateChecker)
         .build();
   }
 }
