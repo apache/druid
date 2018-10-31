@@ -37,7 +37,7 @@ import java.util.Map;
 public class PeriodLoadRule extends LoadRule
 {
   private static final Logger log = new Logger(PeriodLoadRule.class);
-  private static final boolean DEFAULT_INCLUDE_FUTURE = true;
+  static final boolean DEFAULT_INCLUDE_FUTURE = true;
 
   private final Period period;
   private final boolean includeFuture;
