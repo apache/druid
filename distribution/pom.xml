@@ -178,25 +178,10 @@
                                 </goals>
                                 <configuration>
                                     <finalName>apache-druid-${project.parent.version}</finalName>
-                                    <tarLongFileMode>posix</tarLongFileMode>
+                                    <tarLongFileMode>gnu</tarLongFileMode>
                                     <descriptors>
                                         <descriptor>src/assembly/assembly.xml</descriptor>
                                     </descriptors>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>source-release-assembly-druid</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <finalName>apache-druid-${project.version}-src</finalName>
-                                    <tarLongFileMode>posix</tarLongFileMode>
-                                    <descriptors>
-                                        <descriptor>src/assembly/source-assembly.xml</descriptor>
-                                    </descriptors>
-                                    <appendAssemblyId>false</appendAssemblyId>
                                 </configuration>
                             </execution>
                         </executions>
@@ -210,6 +195,34 @@
                                 <goals>
                                     <goal>download-licenses</goal>
                                 </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>apache-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>source-release-assembly-druid</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <finalName>apache-druid-${project.version}-src</finalName>
+                                    <tarLongFileMode>gnu</tarLongFileMode>
+                                    <descriptors>
+                                        <descriptor>src/assembly/source-assembly.xml</descriptor>
+                                    </descriptors>
+                                    <appendAssemblyId>false</appendAssemblyId>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

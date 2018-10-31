@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -182,7 +201,7 @@ The remapping values for each globally cached lookup can be specified by a json 
 {
   "type":"uri",
   "uriPrefix": "s3://bucket/some/key/prefix/",
-  "fileRegex":"renames-[0-9]*\\.gz",
+  "fileRegex":"renames-[0-9]*\.gz",
   "namespaceParseSpec":{
     "format":"csv",
     "columns":["key","value"]
@@ -245,7 +264,7 @@ truck,something3,buck
 |`columns`|The list of columns in the tsv file|yes|`null`|
 |`keyColumn`|The name of the column containing the key|no|The first column|
 |`valueColumn`|The name of the column containing the value|no|The second column|
-|`delimiter`|The delimiter in the file|no|tab (`\t`)|
+|`delimiter`|The delimiter in the file|no|tab (`	`)|
 |`listDelimiter`|The list delimiter in the file|no| (`\u0001`)|
 |`hasHeaderRow`|A flag to indicate that column information can be extracted from the input files' header row|no|false|
 |`skipHeaderRows`|Number of header rows to be skipped|no|0|
