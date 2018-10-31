@@ -29,7 +29,7 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.server.log.EmittingRequestLogger;
+import org.apache.druid.server.log.RequestLogEvent;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -124,7 +124,7 @@ public class GraphiteEmitter implements Emitter
         log.error(e, "got interrupted with message [%s]", e.getMessage());
         Thread.currentThread().interrupt();
       }
-    } else if (event instanceof EmittingRequestLogger.RequestLogEvent) {
+    } else if (event instanceof RequestLogEvent) {
       for (Emitter emitter : requestLogEmitters) {
         emitter.emit(event);
       }
