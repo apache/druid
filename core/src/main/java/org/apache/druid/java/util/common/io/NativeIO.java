@@ -207,9 +207,7 @@ public class NativeIO
     long offset = 0;
     long lastOffset = 0;
 
-    try (
-      final RandomAccessFile raf = new RandomAccessFile(dest, "rw")
-    ) {
+    try (final RandomAccessFile raf = new RandomAccessFile(dest, "rw")) {
       final int fd = getfd(raf.getFD());
 
       for (int numBytes = 0, bytesRead = 0, lastBytes = 0; bytesRead > -1;) {
