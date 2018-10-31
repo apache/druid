@@ -34,12 +34,7 @@ class HavingSpecMetricComparator
 {
   static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
 
-  static int compare(
-      String aggregationName,
-      Number value,
-      Map<String, AggregatorFactory> aggregators,
-      Object metricValueObj
-  )
+  static int compare(String aggregationName, Number value, Map<String, AggregatorFactory> aggregators, Object metricValueObj)
   {
     if (metricValueObj != null) {
       if (aggregators != null && aggregators.containsKey(aggregationName)) {
