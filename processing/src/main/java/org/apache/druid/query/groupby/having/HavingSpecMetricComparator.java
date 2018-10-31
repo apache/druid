@@ -34,7 +34,12 @@ class HavingSpecMetricComparator
 {
   static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
 
-  static int compare(String aggregationName, Number value, Map<String, AggregatorFactory> aggregators, Object metricValueObj)
+  static int compare(
+      String aggregationName,
+      Number value,
+      Map<String, AggregatorFactory> aggregators,
+      Object metricValueObj
+  )
   {
     if (metricValueObj != null) {
       if (aggregators != null && aggregators.containsKey(aggregationName)) {
@@ -73,9 +78,14 @@ class HavingSpecMetricComparator
           double d = Double.parseDouble(metricValueStr);
           return Double.compare(d, value.doubleValue());
         }
-      } else if (metricValueObj instanceof Number) {
-        BigDecimal d = new BigDecimal(metricValueObj.toString());
-        return d.compareTo((BigDecimal) value);
+      } else if (aggregators != null && aggregators.containsKey(aggregationName)) {
+        // Use custom comparator in case of custom aggregation types
+        AggregatorFactory aggregatorFactory = aggregators.get(aggregationName);
+        return aggregatorFactory.getComparator()
+                                .compare(
+                                    aggregatorFactory.deserialize(metricValueObj),
+                                    aggregatorFactory.deserialize(value)
+                                );
       } else {
         throw new ISE("Unknown type of metric value: %s", metricValueObj);
       }
