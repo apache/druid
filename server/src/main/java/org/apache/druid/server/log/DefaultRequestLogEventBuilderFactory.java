@@ -20,9 +20,13 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.server.RequestLogLine;
 
+/**
+ * This {@link RequestLogEventBuilderFactory} creates builders that return {@link DefaultRequestLogEvent}s.
+ */
 public final class DefaultRequestLogEventBuilderFactory implements RequestLogEventBuilderFactory
 {
   private static final DefaultRequestLogEventBuilderFactory INSTANCE = new DefaultRequestLogEventBuilderFactory();
@@ -38,7 +42,14 @@ public final class DefaultRequestLogEventBuilderFactory implements RequestLogEve
   @Override
   public ServiceEventBuilder<RequestLogEvent> createRequestLogEventBuilder(String feed, RequestLogLine requestLogLine)
   {
-    return new DefaultRequestLogEventBuilder(feed, requestLogLine);
+    return new ServiceEventBuilder<RequestLogEvent>()
+    {
+      @Override
+      public RequestLogEvent build(ImmutableMap<String, String> serviceDimensions)
+      {
+        return new DefaultRequestLogEvent(serviceDimensions, feed, requestLogLine);
+      }
+    };
   }
 
   @Override

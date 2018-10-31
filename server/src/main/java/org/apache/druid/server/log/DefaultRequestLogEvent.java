@@ -32,7 +32,7 @@ import java.util.Map;
 
 /**
  * The default implementation of {@link RequestLogEvent}. This class is annotated {@link PublicApi} because it's getters
- * could be used in proprietary {@link org.apache.druid.java.util.emitter.core.Emitter}s.
+ * could be used in proprietary {@link org.apache.druid.java.util.emitter.core.Emitter} implementations.
  */
 @PublicApi
 public final class DefaultRequestLogEvent implements RequestLogEvent
@@ -48,10 +48,12 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
     this.feed = feed;
   }
 
-  @Override
-  // override JsonValue serialization, instead use annotations
-  // to include type information for polymorphic Query objects
+  /**
+   * Override {@link JsonValue} serialization, instead use annotations to include type information for polymorphic
+   * {@link Query} objects.
+   */
   @JsonValue(value = false)
+  @Override
   public Map<String, Object> toMap()
   {
     return ImmutableMap.of();
