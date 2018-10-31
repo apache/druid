@@ -136,8 +136,7 @@ public class DruidLeaderClient
    */
   public Request makeRequest(HttpMethod httpMethod, String urlPath) throws IOException
   {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
+    return makeRequest(httpMethod, urlPath, true);
   }
 
   public FullResponseHolder go(Request request) throws IOException, InterruptedException
