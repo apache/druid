@@ -30,7 +30,7 @@ import org.joda.time.Period;
  */
 public class PeriodDropRule extends DropRule
 {
-  public static final boolean DEFAULT_INCLUDE_FUTURE = true;
+  private static final boolean DEFAULT_INCLUDE_FUTURE = true;
 
   private final Period period;
   private final boolean includeFuture;

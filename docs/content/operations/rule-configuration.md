@@ -77,7 +77,7 @@ Period load rules are of the form:
 * `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 * `tieredReplicants` - A JSON Object where the keys are the tier names and values are the number of replicas for that tier.
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period `overlaps` the interval.
+The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
 
 Drop Rules
 ----------
@@ -131,7 +131,7 @@ Period drop rules are of the form:
 * `period` - A JSON Object representing ISO-8601 Periods
 * `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period `contains` the interval. This drop rule always dropping recent data.
+The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *contains* the interval. This drop rule always dropping recent data.
 
 Broadcast Rules
 ---------------
@@ -187,7 +187,7 @@ Period broadcast rules are of the form:
 * `period` - A JSON Object representing ISO-8601 Periods
 * `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period `overlaps` the interval.
+The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
 
 <div class="note caution">
 broadcast rules don't guarantee that segments of the data sources are always co-located because segments for the colocated data sources are not loaded together atomically.

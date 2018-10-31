@@ -32,7 +32,7 @@ import java.util.Objects;
 public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
 {
   static final String TYPE = "broadcastByPeriod";
-  public static final boolean DEFAULT_INCLUDE_FUTURE = true;
+  private static final boolean DEFAULT_INCLUDE_FUTURE = true;
 
   private final Period period;
   private final boolean includeFuture;
