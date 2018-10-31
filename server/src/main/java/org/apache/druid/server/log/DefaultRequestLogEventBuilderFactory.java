@@ -19,14 +19,31 @@
 
 package org.apache.druid.server.log;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.server.RequestLogLine;
 
 public final class DefaultRequestLogEventBuilderFactory implements RequestLogEventBuilderFactory
 {
+  private static final DefaultRequestLogEventBuilderFactory INSTANCE = new DefaultRequestLogEventBuilderFactory();
+
+  @JsonCreator
+  public static DefaultRequestLogEventBuilderFactory instance()
+  {
+    return INSTANCE;
+  }
+
+  private DefaultRequestLogEventBuilderFactory() {}
+
   @Override
   public ServiceEventBuilder<RequestLogEvent> createRequestLogEventBuilder(String feed, RequestLogLine requestLogLine)
   {
     return new DefaultRequestLogEventBuilder(feed, requestLogLine);
+  }
+
+  @Override
+  public String toString()
+  {
+    return getClass().getName();
   }
 }
