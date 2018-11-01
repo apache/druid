@@ -59,6 +59,10 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -100,10 +104,10 @@ public class IncrementalIndexReadBenchmark
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 
     BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
-        schemaInfo.getColumnSchemas(),
-        RNG_SEED,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
+            schemaInfo.getColumnSchemas(),
+            RNG_SEED,
+            schemaInfo.getDataInterval(),
+            rowsPerSegment
     );
 
     incIndex = makeIncIndex();
@@ -115,7 +119,6 @@ public class IncrementalIndexReadBenchmark
       }
       incIndex.add(row);
     }
-
   }
 
   private IncrementalIndex makeIncIndex()
@@ -195,12 +198,12 @@ public class IncrementalIndexReadBenchmark
   private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
     return sa.makeCursors(
-        filter.toFilter(),
-        schemaInfo.getDataInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
+            (filter == null) ? null : filter.toFilter(),
+            schemaInfo.getDataInterval(),
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
     );
   }
 
@@ -208,4 +211,17 @@ public class IncrementalIndexReadBenchmark
   {
     return cursor.getColumnSelectorFactory().makeDimensionSelector(new DefaultDimensionSpec(name, null));
   }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+            .include(IncrementalIndexReadBenchmark.class.getSimpleName())
+            .threads(1)
+            .forks(1)
+            .build();
+
+    new Runner(opt).run();
+  }
+
+
 }

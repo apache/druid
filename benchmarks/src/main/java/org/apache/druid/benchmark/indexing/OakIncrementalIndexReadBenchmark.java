@@ -48,7 +48,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
@@ -74,7 +73,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class OakIncrementalIndexReadBenchmark
 {
-  @Param({"150000"})
+  @Param({"750000"})
   private int rowsPerSegment;
 
   @Param({"basic"})
@@ -82,9 +81,6 @@ public class OakIncrementalIndexReadBenchmark
 
   @Param({"true", "false"})
   private boolean rollup;
-
-  @Param({"true", "false"})
-  private boolean onheap;
 
   private static final Logger log = new Logger(OakIncrementalIndexReadBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -115,47 +111,31 @@ public class OakIncrementalIndexReadBenchmark
     for (int j = 0; j < rowsPerSegment; j++) {
       InputRow row = gen.nextRow();
       if (j % 10000 == 0) {
-        log.info(j + " rows generated. ");
+        log.info(j + " rows generated.");
       }
       incIndex.add(row);
     }
-
   }
 
   private IncrementalIndex makeIncIndex()
   {
-    if (onheap) {
-      return new IncrementalIndex.Builder()
-              .setIndexSchema(
-                      new IncrementalIndexSchema.Builder()
-                              .withMetrics(schemaInfo.getAggsArray())
-                              .withRollup(rollup)
-                              .build()
-              )
-              .setReportParseExceptions(false)
-              .setMaxRowCount(rowsPerSegment * 16)
-              .buildOnheap();
-    } else {
-      return new IncrementalIndex.Builder()
-              .setIndexSchema(
-                      new IncrementalIndexSchema.Builder()
-                              .withMetrics(schemaInfo.getAggsArray())
-                              .withRollup(rollup)
-                              .build()
-              )
-              .setReportParseExceptions(false)
-              .setMaxRowCount(rowsPerSegment * 16)
-              .buildOffheapOak();
-    }
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMetrics(schemaInfo.getAggsArray())
+                .withRollup(rollup)
+                .build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment)
+        .buildOffheapOak();
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.SingleShotTime)
-  @OutputTimeUnit(TimeUnit.SECONDS)
-  @Threads(1)
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void read(Blackhole blackhole)
   {
-    long time = System.currentTimeMillis();
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
     Sequence<Cursor> cursors = makeCursors(sa, null);
     Cursor cursor = cursors.limit(1).toList().get(0);
@@ -174,26 +154,21 @@ public class OakIncrementalIndexReadBenchmark
       }
       cursor.advance();
     }
-    long duration = System.currentTimeMillis() - time;
-    double throughput = rowsPerSegment / (double) duration;
-    log.info("Throughput: " + throughput + " ops/ms");
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.SingleShotTime)
-  @OutputTimeUnit(TimeUnit.SECONDS)
-  @Threads(1)
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void readWithFilters(Blackhole blackhole)
   {
-    long time = System.currentTimeMillis();
     DimFilter filter = new OrDimFilter(
-            Arrays.asList(
-                    new BoundDimFilter("dimSequential", "-1", "-1", true, true, null, null, StringComparators.ALPHANUMERIC),
-                    new JavaScriptDimFilter("dimSequential", "function(x) { return false }", null, JavaScriptConfig.getEnabledInstance()),
-                    new RegexDimFilter("dimSequential", "X", null),
-                    new SearchQueryDimFilter("dimSequential", new ContainsSearchQuerySpec("X", false), null),
-                    new InDimFilter("dimSequential", Collections.singletonList("X"), null)
-            )
+        Arrays.asList(
+            new BoundDimFilter("dimSequential", "-1", "-1", true, true, null, null, StringComparators.ALPHANUMERIC),
+            new JavaScriptDimFilter("dimSequential", "function(x) { return false }", null, JavaScriptConfig.getEnabledInstance()),
+            new RegexDimFilter("dimSequential", "X", null),
+            new SearchQueryDimFilter("dimSequential", new ContainsSearchQuerySpec("X", false), null),
+            new InDimFilter("dimSequential", Collections.singletonList("X"), null)
+        )
     );
 
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
@@ -214,9 +189,6 @@ public class OakIncrementalIndexReadBenchmark
       }
       cursor.advance();
     }
-    long duration = System.currentTimeMillis() - time;
-    double throughput = rowsPerSegment / (double) duration;
-    log.info("Throughput: " + throughput + " ops/ms");
   }
 
   private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
