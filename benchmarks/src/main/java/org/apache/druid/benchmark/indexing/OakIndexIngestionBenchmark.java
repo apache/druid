@@ -30,7 +30,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Threads;
+import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
@@ -42,16 +42,21 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
+@Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-public class OakIncrementalIndexIngestionBenchmark
+public class OakIndexIngestionBenchmark
 {
-  @Param({"10000", "75000"})
+  @Param({"1000000"})
   private int rowsPerSegment;
 
   @Param({"basic"})
@@ -60,10 +65,7 @@ public class OakIncrementalIndexIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"true", "false"})
-  private boolean onheap;
-
-  private static final Logger log = new Logger(OakIncrementalIndexIngestionBenchmark.class);
+  private static final Logger log = new Logger(OakIndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
   private IncrementalIndex incIndex;
@@ -94,7 +96,7 @@ public class OakIncrementalIndexIngestionBenchmark
     }
   }
 
-  @Setup(Level.Iteration)
+  @Setup(Level.Invocation)
   public void setup2()
   {
     incIndex = makeIncIndex();
@@ -102,46 +104,41 @@ public class OakIncrementalIndexIngestionBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    if (onheap) {
-      return new IncrementalIndex.Builder()
-              .setIndexSchema(
-                      new IncrementalIndexSchema.Builder()
-                              .withMetrics(schemaInfo.getAggsArray())
-                              .withRollup(rollup)
-                              .build()
-              )
-              .setReportParseExceptions(false)
-              .setMaxRowCount(rowsPerSegment * 16)
-              .buildOnheap();
-    } else {
-      return new IncrementalIndex.Builder()
-              .setIndexSchema(
-                      new IncrementalIndexSchema.Builder()
-                              .withMetrics(schemaInfo.getAggsArray())
-                              .withRollup(rollup)
-                              .build()
-              )
-              .setReportParseExceptions(false)
-              .setMaxRowCount(rowsPerSegment * 16)
-              .buildOffheapOak();
-    }
+    return new IncrementalIndex.Builder()
+            .setIndexSchema(
+                    new IncrementalIndexSchema.Builder()
+                            .withMetrics(schemaInfo.getAggsArray())
+                            .withRollup(rollup)
+                            .build()
+            )
+            .setReportParseExceptions(false)
+            .setMaxRowCount(rowsPerSegment * 2)
+            .buildOffheapOak();
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.SingleShotTime)
+  @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @Threads(1)
   public void addRows(Blackhole blackhole) throws Exception
   {
-    long time = System.currentTimeMillis();
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = rows.get(i);
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
-    long duration = System.currentTimeMillis() - time;
-    double throughput = (10 * rowsPerSegment) / (double) duration;
-    log.info("Throughput: " + throughput + " ops/ms");
   }
+
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+            .include(OakIndexIngestionBenchmark.class.getSimpleName())
+            .threads(1)
+            .forks(1)
+            .build();
+
+    new Runner(opt).run();
+  }
+
 
 }
