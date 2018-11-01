@@ -201,7 +201,7 @@ The remapping values for each globally cached lookup can be specified by a json 
 {
   "type":"uri",
   "uriPrefix": "s3://bucket/some/key/prefix/",
-  "fileRegex":"renames-[0-9]*\.gz",
+  "fileRegex":"renames-[0-9]*\\.gz",
   "namespaceParseSpec":{
     "format":"csv",
     "columns":["key","value"]
@@ -264,7 +264,7 @@ truck,something3,buck
 |`columns`|The list of columns in the tsv file|yes|`null`|
 |`keyColumn`|The name of the column containing the key|no|The first column|
 |`valueColumn`|The name of the column containing the value|no|The second column|
-|`delimiter`|The delimiter in the file|no|tab (`	`)|
+|`delimiter`|The delimiter in the file|no|tab (`\t`)|
 |`listDelimiter`|The list delimiter in the file|no| (`\u0001`)|
 |`hasHeaderRow`|A flag to indicate that column information can be extracted from the input files' header row|no|false|
 |`skipHeaderRows`|Number of header rows to be skipped|no|0|

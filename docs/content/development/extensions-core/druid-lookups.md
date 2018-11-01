@@ -51,7 +51,7 @@ The current implementation provides 2 type of poll cache, the first is onheap (u
 User can also implement a different lookup polling cache by implementing `PollingCacheFactory` and `PollingCache` interfaces. 
 
 #### Loading lookup
-Loading cache strategy will load the keyalue pair upon request on the key it self, the general algorithm is load key if absent.
+Loading cache strategy will load the key/value pair upon request on the key it self, the general algorithm is load key if absent.
 Once the key/value  pair is loaded eviction will occur according to the cache eviction policy.
 This module comes with two loading lookup implementation, the first is onheap backed by a Guava cache implementation, the second is MapDB offheap implementation.
 Both implementations offer various eviction strategies.

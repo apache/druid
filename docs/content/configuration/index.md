@@ -415,8 +415,7 @@ The Druid servers [emit various metrics](../operations/metrics.html) and alerts 
 |`druid.emitter.http.flushCount`|How many messages the internal message buffer can hold before flushing (sending).|500|
 |`druid.emitter.http.basicAuthentication`|Login and password for authentification in "login:password" form, e. g. `druid.emitter.http.basicAuthentication=admin:adminpassword`|not specified = no authentification|
 |`druid.emitter.http.flushTimeOut`|The timeout after which an event should be sent to the endpoint, even if internal buffers are not filled, in milliseconds.|not specified = no timeout|
-|`druid.emitter.http.batchingStrategy`|The strategy of how the batch is formatted. "ARRAY" means `[event1,event2]`, "NEWLINES" means `event1
-event2`, ONLY_EVENTS means `event1event2`.|ARRAY|
+|`druid.emitter.http.batchingStrategy`|The strategy of how the batch is formatted. "ARRAY" means `[event1,event2]`, "NEWLINES" means `event1\nevent2`, ONLY_EVENTS means `event1event2`.|ARRAY|
 |`druid.emitter.http.maxBatchSize`|The maximum batch size, in bytes.|the minimum of (10% of JVM heap size divided by 2) or (5191680 (i. e. 5 MB))|
 |`druid.emitter.http.batchQueueSizeLimit`|The maximum number of batches in emitter queue, if there are problems with emitting.|the maximum of (2) or (10% of the JVM heap size divided by 5MB)|
 |`druid.emitter.http.minHttpTimeoutMillis`|If the speed of filling batches imposes timeout smaller than that, not even trying to send batch to endpoint, because it will likely fail, not being able to send the data that fast. Configure this depending based on emitter/successfulSending/minTimeMs metric. Reasonable values are 10ms..100ms.|0|
@@ -1008,32 +1007,7 @@ Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2
 ```
 {
 "type":"javascript",
-"function":"function (config, zkWorkers, task) {
-var batch_workers = new java.util.ArrayList();
-batch_workers.add(\"10.0.0.1\");
-batch_workers.add(\"10.0.0.2\");
-workers = zkWorkers.keySet().toArray();
-var sortedWorkers = new Array()
-;for(var i = 0; i < workers.length; i++){
- sortedWorkers[i] = workers[i];
-}
-Array.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});
-var minWorkerVer = config.getMinWorkerVersion();
-for (var i = 0; i < sortedWorkers.length; i++) {
- var worker = sortedWorkers[i];
-  var zkWorker = zkWorkers.get(worker);
-  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){
-    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){
-      return worker;
-    } else {
-      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){
-        return worker;
-      }
-    }
-  }
-}
-return null;
-}"
+"function":"function (config, zkWorkers, task) {\nvar batch_workers = new java.util.ArrayList();\nbatch_workers.add(\"10.0.0.1\");\nbatch_workers.add(\"10.0.0.2\");\nworkers = zkWorkers.keySet().toArray();\nvar sortedWorkers = new Array()\n;for(var i = 0; i < workers.length; i++){\n sortedWorkers[i] = workers[i];\n}\nArray.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\nvar minWorkerVer = config.getMinWorkerVersion();\nfor (var i = 0; i < sortedWorkers.length; i++) {\n var worker = sortedWorkers[i];\n  var zkWorker = zkWorkers.get(worker);\n  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){\n    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){\n      return worker;\n    } else {\n      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){\n        return worker;\n      }\n    }\n  }\n}\nreturn null;\n}"
 }
 ```
 
