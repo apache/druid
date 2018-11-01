@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.worker.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -120,6 +121,8 @@ public class WorkerResourceTest
 
     Response res = workerResource.doDisable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+    Assert.assertTrue(res.getMetadata().containsKey("Access-Control-Allow-Origin"));
+    Assert.assertEquals(ImmutableList.of("*"), res.getMetadata().get("Access-Control-Allow-Origin"));
 
     theWorker = jsonMapper.readValue(cf.getData().forPath(announcementsPath), Worker.class);
     Assert.assertTrue(theWorker.getVersion().isEmpty());
@@ -137,6 +140,9 @@ public class WorkerResourceTest
     // Enable the worker
     res = workerResource.doEnable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+    Assert.assertTrue(res.getMetadata().containsKey("Access-Control-Allow-Origin"));
+    Assert.assertEquals(ImmutableList.of("*"), res.getMetadata().get("Access-Control-Allow-Origin"));
+
     theWorker = jsonMapper.readValue(cf.getData().forPath(announcementsPath), Worker.class);
     Assert.assertEquals("v1", theWorker.getVersion());
   }

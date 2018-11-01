@@ -94,7 +94,9 @@ public class WorkerResource
       );
       curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
       workerTaskManager.workerDisabled();
-      return Response.ok(ImmutableMap.of(disabledWorker.getHost(), "disabled")).build();
+      return Response.ok(ImmutableMap.of(disabledWorker.getHost(), "disabled"))
+                     .header("Access-Control-Allow-Origin", "*")
+                     .build();
     }
     catch (Exception e) {
       return Response.serverError().build();
@@ -110,7 +112,9 @@ public class WorkerResource
     try {
       curatorCoordinator.updateWorkerAnnouncement(enabledWorker);
       workerTaskManager.workerEnabled();
-      return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "enabled")).build();
+      return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "enabled"))
+                     .header("Access-Control-Allow-Origin", "*")
+                     .build();
     }
     catch (Exception e) {
       return Response.serverError().build();

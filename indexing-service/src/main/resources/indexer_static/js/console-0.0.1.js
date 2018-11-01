@@ -98,10 +98,40 @@ var shutdownSupervisor = function(supervisorId) {
   }
 }
 
+var disableWorker = function(scheme, host) {
+  if(confirm('Do you really want to disable: ' + host)) {
+    $.ajax({
+      type:'POST',
+      crossDomain: true,
+      url: scheme + '://' + host + '/druid/worker/v1/disable',
+      data: ''
+    }).done(function(data) {
+      setTimeout(function() { location.reload(true) }, 750);
+    }).fail(function(data) {
+      alert('Worker disable request failed with status: '+data.status+' please check worker logs');
+    })
+  }
+}
+
+var enableWorker = function(scheme, host) {
+  if(confirm('Do you really want to enable: ' + host)) {
+    $.ajax({
+      type:'POST',
+      crossDomain: true,
+      url: scheme + '://' + host + '/druid/worker/v1/enable',
+      data: ''
+    }).done(function(data) {
+      setTimeout(function() { location.reload(true) }, 750);
+    }).fail(function(data) {
+      alert('Worker enable request failed with status: '+data.status+' please check worker logs');
+    })
+  }
+}
+
 $(document).ready(function() {
   var augment = function(data, showKill) {
     for (i = 0 ; i < data.length ; i++) {
-      var taskId = encodeURIComponent(data[i].id)
+      var taskId = encodeURIComponent(data[i].id);
       data[i].more =
         '<a href="/druid/indexer/v1/task/' + taskId + '">payload</a>' +
         '<a href="/druid/indexer/v1/task/' + taskId + '/status">status</a>' +
@@ -117,7 +147,7 @@ $(document).ready(function() {
 
     var data = []
     for (i = 0 ; i < dataList.length ; i++) {
-      var supervisorId = encodeURIComponent(dataList[i].id)
+      var supervisorId = encodeURIComponent(dataList[i].id);
       var supervisorSpec = dataList[i].spec;
       var statusText = supervisorSpec && supervisorSpec.suspended ?
        '<span style="color:#FF6000">suspended</span>' :
@@ -169,6 +199,16 @@ $(document).ready(function() {
 
   $.get('/druid/indexer/v1/workers', function(data) {
     $('.workers_loading').hide();
+    for (i = 0 ; i < data.length ; i++) {
+      var scheme = data[i].worker.scheme;
+      var host = data[i].worker.host;
+      var isDisabled = data[i].worker.version === "";
+      if (isDisabled) {
+        data[i].more = '<a onclick="enableWorker(\''+ scheme +'\', \''+ host +'\');">enable</a>'
+      } else {
+        data[i].more = '<a onclick="disableWorker(\''+ scheme +'\', \''+ host +'\');">disable</a>'
+      }
+    }
     buildTable(data, $('#workerTable'));
   });
 
