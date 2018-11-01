@@ -1358,15 +1358,12 @@
                 </plugins>
             </build>
         </profile>
+        <!-- Run Apache Rat license checks in a separate profile, because during local builds it doesn't skip files
+        that are not checked into Git -->
         <profile>
-            <id>apache-release</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
+            <id>rat</id>
             <build>
                 <plugins>
-                    <!-- Run Apache Rat license checks in a separate profile, because during local builds it doesn't skip files
-                    that are not checked into Git -->
                     <plugin>
                         <groupId>org.apache.rat</groupId>
                         <artifactId>apache-rat-plugin</artifactId>
@@ -1445,7 +1442,14 @@
                             </excludes>
                         </configuration>
                     </plugin>
-                    <!-- Prevent the source-release-assembly execution defined in the Apache parent POM from running so we can control it ourselves -->
+                </plugins>
+            </build>
+        </profile>
+        <!-- Prevent the source-release-assembly execution defined in the Apache parent POM from running so we can control it ourselves -->
+        <profile>
+            <id>apache-release</id>
+            <build>
+                <plugins>
                     <plugin>
                         <artifactId>maven-assembly-plugin</artifactId>
                         <executions>

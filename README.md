@@ -64,6 +64,10 @@ you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-sub
 We also have a couple people hanging out on IRC in `#druid-dev` on
 `irc.freenode.net`.
 
+### Building From Source
+
+For instructions on building Druid from source, see [docs/content/development/build.md](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md)
+
 ### Contributing
 
 Please follow the guidelines listed [here](http://druid.io/community/).
