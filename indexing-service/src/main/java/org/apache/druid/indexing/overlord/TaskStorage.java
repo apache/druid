@@ -141,8 +141,8 @@ public interface TaskStorage
    * return nothing.
    *
    * @param maxTaskStatuses maxTaskStatuses
-   * @param createdTimeDuration duration
-   * @param datasource datasource
+   * @param durationBeforeNow duration
+   * @param datasource      datasource
    *
    * @return list of {@link TaskInfo}
    */
