@@ -25,7 +25,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.SingleScanTimeDimensionSelector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -81,7 +80,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       // not a dimension, column may be a metric
       ColumnCapabilities capabilities = getColumnCapabilities(dimension);
       if (capabilities == null) {
-        return DimensionSelectorUtils.constantSelector(null, extractionFn);
+        return DimensionSelector.constant(null, extractionFn);
       }
       if (capabilities.getType().isNumeric()) {
         return capabilities.getType().makeNumericWrappingDimensionSelector(
@@ -91,7 +90,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       }
 
       // if we can't wrap the base column, just return a column of all nulls
-      return DimensionSelectorUtils.constantSelector(null, extractionFn);
+      return DimensionSelector.constant(null, extractionFn);
     } else {
       final DimensionIndexer indexer = dimensionDesc.getIndexer();
       return indexer.makeDimensionSelector(dimensionSpec, rowHolder, dimensionDesc);
