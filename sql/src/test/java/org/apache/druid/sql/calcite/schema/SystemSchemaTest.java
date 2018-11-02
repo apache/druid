@@ -345,7 +345,7 @@ public class SystemSchemaTest extends CalciteTestBase
     SettableFuture<InputStream> future = SettableFuture.create();
     EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
     final int ok = HttpServletResponse.SC_OK;
-    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).once();
+    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
 
     EasyMock
         .expect(request.getUrl())
@@ -603,7 +603,7 @@ public class SystemSchemaTest extends CalciteTestBase
     SettableFuture<InputStream> future = SettableFuture.create();
     EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
     final int ok = HttpServletResponse.SC_OK;
-    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).once();
+    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
     EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();

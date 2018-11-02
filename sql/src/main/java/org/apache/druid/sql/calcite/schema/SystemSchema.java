@@ -27,6 +27,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
@@ -50,6 +52,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
@@ -67,6 +70,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,12 +86,13 @@ import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
-
   public static final String NAME = "sys";
   private static final String SEGMENTS_TABLE = "segments";
   private static final String SERVERS_TABLE = "servers";
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
+
+  private static final EmittingLogger log = new EmittingLogger(SystemSchema.class);
 
   private static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -414,14 +419,8 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
-    if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-      throw new RE(
-          "Unexpected response status [%s] description [%s] from request url [%s]",
-          responseHandler.getStatus(),
-          responseHandler.getDescription(),
-          request.getUrl()
-      );
-    }
+    checkResponse(future, request, responseHandler);
+
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
     {
     });
@@ -680,14 +679,8 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
-    if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-      throw new RE(
-          "Unexpected response status [%s] description [%s] from request url [%s]",
-          responseHandler.getStatus(),
-          responseHandler.getDescription(),
-          request.getUrl()
-      );
-    }
+    checkResponse(future, request, responseHandler);
+
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
     {
     });
@@ -698,6 +691,49 @@ public class SystemSchema extends AbstractSchema
         null,
         request.getUrl().getHost(),
         jsonMapper
+    );
+  }
+
+  private static void checkResponse(
+      ListenableFuture<InputStream> future,
+      Request request,
+      BytesAccumulatingResponseHandler responseHandler
+  )
+  {
+    Futures.addCallback(
+        future,
+        new FutureCallback<InputStream>()
+        {
+          @Override
+          public void onSuccess(@Nullable InputStream result)
+          {
+            if (responseHandler.getStatus() == HttpServletResponse.SC_NO_CONTENT) {
+              log.debug("Received NO CONTENT response from [%s]", request.getUrl().getHost());
+              return;
+            } else if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
+              logRequestFailure(new RE("Unexpected Response Status."));
+              return;
+            }
+            log.debug("Finished reading response from [%s]", request.getUrl().getHost());
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            logRequestFailure(t);
+          }
+
+          private void logRequestFailure(Throwable t)
+          {
+            log.error(
+                t,
+                "Request[%s] Failed with status[%s]. Reason[%s].",
+                request.getUrl(),
+                responseHandler.getStatus(),
+                responseHandler.getDescription()
+            );
+          }
+        }
     );
   }
 
