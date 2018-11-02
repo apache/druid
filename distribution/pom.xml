@@ -178,7 +178,7 @@
                                 </goals>
                                 <configuration>
                                     <finalName>apache-druid-${project.parent.version}</finalName>
-                                    <tarLongFileMode>gnu</tarLongFileMode>
+                                    <tarLongFileMode>posix</tarLongFileMode>
                                     <descriptors>
                                         <descriptor>src/assembly/assembly.xml</descriptor>
                                     </descriptors>
@@ -217,7 +217,7 @@
                                 </goals>
                                 <configuration>
                                     <finalName>apache-druid-${project.version}-src</finalName>
-                                    <tarLongFileMode>gnu</tarLongFileMode>
+                                    <tarLongFileMode>posix</tarLongFileMode>
                                     <descriptors>
                                         <descriptor>src/assembly/source-assembly.xml</descriptor>
                                     </descriptors>
