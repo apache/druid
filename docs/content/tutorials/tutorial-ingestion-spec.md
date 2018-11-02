@@ -611,7 +611,7 @@ We've finished defining the ingestion spec, it should now look like the followin
 
 ## Submit the task and query the data
 
-From the druid-#{DRUIDVERSION} package root, run the following command:
+From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
 bin/post-index-task --file quickstart/ingestion-tutorial-index.json 
