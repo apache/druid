@@ -221,9 +221,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfo(
+  public List<TaskInfo<Task, TaskStatus>> getFinishedTaskInfoByCreatedTimeDuration(
       @Nullable Integer maxTaskStatuses,
-      @Nullable Duration duration,
+      @Nullable Duration createdTimeDuration,
       @Nullable String datasource
   )
   {
@@ -240,18 +240,18 @@ public class HeapMemoryTaskStorage implements TaskStorage
       }.reverse();
 
       return maxTaskStatuses == null ?
-             getRecentlyFinishedTaskInfoSince(
-                 DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
+             getFinishedTaskInfoSince(
+                 DateTimes.nowUtc().minus(createdTimeDuration == null ? config.getRecentlyFinishedThreshold() : createdTimeDuration),
                  createdDateDesc
              ) :
-             getNRecentlyFinishedTaskInfo(maxTaskStatuses, createdDateDesc);
+             getNFinishedTaskInfo(maxTaskStatuses, createdDateDesc);
     }
     finally {
       giant.unlock();
     }
   }
 
-  private List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfoSince(
+  private List<TaskInfo<Task, TaskStatus>> getFinishedTaskInfoSince(
       DateTime start,
       Ordering<TaskStuff> createdDateDesc
   )
@@ -262,7 +262,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       List<TaskStuff> list = createdDateDesc
           .sortedCopy(tasks.values())
           .stream()
-          .filter(taskStuff -> taskStuff.getStatus().isComplete())
+          .filter(taskStuff -> taskStuff.getStatus().isComplete() && taskStuff.createdDate.isAfter(start))
           .collect(Collectors.toList());
       final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : list) {
@@ -283,7 +283,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
-  private List<TaskInfo<Task, TaskStatus>> getNRecentlyFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
+  private List<TaskInfo<Task, TaskStatus>> getNFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
   {
     giant.lock();
 
@@ -291,6 +291,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       List<TaskStuff> list = createdDateDesc
           .sortedCopy(tasks.values())
           .stream()
+          .filter(taskStuff -> taskStuff.getStatus().isComplete())
           .limit(n)
           .collect(Collectors.toList());
       final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
