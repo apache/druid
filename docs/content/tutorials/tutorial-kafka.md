@@ -57,7 +57,7 @@ Let's launch a console producer for our topic and send some data!
 In your Druid directory, run the following command:
 
 ```bash
-cd quickstart
+cd quickstart/tutorial
 gunzip -k wikiticker-2015-09-12-sampled.json.gz
 ```
 
@@ -65,7 +65,7 @@ In your Kafka directory, run the following command, where {PATH_TO_DRUID} is rep
 
 ```bash
 export KAFKA_OPTS="-Dfile.encoding=UTF-8"
-./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic wikipedia < {PATH_TO_DRUID}/quickstart/wikiticker-2015-09-12-sampled.json
+./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic wikipedia < {PATH_TO_DRUID}/quickstart/tutorial/wikiticker-2015-09-12-sampled.json
 ```
 
 The previous command posted sample events to the *wikipedia* Kafka topic which were then ingested into Druid by the Kafka indexing service. You're now ready to run some queries!
