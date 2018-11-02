@@ -49,7 +49,7 @@
       "type" : "index",
       "firehose" : {
         "type" : "local",
-        "baseDir" : "quickstart/",
+        "baseDir" : "quickstart/tutorial/",
         "filter" : "wikiticker-2015-09-12-sampled.json.gz"
       },
       "appendToExisting" : false
