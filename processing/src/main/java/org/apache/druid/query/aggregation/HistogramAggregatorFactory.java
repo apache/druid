@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -30,6 +29,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -55,7 +55,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
-    this.breaksList = (breaksList == null) ? Lists.newArrayList() : breaksList;
+    this.breaksList = (breaksList == null) ? new ArrayList<>() : breaksList;
     this.breaks = new float[this.breaksList.size()];
     for (int i = 0; i < this.breaksList.size(); ++i) {
       this.breaks[i] = this.breaksList.get(i);

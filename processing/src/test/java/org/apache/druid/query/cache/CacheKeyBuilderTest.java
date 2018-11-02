@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -155,7 +156,7 @@ public class CacheKeyBuilderTest
   @Test
   public void testNotEqualStrings()
   {
-    final List<byte[]> keys = Lists.newArrayList();
+    final List<byte[]> keys = new ArrayList<>();
     keys.add(
         new CacheKeyBuilder((byte) 10)
             .appendString("test")
@@ -239,7 +240,7 @@ public class CacheKeyBuilderTest
       }
     };
 
-    final List<byte[]> keys = Lists.newArrayList();
+    final List<byte[]> keys = new ArrayList<>();
     keys.add(
         new CacheKeyBuilder((byte) 10)
             .appendCacheable(test)
@@ -268,13 +269,13 @@ public class CacheKeyBuilderTest
     keys.add(
         new CacheKeyBuilder((byte) 10)
             .appendCacheables(Collections.singletonList(testtest))
-            .appendCacheables(Lists.newArrayList())
+            .appendCacheables(new ArrayList<>())
             .build()
     );
 
     keys.add(
         new CacheKeyBuilder((byte) 10)
-            .appendCacheables(Lists.newArrayList())
+            .appendCacheables(new ArrayList<>())
             .appendCacheables(Collections.singletonList(testtest))
             .build()
     );
@@ -319,7 +320,7 @@ public class CacheKeyBuilderTest
   public void testEmptyOrNullCacheables()
   {
     final byte[] key1 = new CacheKeyBuilder((byte) 10)
-        .appendCacheables(Lists.newArrayList())
+        .appendCacheables(new ArrayList<>())
         .build();
 
     final byte[] key2 = new CacheKeyBuilder((byte) 10)

@@ -21,14 +21,13 @@ package org.apache.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Floats;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -1378,7 +1377,7 @@ public class ApproximateHistogram
     } else {
       byte approxCount = (byte) (-1 * count);
 
-      Map<Float, Long> approx = Maps.newHashMap();
+      Map<Float, Long> approx = new HashMap<>();
 
       for (int i = 0; i < approxCount; ++i) {
         final float value = buf.getFloat();
@@ -1394,7 +1393,7 @@ public class ApproximateHistogram
 
       byte exactCount = buf.get();
 
-      Map<Float, Long> exact = Maps.newHashMap();
+      Map<Float, Long> exact = new HashMap<>();
 
       for (int i = 0; i < exactCount; ++i) {
         final float value = buf.getFloat();
@@ -1407,7 +1406,7 @@ public class ApproximateHistogram
 
       int binCount = exact.size() + approx.size();
 
-      List<Float> pos = Lists.newArrayList();
+      List<Float> pos = new ArrayList<>();
       pos.addAll(exact.keySet());
       pos.addAll(approx.keySet());
       Collections.sort(pos);

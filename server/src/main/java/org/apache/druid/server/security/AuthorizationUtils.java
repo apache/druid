@@ -22,12 +22,12 @@ package org.apache.druid.server.security;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,7 +112,7 @@ public class AuthorizationUtils
     }
 
     // this method returns on first failure, so only successful Access results are kept in the cache
-    final Set<ResourceAction> resultCache = Sets.newHashSet();
+    final Set<ResourceAction> resultCache = new HashSet<>();
 
     for (ResourceAction resourceAction : resourceActions) {
       if (resultCache.contains(resourceAction)) {
@@ -263,7 +263,7 @@ public class AuthorizationUtils
       throw new ISE("No authorizer found with name: [%s].", authenticationResult.getAuthorizerName());
     }
 
-    final Map<ResourceAction, Access> resultCache = Maps.newHashMap();
+    final Map<ResourceAction, Access> resultCache = new HashMap<>();
     final Iterable<ResType> filteredResources = Iterables.filter(
         resources,
         resource -> {
@@ -329,7 +329,7 @@ public class AuthorizationUtils
 
     final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
 
-    Map<KeyType, List<ResType>> filteredResources = Maps.newHashMap();
+    Map<KeyType, List<ResType>> filteredResources = new HashMap<>();
     for (Map.Entry<KeyType, List<ResType>> entry : unfilteredResources.entrySet()) {
       if (entry.getValue() == null) {
         continue;

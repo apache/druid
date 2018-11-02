@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -37,6 +36,7 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -55,7 +55,7 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void testHashedBucketSelection()
   {
-    List<HadoopyShardSpec> specs = Lists.newArrayList();
+    List<HadoopyShardSpec> specs = new ArrayList<>();
     final int partitionCount = 10;
     for (int i = 0; i < partitionCount; i++) {
       specs.add(new HadoopyShardSpec(

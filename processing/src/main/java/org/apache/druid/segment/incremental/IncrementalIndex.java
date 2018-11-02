@@ -26,7 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -83,6 +82,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -277,7 +277,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.reportParseExceptions = reportParseExceptions;
 
-    this.columnCapabilities = Maps.newHashMap();
+    this.columnCapabilities = new HashMap<>();
     this.metadata = new Metadata(
         null,
         getCombiningAggregators(metrics),
@@ -689,7 +689,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
         if (wasNewDim) {
           if (overflow == null) {
-            overflow = Lists.newArrayList();
+            overflow = new ArrayList<>();
           }
           overflow.add(dimsKey);
         } else if (desc.getIndex() > dims.length || dims[desc.getIndex()] != null) {

@@ -20,8 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -36,6 +34,8 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,12 +51,12 @@ public class CostBalancerStrategyTest
    */
   public static List<ServerHolder> setupDummyCluster(int serverCount, int maxSegments)
   {
-    List<ServerHolder> serverHolderList = Lists.newArrayList();
+    List<ServerHolder> serverHolderList = new ArrayList<>();
     // Create 10 servers with current size being 3K & max size being 10K
     // Each having having 100 segments
     for (int i = 0; i < serverCount; i++) {
       LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
-      Map<String, DataSegment> segments = Maps.newHashMap();
+      Map<String, DataSegment> segments = new HashMap<>();
       for (int j = 0; j < maxSegments; j++) {
         DataSegment segment = getSegment(j);
         segments.put(segment.getIdentifier(), segment);
@@ -82,7 +82,7 @@ public class CostBalancerStrategyTest
     EasyMock.expect(druidServer.getMaxSize()).andReturn(10000000L).anyTimes();
 
     EasyMock.expect(druidServer.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
-    Map<String, DataSegment> segments = Maps.newHashMap();
+    Map<String, DataSegment> segments = new HashMap<>();
     for (int j = 0; j < (maxSegments - 2); j++) {
       DataSegment segment = getSegment(j);
       segments.put(segment.getIdentifier(), segment);
@@ -115,8 +115,8 @@ public class CostBalancerStrategyTest
         interval,
         String.valueOf(index),
         new ConcurrentHashMap<>(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         null,
         0,
         index * 100L

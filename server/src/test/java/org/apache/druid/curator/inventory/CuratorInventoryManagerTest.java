@@ -20,7 +20,6 @@
 package org.apache.druid.curator.inventory;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
@@ -36,6 +35,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
@@ -185,7 +185,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     @Override
     public Map<String, Integer> deserializeContainer(byte[] bytes)
     {
-      return Maps.newTreeMap();
+      return new TreeMap<>();
     }
 
     @Override

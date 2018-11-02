@@ -31,6 +31,7 @@ import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  */
@@ -130,7 +131,7 @@ public class ServiceMetricEvent implements Event
 
   public static class Builder
   {
-    private final Map<String, Object> userDims = Maps.newTreeMap();
+    private final Map<String, Object> userDims = new TreeMap<>();
     private String feed = "metrics";
 
     public Builder setFeed(String feed)

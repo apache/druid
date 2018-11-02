@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.JobHelper;
@@ -54,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -218,7 +218,7 @@ public class DatasourceInputFormatTest
     @Override
     public InputFormat get()
     {
-      final Map<String, LocatedFileStatus> locationMap = Maps.newHashMap();
+      final Map<String, LocatedFileStatus> locationMap = new HashMap<>();
       for (LocatedFileStatus status : locations) {
         locationMap.put(status.getPath().getName(), status);
       }

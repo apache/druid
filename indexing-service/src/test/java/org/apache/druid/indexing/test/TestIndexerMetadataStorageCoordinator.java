@@ -21,7 +21,6 @@ package org.apache.druid.indexing.test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -31,6 +30,8 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -42,7 +43,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   public TestIndexerMetadataStorageCoordinator()
   {
-    unusedSegments = Lists.newArrayList();
+    unusedSegments = new ArrayList<>();
   }
 
   @Override
@@ -98,7 +99,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
   {
-    Set<DataSegment> added = Sets.newHashSet();
+    Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
       if (published.add(segment)) {
         added.add(segment);

@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -171,7 +170,7 @@ public class SingleDimensionShardSpecTest
   {
     Preconditions.checkState(arguments.length % 2 == 0);
 
-    final ArrayList<Pair<Boolean, Map<String, String>>> retVal = Lists.newArrayList();
+    final ArrayList<Pair<Boolean, Map<String, String>>> retVal = new ArrayList<>();
 
     for (int i = 0; i < arguments.length; i += 2) {
       retVal.add(Pair.of((Boolean) arguments[i], makeMap((String) arguments[i + 1])));

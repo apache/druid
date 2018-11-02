@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Committer;
@@ -90,7 +89,7 @@ public class RealtimeManager implements QuerySegmentWalker
       DataSegmentServerAnnouncer serverAnnouncer
   )
   {
-    this(fireDepartments, conglomerate, serverAnnouncer, Maps.newHashMap());
+    this(fireDepartments, conglomerate, serverAnnouncer, new HashMap<>());
   }
 
   @VisibleForTesting
@@ -104,7 +103,7 @@ public class RealtimeManager implements QuerySegmentWalker
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
     this.serverAnnouncer = serverAnnouncer;
-    this.chiefs = chiefs == null ? Maps.newHashMap() : Maps.newHashMap(chiefs);
+    this.chiefs = chiefs == null ? new HashMap<>() : new HashMap<>(chiefs);
   }
 
   @VisibleForTesting

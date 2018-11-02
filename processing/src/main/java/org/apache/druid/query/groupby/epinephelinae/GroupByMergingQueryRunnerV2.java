@@ -60,6 +60,7 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBas
 import java.io.Closeable;
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -159,7 +160,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
           @Override
           public CloseableGrouperIterator<RowBasedKey, Row> make()
           {
-            final List<ReferenceCountingResourceHolder> resources = Lists.newArrayList();
+            final List<ReferenceCountingResourceHolder> resources = new ArrayList<>();
 
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(

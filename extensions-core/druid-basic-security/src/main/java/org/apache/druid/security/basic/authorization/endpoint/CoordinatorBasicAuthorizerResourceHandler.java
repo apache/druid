@@ -21,7 +21,6 @@ package org.apache.druid.security.basic.authorization.endpoint;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
@@ -64,7 +63,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     this.storageUpdater = storageUpdater;
     this.objectMapper = objectMapper;
 
-    this.authorizerMap = Maps.newHashMap();
+    this.authorizerMap = new HashMap<>();
     for (Map.Entry<String, Authorizer> authorizerEntry : authorizerMapper.getAuthorizerMap().entrySet()) {
       final String authorizerName = authorizerEntry.getKey();
       final Authorizer authorizer = authorizerEntry.getValue();

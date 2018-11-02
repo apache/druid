@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +42,7 @@ public class TopNResultValue implements Iterable<DimensionAndMetricValueExtracto
       List<?> value
   )
   {
-    this.value = (value == null) ? Lists.newArrayList() : Lists.transform(
+    this.value = (value == null) ? new ArrayList<>() : Lists.transform(
         value,
         new Function<Object, DimensionAndMetricValueExtractor>()
         {

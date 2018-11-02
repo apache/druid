@@ -20,7 +20,6 @@
 package org.apache.druid.client;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -32,6 +31,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -55,8 +55,8 @@ public class CoordinatorServerView implements InventoryView
   )
   {
     this.baseView = baseView;
-    this.segmentLoadInfos = Maps.newHashMap();
-    this.timelines = Maps.newHashMap();
+    this.segmentLoadInfos = new HashMap<>();
+    this.timelines = new HashMap<>();
 
     ExecutorService exec = Execs.singleThreaded("CoordinatorServerView-%s");
     baseView.registerSegmentCallback(

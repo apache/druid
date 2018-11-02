@@ -19,10 +19,10 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -43,7 +43,7 @@ public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T
     List<SegmentDescriptor> missingSegments =
         (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
     if (missingSegments == null) {
-      missingSegments = Lists.newArrayList();
+      missingSegments = new ArrayList<>();
       responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
     }
     missingSegments.add(descriptor);

@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.Maps;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -46,7 +46,7 @@ public interface TaskReport
 
   static Map<String, TaskReport> buildTaskReports(TaskReport... taskReports)
   {
-    Map<String, TaskReport> taskReportMap = Maps.newHashMap();
+    Map<String, TaskReport> taskReportMap = new HashMap<>();
     for (TaskReport taskReport : taskReports) {
       taskReportMap.put(taskReport.getReportKey(), taskReport);
     }

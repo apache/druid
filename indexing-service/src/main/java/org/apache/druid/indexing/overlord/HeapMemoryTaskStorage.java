@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -41,6 +40,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -55,7 +55,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   private final TaskStorageConfig config;
 
   private final ReentrantLock giant = new ReentrantLock();
-  private final Map<String, TaskStuff> tasks = Maps.newHashMap();
+  private final Map<String, TaskStuff> tasks = new HashMap<>();
   private final Multimap<String, TaskLock> taskLocks = HashMultimap.create();
   private final Multimap<String, TaskAction> taskActions = ArrayListMultimap.create();
 

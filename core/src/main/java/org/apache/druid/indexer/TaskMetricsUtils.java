@@ -19,8 +19,7 @@
 
 package org.apache.druid.indexer;
 
-import com.google.common.collect.Maps;
-
+import java.util.HashMap;
 import java.util.Map;
 
 public class TaskMetricsUtils
@@ -37,7 +36,7 @@ public class TaskMetricsUtils
       long rowsThrownAway
   )
   {
-    Map<String, Object> metricsMap = Maps.newHashMap();
+    Map<String, Object> metricsMap = new HashMap<>();
     metricsMap.put(ROWS_PROCESSED, rowsProcessed);
     metricsMap.put(ROWS_PROCESSED_WITH_ERRORS, rowsProcessedWithErrors);
     metricsMap.put(ROWS_UNPARSEABLE, rowsUnparseable);

@@ -53,6 +53,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -116,8 +117,8 @@ public class Druids
       virtualColumns = null;
       dimFilter = null;
       granularity = Granularities.ALL;
-      aggregatorSpecs = Lists.newArrayList();
-      postAggregatorSpecs = Lists.newArrayList();
+      aggregatorSpecs = new ArrayList<>();
+      postAggregatorSpecs = new ArrayList<>();
       limit = 0;
       context = null;
     }
@@ -764,8 +765,8 @@ public class Druids
       context = null;
       dimFilter = null;
       granularity = Granularities.ALL;
-      dimensions = Lists.newArrayList();
-      metrics = Lists.newArrayList();
+      dimensions = new ArrayList<>();
+      metrics = new ArrayList<>();
       virtualColumns = null;
       pagingSpec = null;
     }

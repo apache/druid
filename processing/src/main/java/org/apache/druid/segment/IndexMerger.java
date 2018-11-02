@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.Sets;
 import com.google.inject.ImplementedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;
@@ -54,6 +53,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 @ImplementedBy(IndexMergerV9.class)
@@ -142,7 +142,7 @@ public interface IndexMerger
 
   static <T extends Comparable<? super T>> ArrayList<T> mergeIndexed(List<Iterable<T>> indexedLists)
   {
-    Set<T> retVal = Sets.newTreeSet(Comparators.naturalNullsFirst());
+    Set<T> retVal = new TreeSet<>(Comparators.naturalNullsFirst());
 
     for (Iterable<T> indexedList : indexedLists) {
       for (T val : indexedList) {
@@ -388,7 +388,7 @@ public interface IndexMerger
     };
 
     protected final IntBuffer[] conversions;
-    protected final List<Pair<ByteBuffer, Integer>> directBufferAllocations = Lists.newArrayList();
+    protected final List<Pair<ByteBuffer, Integer>> directBufferAllocations = new ArrayList<>();
     protected final PriorityQueue<Pair<Integer, PeekingIterator<String>>> pQueue;
 
     protected int counter;

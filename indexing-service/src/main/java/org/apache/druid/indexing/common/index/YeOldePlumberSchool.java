@@ -28,8 +28,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -57,6 +55,8 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -116,7 +116,7 @@ public class YeOldePlumberSchool implements PlumberSchool
     final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getIdentifier());
 
     // Set of spilled segments. Will be merged at the end.
-    final Set<File> spilled = Sets.newHashSet();
+    final Set<File> spilled = new HashSet<>();
 
     return new Plumber()
     {
@@ -180,7 +180,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           } else if (spilled.size() == 1) {
             fileToUpload = Iterables.getOnlyElement(spilled);
           } else {
-            List<QueryableIndex> indexes = Lists.newArrayList();
+            List<QueryableIndex> indexes = new ArrayList<>();
             for (final File oneSpill : spilled) {
               indexes.add(indexIO.loadIndex(oneSpill));
             }

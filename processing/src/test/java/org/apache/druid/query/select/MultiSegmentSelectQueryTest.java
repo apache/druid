@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -61,6 +60,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -153,7 +153,7 @@ public class MultiSegmentSelectQueryTest
     timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk(segment1));
     timeline.add(index2.getInterval(), "v2", new SingleElementPartitionChunk(segment_override));
 
-    segmentIdentifiers = Lists.newArrayList();
+    segmentIdentifiers = new ArrayList<>();
     for (TimelineObjectHolder<String, ?> holder : timeline.lookup(Intervals.of("2011-01-12/2011-01-14"))) {
       segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()));
     }

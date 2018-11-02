@@ -240,7 +240,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           )
       );
 
-      final List<DataSegment> segments = Lists.newArrayList();
+      final List<DataSegment> segments = new ArrayList<>();
       List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
           Intervals.of("0000-01-01/3000-01-01")
       );
