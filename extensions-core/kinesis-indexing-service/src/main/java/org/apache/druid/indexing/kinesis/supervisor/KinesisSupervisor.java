@@ -403,7 +403,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
               })
           );
           final Map<Integer, Long> offsetsResponse = new ConcurrentHashMap<>();
-          final List<ListenableFuture<Void>> futures = Lists.newArrayList();
+          final List<ListenableFuture<Void>> futures = new ArrayList<>();
           for (TaskGroup taskGroup : taskGroups.values()) {
             for (String taskId : taskGroup.taskIds()) {
               futures.add(Futures.transform(

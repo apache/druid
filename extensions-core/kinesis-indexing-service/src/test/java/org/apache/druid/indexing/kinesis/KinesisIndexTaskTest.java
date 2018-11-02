@@ -40,8 +40,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -171,8 +169,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -260,7 +260,7 @@ public class KinesisIndexTaskTest
   private static ServiceEmitter emitter;
   private static ListeningExecutorService taskExec;
 
-  private final List<Task> runningTasks = Lists.newArrayList();
+  private final List<Task> runningTasks = new ArrayList<>();
 
   private long handoffConditionTimeout = 0;
   private boolean reportParseExceptions = false;
@@ -280,7 +280,7 @@ public class KinesisIndexTaskTest
   private File directory;
   private String stream;
   private final boolean isIncrementalHandoffSupported = false;
-  private final Set<Integer> checkpointRequestsHash = Sets.newHashSet();
+  private final Set<Integer> checkpointRequestsHash = new HashSet<>();
   private File reportsFile;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
 
@@ -408,7 +408,7 @@ public class KinesisIndexTaskTest
   }
 
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunAfterDataInserted() throws Exception
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
@@ -473,7 +473,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunBeforeDataInserted() throws Exception
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
@@ -566,7 +566,7 @@ public class KinesisIndexTaskTest
   }
 
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunWithMinimumMessageTime() throws Exception
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
@@ -636,7 +636,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunWithMaximumMessageTime() throws Exception
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
@@ -708,7 +708,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc3));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunWithTransformSpec() throws Exception
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
@@ -785,7 +785,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("bb"), readSegmentColumn("dim1t", desc1));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunOnNothing() throws Exception
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
@@ -833,7 +833,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testReportParseExceptions() throws Exception
   {
     reportParseExceptions = true;
@@ -888,7 +888,7 @@ public class KinesisIndexTaskTest
     Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testMultipleParseExceptionsSuccess() throws Exception
   {
     reportParseExceptions = false;
@@ -987,7 +987,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(unparseableEvents, reportData.getUnparseableEvents());
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testMultipleParseExceptionsFailure() throws Exception
   {
     reportParseExceptions = false;
@@ -1068,7 +1068,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(unparseableEvents, reportData.getUnparseableEvents());
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunReplicas() throws Exception
   {
     // Insert data
@@ -1166,7 +1166,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunConflicting() throws Exception
   {
     // Insert data
@@ -1265,7 +1265,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunConflictingWithoutTransactions() throws Exception
   {
     // Insert data
@@ -1362,7 +1362,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc4));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunOneTaskTwoPartitions() throws Exception
   {
     // Insert data
@@ -1446,7 +1446,7 @@ public class KinesisIndexTaskTest
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRunTwoTasksTwoPartitions() throws Exception
   {
     // Insert data
@@ -1555,7 +1555,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", desc4));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 120_000L)
   public void testRestore() throws Exception
   {
     // Insert data
@@ -1986,7 +1986,7 @@ public class KinesisIndexTaskTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
     };
     toolboxFactory = new TaskToolboxFactory(
@@ -2090,7 +2090,7 @@ public class KinesisIndexTaskTest
     QueryableIndex index = indexIO.loadIndex(outputLocation);
     DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) index.getColumnHolder(column)
                                                                                        .getColumn();
-    List<String> values = Lists.newArrayList();
+    List<String> values = new ArrayList<>();
     for (int i = 0; i < theColumn.length(); i++) {
       int id = theColumn.getSingleValueRow(i);
       String value = theColumn.lookupName(id);
