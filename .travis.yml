@@ -71,9 +71,13 @@ matrix:
 
 
       # other modules test
-    - env:
+    - sudo: required
+      services:
+          - docker
+      env:
         - NAME="other modules test"
         - AWS_REGION=us-east-1 # set a aws region for unit tests
+        - DOCKER_IP=127.0.0.1
       install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
       before_script: unset _JAVA_OPTIONS
       script:
@@ -83,9 +87,13 @@ matrix:
         - free -m
 
       # other modules test with SQL Compatibility enabled
-    - env:
+    - sudo: required
+      services:
+          - docker
+      env:
         - NAME="other modules test with SQL Compatibility"
         - AWS_REGION=us-east-1 # set a aws region for unit tests
+        - DOCKER_IP=127.0.0.1
       install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
       before_script: unset _JAVA_OPTIONS
       script:
