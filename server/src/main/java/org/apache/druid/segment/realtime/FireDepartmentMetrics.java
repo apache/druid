@@ -241,7 +241,9 @@ public class FireDepartmentMetrics
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
-    retVal.messageGap.set(System.currentTimeMillis() - messageMaxTimestamp.get());
+    retVal.messageGap.set(messageMaxTimestamp.get() == 0
+                          ? messageMaxTimestamp.get()
+                          : (System.currentTimeMillis() - messageMaxTimestamp.get()));
     return retVal;
   }
 
