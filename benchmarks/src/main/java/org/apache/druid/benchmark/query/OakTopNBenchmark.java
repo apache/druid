@@ -70,29 +70,27 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.TearDown;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
-
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -107,12 +105,6 @@ public class OakTopNBenchmark
 
   @Param({"750000"})
   private int rowsPerSegment;
-
-  @Param({"true", "false"})
-  private boolean rollup;
-
-  @Param({"true", "false"})
-  private boolean onheap;
 
   @Param({"basic.A", "basic.numericSort", "basic.alphanumericSort"})
   private String schemaAndQuery;
@@ -172,12 +164,12 @@ public class OakTopNBenchmark
       queryAggs.add(new HyperUniquesAggregatorFactory("hyperUniquesMet", "hyper"));
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
-              .dataSource("blah")
-              .granularity(Granularities.ALL)
-              .dimension("dimSequential")
-              .metric("sumFloatNormal")
-              .intervals(intervalSpec)
-              .aggregators(queryAggs);
+          .dataSource("blah")
+          .granularity(Granularities.ALL)
+          .dimension("dimSequential")
+          .metric("sumFloatNormal")
+          .intervals(intervalSpec)
+          .aggregators(queryAggs);
 
       basicQueries.put("A", queryBuilderA);
     }
@@ -188,12 +180,12 @@ public class OakTopNBenchmark
       queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
-              .dataSource("blah")
-              .granularity(Granularities.ALL)
-              .dimension("dimUniform")
-              .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
-              .intervals(intervalSpec)
-              .aggregators(queryAggs);
+          .dataSource("blah")
+          .granularity(Granularities.ALL)
+          .dimension("dimUniform")
+          .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+          .intervals(intervalSpec)
+          .aggregators(queryAggs);
 
       basicQueries.put("numericSort", queryBuilderA);
     }
@@ -204,12 +196,12 @@ public class OakTopNBenchmark
       queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
 
       TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
-              .dataSource("blah")
-              .granularity(Granularities.ALL)
-              .dimension("dimUniform")
-              .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
-              .intervals(intervalSpec)
-              .aggregators(queryAggs);
+          .dataSource("blah")
+          .granularity(Granularities.ALL)
+          .dimension("dimUniform")
+          .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
+          .intervals(intervalSpec)
+          .aggregators(queryAggs);
 
       basicQueries.put("alphanumericSort", queryBuilderA);
     }
@@ -245,10 +237,10 @@ public class OakTopNBenchmark
       log.info("Generating rows for segment " + i);
 
       BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
-              schemaInfo.getColumnSchemas(),
-              RNG_SEED + i,
-              schemaInfo.getDataInterval(),
-              rowsPerSegment
+          schemaInfo.getColumnSchemas(),
+          RNG_SEED + i,
+          schemaInfo.getDataInterval(),
+          rowsPerSegment
       );
 
       IncrementalIndex incIndex = makeIncIndex();
@@ -269,10 +261,10 @@ public class OakTopNBenchmark
     qIndexes = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       File indexFile = INDEX_MERGER_V9.persist(
-              incIndexes.get(i),
-              tmpDir,
-              new IndexSpec(),
-              null
+          incIndexes.get(i),
+          tmpDir,
+          new IndexSpec(),
+          null
       );
 
       QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
@@ -280,14 +272,14 @@ public class OakTopNBenchmark
     }
 
     factory = new TopNQueryRunnerFactory(
-            new StupidPool<>(
-                    "TopNBenchmark-compute-bufferPool",
-                    new OffheapBufferGenerator("compute", 250000000),
-                    0,
-                    Integer.MAX_VALUE
-            ),
-            new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
-            QueryBenchmarkUtil.NOOP_QUERYWATCHER
+        new StupidPool<>(
+            "TopNBenchmark-compute-bufferPool",
+            new OffheapBufferGenerator("compute", 250000000),
+            0,
+            Integer.MAX_VALUE
+        ),
+        new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
+        QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
   }
 
@@ -299,29 +291,11 @@ public class OakTopNBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
-    if (onheap) {
-      return new IncrementalIndex.Builder()
-              .setIndexSchema(
-                      new IncrementalIndexSchema.Builder()
-                              .withMetrics(schemaInfo.getAggsArray())
-                              .withRollup(rollup)
-                              .build()
-              )
-              .setReportParseExceptions(false)
-              .setMaxRowCount(rowsPerSegment * 16)
-              .buildOnheap();
-    } else {
-      return new IncrementalIndex.Builder()
-              .setIndexSchema(
-                      new IncrementalIndexSchema.Builder()
-                              .withMetrics(schemaInfo.getAggsArray())
-                              .withRollup(rollup)
-                              .build()
-              )
-              .setReportParseExceptions(false)
-              .setMaxRowCount(rowsPerSegment * 16)
-              .buildOffheapOak();
-    }
+    return new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment)
+        .buildOffheapOak();
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)
@@ -329,8 +303,8 @@ public class OakTopNBenchmark
 
     QueryToolChest toolChest = factory.getToolchest();
     QueryRunner<T> theRunner = new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)),
-            toolChest
+        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)),
+        toolChest
     );
 
     Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
@@ -338,83 +312,71 @@ public class OakTopNBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.SingleShotTime)
-  @OutputTimeUnit(TimeUnit.SECONDS)
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleIncrementalIndex(Blackhole blackhole)
   {
-    long time = System.currentTimeMillis();
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
-            factory,
-            "incIndex",
-            new IncrementalIndexSegment(incIndexes.get(0), "incIndex")
+        factory,
+        "incIndex",
+        new IncrementalIndexSegment(incIndexes.get(0), "incIndex")
     );
 
     List<Result<TopNResultValue>> results = OakTopNBenchmark.runQuery(factory, runner, query);
     for (Result<TopNResultValue> result : results) {
       blackhole.consume(result);
     }
-    long duration = System.currentTimeMillis() - time;
-    double throughput = rowsPerSegment / (double) duration;
-    log.info("Throughput: " + throughput + " ops/ms");
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.SingleShotTime)
-  @OutputTimeUnit(TimeUnit.SECONDS)
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void querySingleQueryableIndex(Blackhole blackhole)
   {
-    long time = System.currentTimeMillis();
     final QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
-            factory,
-            "qIndex",
-            new QueryableIndexSegment("qIndex", qIndexes.get(0))
+        factory,
+        "qIndex",
+        new QueryableIndexSegment("qIndex", qIndexes.get(0))
     );
 
     List<Result<TopNResultValue>> results = OakTopNBenchmark.runQuery(factory, runner, query);
     for (Result<TopNResultValue> result : results) {
       blackhole.consume(result);
     }
-    long duration = System.currentTimeMillis() - time;
-    double throughput = rowsPerSegment / (double) duration;
-    log.info("Throughput: " + throughput + " ops/ms");
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.SingleShotTime)
+  @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndex(Blackhole blackhole)
   {
-    long time = System.currentTimeMillis();
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = Lists.newArrayList();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
       String segmentName = "qIndex" + i;
       QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
-              factory,
-              segmentName,
-              new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          factory,
+          segmentName,
+          new QueryableIndexSegment(segmentName, qIndexes.get(i))
       );
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
 
     QueryRunner theRunner = toolChest.postMergeQueryDecoration(
-            new FinalizeResultsQueryRunner<>(
-                    toolChest.mergeResults(factory.mergeRunners(executorService, singleSegmentRunners)),
-                    toolChest
-            )
+        new FinalizeResultsQueryRunner<>(
+            toolChest.mergeResults(factory.mergeRunners(executorService, singleSegmentRunners)),
+            toolChest
+        )
     );
 
     Sequence<Result<TopNResultValue>> queryResult = theRunner.run(
-            QueryPlus.wrap(query),
-            Maps.newHashMap()
+        QueryPlus.wrap(query),
+        Maps.newHashMap()
     );
     List<Result<TopNResultValue>> results = queryResult.toList();
 
     for (Result<TopNResultValue> result : results) {
       blackhole.consume(result);
     }
-    long duration = System.currentTimeMillis() - time;
-    double throughput = rowsPerSegment / (double) duration;
-    log.info("Throughput: " + throughput + " ops/ms");
   }
 }

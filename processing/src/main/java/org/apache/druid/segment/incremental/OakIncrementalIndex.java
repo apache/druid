@@ -170,19 +170,14 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
     };
 
     OakMap tmpOakMap = descending ? oak.descendingMap() : oak;
-    OakTransformView transformView = tmpOakMap.createTransformView(transformer);
-    OakCloseableIterator<Row> valuesIterator = transformView.entriesIterator();
-    return new Iterable<Row>()
-    {
-      @Override
-      public Iterator<Row> iterator()
-      {
-        return Iterators.transform(
-            valuesIterator,
-            row -> row
-        );
-      }
-    };
+
+    try (OakTransformView transformView = tmpOakMap.createTransformView(transformer)) {
+      OakCloseableIterator<Row> valuesIterator = transformView.entriesIterator();
+      return () -> Iterators.transform(
+          valuesIterator,
+          row -> row
+      );
+    }
   }
 
   @Override
@@ -192,7 +187,10 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
   }
 
   @Override
-  public void close() {}
+  public void close()
+  {
+    oak.close();
+  }
 
   @Override
   protected long getMinTimeMillis()
@@ -215,18 +213,15 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
   @Override
   protected Object getAggVal(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
-    Function<Map.Entry<ByteBuffer, ByteBuffer>, Object> transformer = new Function<Map.Entry<ByteBuffer, ByteBuffer>, Object>() {
-      @Override
-      public Object apply(Map.Entry<ByteBuffer, ByteBuffer> entry)
-      {
-        ByteBuffer serializedValue = entry.getValue();
-        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-        return agg.get(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
-      }
+    Function<Map.Entry<ByteBuffer, ByteBuffer>, Object> transformer = entry -> {
+      ByteBuffer serializedValue = entry.getValue();
+      BufferAggregator agg = aggsManager.getAggs()[aggIndex];
+      return agg.get(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     };
 
-    OakTransformView<IncrementalIndexRow, Object> transformView = (OakTransformView<IncrementalIndexRow, Object>) oak.createTransformView(transformer);
-    return transformView.get(incrementalIndexRow);
+    try (OakTransformView<IncrementalIndexRow, Object> transformView = oak.createTransformView(transformer)) {
+      return transformView.get(incrementalIndexRow);
+    }
   }
 
   @Override
@@ -242,8 +237,9 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       }
     };
 
-    OakTransformView<IncrementalIndexRow, Float> transformView = (OakTransformView<IncrementalIndexRow, Float>) oak.createTransformView(transformer);
-    return transformView.get(incrementalIndexRow);
+    try (OakTransformView<IncrementalIndexRow, Float> transformView = oak.createTransformView(transformer)) {
+      return transformView.get(incrementalIndexRow);
+    }
   }
 
   @Override
@@ -259,8 +255,9 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       }
     };
 
-    OakTransformView<IncrementalIndexRow, Long> transformView = (OakTransformView<IncrementalIndexRow, Long>) oak.createTransformView(transformer);
-    return transformView.get(incrementalIndexRow);
+    try (OakTransformView<IncrementalIndexRow, Long> transformView = oak.createTransformView(transformer)) {
+      return transformView.get(incrementalIndexRow);
+    }
   }
 
   @Override
@@ -276,8 +273,9 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       }
     };
 
-    OakTransformView<IncrementalIndexRow, Object> transformView = (OakTransformView<IncrementalIndexRow, Object>) oak.createTransformView(transformer);
-    return transformView.get(incrementalIndexRow);
+    try (OakTransformView<IncrementalIndexRow, Object> transformView = oak.createTransformView(transformer)) {
+      return transformView.get(incrementalIndexRow);
+    }
   }
 
   @Override
@@ -292,9 +290,9 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
         return agg.getDouble(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       }
     };
-
-    OakTransformView<IncrementalIndexRow, Double> transformView = (OakTransformView<IncrementalIndexRow, Double>) oak.createTransformView(transformer);
-    return transformView.get(incrementalIndexRow);
+    try (OakTransformView<IncrementalIndexRow, Double> transformView = oak.createTransformView(transformer)) {
+      return transformView.get(incrementalIndexRow);
+    }
   }
 
   @Override
@@ -310,8 +308,9 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       }
     };
 
-    OakTransformView<IncrementalIndexRow, Boolean> transformView = (OakTransformView<IncrementalIndexRow, Boolean>) oak.createTransformView(transformer);
-    return transformView.get(incrementalIndexRow);
+    try (OakTransformView<IncrementalIndexRow, Boolean> transformView = oak.createTransformView(transformer)) {
+      return transformView.get(incrementalIndexRow);
+    }
   }
 
   @Override
@@ -324,23 +323,18 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
 
     IncrementalIndexRow from = new IncrementalIndexRow(timeStart, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
     IncrementalIndexRow to = new IncrementalIndexRow(timeEnd + 1, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
-    OakMap subMap = oak.subMap(from, true, to, false);
-    if (descending == true) {
-      subMap = subMap.descendingMap();
-    }
+    try (OakMap subMap = oak.subMap(from, true, to, false, descending);
+         OakBufferView bufferView = subMap.createBufferView()) {
 
-    OakBufferView bufferView = subMap.createBufferView();
-    OakCloseableIterator<OakRBuffer> keysIterator = bufferView.keysIterator();
-    return new Iterable<IncrementalIndexRow>() {
-      @Override
-      public Iterator<IncrementalIndexRow> iterator()
-      {
-        return Iterators.transform(
+      OakCloseableIterator<OakRBuffer> keysIterator = bufferView.keysIterator();
+      return () -> Iterators.transform(
           keysIterator,
           oakRBuffer -> new OakIncrementalIndexRow(oakRBuffer, dimensionDescsList)
-        );
-      }
-    };
+      );
+
+
+    }
+
   }
 
   @Override

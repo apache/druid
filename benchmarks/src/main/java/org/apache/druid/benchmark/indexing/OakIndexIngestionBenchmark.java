@@ -39,6 +39,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.infra.Blackhole;
@@ -100,6 +101,13 @@ public class OakIndexIngestionBenchmark
   public void setup2()
   {
     incIndex = makeIncIndex();
+  }
+
+
+  @TearDown(Level.Invocation)
+  public void tearDown()
+  {
+    incIndex.close();
   }
 
   private IncrementalIndex makeIncIndex()

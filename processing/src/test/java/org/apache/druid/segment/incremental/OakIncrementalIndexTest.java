@@ -68,6 +68,7 @@ public class OakIncrementalIndexTest
     Assert.assertEquals(index.size(), rows.length);
     Assert.assertEquals(index.getMinTimeMillis(), minTime);
     Assert.assertEquals(index.getMaxTimeMillis(), minTime + 4000);
+    index.close();
   }
 
   @Test
@@ -99,6 +100,7 @@ public class OakIncrementalIndexTest
     Assert.assertEquals(index.getMinTimeMillis(), minTime);
     Assert.assertEquals(index.getMaxTimeMillis(), minTime + 4000);
     Assert.assertEquals(index.getDimensionNames().size(), 4);
+    index.close();
   }
 
   @Test
@@ -144,6 +146,7 @@ public class OakIncrementalIndexTest
 
     keySet.forEach(keySetConsumer);
     Assert.assertEquals(index.size(), rows.length);
+    index.close();
   }
 
   @Test
@@ -211,7 +214,7 @@ public class OakIncrementalIndexTest
 
     timeRangeIterable.forEach(timeRangeConsumer);
     Assert.assertEquals(index.size(), rows.length);
-
+    index.close();
   }
 
   @Test
@@ -268,6 +271,7 @@ public class OakIncrementalIndexTest
 
     iterable.forEach(rowConsumer);
     Assert.assertEquals(index.size(), rows.length);
+    index.close();
   }
 
   @Test
@@ -320,6 +324,7 @@ public class OakIncrementalIndexTest
 
     iterable.forEach(rowConsumer);
     Assert.assertEquals(index.size(), rows.length * insertionTrials);
+    index.close();
   }
 
   private OakIncrementalIndex getIndex(boolean rollup)
