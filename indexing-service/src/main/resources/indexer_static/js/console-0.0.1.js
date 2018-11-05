@@ -99,11 +99,11 @@ var shutdownSupervisor = function(supervisorId) {
 }
 
 var disableWorker = function(scheme, host) {
-  if(confirm('Do you really want to disable: ' + host)) {
+  if(confirm('Do you really want to disable: '+scheme+'://'+host)) {
     $.ajax({
-      type:'POST',
-      crossDomain: true,
-      url: scheme + '://' + host + '/druid/worker/v1/disable',
+      type: 'POST',
+      url: '/druid/indexer/v1/remote-worker/'+scheme+'/'+host+'/disable',
+      dataType: 'json',
       data: ''
     }).done(function(data) {
       setTimeout(function() { location.reload(true) }, 750);
@@ -114,11 +114,11 @@ var disableWorker = function(scheme, host) {
 }
 
 var enableWorker = function(scheme, host) {
-  if(confirm('Do you really want to enable: ' + host)) {
+  if(confirm('Do you really want to enable: '+scheme+'://'+host)) {
     $.ajax({
-      type:'POST',
-      crossDomain: true,
-      url: scheme + '://' + host + '/druid/worker/v1/enable',
+      type: 'POST',
+      url: '/druid/indexer/v1/remote-worker/'+scheme+'/'+host+'/enable',
+      dataType: 'json',
       data: ''
     }).done(function(data) {
       setTimeout(function() { location.reload(true) }, 750);
@@ -204,9 +204,9 @@ $(document).ready(function() {
       var host = data[i].worker.host;
       var isDisabled = data[i].worker.version === "";
       if (isDisabled) {
-        data[i].more = '<a onclick="enableWorker(\''+ scheme +'\', \''+ host +'\');">enable</a>'
+        data[i].more = '<a onclick="enableWorker(\''+scheme+'\',\''+host+'\');">enable</a>'
       } else {
-        data[i].more = '<a onclick="disableWorker(\''+ scheme +'\', \''+ host +'\');">disable</a>'
+        data[i].more = '<a onclick="disableWorker(\''+scheme+'\',\''+host+'\');">disable</a>'
       }
     }
     buildTable(data, $('#workerTable'));
