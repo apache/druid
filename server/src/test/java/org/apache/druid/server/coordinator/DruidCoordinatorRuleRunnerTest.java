@@ -21,8 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
@@ -48,7 +46,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -78,16 +78,16 @@ public class DruidCoordinatorRuleRunnerTest
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
 
     DateTime start = DateTimes.of("2012-01-01");
-    availableSegments = Lists.newArrayList();
+    availableSegments = new ArrayList<>();
     for (int i = 0; i < 24; i++) {
       availableSegments.add(
           new DataSegment(
               "test",
               new Interval(start, start.plusHours(1)),
               DateTimes.nowUtc().toString(),
-              Maps.newHashMap(),
-              Lists.newArrayList(),
-              Lists.newArrayList(),
+              new HashMap<>(),
+              new ArrayList<>(),
+              new ArrayList<>(),
               NoneShardSpec.instance(),
               IndexIO.CURRENT_VERSION_ID,
               1
@@ -937,7 +937,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     LoadQueuePeon anotherMockPeon = EasyMock.createMock(LoadQueuePeon.class);
     EasyMock.expect(anotherMockPeon.getLoadQueueSize()).andReturn(10L).atLeastOnce();
-    EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(Sets.newHashSet()).anyTimes();
+    EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(new HashSet<>()).anyTimes();
 
     EasyMock.replay(anotherMockPeon);
 
@@ -1065,9 +1065,9 @@ public class DruidCoordinatorRuleRunnerTest
         "test",
         Intervals.of("2012-02-01/2012-02-02"),
         DateTimes.nowUtc().toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         1,
         0
@@ -1224,9 +1224,9 @@ public class DruidCoordinatorRuleRunnerTest
         "test",
         Intervals.of("2012-02-01/2012-02-02"),
         DateTimes.nowUtc().toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         1,
         0
@@ -1310,9 +1310,9 @@ public class DruidCoordinatorRuleRunnerTest
         "test",
         Intervals.of("2012-01-01/2012-01-02"),
         "1",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         IndexIO.CURRENT_VERSION_ID,
         1
@@ -1321,9 +1321,9 @@ public class DruidCoordinatorRuleRunnerTest
         "test",
         Intervals.of("2012-01-01/2012-01-02"),
         "2",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         IndexIO.CURRENT_VERSION_ID,
         1

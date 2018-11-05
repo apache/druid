@@ -28,7 +28,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
@@ -95,6 +94,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -469,9 +469,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, Object> returnMap = Maps.newHashMap();
-    Map<String, Object> totalsMap = Maps.newHashMap();
-    Map<String, Object> averagesMap = Maps.newHashMap();
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> totalsMap = new HashMap<>();
+    Map<String, Object> averagesMap = new HashMap<>();
 
     totalsMap.put(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -533,7 +533,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
-    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         savedParseExceptions);
     if (buildSegmentsParseExceptionMessages != null) {
@@ -544,7 +544,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
   private Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metricsMap = Maps.newHashMap();
+    Map<String, Object> metricsMap = new HashMap<>();
     metricsMap.put(
         RowIngestionMeters.BUILD_SEGMENTS,
         rowIngestionMeters.getTotals()

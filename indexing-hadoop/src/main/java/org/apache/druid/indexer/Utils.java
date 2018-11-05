@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -38,6 +37,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -126,7 +126,7 @@ public class Utils
   public static String getFailureMessage(Job failedJob, ObjectMapper jsonMapper)
   {
     try {
-      Map<String, String> taskDiagsMap = Maps.newHashMap();
+      Map<String, String> taskDiagsMap = new HashMap<>();
       TaskCompletionEvent[] completionEvents = failedJob.getTaskCompletionEvents(0, 100);
       for (TaskCompletionEvent tce : completionEvents) {
         String[] taskDiags = failedJob.getTaskDiagnostics(tce.getTaskAttemptId());

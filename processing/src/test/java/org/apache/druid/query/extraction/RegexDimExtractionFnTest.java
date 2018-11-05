@@ -27,6 +27,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -58,7 +59,7 @@ public class RegexDimExtractionFnTest
   {
     String regex = "/([^/]+)/";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
-    Set<String> extracted = Sets.newLinkedHashSet();
+    Set<String> extracted = new LinkedHashSet<>();
 
     for (String path : paths) {
       extracted.add(extractionFn.apply(path));
@@ -73,7 +74,7 @@ public class RegexDimExtractionFnTest
   {
     String regex = "^/([^/]+/[^/]+)(/|$)";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
-    Set<String> extracted = Sets.newLinkedHashSet();
+    Set<String> extracted = new LinkedHashSet<>();
 
     for (String path : paths) {
       extracted.add(extractionFn.apply(path));
@@ -93,7 +94,7 @@ public class RegexDimExtractionFnTest
   {
     String regex = "/([^/]{4})/";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, 0, true, null);
-    Set<String> extracted = Sets.newLinkedHashSet();
+    Set<String> extracted = new LinkedHashSet<>();
 
     for (String path : paths) {
       extracted.add(extractionFn.apply(path));
@@ -110,7 +111,7 @@ public class RegexDimExtractionFnTest
   {
     String regex = "^/([^/]+)/([^/]+)";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, 2, true, null);
-    Set<String> extracted = Sets.newLinkedHashSet();
+    Set<String> extracted = new LinkedHashSet<>();
 
     for (String path : paths) {
       extracted.add(extractionFn.apply(path));
@@ -130,7 +131,7 @@ public class RegexDimExtractionFnTest
   {
     String regex = "(.)";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
-    Set<String> extracted = Sets.newLinkedHashSet();
+    Set<String> extracted = new LinkedHashSet<>();
 
     for (String testString : testStrings) {
       extracted.add(extractionFn.apply(testString));
@@ -191,7 +192,7 @@ public class RegexDimExtractionFnTest
   {
     String regex = "(a\\w*)";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "foobar");
-    Set<String> extracted = Sets.newLinkedHashSet();
+    Set<String> extracted = new LinkedHashSet<>();
 
     for (String testString : testStrings) {
       extracted.add(extractionFn.apply(testString));
@@ -210,7 +211,7 @@ public class RegexDimExtractionFnTest
     Assert.assertArrayEquals(expectedCacheKey, cacheKey);
 
     ExtractionFn nullExtractionFn = new RegexDimExtractionFn(regex, true, null);
-    Set<String> extracted2 = Sets.newLinkedHashSet();
+    Set<String> extracted2 = new LinkedHashSet<>();
 
     for (String testString : testStrings) {
       extracted2.add(nullExtractionFn.apply(testString));

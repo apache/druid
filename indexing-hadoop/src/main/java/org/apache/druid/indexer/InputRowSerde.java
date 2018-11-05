@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
@@ -49,6 +48,7 @@ import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -74,7 +74,7 @@ public class InputRowSerde
 
   public static Map<String, IndexSerdeTypeHelper> getTypeHelperMap(DimensionsSpec dimensionsSpec)
   {
-    Map<String, IndexSerdeTypeHelper> typeHelperMap = Maps.newHashMap();
+    Map<String, IndexSerdeTypeHelper> typeHelperMap = new HashMap<>();
     for (DimensionSchema dimensionSchema : dimensionsSpec.getDimensions()) {
       IndexSerdeTypeHelper typeHelper;
       switch (dimensionSchema.getValueType()) {
@@ -416,10 +416,10 @@ public class InputRowSerde
       //Read timestamp
       long timestamp = in.readLong();
 
-      Map<String, Object> event = Maps.newHashMap();
+      Map<String, Object> event = new HashMap<>();
 
       //Read dimensions
-      List<String> dimensions = Lists.newArrayList();
+      List<String> dimensions = new ArrayList<>();
       int dimNum = WritableUtils.readVInt(in);
       for (int i = 0; i < dimNum; i++) {
         String dimension = readString(in);

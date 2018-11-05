@@ -62,6 +62,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -305,8 +306,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     DataSegment segmentToMove = sourceSegments.get(2);
 
-    List<String> sourceSegKeys = Lists.newArrayList();
-    List<String> destSegKeys = Lists.newArrayList();
+    List<String> sourceSegKeys = new ArrayList<>();
+    List<String> destSegKeys = new ArrayList<>();
 
     for (DataSegment segment : sourceSegments) {
       sourceSegKeys.add(announceBatchSegmentsForServer(source, ImmutableSet.of(segment), zkPathsConfig, jsonMapper));

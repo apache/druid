@@ -21,7 +21,6 @@ package org.apache.druid.server.emitter;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
@@ -45,6 +44,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -137,7 +137,7 @@ public class EmitterModule implements Module
       }
 
       if (emitter == null) {
-        List<String> knownTypes = Lists.newArrayList();
+        List<String> knownTypes = new ArrayList<>();
         for (Binding<Emitter> binding : emitterBindings) {
           final Annotation annotation = binding.getKey().getAnnotation();
           if (annotation != null) {

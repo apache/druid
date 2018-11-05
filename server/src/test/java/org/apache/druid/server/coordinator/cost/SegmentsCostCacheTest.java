@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.cost;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -186,8 +185,8 @@ public class SegmentsCostCacheTest
         interval,
         UUID.randomUUID().toString(),
         new ConcurrentHashMap<>(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         null,
         0,
         size

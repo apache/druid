@@ -25,11 +25,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.inject.Inject;
@@ -80,11 +78,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
@@ -216,7 +217,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
     private final Query<T> downstreamQuery;
-    private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = Maps.newHashMap();
+    private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final List<Interval> intervals;
 
     SpecificQueryRunnable(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
@@ -297,8 +298,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
           intervals.stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
       );
 
-      final Set<ServerToSegment> segments = Sets.newLinkedHashSet();
-      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = Maps.newHashMap();
+      final Set<ServerToSegment> segments = new LinkedHashSet<>();
+      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks = DimFilterUtils.filterShards(
@@ -405,7 +406,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (queryCacheKey == null) {
         return Collections.emptyList();
       }
-      final List<Pair<Interval, byte[]>> alreadyCachedResults = Lists.newArrayList();
+      final List<Pair<Interval, byte[]>> alreadyCachedResults = new ArrayList<>();
       Map<ServerToSegment, Cache.NamedKey> perSegmentCacheKeys = computePerSegmentCacheKeys(segments, queryCacheKey);
       // Pull cached segments from cache and remove from set of segments to query
       final Map<Cache.NamedKey, byte[]> cachedValues = computeCachedValues(perSegmentCacheKeys);
@@ -474,7 +475,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(Set<ServerToSegment> segments)
     {
-      final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = Maps.newTreeMap();
+      final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (ServerToSegment serverToSegment : segments) {
         final QueryableDruidServer queryableDruidServer = serverToSegment.getServer().pick();
 

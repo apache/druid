@@ -20,7 +20,6 @@
 package org.apache.druid.collections;
 
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.After;
 import org.junit.Before;
@@ -28,6 +27,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -153,7 +153,7 @@ public class BlockingPoolTest
           @Override
           public List<ReferenceCountingResourceHolder<Integer>> call()
           {
-            List<ReferenceCountingResourceHolder<Integer>> result = Lists.newArrayList();
+            List<ReferenceCountingResourceHolder<Integer>> result = new ArrayList<>();
             for (int i = 0; i < limit1; i++) {
               result.add(pool.take(10));
             }
@@ -167,7 +167,7 @@ public class BlockingPoolTest
           @Override
           public List<ReferenceCountingResourceHolder<Integer>> call()
           {
-            List<ReferenceCountingResourceHolder<Integer>> result = Lists.newArrayList();
+            List<ReferenceCountingResourceHolder<Integer>> result = new ArrayList<>();
             for (int i = 0; i < limit2; i++) {
               result.add(pool.take(10));
             }

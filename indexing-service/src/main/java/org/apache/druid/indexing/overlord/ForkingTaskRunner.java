@@ -75,6 +75,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -151,7 +152,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       return ImmutableList.of();
     }
 
-    final List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = Lists.newArrayList();
+    final List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = new ArrayList<>();
     for (final String taskId : taskRestoreInfo.getRunningTasks()) {
       try {
         final File taskFile = new File(taskConfig.getTaskDir(taskId), "task.json");
@@ -275,7 +276,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 throw new ISE("TaskInfo already has processHolder for task[%s]!", task.getId());
                               }
 
-                              final List<String> command = Lists.newArrayList();
+                              final List<String> command = new ArrayList<>();
                               final String taskClasspath;
                               if (task.getClasspathPrefix() != null && !task.getClasspathPrefix().isEmpty()) {
                                 taskClasspath = Joiner.on(File.pathSeparator).join(
@@ -608,7 +609,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
     synchronized (tasks) {
-      final List<TaskRunnerWorkItem> ret = Lists.newArrayList();
+      final List<TaskRunnerWorkItem> ret = new ArrayList<>();
       for (final ForkingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
         if (taskWorkItem.processHolder != null) {
           ret.add(taskWorkItem);
@@ -622,7 +623,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
     synchronized (tasks) {
-      final List<TaskRunnerWorkItem> ret = Lists.newArrayList();
+      final List<TaskRunnerWorkItem> ret = new ArrayList<>();
       for (final ForkingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
         if (taskWorkItem.processHolder == null) {
           ret.add(taskWorkItem);
@@ -702,7 +703,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private void saveRunningTasks()
   {
     final File restoreFile = getRestoreFile();
-    final List<String> theTasks = Lists.newArrayList();
+    final List<String> theTasks = new ArrayList<>();
     for (ForkingTaskRunnerWorkItem forkingTaskRunnerWorkItem : tasks.values()) {
       theTasks.add(forkingTaskRunnerWorkItem.getTaskId());
     }

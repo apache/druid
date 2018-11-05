@@ -21,23 +21,21 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Sets;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
-
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
-import javax.annotation.Nullable;
 
 /**
  * Returns a union of a given list of sketches.
@@ -94,7 +92,7 @@ public class HllSketchUnionPostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    final Set<String> dependentFields = Sets.newLinkedHashSet();
+    final Set<String> dependentFields = new LinkedHashSet<>();
     for (final PostAggregator field : fields) {
       dependentFields.addAll(field.getDependentFields());
     }

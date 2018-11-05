@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -61,6 +60,8 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +75,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
 
   private static final ObjectMapper objectMapper = new DefaultObjectMapper();
   private static final String TEST_ID = "test-id";
-  private static final List<String> TEST_IDS = Lists.newArrayList("test-id1", "test-id2", "test-id3", "test-id4");
+  private static final List<String> TEST_IDS = Arrays.asList("test-id1", "test-id2", "test-id3", "test-id4");
   private static final String TEST_HOST = "test-host";
   private static final int TEST_PORT = 1234;
   private static final int TEST_TLS_PORT = -1;
@@ -694,8 +695,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "stop")));
       futures.add(client.stopAsync(testId, false));
@@ -730,8 +731,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "resume")));
       futures.add(client.resumeAsync(testId));
@@ -767,8 +768,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<Map<String, String>>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<Map<String, String>>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "pause")));
       futures.add(client.pauseAsync(testId));
@@ -804,8 +805,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<SeekableStreamIndexTask.Status>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<SeekableStreamIndexTask.Status>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "status")));
       futures.add(client.getStatusAsync(testId));
@@ -842,8 +843,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<DateTime>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<DateTime>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "time/start")));
       futures.add(client.getStartTimeAsync(testId));
@@ -879,8 +880,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<Map<String, String>>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<Map<String, String>>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "offsets/current")));
       futures.add(client.getCurrentOffsetsAsync(testId, false));
@@ -916,8 +917,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<Map<String, String>>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<Map<String, String>>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "offsets/end")));
       futures.add(client.getEndOffsetsAsync(testId));
@@ -953,8 +954,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(
           URL_FORMATTER,
@@ -996,8 +997,8 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).times(numRequests);
     replayAll();
 
-    List<URL> expectedUrls = Lists.newArrayList();
-    List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(
           new URL(

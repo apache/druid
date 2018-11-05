@@ -26,7 +26,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -69,8 +68,8 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
 
-  private final List<File> files = Lists.newArrayList();
-  private final List<File> dictionaryFiles = Lists.newArrayList();
+  private final List<File> files = new ArrayList<>();
+  private final List<File> dictionaryFiles = new ArrayList<>();
   private final boolean sortHasNonGroupingFields;
 
   private boolean spillingAllowed = false;

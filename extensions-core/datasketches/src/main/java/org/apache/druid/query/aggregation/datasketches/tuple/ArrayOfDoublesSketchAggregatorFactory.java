@@ -40,7 +40,6 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.NilColumnValueSelector;
 
 import javax.annotation.Nullable;
@@ -101,7 +100,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     // input is raw data (key and array of values), use build aggregator
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
-    if (DimensionSelectorUtils.isNilSelector(keySelector)) {
+    if (DimensionSelector.isNilSelector(keySelector)) {
       return new ArrayOfDoublesSketchNoOpAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
@@ -131,7 +130,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     // input is raw data (key and array of values), use build aggregator
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
-    if (DimensionSelectorUtils.isNilSelector(keySelector)) {
+    if (DimensionSelector.isNilSelector(keySelector)) {
       return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();

@@ -69,7 +69,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     Collections.sort(values);
     List<Integer> expected = values.subList(0, limit);
 
-    List<Integer> actual = Lists.newArrayList();
+    List<Integer> actual = new ArrayList<>();
     for (int i = 0; i < limit; i++) {
       int min = heap.removeMin();
       actual.add(min);
@@ -86,11 +86,11 @@ public class ByteBufferMinMaxOffsetHeapTest
 
     Random rng = new Random(999);
 
-    ArrayList<Integer> values = Lists.newArrayList();
+    ArrayList<Integer> values = new ArrayList<>();
     for (int i = 0; i < 10000; i++) {
       values.add(rng.nextInt(1000000));
     }
-    ArrayList<Integer> deletedValues = Lists.newArrayList();
+    ArrayList<Integer> deletedValues = new ArrayList<>();
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
@@ -126,7 +126,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     Assert.assertTrue(heap.getHeapSize() <= limit);
     List<Integer> expected = values.subList(0, heap.getHeapSize());
 
-    List<Integer> actual = Lists.newArrayList();
+    List<Integer> actual = new ArrayList<>();
     int initialHeapSize = heap.getHeapSize();
     for (int i = 0; i < initialHeapSize; i++) {
       int min = heap.removeMin();
@@ -143,11 +143,11 @@ public class ByteBufferMinMaxOffsetHeapTest
 
     Random rng = new Random(9999);
 
-    ArrayList<Integer> values = Lists.newArrayList();
+    ArrayList<Integer> values = new ArrayList<>();
     for (int i = 0; i < 20000; i++) {
       values.add(rng.nextInt(1000000));
     }
-    ArrayList<Integer> deletedValues = Lists.newArrayList();
+    ArrayList<Integer> deletedValues = new ArrayList<>();
 
     ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
@@ -183,7 +183,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     Assert.assertTrue(heap.getHeapSize() <= limit);
     List<Integer> expected = values.subList(0, heap.getHeapSize());
 
-    List<Integer> actual = Lists.newArrayList();
+    List<Integer> actual = new ArrayList<>();
     int initialHeapSize = heap.getHeapSize();
     for (int i = 0; i < initialHeapSize; i++) {
       int min = heap.removeMin();
@@ -218,7 +218,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     Collections.sort(values);
     values.rem(12);
 
-    List<Integer> actual = Lists.newArrayList();
+    List<Integer> actual = new ArrayList<>();
     for (int i = 0; i < values.size(); i++) {
       int min = heap.removeMin();
       actual.add(min);
@@ -252,7 +252,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     values.rem(2);
     Assert.assertTrue(heap.isIntact());
 
-    List<Integer> actual = Lists.newArrayList();
+    List<Integer> actual = new ArrayList<>();
     for (int i = 0; i < values.size(); i++) {
       int min = heap.removeMin();
       actual.add(min);

@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -822,7 +821,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         payload
     );
 
-    List<TaskReportData<PartitionType, SequenceType>> taskReports = Lists.newArrayList();
+    List<TaskReportData<PartitionType, SequenceType>> taskReports = new ArrayList<>();
 
     try {
       for (TaskGroup taskGroup : taskGroups.values()) {
@@ -918,7 +917,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private Map<String, Map<String, Object>> getCurrentTotalStats()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    Map<String, Map<String, Object>> allStats = Maps.newHashMap();
+    Map<String, Map<String, Object>> allStats = new HashMap<>();
     final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
     final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
 
@@ -963,7 +962,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     for (int i = 0; i < results.size(); i++) {
       StatsFromTaskResult result = results.get(i);
       if (result != null) {
-        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> Maps.newHashMap());
+        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> new HashMap<>());
         groupMap.put(result.getTaskId(), result.getStats());
       } else {
         Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
@@ -1250,8 +1249,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private void discoverTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
     int taskCount = 0;
-    List<String> futureTaskIds = Lists.newArrayList();
-    List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    List<String> futureTaskIds = new ArrayList<>();
+    List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     List<Task> tasks = taskStorage.getActiveTasks();
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
@@ -1782,8 +1781,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   private void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException
   {
-    final List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
-    final List<String> futureTaskIds = Lists.newArrayList();
+    final List<ListenableFuture<Boolean>> futures = new ArrayList<>();
+    final List<String> futureTaskIds = new ArrayList<>();
 
     // update status (and startTime if unknown) of current tasks in taskGroups
     for (TaskGroup group : taskGroups.values()) {
@@ -1849,8 +1848,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   private void checkTaskDuration() throws ExecutionException, InterruptedException, TimeoutException
   {
-    final List<ListenableFuture<Map<PartitionType, SequenceType>>> futures = Lists.newArrayList();
-    final List<Integer> futureGroupIds = Lists.newArrayList();
+    final List<ListenableFuture<Map<PartitionType, SequenceType>>> futures = new ArrayList<>();
+    final List<Integer> futureGroupIds = new ArrayList<>();
 
     for (Entry<Integer, TaskGroup> entry : taskGroups.entrySet()) {
       Integer groupId = entry.getKey();
@@ -1961,7 +1960,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
 
     // 2) Pause running tasks
-    final List<ListenableFuture<Map<PartitionType, SequenceType>>> pauseFutures = Lists.newArrayList();
+    final List<ListenableFuture<Map<PartitionType, SequenceType>>> pauseFutures = new ArrayList<>();
     final List<String> pauseTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
     for (final String taskId : pauseTaskIds) {
       pauseFutures.add(taskClient.pauseAsync(taskId));
@@ -1999,7 +1998,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
             // 4) Set the end offsets for each task to the values from step 3 and resume the tasks. All the tasks should
             //    finish reading and start publishing within a short period, depending on how in sync the tasks were.
-            final List<ListenableFuture<Boolean>> setEndOffsetFutures = Lists.newArrayList();
+            final List<ListenableFuture<Boolean>> setEndOffsetFutures = new ArrayList<>();
             final List<String> setEndOffsetTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
 
             if (setEndOffsetTaskIds.isEmpty()) {
@@ -2064,7 +2063,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       return Futures.immediateFuture(null);
     }
 
-    final List<ListenableFuture<Void>> futures = Lists.newArrayList();
+    final List<ListenableFuture<Void>> futures = new ArrayList<>();
     for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
       final String taskId = entry.getKey();
       final TaskData taskData = entry.getValue();
@@ -2081,14 +2080,14 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private void checkPendingCompletionTasks()
       throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<?>> futures = Lists.newArrayList();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
 
     for (Entry<Integer, CopyOnWriteArrayList<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
 
       boolean stopTasksInTaskGroup = false;
       Integer groupId = pendingGroupList.getKey();
       CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingGroupList.getValue();
-      List<TaskGroup> toRemove = Lists.newArrayList();
+      List<TaskGroup> toRemove = new ArrayList<>();
 
       for (TaskGroup group : taskGroupList) {
         boolean foundSuccess = false, entireTaskGroupFailed = false;
@@ -2163,7 +2162,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<?>> futures = Lists.newArrayList();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
     Iterator<Entry<Integer, TaskGroup>> iTaskGroups = taskGroups.entrySet().iterator();
     while (iTaskGroups.hasNext()) {
       Entry<Integer, TaskGroup> taskGroupEntry = iTaskGroups.next();

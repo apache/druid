@@ -57,10 +57,12 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.TreeMap;
 
 /**
  */
@@ -153,9 +155,9 @@ public class GroupByQueryEngine
     private final BufferAggregator[] aggregators;
     private final PositionMaintainer positionMaintainer;
 
-    private final Map<ByteBuffer, Integer> positions = Maps.newTreeMap();
+    private final Map<ByteBuffer, Integer> positions = new TreeMap<>();
     // GroupBy queries tend to do a lot of reads from this. We co-store a hash map to make those reads go faster.
-    private final Map<ByteBuffer, Integer> positionsHash = Maps.newHashMap();
+    private final Map<ByteBuffer, Integer> positionsHash = new HashMap<>();
 
     public RowUpdater(
         ByteBuffer metricValues,
@@ -198,7 +200,7 @@ public class GroupByQueryEngine
             List<ByteBuffer> unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
             if (unaggregatedBuffers != null) {
               if (retVal == null) {
-                retVal = Lists.newArrayList();
+                retVal = new ArrayList<>();
               }
               retVal.addAll(unaggregatedBuffers);
             }

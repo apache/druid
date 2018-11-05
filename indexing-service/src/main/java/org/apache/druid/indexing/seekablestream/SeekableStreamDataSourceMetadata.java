@@ -21,10 +21,10 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Maps;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.IAE;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -79,7 +79,7 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionType, SequenceTy
 
     if (that.getSeekableStreamPartitions().getName().equals(seekableStreamPartitions.getName())) {
       // Same topic, merge offsets.
-      final Map<PartitionType, SequenceType> newMap = Maps.newHashMap();
+      final Map<PartitionType, SequenceType> newMap = new HashMap<>();
 
       for (Map.Entry<PartitionType, SequenceType> entry : seekableStreamPartitions.getMap().entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
@@ -113,7 +113,7 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionType, SequenceTy
 
     if (that.getSeekableStreamPartitions().getName().equals(seekableStreamPartitions.getName())) {
       // Same stream, remove partitions present in "that" from "this"
-      final Map<PartitionType, SequenceType> newMap = Maps.newHashMap();
+      final Map<PartitionType, SequenceType> newMap = new HashMap<>();
 
       for (Map.Entry<PartitionType, SequenceType> entry : seekableStreamPartitions.getMap().entrySet()) {
         if (!that.getSeekableStreamPartitions().getMap().containsKey(entry.getKey())) {

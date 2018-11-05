@@ -390,6 +390,82 @@ Shuts down a task.
 
 Shuts down all tasks for a dataSource.
 
+### Supervisors
+
+#### GET
+
+* `/druid/indexer/v1/supervisor`
+
+Returns a list of strings of the currently active supervisor ids.
+
+* `/druid/indexer/v1/supervisor?full`
+
+Returns a list of objects of the currently active supervisors.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+
+* `/druid/indexer/v1/supervisor/<supervisorId>`
+
+Returns the current spec for the supervisor with the provided ID.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/status`
+
+Returns the current status of the supervisor with the provided ID.
+
+* `/druid/indexer/v1/supervisor/history`
+
+Returns an audit history of specs for all supervisors (current and past).
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/history`
+
+Returns an audit history of specs for the supervisor with the provided ID.
+
+#### POST
+
+* `/druid/indexer/v1/supervisor`
+
+Create a new supervisor or update an existing one.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/suspend`
+
+Suspend the current running supervisor of the provided ID. Responds with updated SupervisorSpec.
+
+* `/druid/indexer/v1/supervisor/suspendAll`
+
+Suspend all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/resume`
+
+Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
+
+* `/druid/indexer/v1/supervisor/resumeAll`
+
+Resume all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/reset`
+
+Reset the specified supervisor.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/terminate`
+
+Terminate a supervisor of the provided ID.
+
+* `/druid/indexer/v1/supervisor/terminateAll`
+
+Terminate all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/shutdown`
+
+Shutdown a supervisor.
+
+<div class="note caution">
+This API is deprecated and will be removed in future releases.
+Please use the equivalent 'terminate' instead.
+</div>
+
 ## MiddleManager
 
 The MiddleManager does not have any API endpoints beyond the [common endpoints](#common).

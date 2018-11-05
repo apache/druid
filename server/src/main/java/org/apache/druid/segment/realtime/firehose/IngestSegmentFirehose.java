@@ -49,6 +49,7 @@ import org.apache.druid.utils.Runnables;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +96,7 @@ public class IngestSegmentFirehose implements Firehose
                             final BaseLongColumnValueSelector timestampColumnSelector =
                                 cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
 
-                            final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
+                            final Map<String, DimensionSelector> dimSelectors = new HashMap<>();
                             for (String dim : dims) {
                               final DimensionSelector dimSelector = cursor
                                   .getColumnSelectorFactory()
@@ -106,7 +107,7 @@ public class IngestSegmentFirehose implements Firehose
                               }
                             }
 
-                            final Map<String, BaseObjectColumnValueSelector> metSelectors = Maps.newHashMap();
+                            final Map<String, BaseObjectColumnValueSelector> metSelectors = new HashMap<>();
                             for (String metric : metrics) {
                               final BaseObjectColumnValueSelector metricSelector =
                                   cursor.getColumnSelectorFactory().makeColumnValueSelector(metric);

@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -38,9 +37,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.NullDimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
@@ -48,6 +45,7 @@ import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -195,10 +193,10 @@ public class ExpressionSelectors
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
-      return DimensionSelectorUtils.constantSelector(baseSelector.getObject().asString(), extractionFn);
+      return DimensionSelector.constant(baseSelector.getObject().asString(), extractionFn);
     } else if (baseSelector instanceof NilColumnValueSelector) {
       // Optimization for null dimension selector.
-      return NullDimensionSelector.instance();
+      return DimensionSelector.constant(null);
     } else if (extractionFn == null) {
       class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
       {
@@ -237,7 +235,7 @@ public class ExpressionSelectors
 
   private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory)
   {
-    final Map<String, Supplier<Object>> suppliers = Maps.newHashMap();
+    final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     for (String columnName : Parser.findRequiredBindings(expression)) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);

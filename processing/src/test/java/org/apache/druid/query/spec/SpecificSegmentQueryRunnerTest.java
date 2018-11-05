@@ -21,8 +21,6 @@ package org.apache.druid.query.spec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -48,7 +46,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -93,7 +93,7 @@ public class SpecificSegmentQueryRunnerTest
     );
 
     // from accumulate
-    Map<String, Object> responseContext = Maps.newHashMap();
+    Map<String, Object> responseContext = new HashMap<>();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)
@@ -109,13 +109,13 @@ public class SpecificSegmentQueryRunnerTest
     validate(mapper, descriptor, responseContext);
 
     // from toYielder
-    responseContext = Maps.newHashMap();
+    responseContext = new HashMap<>();
     results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     results.toYielder(
         null,
         new YieldingAccumulator()
         {
-          final List lists = Lists.newArrayList();
+          final List lists = new ArrayList<>();
           @Override
           public Object accumulate(Object accumulated, Object in)
           {
@@ -171,7 +171,7 @@ public class SpecificSegmentQueryRunnerTest
         )
     );
 
-    final Map<String, Object> responseContext = Maps.newHashMap();
+    final Map<String, Object> responseContext = new HashMap<>();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
                                   .granularity(Granularities.ALL)

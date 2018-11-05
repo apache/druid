@@ -126,7 +126,7 @@ public class DataSchema
         jsonMapper.convertValue(this.parser, InputRowParser.class)
     );
 
-    final Set<String> dimensionExclusions = Sets.newHashSet();
+    final Set<String> dimensionExclusions = new HashSet<>();
     for (AggregatorFactory aggregator : aggregators) {
       dimensionExclusions.addAll(aggregator.requiredFields());
       dimensionExclusions.add(aggregator.getName());
@@ -144,7 +144,7 @@ public class DataSchema
         }
       }
       if (dimensionsSpec != null) {
-        final Set<String> metSet = Sets.newHashSet();
+        final Set<String> metSet = new HashSet<>();
         for (AggregatorFactory aggregator : aggregators) {
           metSet.add(aggregator.getName());
         }

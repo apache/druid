@@ -140,6 +140,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -550,7 +551,7 @@ public class TaskLifecycleTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
     };
     return new TaskToolboxFactory(
@@ -854,7 +855,7 @@ public class TaskLifecycleTest
     mdc.setUnusedSegments(expectedUnusedSegments);
 
     // manually create local segments files
-    List<File> segmentFiles = Lists.newArrayList();
+    List<File> segmentFiles = new ArrayList<>();
     for (DataSegment segment : mdc.getUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       file.mkdirs();

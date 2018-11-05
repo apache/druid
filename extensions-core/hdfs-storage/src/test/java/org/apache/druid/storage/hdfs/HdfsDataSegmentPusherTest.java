@@ -32,8 +32,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.Bucket;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -67,7 +65,9 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  */
@@ -150,9 +150,9 @@ public class HdfsDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         size
@@ -195,9 +195,9 @@ public class HdfsDataSegmentPusherTest
           "foo",
           Intervals.of("2015/2016"),
           "0",
-          Maps.newHashMap(),
-          Lists.newArrayList(),
-          Lists.newArrayList(),
+          new HashMap<>(),
+          new ArrayList<>(),
+          new ArrayList<>(),
           new NumberedShardSpec(i, i),
           0,
           size
@@ -301,9 +301,9 @@ public class HdfsDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         size

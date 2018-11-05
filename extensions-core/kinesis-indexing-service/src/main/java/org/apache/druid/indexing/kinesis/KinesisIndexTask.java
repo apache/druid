@@ -30,8 +30,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -326,7 +324,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       }
 
       // Set up sequenceNames.
-      final Map<String, String> sequenceNames = Maps.newHashMap();
+      final Map<String, String> sequenceNames = new HashMap<>();
       for (String partitionNum : lastOffsets.keySet()) {
         sequenceNames.put(partitionNum, StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), partitionNum));
       }
@@ -715,7 +713,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   private Set<String> assignPartitions(RecordSupplier<String, String> recordSupplier, String topic)
   {
     // Initialize consumer assignment.
-    final Set<String> assignment = Sets.newHashSet();
+    final Set<String> assignment = new HashSet<>();
     for (Map.Entry<String, String> entry : lastOffsets.entrySet()) {
       final String endOffset = endOffsets.get(entry.getKey());
       if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(endOffset)
@@ -966,7 +964,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
-    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         savedParseExceptions
     );
@@ -978,7 +976,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
   private Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metrics = Maps.newHashMap();
+    Map<String, Object> metrics = new HashMap<>();
     metrics.put(
         RowIngestionMeters.BUILD_SEGMENTS,
         rowIngestionMeters.getTotals()
@@ -1304,9 +1302,9 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   )
   {
     authorizationCheck(req, Action.READ);
-    Map<String, Object> returnMap = Maps.newHashMap();
-    Map<String, Object> totalsMap = Maps.newHashMap();
-    Map<String, Object> averagesMap = Maps.newHashMap();
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> totalsMap = new HashMap<>();
+    Map<String, Object> averagesMap = new HashMap<>();
 
     totalsMap.put(
         RowIngestionMeters.BUILD_SEGMENTS,

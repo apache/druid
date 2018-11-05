@@ -31,7 +31,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.io.CountingInputStream;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -66,6 +65,7 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -259,7 +259,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       }
       log.debug("Adding %,d events to firehose: %s", events.size(), serviceName);
 
-      final List<InputRow> rows = Lists.newArrayList();
+      final List<InputRow> rows = new ArrayList<>();
       for (final Map<String, Object> event : events) {
         // Might throw an exception. We'd like that to happen now, instead of while adding to the row buffer.
         rows.addAll(parser.parseBatch(event));

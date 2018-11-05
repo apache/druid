@@ -21,7 +21,6 @@ package org.apache.druid.curator.discovery;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -64,6 +63,7 @@ import org.apache.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -230,7 +230,7 @@ public class DiscoveryModule implements Module
           public void start()
           {
             if (nodes == null) {
-              nodes = Lists.newArrayList();
+              nodes = new ArrayList<>();
               for (KeyHolder<DruidNode> holder : nodesToAnnounce) {
                 nodes.add(injector.getInstance(holder.getKey()));
               }
