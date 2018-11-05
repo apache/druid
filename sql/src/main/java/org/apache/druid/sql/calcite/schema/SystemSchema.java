@@ -27,8 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
@@ -70,8 +68,6 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -419,7 +415,6 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
-    checkResponse(future, request, responseHandler);
 
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
     {
@@ -430,7 +425,8 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper
+        jsonMapper,
+        responseHandler
     );
   }
 
@@ -679,7 +675,6 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
-    checkResponse(future, request, responseHandler);
 
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
     {
@@ -690,50 +685,8 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper
-    );
-  }
-
-  private static void checkResponse(
-      ListenableFuture<InputStream> future,
-      Request request,
-      BytesAccumulatingResponseHandler responseHandler
-  )
-  {
-    Futures.addCallback(
-        future,
-        new FutureCallback<InputStream>()
-        {
-          @Override
-          public void onSuccess(@Nullable InputStream result)
-          {
-            if (responseHandler.getStatus() == HttpServletResponse.SC_NO_CONTENT) {
-              log.debug("Received NO CONTENT response from [%s]", request.getUrl().getHost());
-              return;
-            } else if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-              logRequestFailure(new RE("Unexpected Response Status."));
-              return;
-            }
-            log.debug("Finished reading response from [%s]", request.getUrl().getHost());
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            logRequestFailure(t);
-          }
-
-          private void logRequestFailure(Throwable t)
-          {
-            log.error(
-                t,
-                "Request[%s] Failed with status[%s]. Reason[%s].",
-                request.getUrl(),
-                responseHandler.getStatus(),
-                responseHandler.getDescription()
-            );
-          }
-        }
+        jsonMapper,
+        responseHandler
     );
   }
 
