@@ -35,6 +35,7 @@ import com.amazonaws.services.kinesis.model.ShardIteratorType;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.indexing.kinesis.aws.ConstructibleAWSCredentialsConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -45,8 +46,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -69,6 +71,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
   private static final long EXCEPTION_RETRY_DELAY_MS = 10000;
   private final String endpoint;
+  private static final int DEFAULT_POLL_RECORD_LIMIT = 20;
 
   private class PartitionResource
   {
@@ -372,9 +375,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     return partitionResources.keySet();
   }
 
-  @Nullable
+  @Nonnull
   @Override
-  public OrderedPartitionableRecord<String, String> poll(long timeout)
+  public List<OrderedPartitionableRecord<String, String>> poll(long timeout)
   {
     checkIfClosed();
     if (checkPartitionsStarted) {
@@ -383,23 +386,21 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     try {
-      while (true) {
-        OrderedPartitionableRecord<String, String> record = records.poll(timeout, TimeUnit.MILLISECONDS);
-        if (record == null || partitionResources.containsKey(record.getStreamPartition())) {
-          return record;
-        } else if (log.isTraceEnabled()) {
-          log.trace(
-              "Skipping stream[%s] / partition[%s] / sequenceNum[%s] because it is not in current assignment",
-              record.getStream(),
-              record.getPartitionId(),
-              record.getSequenceNumber()
-          );
-        }
-      }
+      List<OrderedPartitionableRecord<String, String>> polledRecords = new ArrayList<>();
+      Queues.drain(
+          records,
+          polledRecords,
+          Math.max(records.size(), DEFAULT_POLL_RECORD_LIMIT),
+          timeout,
+          TimeUnit.MILLISECONDS
+      );
+      return polledRecords.stream()
+                          .filter(x -> partitionResources.containsKey(x.getStreamPartition()))
+                          .collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       log.warn(e, "InterruptedException");
-      return null;
+      return Collections.emptyList();
     }
   }
 

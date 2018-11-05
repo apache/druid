@@ -41,7 +41,6 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +52,7 @@ public class KafkaRecordSupplierTest
   private static final Logger log = new Logger(KafkaRecordSupplierTest.class);
   private static String topic = "topic";
   private static long poll_timeout_millis = 1000;
+  private static int pollRetry = 5;
   private static int topicPosFix = 0;
   private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
 
@@ -211,19 +211,18 @@ public class KafkaRecordSupplierTest
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
-    Set<OrderedPartitionableRecord<Integer, Long>> supplierRecords = new HashSet<>();
-    OrderedPartitionableRecord<Integer, Long> record = recordSupplier.poll(poll_timeout_millis);
-
-    while (record != null) {
-      supplierRecords.add(record);
-      record = recordSupplier.poll(poll_timeout_millis);
-    }
-
     Set<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
 
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
+    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
+      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+      Thread.sleep(200);
+    }
+
+
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(records.size(), supplierRecords.size());
-    Assert.assertTrue(initialRecords.containsAll(supplierRecords));
+    Assert.assertEquals(initialRecords.size(), polledRecords.size());
+    Assert.assertTrue(initialRecords.containsAll(polledRecords));
 
     recordSupplier.close();
   }
@@ -251,12 +250,10 @@ public class KafkaRecordSupplierTest
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
-    Set<OrderedPartitionableRecord<Integer, Long>> supplierRecords = new HashSet<>();
-    OrderedPartitionableRecord<Integer, Long> record = recordSupplier.poll(poll_timeout_millis);
-
-    while (record != null) {
-      supplierRecords.add(record);
-      record = recordSupplier.poll(poll_timeout_millis);
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
+    for (int i = 0; polledRecords.size() != 13 && i < pollRetry; i++) {
+      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+      Thread.sleep(200);
     }
 
     // Insert data
@@ -265,16 +262,15 @@ public class KafkaRecordSupplierTest
     }
 
 
-    record = recordSupplier.poll(poll_timeout_millis);
-    while (record != null) {
-      supplierRecords.add(record);
-      record = recordSupplier.poll(poll_timeout_millis);
+    for (int i = 0; polledRecords.size() != records.size() && i < pollRetry; i++) {
+      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+      Thread.sleep(200);
     }
 
     Set<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
 
-    Assert.assertEquals(records.size(), supplierRecords.size());
-    Assert.assertTrue(initialRecords.containsAll(supplierRecords));
+    Assert.assertEquals(records.size(), polledRecords.size());
+    Assert.assertTrue(initialRecords.containsAll(polledRecords));
 
 
     recordSupplier.close();
@@ -309,19 +305,17 @@ public class KafkaRecordSupplierTest
     recordSupplier.seek(partition0, 2L);
     recordSupplier.seek(partition1, 2L);
 
-
-    Set<OrderedPartitionableRecord<Integer, Long>> supplierRecords = new HashSet<>();
-    OrderedPartitionableRecord<Integer, Long> record = recordSupplier.poll(poll_timeout_millis);
-
-    while (record != null) {
-      supplierRecords.add(record);
-      record = recordSupplier.poll(poll_timeout_millis);
-    }
-
     Set<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
 
-    Assert.assertEquals(11, supplierRecords.size());
-    Assert.assertTrue(initialRecords.containsAll(supplierRecords));
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
+    for (int i = 0; polledRecords.size() != 11 && i < pollRetry; i++) {
+      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+      Thread.sleep(200);
+    }
+
+
+    Assert.assertEquals(11, polledRecords.size());
+    Assert.assertTrue(initialRecords.containsAll(polledRecords));
 
 
     recordSupplier.close();
@@ -355,8 +349,9 @@ public class KafkaRecordSupplierTest
     Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition1));
 
     recordSupplier.seekToLatest(partitions);
-    Assert.assertNull(recordSupplier.poll(poll_timeout_millis));
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
 
+    Assert.assertEquals(Collections.emptyList(), polledRecords);
     recordSupplier.close();
   }
 
@@ -421,15 +416,22 @@ public class KafkaRecordSupplierTest
     Assert.assertEquals(4L, (long) recordSupplier.position(partition0));
     Assert.assertEquals(5L, (long) recordSupplier.position(partition1));
 
-    recordSupplier.poll(poll_timeout_millis);
-    Assert.assertTrue(recordSupplier.position(partition0) == 5L || recordSupplier.position(partition1) == 6L);
-
     recordSupplier.seekToEarliest(Collections.singleton(partition0));
     Assert.assertEquals(0L, (long) recordSupplier.position(partition0));
 
     recordSupplier.seekToLatest(Collections.singleton(partition0));
     Assert.assertEquals(11L, (long) recordSupplier.position(partition0));
 
+    long prevPos = recordSupplier.position(partition0);
+    recordSupplier.getEarliestSequenceNumber(partition0);
+    Assert.assertEquals(prevPos, (long) recordSupplier.position(partition0));
+
+    recordSupplier.getLatestSequenceNumber(partition0);
+    Assert.assertEquals(prevPos, (long) recordSupplier.position(partition0));
+
+
     recordSupplier.close();
   }
+
+
 }

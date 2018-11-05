@@ -21,19 +21,22 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -117,20 +120,20 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
         .collect(Collectors.toSet());
   }
 
+  @Nonnull
   @Override
-  public OrderedPartitionableRecord<Integer, Long> poll(long timeout)
+  public List<OrderedPartitionableRecord<Integer, Long>> poll(long timeout)
   {
-    ConsumerRecords<byte[], byte[]> polledRecords = consumer.poll(timeout);
-    if (!polledRecords.isEmpty()) {
-      ConsumerRecord<byte[], byte[]> record = polledRecords.iterator().next();
-      return new OrderedPartitionableRecord<>(
+    List<OrderedPartitionableRecord<Integer, Long>> polledRecords = new ArrayList<>();
+    for (ConsumerRecord<byte[], byte[]> record : consumer.poll(timeout)) {
+      polledRecords.add(new OrderedPartitionableRecord<>(
           record.topic(),
           record.partition(),
           record.offset(),
           record.value() == null ? null : ImmutableList.of(record.value())
-      );
+      ));
     }
-    return null;
+    return polledRecords;
   }
 
   @Override
@@ -179,15 +182,37 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     consumer.close();
   }
 
+  public static void addConsumerPropertiesFromConfig(
+      Properties properties,
+      ObjectMapper configMapper,
+      Map<String, Object> consumerProperties
+  )
+  {
+    // Extract passwords before SSL connection to Kafka
+    for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
+      String propertyKey = entry.getKey();
+      if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+        PasswordProvider configPasswordProvider = configMapper.convertValue(
+            entry.getValue(),
+            PasswordProvider.class
+        );
+        properties.setProperty(propertyKey, configPasswordProvider.getPassword());
+      } else {
+        properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
+      }
+    }
+  }
+
   private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
   {
     final Properties props = new Properties();
 
     props.setProperty("metadata.max.age.ms", "10000");
     props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", getRandomId()));
-    props.setProperty("max.poll.records", "1");
 
-    KafkaIndexTask.addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
+    addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
 
     props.setProperty("enable.auto.commit", "false");
 

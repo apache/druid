@@ -21,9 +21,10 @@ package org.apache.druid.indexing.seekablestream.common;
 
 import com.google.common.annotations.Beta;
 
-import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
@@ -89,8 +90,8 @@ public interface RecordSupplier<PartitionType, SequenceType> extends Closeable
    *
    * @return record
    */
-  @Nullable
-  OrderedPartitionableRecord<PartitionType, SequenceType> poll(long timeout);
+  @NotNull
+  List<OrderedPartitionableRecord<PartitionType, SequenceType>> poll(long timeout);
 
   /**
    * get the latest sequence number in stream

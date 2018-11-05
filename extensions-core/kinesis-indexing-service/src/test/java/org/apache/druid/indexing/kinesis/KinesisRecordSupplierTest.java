@@ -46,7 +46,6 @@ import org.junit.runner.RunWith;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
@@ -62,7 +61,7 @@ public class KinesisRecordSupplierTest
 
   private static final Logger log = new Logger(KinesisRecordSupplierTest.class);
   private static String stream = "streamm";
-  private static long poll_timeout_millis = 1000;
+  private static long poll_timeout_millis = 2000;
   private static String shardId1 = "shardId-000000000001";
   private static String shardId0 = "shardId-000000000000";
   private static int streamPosFix = 0;
@@ -214,7 +213,7 @@ public class KinesisRecordSupplierTest
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(ImmutableSet.of(shardId1, shardId0), recordSupplier.getPartitionIds(stream));
-    Assert.assertNull(recordSupplier.poll(100));
+    Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
 
     recordSupplier.close();
   }
@@ -256,17 +255,11 @@ public class KinesisRecordSupplierTest
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
-    Set<OrderedPartitionableRecord<String, String>> supplierRecords = new HashSet<>();
-    OrderedPartitionableRecord<String, String> record = recordSupplier.poll(poll_timeout_millis);
-
-    while (record != null) {
-      supplierRecords.add(record);
-      record = recordSupplier.poll(poll_timeout_millis);
-    }
+    List<OrderedPartitionableRecord<String, String>> polledRecords = recordSupplier.poll(poll_timeout_millis);
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(initialRecords.size(), supplierRecords.size());
-    Assert.assertTrue(supplierRecords.containsAll(initialRecords));
+    Assert.assertEquals(initialRecords.size(), polledRecords.size());
+    Assert.assertTrue(polledRecords.containsAll(initialRecords));
 
     recordSupplier.close();
   }
@@ -309,13 +302,7 @@ public class KinesisRecordSupplierTest
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
-    Set<OrderedPartitionableRecord<String, String>> supplierRecords = new HashSet<>();
-    OrderedPartitionableRecord<String, String> record = recordSupplier.poll(poll_timeout_millis);
-
-    while (record != null) {
-      supplierRecords.add(record);
-      record = recordSupplier.poll(poll_timeout_millis);
-    }
+    List<OrderedPartitionableRecord<String, String>> polledRecords = recordSupplier.poll(poll_timeout_millis);
 
     List<PutRecordsResultEntry> insertDataResults2 = insertData(kinesis, generateRecordsRequests(stream, 5, 12));
     insertDataResults2.forEach(entry -> initialRecords.add(new OrderedPartitionableRecord<>(
@@ -325,14 +312,10 @@ public class KinesisRecordSupplierTest
         null
     )));
 
-    record = recordSupplier.poll(poll_timeout_millis);
-    while (record != null) {
-      supplierRecords.add(record);
-      record = recordSupplier.poll(poll_timeout_millis);
-    }
+    polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
 
-    Assert.assertEquals(initialRecords.size(), supplierRecords.size());
-    Assert.assertTrue(supplierRecords.containsAll(initialRecords));
+    Assert.assertEquals(initialRecords.size(), polledRecords.size());
+    Assert.assertTrue(polledRecords.containsAll(initialRecords));
 
     recordSupplier.close();
   }
@@ -392,17 +375,11 @@ public class KinesisRecordSupplierTest
                                                                                        ))
                                                                                        .collect(Collectors.toSet());
 
-    Set<OrderedPartitionableRecord<String, String>> supplierRecords = new HashSet<>();
-    OrderedPartitionableRecord<String, String> record = recordSupplier.poll(poll_timeout_millis);
+    List<OrderedPartitionableRecord<String, String>> polledRecords = recordSupplier.poll(poll_timeout_millis);
 
-    while (record != null) {
-      supplierRecords.add(record);
-      record = recordSupplier.poll(poll_timeout_millis);
-    }
-
-    Assert.assertEquals(8, supplierRecords.size());
-    Assert.assertTrue(supplierRecords.containsAll(initialRecords1));
-    Assert.assertTrue(supplierRecords.containsAll(initialRecords2));
+    Assert.assertEquals(8, polledRecords.size());
+    Assert.assertTrue(polledRecords.containsAll(initialRecords1));
+    Assert.assertTrue(polledRecords.containsAll(initialRecords2));
 
     recordSupplier.close();
 
@@ -443,7 +420,7 @@ public class KinesisRecordSupplierTest
     Assert.assertEquals(insertDataResults.get(8).getSequenceNumber(), recordSupplier.getEarliestSequenceNumber(shard0));
 
     recordSupplier.seekToLatest(partitions);
-    Assert.assertNull(recordSupplier.poll(poll_timeout_millis));
+    Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(poll_timeout_millis));
 
     recordSupplier.close();
   }

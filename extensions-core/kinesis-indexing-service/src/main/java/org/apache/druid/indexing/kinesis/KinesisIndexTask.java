@@ -380,133 +380,139 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
             break;
           }
 
-          OrderedPartitionableRecord<String, String> record = recordSupplier.poll(POLL_TIMEOUT);
+          List<OrderedPartitionableRecord<String, String>> records = recordSupplier.poll(POLL_TIMEOUT);
 
-          if (record == null) {
+          if (records.size() == 0) {
             continue;
           }
 
-          // for the first message we receive, check that we were given a message with a sequenceNumber that matches our
-          // expected starting sequenceNumber
-          if (!verifiedAllStartingOffsets && contiguousOffsetCheck.containsKey(record.getPartitionId())) {
-            if (!contiguousOffsetCheck.get(record.getPartitionId()).equals(record.getSequenceNumber())) {
-              throw new ISE(
-                  "Starting sequenceNumber [%s] does not match expected [%s] for partition [%s]",
-                  record.getSequenceNumber(),
-                  contiguousOffsetCheck.get(record.getPartitionId()),
-                  record.getPartitionId()
+          for (OrderedPartitionableRecord<String, String> record : records) {
+
+            // for the first message we receive, check that we were given a message with a sequenceNumber that matches our
+            // expected starting sequenceNumber
+            if (!verifiedAllStartingOffsets && contiguousOffsetCheck.containsKey(record.getPartitionId())) {
+              if (!contiguousOffsetCheck.get(record.getPartitionId()).equals(record.getSequenceNumber())) {
+                throw new ISE(
+                    "Starting sequenceNumber [%s] does not match expected [%s] for partition [%s]",
+                    record.getSequenceNumber(),
+                    contiguousOffsetCheck.get(record.getPartitionId()),
+                    record.getPartitionId()
+                );
+              }
+
+              log.info(
+                  "Verified starting sequenceNumber [%s] for partition [%s]",
+                  record.getSequenceNumber(), record.getPartitionId()
+              );
+
+              contiguousOffsetCheck.remove(record.getPartitionId());
+              if (contiguousOffsetCheck.isEmpty()) {
+                verifiedAllStartingOffsets = true;
+                log.info("Verified starting offsets for all partitions");
+              }
+
+              if (ioConfig.getExclusiveStartSequenceNumberPartitions() != null
+                  && ioConfig.getExclusiveStartSequenceNumberPartitions().contains(record.getPartitionId())) {
+                log.info(
+                    "Skipping starting sequenceNumber for partition [%s] marked exclusive",
+                    record.getPartitionId()
+                );
+
+                continue;
+              }
+            }
+
+            if (log.isTraceEnabled()) {
+              log.trace(
+                  "Got topic[%s] partition[%s] offset[%s].",
+                  record.getStream(),
+                  record.getPartitionId(),
+                  record.getSequenceNumber()
               );
             }
 
-            log.info(
-                "Verified starting sequenceNumber [%s] for partition [%s]",
-                record.getSequenceNumber(), record.getPartitionId()
-            );
+            if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(record.getSequenceNumber())) {
+              lastOffsets.put(record.getPartitionId(), record.getSequenceNumber());
 
-            contiguousOffsetCheck.remove(record.getPartitionId());
-            if (contiguousOffsetCheck.isEmpty()) {
-              verifiedAllStartingOffsets = true;
-              log.info("Verified starting offsets for all partitions");
-            }
+            } else if (SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffsets.get(record.getPartitionId()))
+                       || record.getSequenceNumber().compareTo(endOffsets.get(record.getPartitionId())) <= 0) {
 
-            if (ioConfig.getExclusiveStartSequenceNumberPartitions() != null
-                && ioConfig.getExclusiveStartSequenceNumberPartitions().contains(record.getPartitionId())) {
-              log.info("Skipping starting sequenceNumber for partition [%s] marked exclusive", record.getPartitionId());
+              try {
+                final List<byte[]> valueBytess = record.getData();
 
-              continue;
-            }
-          }
-
-          if (log.isTraceEnabled()) {
-            log.trace(
-                "Got topic[%s] partition[%s] offset[%s].",
-                record.getStream(),
-                record.getPartitionId(),
-                record.getSequenceNumber()
-            );
-          }
-
-          if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(record.getSequenceNumber())) {
-            lastOffsets.put(record.getPartitionId(), record.getSequenceNumber());
-
-          } else if (SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffsets.get(record.getPartitionId()))
-                     || record.getSequenceNumber().compareTo(endOffsets.get(record.getPartitionId())) <= 0) {
-
-            try {
-              final List<byte[]> valueBytess = record.getData();
-
-              final List<InputRow> rows;
-              if (valueBytess == null || valueBytess.isEmpty()) {
-                rows = Utils.nullableListOf((InputRow) null);
-              } else {
-                rows = new ArrayList<>();
-                for (byte[] valueBytes : valueBytess) {
-                  rows.addAll(parser.parseBatch(ByteBuffer.wrap(valueBytes)));
-                }
-              }
-
-              boolean isPersistRequired = false;
-              final Map<String, Set<SegmentIdentifier>> segmentsToMoveOut = new HashMap<>();
-
-              for (final InputRow row : rows) {
-                if (row != null && withinMinMaxRecordTime(row)) {
-                  final String sequenceName = sequenceNames.get(record.getPartitionId());
-                  final AppenderatorDriverAddResult addResult = driver.add(
-                      row,
-                      sequenceName,
-                      committerSupplier,
-                      false,
-                      false
-                  );
-
-                  if (addResult.isOk()) {
-                    // If the number of rows in the segment exceeds the threshold after adding a row,
-                    // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
-                    if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
-                      segmentsToMoveOut.computeIfAbsent(sequenceName, k -> new HashSet<>())
-                                       .add(addResult.getSegmentIdentifier());
-                    }
-                    isPersistRequired |= addResult.isPersistRequired();
-                  } else {
-                    // Failure to allocate segment puts determinism at risk, bail out to be safe.
-                    // May want configurable behavior here at some point.
-                    // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
-                    throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
-                  }
-
-                  if (addResult.getParseException() != null) {
-                    handleParseException(addResult.getParseException(), record);
-                  } else {
-                    rowIngestionMeters.incrementProcessed();
-                  }
+                final List<InputRow> rows;
+                if (valueBytess == null || valueBytess.isEmpty()) {
+                  rows = Utils.nullableListOf((InputRow) null);
                 } else {
-                  rowIngestionMeters.incrementThrownAway();
+                  rows = new ArrayList<>();
+                  for (byte[] valueBytes : valueBytess) {
+                    rows.addAll(parser.parseBatch(ByteBuffer.wrap(valueBytes)));
+                  }
                 }
+
+                boolean isPersistRequired = false;
+                final Map<String, Set<SegmentIdentifier>> segmentsToMoveOut = new HashMap<>();
+
+                for (final InputRow row : rows) {
+                  if (row != null && withinMinMaxRecordTime(row)) {
+                    final String sequenceName = sequenceNames.get(record.getPartitionId());
+                    final AppenderatorDriverAddResult addResult = driver.add(
+                        row,
+                        sequenceName,
+                        committerSupplier,
+                        false,
+                        false
+                    );
+
+                    if (addResult.isOk()) {
+                      // If the number of rows in the segment exceeds the threshold after adding a row,
+                      // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
+                      if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
+                        segmentsToMoveOut.computeIfAbsent(sequenceName, k -> new HashSet<>())
+                                         .add(addResult.getSegmentIdentifier());
+                      }
+                      isPersistRequired |= addResult.isPersistRequired();
+                    } else {
+                      // Failure to allocate segment puts determinism at risk, bail out to be safe.
+                      // May want configurable behavior here at some point.
+                      // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
+                      throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
+                    }
+
+                    if (addResult.getParseException() != null) {
+                      handleParseException(addResult.getParseException(), record);
+                    } else {
+                      rowIngestionMeters.incrementProcessed();
+                    }
+                  } else {
+                    rowIngestionMeters.incrementThrownAway();
+                  }
+                }
+
+                if (isPersistRequired) {
+                  driver.persist(committerSupplier.get());
+                }
+                segmentsToMoveOut.forEach((key, value) -> driver.moveSegmentOut(
+                    key,
+                    new ArrayList<SegmentIdentifier>(value)
+                ));
+              }
+              catch (ParseException e) {
+                handleParseException(e, record);
               }
 
-              if (isPersistRequired) {
-                driver.persist(committerSupplier.get());
-              }
-              segmentsToMoveOut.forEach((key, value) -> driver.moveSegmentOut(
-                  key,
-                  new ArrayList<SegmentIdentifier>(value)
-              ));
+              lastOffsets.put(record.getPartitionId(), record.getSequenceNumber());
+
+
             }
-            catch (ParseException e) {
-              handleParseException(e, record);
+            if ((lastOffsets.get(record.getPartitionId()).equals(endOffsets.get(record.getPartitionId()))
+                 || OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(lastOffsets.get(record.getPartitionId())))
+                && assignment.remove(record.getPartitionId())) {
+
+              log.info("Finished reading stream[%s], partition[%s].", record.getStream(), record.getPartitionId());
+              assignPartitions(recordSupplier, topic, assignment);
+              stillReading = !assignment.isEmpty();
             }
-
-            lastOffsets.put(record.getPartitionId(), record.getSequenceNumber());
-
-
-          }
-          if ((lastOffsets.get(record.getPartitionId()).equals(endOffsets.get(record.getPartitionId()))
-               || OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(lastOffsets.get(record.getPartitionId())))
-              && assignment.remove(record.getPartitionId())) {
-
-            log.info("Finished reading stream[%s], partition[%s].", record.getStream(), record.getPartitionId());
-            assignPartitions(recordSupplier, topic, assignment);
-            stillReading = !assignment.isEmpty();
           }
         }
       }
