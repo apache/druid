@@ -137,7 +137,6 @@ public class WorkerResourceTest
     // Enable the worker
     res = workerResource.doEnable();
     Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
-
     theWorker = jsonMapper.readValue(cf.getData().forPath(announcementsPath), Worker.class);
     Assert.assertEquals("v1", theWorker.getVersion());
   }
