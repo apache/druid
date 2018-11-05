@@ -213,7 +213,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     this.ingestionState = IngestionState.NOT_STARTED;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig;
-    this.endOffsets.putAll(ioConfig.getEndPartitions().getMap());
+    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionSequenceNumberMap());
   }
 
   @Override
@@ -267,7 +267,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
       appenderator = appenderator0;
 
-      final String topic = ioConfig.getStartPartitions().getName();
+      final String topic = ioConfig.getStartPartitions().getStream();
 
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
@@ -277,7 +277,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
             topic,
             ioConfig.getStartPartitions()
         );
-        lastOffsets.putAll(ioConfig.getStartPartitions().getMap());
+        lastOffsets.putAll(ioConfig.getStartPartitions().getPartitionSequenceNumberMap());
       } else {
         log.info("found meatadata [%s] for [%s]", restoredMetadata, topic);
         @SuppressWarnings("unchecked")
@@ -293,22 +293,22 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
                     String.class
                 )
             );
-        lastOffsets.putAll(restoredNextPartitions.getMap());
+        lastOffsets.putAll(restoredNextPartitions.getPartitionSequenceNumberMap());
 
         // Sanity checks.
-        if (!restoredNextPartitions.getName().equals(ioConfig.getStartPartitions().getName())) {
+        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartPartitions().getStream())) {
           throw new ISE(
               "WTF?! Restored stream[%s] but expected stream[%s]",
-              restoredNextPartitions.getName(),
-              ioConfig.getStartPartitions().getName()
+              restoredNextPartitions.getStream(),
+              ioConfig.getStartPartitions().getStream()
           );
         }
 
-        if (!lastOffsets.keySet().equals(ioConfig.getStartPartitions().getMap().keySet())) {
+        if (!lastOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet())) {
           throw new ISE(
               "WTF?! Restored partitions[%s] but expected partitions[%s]",
               lastOffsets.keySet(),
-              ioConfig.getStartPartitions().getMap().keySet()
+              ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet()
           );
         }
       }
@@ -340,7 +340,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
           {
             return ImmutableMap.of(
                 METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
-                    ioConfig.getStartPartitions().getName(),
+                    ioConfig.getStartPartitions().getStream(),
                     snapshot
                 )
             );
@@ -544,7 +544,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         );
 
         // Sanity check, we should only be publishing things that match our desired end state.
-        if (!endOffsets.equals(finalPartitions.getMap())) {
+        if (!endOffsets.equals(finalPartitions.getPartitionSequenceNumberMap())) {
           throw new ISE(
               "WTF?! Driver attempted to publish invalid metadata[%s], final sequences are [%s]",
               commitMetadata,
@@ -640,7 +640,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   {
     int fetchThreads = tuningConfig.getFetchThreads() != null
                        ? tuningConfig.getFetchThreads()
-                       : Math.max(1, ioConfig.getStartPartitions().getMap().size());
+                       : Math.max(1, ioConfig.getStartPartitions().getPartitionSequenceNumberMap().size());
 
     return new KinesisRecordSupplier(
         ioConfig.getEndpoint(),
@@ -662,7 +662,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
     final int maxRowsInMemoryPerPartition = (tuningConfig.getMaxRowsInMemory() /
-                                             ioConfig.getStartPartitions().getMap().size());
+                                             ioConfig.getStartPartitions().getPartitionSequenceNumberMap().size());
     return Appenderators.createRealtime(
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
@@ -939,7 +939,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
                 getDataSource(),
                 new KinesisDataSourceMetadata(
                     new SeekableStreamPartitions<>(
-                        ioConfig.getStartPartitions().getName(),
+                        ioConfig.getStartPartitions().getStream(),
                         partitionOffsetMap
                     )
                 )

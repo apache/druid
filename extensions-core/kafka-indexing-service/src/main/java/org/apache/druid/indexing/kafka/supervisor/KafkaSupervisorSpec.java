@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
@@ -36,7 +35,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
-import java.util.List;
 import java.util.Map;
 
 public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
@@ -117,12 +115,6 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
-  public List<String> getDataSources()
-  {
-    return ImmutableList.of(getDataSchema().getDataSource());
-  }
-
-  @Override
   @JsonProperty
   public KafkaSupervisorTuningConfig getTuningConfig()
   {
@@ -163,6 +155,8 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
            "dataSchema=" + getDataSchema() +
            ", tuningConfig=" + getTuningConfig() +
            ", ioConfig=" + getIoConfig() +
+           ", context=" + getContext() +
+           ", suspend=" + isSuspended() +
            '}';
   }
 }

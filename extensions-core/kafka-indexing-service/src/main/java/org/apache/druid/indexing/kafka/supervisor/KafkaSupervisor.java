@@ -87,6 +87,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
   private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
   private static final Long NOT_SET = -1L;
+  private static final Long END_OF_PARTITION = Long.MAX_VALUE;
 
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
@@ -113,8 +114,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         mapper,
         spec,
         rowIngestionMetersFactory,
-        NOT_SET,
-        Long.MAX_VALUE,
         false,
         true
     );
@@ -139,10 +138,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     Preconditions.checkArgument(
         spec.getIoConfig()
             .getTopic()
-            .equals(((KafkaDataSourceMetadata) currentCheckPoint).getKafkaPartitions().getTopic()),
+            .equals(((KafkaDataSourceMetadata) currentCheckPoint).getSeekableStreamPartitions().getStream()),
         "Supervisor topic [%s] and topic in checkpoint [%s] does not match",
         spec.getIoConfig().getTopic(),
-        ((KafkaDataSourceMetadata) currentCheckPoint).getKafkaPartitions().getTopic()
+        ((KafkaDataSourceMetadata) currentCheckPoint).getSeekableStreamPartitions().getStream()
     );
 
     log.info("Checkpointing [%s] for taskGroup [%s]", currentCheckPoint, taskGroupId);
@@ -329,7 +328,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   @Override
   protected OrderedSequenceNumber<Long> makeSequenceNumber(
       Long seq,
-      boolean useExclusive,
       boolean isExclusive
   )
   {
@@ -381,6 +379,18 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     Long latestOffset = getOffsetFromStreamForPartition(partition, false);
     return latestOffset != null
            && KafkaSequenceNumber.of(latestOffset).compareTo(KafkaSequenceNumber.of(sequenceFromMetadata)) >= 0;
+  }
+
+  @Override
+  protected Long getNotSetMarker()
+  {
+    return NOT_SET;
+  }
+
+  @Override
+  protected Long getEndOfPartitionMarker()
+  {
+    return END_OF_PARTITION;
   }
 
   // the following are for unit testing purposes only

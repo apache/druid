@@ -32,11 +32,17 @@ import java.util.concurrent.TimeoutException;
  * (i.e. Kafka consumer, Kinesis streams)
  *
  * @param <PartitionType> Partition Number Type
- * @param <SequenceType> Sequence Number Type
+ * @param <SequenceType>  Sequence Number Type
  */
 @Beta
 public interface RecordSupplier<PartitionType, SequenceType> extends Closeable
 {
+  /**
+   * assigns the given parittions to this RecordSupplier. Previously
+   * assigned partitions will be replaced
+   *
+   * @param partitions parititions to assign
+   */
   void assign(Set<StreamPartition<PartitionType>> partitions);
 
   /**

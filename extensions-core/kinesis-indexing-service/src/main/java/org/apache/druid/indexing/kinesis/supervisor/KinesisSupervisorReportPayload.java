@@ -52,8 +52,9 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
   public String toString()
   {
     return "{" +
+           "className=" + this.getClass().getSimpleName() +
            "dataSource='" + getDataSource() + '\'' +
-           ", stream='" + getId() + '\'' +
+           ", stream='" + getStream() + '\'' +
            ", partitions=" + getPartitions() +
            ", replicas=" + getReplicas() +
            ", durationSeconds=" + getDurationSeconds() +

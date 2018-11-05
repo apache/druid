@@ -25,14 +25,14 @@ import javax.validation.constraints.NotNull;
 
 public class KafkaSequenceNumber extends OrderedSequenceNumber<Long>
 {
-  private KafkaSequenceNumber(Long sequenceNumber, boolean useExclusive, boolean isExclusive)
+  private KafkaSequenceNumber(Long sequenceNumber, boolean isExclusive)
   {
-    super(sequenceNumber, useExclusive, isExclusive);
+    super(sequenceNumber, false);
   }
 
   public static KafkaSequenceNumber of(Long sequenceNumber)
   {
-    return new KafkaSequenceNumber(sequenceNumber, false, false);
+    return new KafkaSequenceNumber(sequenceNumber, false);
   }
 
   @Override

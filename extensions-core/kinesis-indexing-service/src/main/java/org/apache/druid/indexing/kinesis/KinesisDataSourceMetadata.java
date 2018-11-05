@@ -36,14 +36,8 @@ public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<
     super(kinesisPartitions);
   }
 
-  @JsonProperty("partitions")
-  public SeekableStreamPartitions<String, String> getKinesisPartitions()
-  {
-    return getSeekableStreamPartitions();
-  }
-
   @Override
-  protected KinesisDataSourceMetadata createConcretDataSourceMetaData(String streamName, Map<String, String> newMap)
+  protected KinesisDataSourceMetadata createConcreteDataSourceMetaData(String streamName, Map<String, String> newMap)
   {
     return new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(streamName, newMap));
   }

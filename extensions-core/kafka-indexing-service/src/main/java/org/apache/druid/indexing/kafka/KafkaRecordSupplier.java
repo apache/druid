@@ -65,7 +65,6 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     this.consumerProperties = consumerProperties;
     this.sortingMapper = sortingMapper;
     this.consumer = getKafkaConsumer();
-    this.closed = false;
     this.records = new LinkedBlockingQueue<>();
   }
 
@@ -114,7 +113,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     Set<TopicPartition> topicPartitions = consumer.assignment();
     return topicPartitions
         .stream()
-        .map((TopicPartition e) -> new StreamPartition<>(e.topic(), e.partition()))
+        .map(e -> new StreamPartition<>(e.topic(), e.partition()))
         .collect(Collectors.toSet());
   }
 
@@ -137,15 +136,21 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public Long getLatestSequenceNumber(StreamPartition<Integer> partition)
   {
+    Long currPos = consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
     seekToLatest(Collections.singleton(partition));
-    return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    Long nextPos = consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    seek(partition, currPos);
+    return nextPos;
   }
 
   @Override
   public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
   {
+    Long currPos = consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
     seekToEarliest(Collections.singleton(partition));
-    return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    Long nextPos = consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    seek(partition, currPos);
+    return nextPos;
   }
 
   @Override

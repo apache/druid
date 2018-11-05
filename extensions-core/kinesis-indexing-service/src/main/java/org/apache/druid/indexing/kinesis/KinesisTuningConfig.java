@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
@@ -92,10 +91,6 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         maxParseExceptions,
         maxSavedParseExceptions
     );
-    // Cannot be a static because default basePersistDirectory is unique per-instance
-    final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);
-
-
     this.recordBufferSize = recordBufferSize == null ? DEFAULT_RECORD_BUFFER_SIZE : recordBufferSize;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout == null
                                     ? DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT
@@ -178,33 +173,6 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getMaxRowsPerSegment(),
         getIntermediatePersistPeriod(),
         dir,
-        0,
-        getIndexSpec(),
-        true,
-        isReportParseExceptions(),
-        getHandoffConditionTimeout(),
-        isResetOffsetAutomatically(),
-        isSkipSequenceNumberAvailabilityCheck(),
-        getRecordBufferSize(),
-        getRecordBufferOfferTimeout(),
-        getRecordBufferFullWait(),
-        getFetchSequenceNumberTimeout(),
-        getFetchThreads(),
-        getSegmentWriteOutMediumFactory(),
-        isLogParseExceptions(),
-        getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
-    );
-  }
-
-  public KinesisTuningConfig withMaxRowsInMemory(int rows)
-  {
-    return new KinesisTuningConfig(
-        rows,
-        getMaxBytesInMemory(),
-        getMaxRowsPerSegment(),
-        getIntermediatePersistPeriod(),
-        getBasePersistDirectory(),
         0,
         getIndexSpec(),
         true,

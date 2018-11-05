@@ -31,8 +31,8 @@ import java.util.Set;
 public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
 {
   private static final boolean DEFAULT_PAUSE_AFTER_READ = true;
-  private static final int DEFAULT_RECORDS_PER_FETCH = 4000;
-  private static final int DEFAULT_FETCH_DELAY_MILLIS = 0;
+  public static final int DEFAULT_RECORDS_PER_FETCH = 4000;
+  public static final int DEFAULT_FETCH_DELAY_MILLIS = 0;
 
   private final boolean pauseAfterRead;
   private final String endpoint;

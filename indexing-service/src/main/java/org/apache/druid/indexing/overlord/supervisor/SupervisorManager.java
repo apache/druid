@@ -70,7 +70,7 @@ public class SupervisorManager
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
-    Preconditions.checkNotNull(spec.getId(), "spec.getId()");
+    Preconditions.checkNotNull(spec.getId(), "spec.getStream()");
     Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
 
     synchronized (lock) {

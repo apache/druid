@@ -93,9 +93,12 @@ public class KinesisSupervisorTuningConfig extends KinesisTuningConfig implement
 
     this.workerThreads = workerThreads;
     this.chatThreads = chatThreads;
-    this.chatRetries = (chatRetries != null ? chatRetries : 8);
-    this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, "PT10S");
-    this.shutdownTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(shutdownTimeout, "PT80S");
+    this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
+    this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, DEFAULT_HTTP_TIMEOUT);
+    this.shutdownTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(
+        shutdownTimeout,
+        DEFAULT_SHUTDOWN_TIMEOUT
+    );
   }
 
   @Override

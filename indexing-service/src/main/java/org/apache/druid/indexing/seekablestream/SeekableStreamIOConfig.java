@@ -62,12 +62,14 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
 
     Preconditions.checkArgument(
-        startPartitions.getName().equals(endPartitions.getName()),
+        startPartitions.getStream().equals(endPartitions.getStream()),
         "start topic/stream and end topic/stream must match"
     );
 
     Preconditions.checkArgument(
-        startPartitions.getMap().keySet().equals(endPartitions.getMap().keySet()),
+        startPartitions.getPartitionSequenceNumberMap()
+                       .keySet()
+                       .equals(endPartitions.getPartitionSequenceNumberMap().keySet()),
         "start partition set and end partition set must match"
     );
   }
@@ -115,6 +117,9 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
     return minimumMessageTime;
   }
 
+  // exclusive starting sequence partitions are used only for kinesis where the starting
+  // sequence number for certain partitions are discarded because they've already been
+  // read by a previous task
   @JsonProperty
   public abstract Set<PartitionType> getExclusiveStartSequenceNumberPartitions();
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.errorprone.annotations.DoNotCall;
 
 import javax.validation.constraints.NotNull;
 import java.util.Map;
@@ -31,7 +32,7 @@ import java.util.Objects;
 /**
  * class that encapsulates a map of partitionId -> sequenceNumber.
  * To be backward compatible with both Kafka and Kinesis datasource metadata when
- * deserializing json. Redundant constrcturo fields stream, topic and
+ * deserializing json. Redundant constructor fields stream, topic and
  * partitionSequenceNumberMap and partitionOffsetMap are created. Only one of topic, stream
  * should have a non-null value and only one of partitionOffsetMap and partitionSequenceNumberMap
  * should have a non-null value.
@@ -41,7 +42,7 @@ import java.util.Objects;
  * used by Kafka and kinesis (i.e. topic vs. name)
  *
  * @param <PartitionType> partition id type
- * @param <SequenceType> sequence number type
+ * @param <SequenceType>  sequence number type
  */
 public class SeekableStreamPartitions<PartitionType, SequenceType>
 {
@@ -75,20 +76,16 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
   }
 
   @JsonProperty
-  public String getName()
+  public String getStream()
   {
     return name;
   }
 
+  @DoNotCall
   @JsonProperty
   public String getTopic()
   {
     return name;
-  }
-
-  public Map<PartitionType, SequenceType> getMap()
-  {
-    return map;
   }
 
   @JsonProperty
@@ -97,6 +94,7 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
     return map;
   }
 
+  @DoNotCall
   @JsonProperty
   public Map<PartitionType, SequenceType> getPartitionOffsetMap()
   {

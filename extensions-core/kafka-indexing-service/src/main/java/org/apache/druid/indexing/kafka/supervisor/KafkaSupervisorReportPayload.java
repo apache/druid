@@ -19,15 +19,11 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
-import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<Integer, Long>
 {
@@ -60,32 +56,12 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
   }
 
 
-  @JsonProperty
-  public String getTopic()
-  {
-    return getId();
-  }
-
-  @Override
-  @JsonProperty
-  public List<TaskReportData> getActiveTasks()
-  {
-    return super.getActiveTasks().stream().map(e -> (TaskReportData) e).collect(Collectors.toList());
-  }
-
-  @Override
-  @JsonProperty
-  public List<TaskReportData> getPublishingTasks()
-  {
-    return super.getPublishingTasks().stream().map(e -> (TaskReportData) e).collect(Collectors.toList());
-  }
-
   @Override
   public String toString()
   {
     return "{" +
            "dataSource='" + getDataSource() + '\'' +
-           ", topic='" + getTopic() + '\'' +
+           ", topic='" + getStream() + '\'' +
            ", partitions=" + getPartitions() +
            ", replicas=" + getReplicas() +
            ", durationSeconds=" + getDurationSeconds() +

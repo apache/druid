@@ -33,6 +33,7 @@ import java.io.File;
 
 public class KafkaSupervisorTuningConfig extends KafkaTuningConfig implements SeekableStreamSupervisorTuningConfig
 {
+  private static final String DEFAULT_OFFSET_FETCH_PERIOD = "PT30S";
 
   private final Integer workerThreads;
   private final Integer chatThreads;
@@ -89,10 +90,16 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig implements Se
     );
     this.workerThreads = workerThreads;
     this.chatThreads = chatThreads;
-    this.chatRetries = (chatRetries != null ? chatRetries : 8);
-    this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, "PT10S");
-    this.shutdownTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(shutdownTimeout, "PT80S");
-    this.offsetFetchPeriod = SeekableStreamSupervisorTuningConfig.defaultDuration(offsetFetchPeriod, "PT30S");
+    this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
+    this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, DEFAULT_HTTP_TIMEOUT);
+    this.shutdownTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(
+        shutdownTimeout,
+        DEFAULT_SHUTDOWN_TIMEOUT
+    );
+    this.offsetFetchPeriod = SeekableStreamSupervisorTuningConfig.defaultDuration(
+        offsetFetchPeriod,
+        DEFAULT_OFFSET_FETCH_PERIOD
+    );
   }
 
   @Override

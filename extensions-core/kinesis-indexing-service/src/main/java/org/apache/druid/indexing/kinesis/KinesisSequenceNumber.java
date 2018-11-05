@@ -32,9 +32,9 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
 
   private final BigInteger intSequence;
 
-  private KinesisSequenceNumber(@NotNull String sequenceNumber, boolean useExclusive, boolean isExclusive)
+  private KinesisSequenceNumber(@NotNull String sequenceNumber, boolean isExclusive)
   {
-    super(sequenceNumber, useExclusive, isExclusive);
+    super(sequenceNumber, isExclusive);
     this.intSequence = OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(sequenceNumber)
                        ? new BigInteger("-1")
                        : new BigInteger(sequenceNumber);
@@ -42,17 +42,12 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
 
   public static KinesisSequenceNumber of(String sequenceNumber)
   {
-    return new KinesisSequenceNumber(sequenceNumber, false, false);
+    return new KinesisSequenceNumber(sequenceNumber, false);
   }
 
-  public static KinesisSequenceNumber of(String sequenceNumber, boolean useExclusive, boolean isExclusive)
+  public static KinesisSequenceNumber of(String sequenceNumber, boolean isExclusive)
   {
-    return new KinesisSequenceNumber(sequenceNumber, useExclusive, isExclusive);
-  }
-
-  public BigInteger getBigInteger()
-  {
-    return intSequence;
+    return new KinesisSequenceNumber(sequenceNumber, isExclusive);
   }
 
   @Override

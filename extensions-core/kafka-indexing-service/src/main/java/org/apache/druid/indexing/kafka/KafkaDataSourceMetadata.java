@@ -37,14 +37,8 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
     super(kafkaPartitions);
   }
 
-  @JsonProperty("partitions")
-  public SeekableStreamPartitions<Integer, Long> getKafkaPartitions()
-  {
-    return super.getSeekableStreamPartitions();
-  }
-
   @Override
-  protected SeekableStreamDataSourceMetadata<Integer, Long> createConcretDataSourceMetaData(
+  protected SeekableStreamDataSourceMetadata<Integer, Long> createConcreteDataSourceMetaData(
       String streamId,
       Map<Integer, Long> newMap
   )

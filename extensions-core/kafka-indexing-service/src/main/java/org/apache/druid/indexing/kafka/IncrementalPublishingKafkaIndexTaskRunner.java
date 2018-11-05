@@ -217,10 +217,10 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.savedParseExceptions = savedParseExceptions;
-    this.topic = ioConfig.getStartPartitions().getTopic();
+    this.topic = ioConfig.getStartPartitions().getStream();
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
-    this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndPartitions().getPartitionOffsetMap());
+    this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndPartitions().getPartitionSequenceNumberMap());
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
 
@@ -279,7 +279,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
         sequences.add(new SequenceMetadata(
             0,
             StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), 0),
-            ioConfig.getStartPartitions().getPartitionOffsetMap(),
+            ioConfig.getStartPartitions().getPartitionSequenceNumberMap(),
             endOffsets,
             false
         ));
@@ -327,7 +327,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
       appenderator = task.newAppenderator(fireDepartmentMetrics, toolbox);
       driver = task.newDriver(appenderator, toolbox, fireDepartmentMetrics);
 
-      final String topic = ioConfig.getStartPartitions().getTopic();
+      final String topic = ioConfig.getStartPartitions().getStream();
 
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
@@ -338,7 +338,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
             partitionOffsetEntry -> Longs.compare(
                 partitionOffsetEntry.getValue(),
                 ioConfig.getStartPartitions()
-                        .getPartitionOffsetMap()
+                        .getPartitionSequenceNumberMap()
                         .get(partitionOffsetEntry.getKey())
             ) >= 0
         ), "Sequence offsets are not compatible with start offsets of task");
@@ -360,22 +360,22 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
                        )
             );
 
-        nextOffsets.putAll(restoredNextPartitions.getPartitionOffsetMap());
+        nextOffsets.putAll(restoredNextPartitions.getPartitionSequenceNumberMap());
 
         // Sanity checks.
-        if (!restoredNextPartitions.getTopic().equals(ioConfig.getStartPartitions().getTopic())) {
+        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartPartitions().getStream())) {
           throw new ISE(
               "WTF?! Restored topic[%s] but expected topic[%s]",
-              restoredNextPartitions.getTopic(),
-              ioConfig.getStartPartitions().getTopic()
+              restoredNextPartitions.getStream(),
+              ioConfig.getStartPartitions().getStream()
           );
         }
 
-        if (!nextOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionOffsetMap().keySet())) {
+        if (!nextOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet())) {
           throw new ISE(
               "WTF?! Restored partitions[%s] but expected partitions[%s]",
               nextOffsets.keySet(),
-              ioConfig.getStartPartitions().getPartitionOffsetMap().keySet()
+              ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet()
           );
         }
         // sequences size can be 0 only when all sequences got published and task stopped before it could finish
@@ -401,7 +401,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
           {
             return ImmutableMap.of(
                 METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
-                    ioConfig.getStartPartitions().getTopic(),
+                    ioConfig.getStartPartitions().getStream(),
                     snapshot
                 )
             );
@@ -1146,7 +1146,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
                                     task.getDataSource(),
                                     new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(
                                         ioConfig.getStartPartitions()
-                                                .getTopic(),
+                                                .getStream(),
                                         partitionOffsetMap
                                     ))
                                 ));
@@ -1784,7 +1784,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
         );
 
         // Sanity check, we should only be publishing things that match our desired end state.
-        if (!getEndOffsets().equals(finalPartitions.getPartitionOffsetMap())) {
+        if (!getEndOffsets().equals(finalPartitions.getPartitionSequenceNumberMap())) {
           throw new ISE(
               "WTF?! Driver for sequence [%s], attempted to publish invalid metadata[%s].",
               toString(),
@@ -1798,7 +1798,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements SeekableStream
           action = new SegmentTransactionalInsertAction(
               segments,
               new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(
-                  finalPartitions.getTopic(),
+                  finalPartitions.getStream(),
                   getStartOffsets()
               )),
               new KafkaDataSourceMetadata(finalPartitions)

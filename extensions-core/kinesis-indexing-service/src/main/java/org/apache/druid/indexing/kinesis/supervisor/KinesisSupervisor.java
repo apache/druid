@@ -97,8 +97,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         mapper,
         spec,
         rowIngestionMetersFactory,
-        NOT_SET,
-        SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER,
         true,
         false
     );
@@ -278,11 +276,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected OrderedSequenceNumber<String> makeSequenceNumber(
       String seq,
-      boolean useExclusive,
       boolean isExclusive
   )
   {
-    return KinesisSequenceNumber.of(seq, useExclusive, isExclusive);
+    return KinesisSequenceNumber.of(seq, isExclusive);
   }
 
   // the following are for unit testing purposes only
@@ -339,6 +336,18 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
+  protected String getNotSetMarker()
+  {
+    return NOT_SET;
+  }
+
+  @Override
+  protected String getEndOfPartitionMarker()
+  {
+    return SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER;
+  }
+
+  @Override
   @VisibleForTesting
   protected void addTaskGroupToActivelyReadingTaskGroup(
       int taskGroupId,
@@ -391,14 +400,14 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       {
         try {
           final Map<String, List<PartitionInfo>> topics = lagComputingConsumer.listTopics();
-          final List<PartitionInfo> partitionInfoList = topics.get(ioConfig.getName());
+          final List<PartitionInfo> partitionInfoList = topics.get(ioConfig.getStream());
           lagComputingConsumer.assign(
               Lists.transform(partitionInfoList, new Function<PartitionInfo, TopicPartition>()
               {
                 @Override
                 public TopicPartition apply(PartitionInfo input)
                 {
-                  return new TopicPartition(ioConfig.getName(), input.partition());
+                  return new TopicPartition(ioConfig.getStream(), input.partition());
                 }
               })
           );
@@ -448,7 +457,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           long lag = 0;
           for (PartitionInfo partitionInfo : partitionInfoList) {
             long diff;
-            final TopicPartition topicPartition = new TopicPartition(ioConfig.getName(), partitionInfo.partition());
+            final TopicPartition topicPartition = new TopicPartition(ioConfig.getStream(), partitionInfo.partition());
             lagComputingConsumer.seekToEnd(ImmutableList.of(topicPartition));
             if (offsetsResponse.get(topicPartition.partition()) != null) {
               diff = lagComputingConsumer.position(topicPartition) - offsetsResponse.get(topicPartition.partition());

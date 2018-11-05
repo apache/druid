@@ -24,7 +24,11 @@ import java.util.Objects;
 
 /**
  * Represents a Kafka/Kinesis stream sequence number. Mainly used to do
- * comparison and indicate whether the sequence number is exclusive
+ * comparison and indicate whether the sequence number is exclusive.
+ * <p>
+ * isExclusive is used to indicate if this sequence number is the starting
+ * sequence of some Kinesis partition and should be discarded because some
+ * previous task has already read this sequence number
  *
  * @param <T> type of sequence number
  */
@@ -32,12 +36,10 @@ public abstract class OrderedSequenceNumber<T> implements Comparable<OrderedSequ
 {
   private final T sequenceNumber;
   private final boolean isExclusive;
-  private final boolean useExclusive;
 
-  protected OrderedSequenceNumber(T sequenceNumber, boolean useExclusive, boolean isExclusive)
+  protected OrderedSequenceNumber(T sequenceNumber, boolean isExclusive)
   {
     this.sequenceNumber = sequenceNumber;
-    this.useExclusive = useExclusive;
     this.isExclusive = isExclusive;
   }
 
@@ -48,14 +50,13 @@ public abstract class OrderedSequenceNumber<T> implements Comparable<OrderedSequ
 
   public boolean isExclusive()
   {
-    return useExclusive && isExclusive;
+    return isExclusive;
   }
-
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(sequenceNumber, useExclusive, isExclusive);
+    return Objects.hash(sequenceNumber, isExclusive);
   }
 
   @Override
@@ -69,7 +70,6 @@ public abstract class OrderedSequenceNumber<T> implements Comparable<OrderedSequ
     }
     OrderedSequenceNumber<?> that = (OrderedSequenceNumber<?>) o;
     return isExclusive == that.isExclusive &&
-           useExclusive == that.useExclusive &&
            Objects.equals(sequenceNumber, that.sequenceNumber);
   }
 }

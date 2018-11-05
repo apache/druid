@@ -34,7 +34,6 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
 {
   private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
-  @Nullable
   private final Map<String, Object> consumerProperties;
   private final boolean skipOffsetGaps;
 
@@ -64,31 +63,31 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
 
-    for (int partition : endPartitions.getMap().keySet()) {
+    for (int partition : endPartitions.getPartitionSequenceNumberMap().keySet()) {
       Preconditions.checkArgument(
-          endPartitions.getMap()
+          endPartitions.getPartitionSequenceNumberMap()
                        .get(partition)
-                       .compareTo(startPartitions.getMap().get(partition)) >= 0,
+                       .compareTo(startPartitions.getPartitionSequenceNumberMap().get(partition)) >= 0,
           "end offset must be >= start offset for partition[%s]",
           partition
       );
     }
   }
 
+  // exclusive starting sequence partitions are used only for kinesis where the starting
+  // sequence number for certain partitions are discarded because they've already been
+  // read by a previous task
   @Override
   public Set<Integer> getExclusiveStartSequenceNumberPartitions()
   {
     return null;
   }
 
-
-  @Nullable
   @JsonProperty
   public Map<String, Object> getConsumerProperties()
   {
     return consumerProperties;
   }
-
 
   @JsonProperty
   public boolean isSkipOffsetGaps()

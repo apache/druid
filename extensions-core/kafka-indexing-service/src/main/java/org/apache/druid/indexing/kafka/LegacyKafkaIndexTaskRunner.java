@@ -191,7 +191,7 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
     this.savedParseExceptions = savedParseExceptions;
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
-    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
+    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionSequenceNumberMap());
     this.ingestionState = IngestionState.NOT_STARTED;
   }
 
@@ -275,12 +275,12 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
 
       appenderator = appenderator0;
 
-      final String topic = ioConfig.getStartPartitions().getTopic();
+      final String topic = ioConfig.getStartPartitions().getStream();
 
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
       if (restoredMetadata == null) {
-        nextOffsets.putAll(ioConfig.getStartPartitions().getPartitionOffsetMap());
+        nextOffsets.putAll(ioConfig.getStartPartitions().getPartitionSequenceNumberMap());
       } else {
         final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
         final SeekableStreamPartitions<Integer, Long> restoredNextPartitions = toolbox.getObjectMapper().convertValue(
@@ -292,22 +292,22 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
                 Long.class
             )
         );
-        nextOffsets.putAll(restoredNextPartitions.getPartitionOffsetMap());
+        nextOffsets.putAll(restoredNextPartitions.getPartitionSequenceNumberMap());
 
         // Sanity checks.
-        if (!restoredNextPartitions.getTopic().equals(ioConfig.getStartPartitions().getTopic())) {
+        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartPartitions().getStream())) {
           throw new ISE(
               "WTF?! Restored topic[%s] but expected topic[%s]",
-              restoredNextPartitions.getTopic(),
-              ioConfig.getStartPartitions().getTopic()
+              restoredNextPartitions.getStream(),
+              ioConfig.getStartPartitions().getStream()
           );
         }
 
-        if (!nextOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionOffsetMap().keySet())) {
+        if (!nextOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet())) {
           throw new ISE(
               "WTF?! Restored partitions[%s] but expected partitions[%s]",
               nextOffsets.keySet(),
-              ioConfig.getStartPartitions().getPartitionOffsetMap().keySet()
+              ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet()
           );
         }
       }
@@ -333,7 +333,7 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
             {
               return ImmutableMap.of(
                   METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
-                      ioConfig.getStartPartitions().getTopic(),
+                      ioConfig.getStartPartitions().getStream(),
                       snapshot
                   )
               );
@@ -513,7 +513,7 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
         );
 
         // Sanity check, we should only be publishing things that match our desired end state.
-        if (!endOffsets.equals(finalPartitions.getPartitionOffsetMap())) {
+        if (!endOffsets.equals(finalPartitions.getPartitionSequenceNumberMap())) {
           throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
         }
 
@@ -730,7 +730,7 @@ public class LegacyKafkaIndexTaskRunner implements SeekableStreamIndexTaskRunner
                                     task.getDataSource(),
                                     new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(
                                         ioConfig.getStartPartitions()
-                                                .getTopic(),
+                                                .getStream(),
                                         partitionOffsetMap
                                     ))
                                 ));

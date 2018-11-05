@@ -36,10 +36,7 @@ public class KafkaIndexTaskClientFactory extends SeekableStreamIndexTaskClientFa
       @Json ObjectMapper mapper
   )
   {
-    super(
-        httpClient,
-        mapper
-    );
+    super(httpClient, mapper);
   }
 
   @Override

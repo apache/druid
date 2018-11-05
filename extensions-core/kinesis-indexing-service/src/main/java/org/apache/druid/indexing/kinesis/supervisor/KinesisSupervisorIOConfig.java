@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.kinesis.KinesisIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.joda.time.Period;
@@ -87,8 +88,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.endpoint = endpoint != null
                     ? endpoint
                     : (region != null ? region.getEndpoint() : KinesisRegion.US_EAST_1.getEndpoint());
-    this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : 4000;
-    this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : 0;
+    this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : KinesisIOConfig.DEFAULT_RECORDS_PER_FETCH;
+    this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : KinesisIOConfig.DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAccessKeyId = awsAccessKeyId;
     this.awsSecretAccessKey = awsSecretAccessKey;
     this.awsAssumedRoleArn = awsAssumedRoleArn;

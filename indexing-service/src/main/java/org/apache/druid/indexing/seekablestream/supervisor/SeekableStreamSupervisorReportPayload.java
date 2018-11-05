@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public abstract class SeekableStreamSupervisorReportPayload<PartitionType, SequenceType>
 {
   private final String dataSource;
@@ -88,7 +89,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionType, Seque
     return dataSource;
   }
 
-  public String getId()
+  public String getStream()
   {
     return id;
   }
@@ -130,21 +131,18 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionType, Seque
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<PartitionType, SequenceType> getLatestOffsets()
   {
     return latestOffsets;
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<PartitionType, SequenceType> getMinimumLag()
   {
     return minimumLag;
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Long getAggregateLag()
   {
     return aggregateLag;

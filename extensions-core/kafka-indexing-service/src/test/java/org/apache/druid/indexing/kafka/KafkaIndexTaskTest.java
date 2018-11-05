@@ -548,8 +548,8 @@ public class KafkaIndexTaskTest
       Thread.sleep(10);
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets) || checkpoint2.getPartitionOffsetMap()
-                                                                                               .equals(currentOffsets));
+    Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets) || checkpoint2.getPartitionSequenceNumberMap()
+                                                                                                       .equals(currentOffsets));
     task.getRunner().setEndOffsets(currentOffsets, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -675,7 +675,7 @@ public class KafkaIndexTaskTest
       }
       final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
-      Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets));
+      Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets));
       task.getRunner().setEndOffsets(currentOffsets, false);
 
       while (task.getRunner().getStatus() != SeekableStreamIndexTask.Status.PAUSED) {
@@ -688,7 +688,7 @@ public class KafkaIndexTaskTest
       }
       final Map<Integer, Long> nextOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
-      Assert.assertTrue(checkpoint2.getPartitionOffsetMap().equals(nextOffsets));
+      Assert.assertTrue(checkpoint2.getPartitionSequenceNumberMap().equals(nextOffsets));
       task.getRunner().setEndOffsets(nextOffsets, false);
 
       Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -816,7 +816,7 @@ public class KafkaIndexTaskTest
       Thread.sleep(10);
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint.getPartitionOffsetMap().equals(currentOffsets));
+    Assert.assertTrue(checkpoint.getPartitionSequenceNumberMap().equals(currentOffsets));
     task.getRunner().setEndOffsets(currentOffsets, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -827,7 +827,7 @@ public class KafkaIndexTaskTest
                 DATA_SCHEMA.getDataSource(),
                 0,
                 new KafkaDataSourceMetadata(startPartitions),
-                new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, checkpoint.getPartitionOffsetMap()))
+                new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, checkpoint.getPartitionSequenceNumberMap()))
             )
         )
     );
