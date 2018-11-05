@@ -35,7 +35,6 @@ import org.junit.Test;
 import javax.ws.rs.core.Response;
 import java.net.URL;
 
-
 public class RemoteWorkerProxyResourceTest
 {
   private RemoteWorkerProxyResource remoteWorkerProxyResource;
