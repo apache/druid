@@ -83,7 +83,7 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
 
   @DoNotCall
   @JsonProperty
-  public String getTopic()
+  public final String getTopic()
   {
     return name;
   }
@@ -96,7 +96,7 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
 
   @DoNotCall
   @JsonProperty
-  public Map<PartitionType, SequenceType> getPartitionOffsetMap()
+  public final Map<PartitionType, SequenceType> getPartitionOffsetMap()
   {
     return map;
   }
