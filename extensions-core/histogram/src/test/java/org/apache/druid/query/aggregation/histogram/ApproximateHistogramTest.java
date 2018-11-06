@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.histogram;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -221,6 +222,7 @@ public class ApproximateHistogramTest
   }
 
     //@Test
+  @Ignore
   @SuppressWarnings("unused") //TODO rewrite using JMH and move to the benchmarks module
   public void testFoldSpeed()
   {

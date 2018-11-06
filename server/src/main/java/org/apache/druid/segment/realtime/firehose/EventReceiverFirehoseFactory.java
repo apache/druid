@@ -242,7 +242,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       }
 
       CountingInputStream countingInputStream = new CountingInputStream(in);
-      Collection<Map<String, Object>> events = null;
+      Collection<Map<String, Object>> events;
       try {
         events = objectMapper.readValue(
             countingInputStream,

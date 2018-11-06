@@ -276,7 +276,7 @@ public class DatasourcesResource
       return Response.noContent().build();
     }
 
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
 
     if (full != null) {
       final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
@@ -342,7 +342,7 @@ public class DatasourcesResource
       return Response.noContent().build();
     }
 
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
     if (full != null) {
       final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
@@ -385,7 +385,7 @@ public class DatasourcesResource
       return Response.ok(retVal).build();
     }
 
-    final Set<String> retVal = new TreeSet<>(Comparators.inverse(String.CASE_INSENSITIVE_ORDER));
+    final Set<String> retVal = new TreeSet<>(String.CASE_INSENSITIVE_ORDER.reversed());
     for (DataSegment dataSegment : dataSource.getSegments()) {
       if (theInterval.contains(dataSegment.getInterval())) {
         retVal.add(dataSegment.getIdentifier());

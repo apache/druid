@@ -30,11 +30,11 @@ public class AzureBlob
 {
   @JsonProperty
   @NotNull
-  private String container = null;
+  private String container;
 
   @JsonProperty
   @NotNull
-  private String path = null;
+  private String path;
 
   @JsonCreator
   public AzureBlob(@JsonProperty("container") String container, @JsonProperty("path") String path)

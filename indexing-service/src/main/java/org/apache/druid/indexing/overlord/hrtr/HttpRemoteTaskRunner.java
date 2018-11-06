@@ -963,7 +963,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     pendingTasksExec.execute(
         () -> {
           while (!Thread.interrupted() && lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-            ImmutableWorkerInfo immutableWorker = null;
+            ImmutableWorkerInfo immutableWorker;
             HttpRemoteTaskRunnerWorkItem taskItem = null;
             try {
               synchronized (statusLock) {

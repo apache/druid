@@ -33,7 +33,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
 {
   private Yielder<ScanResultValue> yielder;
   private String resultFormat;
-  private long limit = 0;
+  private long limit;
   private long count = 0;
 
   public ScanQueryLimitRowIterator(

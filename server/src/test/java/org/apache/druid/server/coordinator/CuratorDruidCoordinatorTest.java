@@ -307,14 +307,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     DataSegment segmentToMove = sourceSegments.get(2);
 
     List<String> sourceSegKeys = new ArrayList<>();
-    List<String> destSegKeys = new ArrayList<>();
 
     for (DataSegment segment : sourceSegments) {
       sourceSegKeys.add(announceBatchSegmentsForServer(source, ImmutableSet.of(segment), zkPathsConfig, jsonMapper));
     }
 
     for (DataSegment segment : destinationSegments) {
-      destSegKeys.add(announceBatchSegmentsForServer(dest, ImmutableSet.of(segment), zkPathsConfig, jsonMapper));
+      announceBatchSegmentsForServer(dest, ImmutableSet.of(segment), zkPathsConfig, jsonMapper);
     }
 
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));

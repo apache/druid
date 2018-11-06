@@ -31,7 +31,9 @@ import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,6 +52,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
   private final String url;
   private final String host;
   private final ObjectMapper objectMapper;
+  private final BytesAccumulatingResponseHandler responseHandler;
 
   public JsonParserIterator(
       JavaType typeRef,
@@ -57,7 +60,8 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       String url,
       Query<T> query,
       String host,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      BytesAccumulatingResponseHandler responseHandler
   )
   {
     this.typeRef = typeRef;
@@ -67,6 +71,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     jp = null;
     this.host = host;
     this.objectMapper = objectMapper;
+    this.responseHandler = responseHandler;
   }
 
   @Override
@@ -111,6 +116,14 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     if (jp == null) {
       try {
         InputStream is = future.get();
+        if (responseHandler != null && responseHandler.getStatus() != HttpServletResponse.SC_OK) {
+          throw new RE(
+              "Unexpected response status [%s] description [%s] from request url [%s]",
+              responseHandler.getStatus(),
+              responseHandler.getDescription(),
+              url
+          );
+        }
         if (is == null) {
           throw new QueryInterruptedException(
               new ResourceLimitExceededException(

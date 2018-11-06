@@ -41,7 +41,6 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -127,7 +126,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (!DimensionSelectorUtils.isNilSelector(selector)) {
+      if (!DimensionSelector.isNilSelector(selector)) {
         final IndexedInts row = selector.getRow();
         for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
           final String dimVal = selector.lookupName(row.get(i));

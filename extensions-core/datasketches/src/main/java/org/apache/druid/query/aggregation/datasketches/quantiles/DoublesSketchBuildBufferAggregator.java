@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.yahoo.memory.WritableMemory;
+import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -54,7 +55,7 @@ public class DoublesSketchBuildBufferAggregator implements BufferAggregator
   {
     final WritableMemory mem = getMemory(buffer);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final UpdateDoublesSketch sketch = UpdateDoublesSketch.builder().setK(size).build(region);
+    final UpdateDoublesSketch sketch = DoublesSketch.builder().setK(size).build(region);
     putSketch(buffer, position, sketch);
   }
 

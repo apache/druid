@@ -60,7 +60,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
 
   private void loadData(String hadoopDir)
   {
-    String indexerSpec = "";
+    String indexerSpec;
 
     try {
       LOG.info("indexerFile name: [%s]", BATCH_TASK);
