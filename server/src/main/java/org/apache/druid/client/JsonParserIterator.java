@@ -71,7 +71,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     jp = null;
     this.host = host;
     this.objectMapper = objectMapper;
-    this.responseHandler = responseHandler == null ? new BytesAccumulatingResponseHandler() : responseHandler;
+    this.responseHandler = responseHandler;
   }
 
   @Override
@@ -116,7 +116,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     if (jp == null) {
       try {
         InputStream is = future.get();
-        if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
+        if (responseHandler != null && responseHandler.getStatus() != HttpServletResponse.SC_OK) {
           throw new RE(
               "Unexpected response status [%s] description [%s] from request url [%s]",
               responseHandler.getStatus(),
