@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.avro;
+package org.apache.druid.data.input.parquet.simple;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,40 +26,42 @@ import org.apache.druid.data.input.impl.NestedDataParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.java.util.common.parsers.Parser;
 
-public class AvroParseSpec extends NestedDataParseSpec<JSONPathSpec>
+public class ParquetParseSpec extends NestedDataParseSpec<JSONPathSpec>
 {
   @JsonCreator
-  public AvroParseSpec(
+  public ParquetParseSpec(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
       @JsonProperty("flattenSpec") JSONPathSpec flattenSpec
   )
   {
     super(
-        timestampSpec != null ? timestampSpec : new TimestampSpec(null, null, null),
+        timestampSpec,
         dimensionsSpec != null ? dimensionsSpec : DimensionsSpec.EMPTY,
         flattenSpec != null ? flattenSpec : JSONPathSpec.DEFAULT
     );
   }
 
   @Override
-  public Parser<String, Object> makeParser()
-  {
-    // makeParser is only used by StringInputRowParser, which cannot parse avro anyway.
-    throw new UnsupportedOperationException("makeParser not supported");
-  }
-
-  @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new AvroParseSpec(spec, getDimensionsSpec(), getFlattenSpec());
+    return new ParquetParseSpec(spec, getDimensionsSpec(), getFlattenSpec());
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new AvroParseSpec(getTimestampSpec(), spec, getFlattenSpec());
+    return new ParquetParseSpec(getTimestampSpec(), spec, getFlattenSpec());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ParquetGroupParseSpec{" +
+           "timestampSpec=" + getTimestampSpec() +
+           ", dimensionsSpec=" + getDimensionsSpec() +
+           ", flattenSpec=" + getFlattenSpec() +
+           "}";
   }
 }
