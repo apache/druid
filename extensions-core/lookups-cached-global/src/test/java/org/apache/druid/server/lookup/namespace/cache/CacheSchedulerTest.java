@@ -311,7 +311,7 @@ public class CacheSchedulerTest
     testDelete();
   }
 
-  public void testDelete() throws InterruptedException
+  private void testDelete() throws InterruptedException
   {
     final long period = 1_000L; // Give it some time between attempts to update
     final UriExtractionNamespace namespace = getUriExtractionNamespace(period);

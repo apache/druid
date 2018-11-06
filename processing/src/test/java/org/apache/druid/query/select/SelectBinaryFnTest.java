@@ -137,9 +137,6 @@ public class SelectBinaryFnTest
     Assert.assertEquals(res1.getTimestamp(), merged.getTimestamp());
 
     LinkedHashMap<String, Integer> expectedPageIds = Maps.newLinkedHashMap();
-    expectedPageIds.put(segmentId1, 0);
-    expectedPageIds.put(segmentId2, 0);
-    expectedPageIds.put(segmentId2, 1);
     expectedPageIds.put(segmentId1, 1);
     expectedPageIds.put(segmentId2, 2);
 

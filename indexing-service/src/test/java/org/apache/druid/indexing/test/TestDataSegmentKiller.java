@@ -19,20 +19,15 @@
 
 package org.apache.druid.indexing.test;
 
-import com.google.common.collect.Sets;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.Set;
-
 public class TestDataSegmentKiller implements DataSegmentKiller
 {
-  private final Set<DataSegment> killedSegments = Sets.newConcurrentHashSet();
-
   @Override
   public void kill(DataSegment segment)
   {
-    killedSegments.add(segment);
+    // do nothing
   }
 
   @Override

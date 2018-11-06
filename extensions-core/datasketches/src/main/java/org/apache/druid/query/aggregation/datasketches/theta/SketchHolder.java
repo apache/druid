@@ -90,6 +90,7 @@ public class SketchHolder
 
   private static final Comparator<Memory> MEMORY_COMPARATOR = new Comparator<Memory>()
   {
+    @SuppressWarnings("SubtractionInCompareTo")
     @Override
     public int compare(Memory o1, Memory o2)
     {
