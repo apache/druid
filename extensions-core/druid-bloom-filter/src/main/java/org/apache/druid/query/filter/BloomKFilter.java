@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.hive.common.util.Murmur3;
 
 import java.io.DataInputStream;
@@ -261,7 +262,7 @@ public class BloomKFilter
 
   public void addString(String val)
   {
-    addBytes(val.getBytes());
+    addBytes(StringUtils.toUtf8(val));
   }
 
   public void addByte(byte val)
@@ -358,7 +359,7 @@ public class BloomKFilter
 
   public boolean testString(String val)
   {
-    return testBytes(val.getBytes());
+    return testBytes(StringUtils.toUtf8(val));
   }
 
   public boolean testByte(byte val)
