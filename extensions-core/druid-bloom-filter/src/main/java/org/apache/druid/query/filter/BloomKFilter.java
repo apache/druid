@@ -49,12 +49,16 @@ import java.util.Arrays;
  */
 public class BloomKFilter
 {
-  private final ThreadLocal<byte[]> BYTE_ARRAY_4 = ThreadLocal.withInitial(() -> new byte[4]);
   public static final float DEFAULT_FPP = 0.05f;
+  // Given a byte array consisting of a serialized BloomKFilter, gives the offset (from 0)
+  // for the start of the serialized long values that make up the bitset.
+  // NumHashFunctions (1 byte) + bitset array length (4 bytes)
+  public static final int START_OF_SERIALIZED_LONGS = 5;
   private static final int DEFAULT_BLOCK_SIZE = 8;
   private static final int DEFAULT_BLOCK_SIZE_BITS = (int) (Math.log(DEFAULT_BLOCK_SIZE) / Math.log(2));
   private static final int DEFAULT_BLOCK_OFFSET_MASK = DEFAULT_BLOCK_SIZE - 1;
   private static final int DEFAULT_BIT_OFFSET_MASK = Long.SIZE - 1;
+  private final ThreadLocal<byte[]> BYTE_ARRAY_4 = ThreadLocal.withInitial(() -> new byte[4]);
   private final ThreadLocal<long[]> masks = ThreadLocal.withInitial(() -> new long[DEFAULT_BLOCK_SIZE]);
   private final BitSet bitSet;
   private final int m;
@@ -64,13 +68,8 @@ public class BloomKFilter
   // default block size is set to 8 as most cache line sizes are 64 bytes and also AVX512 friendly
   private final int totalBlockCount;
 
-  static void checkArgument(boolean expression, String message) {
-    if (!expression) {
-      throw new IllegalArgumentException(message);
-    }
-  }
-
-  public BloomKFilter(long maxNumEntries) {
+  public BloomKFilter(long maxNumEntries)
+  {
     checkArgument(maxNumEntries > 0, "expectedEntries should be > 0");
     long numBits = optimalNumOfBits(maxNumEntries, DEFAULT_FPP);
     this.k = optimalNumOfHashFunctions(maxNumEntries, numBits);
@@ -85,10 +84,12 @@ public class BloomKFilter
 
   /**
    * A constructor to support rebuilding the BloomFilter from a serialized representation.
+   *
    * @param bits
    * @param numFuncs
    */
-  public BloomKFilter(long[] bits, int numFuncs) {
+  public BloomKFilter(long[] bits, int numFuncs)
+  {
     super();
     bitSet = new BitSet(bits);
     this.m = bits.length * Long.SIZE;
@@ -96,19 +97,123 @@ public class BloomKFilter
     checkArgument((bitSet.data.length % DEFAULT_BLOCK_SIZE) == 0, "bitSet has to be block aligned");
     this.totalBlockCount = bitSet.data.length / DEFAULT_BLOCK_SIZE;
   }
-  static int optimalNumOfHashFunctions(long n, long m) {
+
+  static void checkArgument(boolean expression, String message)
+  {
+    if (!expression) {
+      throw new IllegalArgumentException(message);
+    }
+  }
+
+  static int optimalNumOfHashFunctions(long n, long m)
+  {
     return Math.max(1, (int) Math.round((double) m / n * Math.log(2)));
   }
 
-  static long optimalNumOfBits(long n, double p) {
+  static long optimalNumOfBits(long n, double p)
+  {
     return (long) (-n * Math.log(p) / (Math.log(2) * Math.log(2)));
   }
 
-  public void add(byte[] val) {
+  /**
+   * Serialize a bloom filter
+   *
+   * @param out         output stream to write to
+   * @param bloomFilter BloomKFilter that needs to be seralized
+   */
+  public static void serialize(OutputStream out, BloomKFilter bloomFilter) throws IOException
+  {
+    /**
+     * Serialized BloomKFilter format:
+     * 1 byte for the number of hash functions.
+     * 1 big endian int(That is how OutputStream works) for the number of longs in the bitset
+     * big endina longs in the BloomKFilter bitset
+     */
+    DataOutputStream dataOutputStream = new DataOutputStream(out);
+    dataOutputStream.writeByte(bloomFilter.k);
+    dataOutputStream.writeInt(bloomFilter.getBitSet().length);
+    for (long value : bloomFilter.getBitSet()) {
+      dataOutputStream.writeLong(value);
+    }
+  }
+
+  /**
+   * Deserialize a bloom filter
+   * Read a byte stream, which was written by {@linkplain #serialize(OutputStream, BloomKFilter)}
+   * into a {@code BloomKFilter}
+   *
+   * @param in input bytestream
+   *
+   * @return deserialized BloomKFilter
+   */
+  public static BloomKFilter deserialize(InputStream in) throws IOException
+  {
+    if (in == null) {
+      throw new IOException("Input stream is null");
+    }
+
+    try {
+      DataInputStream dataInputStream = new DataInputStream(in);
+      int numHashFunc = dataInputStream.readByte();
+      int bitsetArrayLen = dataInputStream.readInt();
+      long[] data = new long[bitsetArrayLen];
+      for (int i = 0; i < bitsetArrayLen; i++) {
+        data[i] = dataInputStream.readLong();
+      }
+      return new BloomKFilter(data, numHashFunc);
+    }
+    catch (RuntimeException e) {
+      IOException io = new IOException("Unable to deserialize BloomKFilter");
+      io.initCause(e);
+      throw io;
+    }
+  }
+
+  /**
+   * Merges BloomKFilter bf2 into bf1.
+   * Assumes 2 BloomKFilters with the same size/hash functions are serialized to byte arrays
+   *
+   * @param bf1Bytes
+   * @param bf1Start
+   * @param bf1Length
+   * @param bf2Bytes
+   * @param bf2Start
+   * @param bf2Length
+   */
+  public static void mergeBloomFilterBytes(
+      byte[] bf1Bytes,
+      int bf1Start,
+      int bf1Length,
+      byte[] bf2Bytes,
+      int bf2Start,
+      int bf2Length
+  )
+  {
+    if (bf1Length != bf2Length) {
+      throw new IllegalArgumentException("bf1Length " + bf1Length + " does not match bf2Length " + bf2Length);
+    }
+
+    // Validation on the bitset size/3 hash functions.
+    for (int idx = 0; idx < START_OF_SERIALIZED_LONGS; ++idx) {
+      if (bf1Bytes[bf1Start + idx] != bf2Bytes[bf2Start + idx]) {
+        throw new IllegalArgumentException("bf1 NumHashFunctions/NumBits does not match bf2");
+      }
+    }
+
+    // Just bitwise-OR the bits together - size/# functions should be the same,
+    // rest of the data is serialized long values for the bitset which are supposed to be bitwise-ORed.
+    for (int idx = START_OF_SERIALIZED_LONGS; idx < bf1Length; ++idx) {
+      bf1Bytes[bf1Start + idx] |= bf2Bytes[bf2Start + idx];
+    }
+  }
+
+  public void add(byte[] val)
+  {
     addBytes(val);
   }
 
-  public void addBytes(byte[] val, int offset, int length) {
+  public void addBytes(byte[] val, int offset, int length)
+  {
     // We use the trick mentioned in "Less Hashing, Same Performance: Building a Better Bloom Filter"
     // by Kirsch et.al. From abstract 'only two hash functions are necessary to effectively
     // implement a Bloom filter without any loss in the asymptotic false positive probability'
@@ -120,11 +225,13 @@ public class BloomKFilter
     addHash(hash64);
   }
 
-  public void addBytes(byte[] val) {
+  public void addBytes(byte[] val)
+  {
     addBytes(val, 0, val.length);
   }
 
-  private void addHash(long hash64) {
+  private void addHash(long hash64)
+  {
     final int hash1 = (int) hash64;
     final int hash2 = (int) (hash64 >>> 32);
 
@@ -152,48 +259,57 @@ public class BloomKFilter
     }
   }
 
-  public void addString(String val) {
+  public void addString(String val)
+  {
     addBytes(val.getBytes());
   }
 
-  public void addByte(byte val) {
+  public void addByte(byte val)
+  {
     addBytes(new byte[]{val});
   }
 
-  public void addInt(int val) {
+  public void addInt(int val)
+  {
     // puts int in little endian order
     addBytes(intToByteArrayLE(val));
   }
 
-
-  public void addLong(long val) {
+  public void addLong(long val)
+  {
     // puts long in little endian order
     addHash(Murmur3.hash64(val));
   }
 
-  public void addFloat(float val) {
+  public void addFloat(float val)
+  {
     addInt(Float.floatToIntBits(val));
   }
 
-  public void addDouble(double val) {
+  public void addDouble(double val)
+  {
     addLong(Double.doubleToLongBits(val));
   }
 
-  public boolean test(byte[] val) {
+  public boolean test(byte[] val)
+  {
     return testBytes(val);
   }
 
-  public boolean testBytes(byte[] val) {
+  public boolean testBytes(byte[] val)
+  {
     return testBytes(val, 0, val.length);
   }
 
-  public boolean testBytes(byte[] val, int offset, int length) {
+  public boolean testBytes(byte[] val, int offset, int length)
+  {
     long hash64 = val == null ? Murmur3.NULL_HASHCODE :
                   Murmur3.hash64(val, offset, length);
     return testHash(hash64);
   }
 
-  private boolean testHash(long hash64) {
+  private boolean testHash(long hash64)
+  {
     final int hash1 = (int) hash64;
     final int hash2 = (int) (hash64 >>> 32);
 
@@ -214,7 +330,7 @@ public class BloomKFilter
 
     // iterate and update masks array
     for (int i = 1; i <= k; i++) {
-      int combinedHash = hash1 + ((i + 1)  * hash2);
+      int combinedHash = hash1 + ((i + 1) * hash2);
       // hashcode should be positive, flip all the bits if it's negative
       if (combinedHash < 0) {
         combinedHash = ~combinedHash;
@@ -240,31 +356,38 @@ public class BloomKFilter
     return expected == 0;
   }
 
-  public boolean testString(String val) {
+  public boolean testString(String val)
+  {
     return testBytes(val.getBytes());
   }
 
-  public boolean testByte(byte val) {
+  public boolean testByte(byte val)
+  {
     return testBytes(new byte[]{val});
   }
 
-  public boolean testInt(int val) {
+  public boolean testInt(int val)
+  {
     return testBytes(intToByteArrayLE(val));
   }
 
-  public boolean testLong(long val) {
+  public boolean testLong(long val)
+  {
     return testHash(Murmur3.hash64(val));
   }
 
-  public boolean testFloat(float val) {
+  public boolean testFloat(float val)
+  {
     return testInt(Float.floatToIntBits(val));
   }
 
-  public boolean testDouble(double val) {
+  public boolean testDouble(double val)
+  {
     return testLong(Double.doubleToLongBits(val));
   }
 
-  private byte[] intToByteArrayLE(int val) {
+  private byte[] intToByteArrayLE(int val)
+  {
     byte[] bytes = BYTE_ARRAY_4.get();
     bytes[0] = (byte) (val >> 0);
     bytes[1] = (byte) (val >> 8);
@@ -273,28 +396,34 @@ public class BloomKFilter
     return bytes;
   }
 
-  public long sizeInBytes() {
+  public long sizeInBytes()
+  {
     return getBitSize() / 8;
   }
 
-  public int getBitSize() {
+  public int getBitSize()
+  {
     return bitSet.getData().length * Long.SIZE;
   }
 
-  public int getNumHashFunctions() {
+  public int getNumHashFunctions()
+  {
     return k;
   }
 
-  public int getNumBits() {
+  public int getNumBits()
+  {
     return m;
   }
 
-  public long[] getBitSet() {
+  public long[] getBitSet()
+  {
     return bitSet.getData();
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "m: " + m + " k: " + k;
   }
 
@@ -303,7 +432,8 @@ public class BloomKFilter
    *
    * @param that - bloom filter to merge
    */
-  public void merge(BloomKFilter that) {
+  public void merge(BloomKFilter that)
+  {
     if (this != that && this.m == that.m && this.k == that.k) {
       this.bitSet.putAll(that.bitSet);
     } else {
@@ -312,105 +442,21 @@ public class BloomKFilter
     }
   }
 
-  public void reset() {
+  public void reset()
+  {
     this.bitSet.clear();
-  }
-
-  /**
-   * Serialize a bloom filter
-   *
-   * @param out         output stream to write to
-   * @param bloomFilter BloomKFilter that needs to be seralized
-   */
-  public static void serialize(OutputStream out, BloomKFilter bloomFilter) throws IOException {
-    /**
-     * Serialized BloomKFilter format:
-     * 1 byte for the number of hash functions.
-     * 1 big endian int(That is how OutputStream works) for the number of longs in the bitset
-     * big endina longs in the BloomKFilter bitset
-     */
-    DataOutputStream dataOutputStream = new DataOutputStream(out);
-    dataOutputStream.writeByte(bloomFilter.k);
-    dataOutputStream.writeInt(bloomFilter.getBitSet().length);
-    for (long value : bloomFilter.getBitSet()) {
-      dataOutputStream.writeLong(value);
-    }
-  }
-
-  /**
-   * Deserialize a bloom filter
-   * Read a byte stream, which was written by {@linkplain #serialize(OutputStream, BloomKFilter)}
-   * into a {@code BloomKFilter}
-   *
-   * @param in input bytestream
-   * @return deserialized BloomKFilter
-   */
-  public static BloomKFilter deserialize(InputStream in) throws IOException {
-    if (in == null) {
-      throw new IOException("Input stream is null");
-    }
-
-    try {
-      DataInputStream dataInputStream = new DataInputStream(in);
-      int numHashFunc = dataInputStream.readByte();
-      int bitsetArrayLen = dataInputStream.readInt();
-      long[] data = new long[bitsetArrayLen];
-      for (int i = 0; i < bitsetArrayLen; i++) {
-        data[i] = dataInputStream.readLong();
-      }
-      return new BloomKFilter(data, numHashFunc);
-    } catch (RuntimeException e) {
-      IOException io = new IOException("Unable to deserialize BloomKFilter");
-      io.initCause(e);
-      throw io;
-    }
-  }
-
-  // Given a byte array consisting of a serialized BloomKFilter, gives the offset (from 0)
-  // for the start of the serialized long values that make up the bitset.
-  // NumHashFunctions (1 byte) + bitset array length (4 bytes)
-  public static final int START_OF_SERIALIZED_LONGS = 5;
-
-  /**
-   * Merges BloomKFilter bf2 into bf1.
-   * Assumes 2 BloomKFilters with the same size/hash functions are serialized to byte arrays
-   *
-   * @param bf1Bytes
-   * @param bf1Start
-   * @param bf1Length
-   * @param bf2Bytes
-   * @param bf2Start
-   * @param bf2Length
-   */
-  public static void mergeBloomFilterBytes(
-      byte[] bf1Bytes, int bf1Start, int bf1Length,
-      byte[] bf2Bytes, int bf2Start, int bf2Length) {
-    if (bf1Length != bf2Length) {
-      throw new IllegalArgumentException("bf1Length " + bf1Length + " does not match bf2Length " + bf2Length);
-    }
-
-    // Validation on the bitset size/3 hash functions.
-    for (int idx = 0; idx < START_OF_SERIALIZED_LONGS; ++idx) {
-      if (bf1Bytes[bf1Start + idx] != bf2Bytes[bf2Start + idx]) {
-        throw new IllegalArgumentException("bf1 NumHashFunctions/NumBits does not match bf2");
-      }
-    }
-
-    // Just bitwise-OR the bits together - size/# functions should be the same,
-    // rest of the data is serialized long values for the bitset which are supposed to be bitwise-ORed.
-    for (int idx = START_OF_SERIALIZED_LONGS; idx < bf1Length; ++idx) {
-      bf1Bytes[bf1Start + idx] |= bf2Bytes[bf2Start + idx];
-    }
   }
 
   /**
    * Bare metal bit set implementation. For performance reasons, this implementation does not check
    * for index bounds nor expand the bit set size if the specified index is greater than the size.
    */
-  public static class BitSet {
+  public static class BitSet
+  {
     private final long[] data;
 
-    public BitSet(long bits) {
+    public BitSet(long bits)
+    {
       this(new long[(int) Math.ceil((double) bits / (double) Long.SIZE)]);
     }
 
@@ -419,7 +465,8 @@ public class BloomKFilter
      *
      * @param data - bit array
      */
-    public BitSet(long[] data) {
+    public BitSet(long[] data)
+    {
       assert data.length > 0 : "data length is zero!";
       this.data = data;
     }
@@ -429,7 +476,8 @@ public class BloomKFilter
      *
      * @param index - position
      */
-    public void set(int index) {
+    public void set(int index)
+    {
       data[index >>> 6] |= (1L << index);
     }
 
@@ -437,27 +485,32 @@ public class BloomKFilter
      * Returns true if the bit is set in the specified index.
      *
      * @param index - position
+     *
      * @return - value at the bit position
      */
-    public boolean get(int index) {
+    public boolean get(int index)
+    {
       return (data[index >>> 6] & (1L << index)) != 0;
     }
 
     /**
      * Number of bits
      */
-    public int bitSize() {
+    public int bitSize()
+    {
       return data.length * Long.SIZE;
     }
 
-    public long[] getData() {
+    public long[] getData()
+    {
       return data;
     }
 
     /**
      * Combines the two BitArrays using bitwise OR.
      */
-    public void putAll(BloomKFilter.BitSet array) {
+    public void putAll(BloomKFilter.BitSet array)
+    {
       assert data.length == array.data.length :
           "BitArrays must be of equal length (" + data.length + "!= " + array.data.length + ")";
       for (int i = 0; i < data.length; i++) {
@@ -468,7 +521,8 @@ public class BloomKFilter
     /**
      * Clear the bit set.
      */
-    public void clear() {
+    public void clear()
+    {
       Arrays.fill(data, 0);
     }
   }
