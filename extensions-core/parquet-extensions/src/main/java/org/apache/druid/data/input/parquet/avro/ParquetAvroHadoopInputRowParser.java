@@ -51,7 +51,7 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
   private final boolean binaryAsString;
   private final TimestampSpec timestampSpec;
   private final ObjectFlattener<GenericRecord> recordFlattener;
-
+  private final List<String> dimensions;
 
   @JsonCreator
   public ParquetAvroHadoopInputRowParser(
@@ -61,6 +61,7 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
   {
     this.parseSpec = parseSpec;
     this.timestampSpec = parseSpec.getTimestampSpec();
+    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
 
     final JSONPathSpec flattenSpec;
@@ -95,8 +96,8 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
   {
     Map<String, Object> row = recordFlattener.flatten(record);
 
-    final List<String> dimensions = parseSpec.getDimensionsSpec().hasCustomDimensions()
-                                    ? parseSpec.getDimensionsSpec().getDimensionNames()
+    final List<String> dimensions = !this.dimensions.isEmpty()
+                                    ? this.dimensions
                                     : new ArrayList(
                                         Sets.difference(
                                             row.keySet(),

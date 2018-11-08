@@ -36,6 +36,7 @@ import java.util.Map;
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
   private final ParseSpec parseSpec;
+  private final List<String> dimensions;
 
   @JsonCreator
   public MapInputRowParser(
@@ -43,13 +44,14 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   )
   {
     this.parseSpec = parseSpec;
+    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
   }
 
   @Override
   public List<InputRow> parseBatch(Map<String, Object> theMap)
   {
-    final List<String> dimensions = parseSpec.getDimensionsSpec().hasCustomDimensions()
-                                    ? parseSpec.getDimensionsSpec().getDimensionNames()
+    final List<String> dimensions = !this.dimensions.isEmpty()
+                                    ? this.dimensions
                                     : Lists.newArrayList(
                                         Sets.difference(
                                             theMap.keySet(),
