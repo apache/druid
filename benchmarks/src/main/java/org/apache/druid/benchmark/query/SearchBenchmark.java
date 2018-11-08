@@ -298,11 +298,6 @@ public class SearchBenchmark
     dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
     dimFilters.add(new SelectorDimFilter(dimName, "3", null));
     dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null));
-    //CHECKSTYLE.OFF: Regexp - TODO intentional duplicates?
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
-    //CHECKSTYLE.ON: Regexp
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
