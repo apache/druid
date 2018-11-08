@@ -197,7 +197,7 @@ public class KafkaSimpleConsumer
         )
     );
     OffsetRequest request = new OffsetRequest(requestInfo, kafka.api.OffsetRequest.CurrentVersion(), clientId);
-    OffsetResponse response = null;
+    OffsetResponse response;
     try {
       response = consumer.getOffsetsBefore(request);
     }
@@ -219,7 +219,7 @@ public class KafkaSimpleConsumer
 
   public Iterable<BytesMessageWithOffset> fetch(long offset, int timeoutMs) throws InterruptedException
   {
-    FetchResponse response = null;
+    FetchResponse response;
     Broker previousLeader = leaderBroker;
     while (true) {
       ensureConsumer(previousLeader);

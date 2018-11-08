@@ -24,7 +24,7 @@ tar -xzf tranquility-distribution-0.8.2.tgz
 mv tranquility-distribution-0.8.2 tranquility
 ```
 
-The startup scripts for the tutorial will expect the contents of the Tranquility tarball to be located at `tranquility` under the druid-#{DRUIDVERSION} package root.
+The startup scripts for the tutorial will expect the contents of the Tranquility tarball to be located at `tranquility` under the apache-druid-#{DRUIDVERSION} package root.
 
 ## Enable Tranquility Server
 
@@ -34,7 +34,7 @@ The startup scripts for the tutorial will expect the contents of the Tranquility
 As part of the output of *supervise* you should see something like:
 
 ```bash
-Running command[tranquility-server], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/tranquility-server.log]: tranquility/bin/tranquility server -configFile quickstart/tutorial/conf/tranquility/server.json -Ddruid.extensions.loadList=[]
+Running command[tranquility-server], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/tranquility-server.log]: tranquility/bin/tranquility server -configFile quickstart/tutorial/conf/tranquility/server.json -Ddruid.extensions.loadList=[]
 ```
 
 You can check the log file in `var/sv/tranquility-server.log` to confirm that the server is starting up properly.
@@ -44,8 +44,8 @@ You can check the log file in `var/sv/tranquility-server.log` to confirm that th
 Let's send the sample Wikipedia edits data to Tranquility:
 
 ```bash
-gunzip -k quickstart/wikiticker-2015-09-12-sampled.json.gz 
-curl -XPOST -H'Content-Type: application/json' --data-binary @quickstart/wikiticker-2015-09-12-sampled.json http://localhost:8200/v1/post/wikipedia
+gunzip -k quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz 
+curl -XPOST -H'Content-Type: application/json' --data-binary @quickstart/tutorial/wikiticker-2015-09-12-sampled.json http://localhost:8200/v1/post/wikipedia
 ```
 
 Which will print something like:

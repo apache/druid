@@ -28,13 +28,13 @@ import org.junit.Test;
 
 public class ConstantDimensionSelectorTest
 {
-  private final DimensionSelector NULL_SELECTOR = DimensionSelectorUtils.constantSelector(null);
-  private final DimensionSelector CONST_SELECTOR = DimensionSelectorUtils.constantSelector("billy");
-  private final DimensionSelector NULL_EXTRACTION_SELECTOR = DimensionSelectorUtils.constantSelector(
+  private final DimensionSelector NULL_SELECTOR = DimensionSelector.constant(null);
+  private final DimensionSelector CONST_SELECTOR = DimensionSelector.constant("billy");
+  private final DimensionSelector NULL_EXTRACTION_SELECTOR = DimensionSelector.constant(
       null,
       new StringFormatExtractionFn("billy")
   );
-  private final DimensionSelector CONST_EXTRACTION_SELECTOR = DimensionSelectorUtils.constantSelector(
+  private final DimensionSelector CONST_EXTRACTION_SELECTOR = DimensionSelector.constant(
       "billybilly",
       new SubstringDimExtractionFn(0, 5)
   );

@@ -94,7 +94,7 @@ The SQL queries are submitted as JSON over HTTP.
 
 ### TopN query example
 
-The tutorial package includes an example file that contains the SQL query shown above at `quickstart/wikipedia-top-pages-sql.json`. Let's submit that query to the Druid broker:
+The tutorial package includes an example file that contains the SQL query shown above at `quickstart/tutorial/wikipedia-top-pages-sql.json`. Let's submit that query to the Druid broker:
 
 ```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-top-pages-sql.json http://localhost:8082/druid/v2/sql

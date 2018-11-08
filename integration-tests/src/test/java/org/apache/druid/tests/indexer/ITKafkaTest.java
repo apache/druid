@@ -197,7 +197,6 @@ public class ITKafkaTest extends AbstractIndexerTest
       consumerProperties.put("zookeeper.connection.timeout.ms", "15000");
       consumerProperties.put("zookeeper.sync.time.ms", "5000");
       consumerProperties.put("group.id", Long.toString(System.currentTimeMillis()));
-      consumerProperties.put("zookeeper.sync.time.ms", "5000");
       consumerProperties.put("fetch.message.max.bytes", "1048586");
       consumerProperties.put("auto.offset.reset", "smallest");
       consumerProperties.put("auto.commit.enable", "false");
@@ -249,20 +248,20 @@ public class ITKafkaTest extends AbstractIndexerTest
     segmentsExist = true;
 
     // put the timestamps into the query structure
-    String query_response_template = null;
+    String queryResponseTemplate;
     InputStream is = ITKafkaTest.class.getResourceAsStream(QUERIES_FILE);
     if (null == is) {
       throw new ISE("could not open query file: %s", QUERIES_FILE);
     }
 
     try {
-      query_response_template = IOUtils.toString(is, "UTF-8");
+      queryResponseTemplate = IOUtils.toString(is, "UTF-8");
     }
     catch (IOException e) {
       throw new ISE(e, "could not read query file: %s", QUERIES_FILE);
     }
 
-    String queryStr = query_response_template
+    String queryStr = queryResponseTemplate
         .replaceAll("%%DATASOURCE%%", DATASOURCE)
         // time boundary
         .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))

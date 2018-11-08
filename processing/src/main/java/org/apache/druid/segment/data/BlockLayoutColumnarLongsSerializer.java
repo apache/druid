@@ -47,7 +47,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
   private int numInserted = 0;
   private int numInsertedForNextFlush;
 
-  private ByteBuffer endBuffer = null;
+  private ByteBuffer endBuffer;
 
   BlockLayoutColumnarLongsSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,

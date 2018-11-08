@@ -216,7 +216,7 @@ public class ImmutableConciseSet
     int endIndex = length - 1;
 
     int wordsWalked = 0;
-    int last = 0;
+    int last;
 
     WordIterator iter = set.newWordIterator();
 

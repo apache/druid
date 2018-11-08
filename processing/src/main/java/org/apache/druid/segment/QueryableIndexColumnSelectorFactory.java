@@ -81,7 +81,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder == null) {
-      return DimensionSelectorUtils.constantSelector(null, extractionFn);
+      return DimensionSelector.constant(null, extractionFn);
     }
 
     if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
@@ -108,7 +108,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       //noinspection unchecked
       return ((DictionaryEncodedColumn<String>) column).makeDimensionSelector(offset, extractionFn);
     } else {
-      return DimensionSelectorUtils.constantSelector(null, extractionFn);
+      return DimensionSelector.constant(null, extractionFn);
     }
   }
 
