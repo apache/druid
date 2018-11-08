@@ -96,10 +96,10 @@
   "ingest/events/messageGap": [
     "dataSource"
   ],
-  "ingest/kafka/maxLag": [
+  "ingest/kafka/lag": [
     "dataSource"
   ],
-  "ingest/kafka/totalLag": [
+  "ingest/kafka/maxLag": [
     "dataSource"
   ],
   "ingest/kafka/avgLag": [
