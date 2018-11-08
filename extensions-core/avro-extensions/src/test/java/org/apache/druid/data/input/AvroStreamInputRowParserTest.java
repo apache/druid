@@ -89,6 +89,7 @@ public class AvroStreamInputRowParserTest
       "someStringArray",
       "someIntArray",
       "someFloat",
+      "someUnion",
       EVENT_TYPE,
       ID,
       "someBytes",

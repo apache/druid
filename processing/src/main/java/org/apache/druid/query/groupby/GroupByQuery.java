@@ -95,11 +95,14 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private final VirtualColumns virtualColumns;
   private final LimitSpec limitSpec;
+  @Nullable
   private final HavingSpec havingSpec;
+  @Nullable
   private final DimFilter dimFilter;
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  @Nullable
   private final List<List<String>> subtotalsSpec;
 
   private final boolean applyLimitPushDown;
@@ -115,9 +118,9 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
-      @JsonProperty("having") HavingSpec havingSpec,
+      @JsonProperty("having") @Nullable HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
-      @JsonProperty("subtotalsSpec") List<List<String>> subtotalsSpec,
+      @JsonProperty("subtotalsSpec") @Nullable List<List<String>> subtotalsSpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -168,12 +171,12 @@ public class GroupByQuery extends BaseQuery<Row>
       final DataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       final VirtualColumns virtualColumns,
-      final DimFilter dimFilter,
+      final @Nullable DimFilter dimFilter,
       final Granularity granularity,
-      final List<DimensionSpec> dimensions,
-      final List<AggregatorFactory> aggregatorSpecs,
-      final List<PostAggregator> postAggregatorSpecs,
-      final HavingSpec havingSpec,
+      final @Nullable List<DimensionSpec> dimensions,
+      final @Nullable List<AggregatorFactory> aggregatorSpecs,
+      final @Nullable List<PostAggregator> postAggregatorSpecs,
+      final @Nullable HavingSpec havingSpec,
       final LimitSpec limitSpec,
       final @Nullable List<List<String>> subtotalsSpec,
       final @Nullable Function<Sequence<Row>, Sequence<Row>> postProcessingFn,
@@ -198,7 +201,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
 
-    this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, dimensions);
+    this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, this.dimensions);
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
@@ -211,7 +214,11 @@ public class GroupByQuery extends BaseQuery<Row>
     this.applyLimitPushDown = determineApplyLimitPushDown();
   }
 
-  private List<List<String>> verifySubtotalsSpec(List<List<String>> subtotalsSpec, List<DimensionSpec> dimensions)
+  @Nullable
+  private List<List<String>> verifySubtotalsSpec(
+      @Nullable List<List<String>> subtotalsSpec,
+      List<DimensionSpec> dimensions
+  )
   {
     // if subtotalsSpec exists then validate that all are subsets of dimensions spec and are in same order.
     // For example if we had {D1, D2, D3} in dimensions spec then
@@ -736,20 +743,37 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public static class Builder
   {
+    @Nullable
+    private static List<List<String>> copySubtotalSpec(@Nullable List<List<String>> subtotalsSpec)
+    {
+      if (subtotalsSpec == null) {
+        return null;
+      }
+      return subtotalsSpec.stream().map(ArrayList::new).collect(Collectors.toList());
+    }
+
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private VirtualColumns virtualColumns;
+    @Nullable
     private DimFilter dimFilter;
     private Granularity granularity;
+    @Nullable
     private List<DimensionSpec> dimensions;
+    @Nullable
     private List<AggregatorFactory> aggregatorSpecs;
+    @Nullable
     private List<PostAggregator> postAggregatorSpecs;
+    @Nullable
     private HavingSpec havingSpec;
 
     private Map<String, Object> context;
 
+    @Nullable
     private List<List<String>> subtotalsSpec = null;
+    @Nullable
     private LimitSpec limitSpec = null;
+    @Nullable
     private Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
     private List<OrderByColumnSpec> orderByColumnSpecs = new ArrayList<>();
     private int limit = Integer.MAX_VALUE;
@@ -787,6 +811,7 @@ public class GroupByQuery extends BaseQuery<Row>
       postAggregatorSpecs = builder.postAggregatorSpecs;
       havingSpec = builder.havingSpec;
       limitSpec = builder.limitSpec;
+      subtotalsSpec = copySubtotalSpec(builder.subtotalsSpec);
       postProcessingFn = builder.postProcessingFn;
       limit = builder.limit;
       orderByColumnSpecs = new ArrayList<>(builder.orderByColumnSpecs);

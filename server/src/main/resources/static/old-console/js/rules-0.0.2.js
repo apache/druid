@@ -118,6 +118,7 @@ function makeLoadByInterval(rule) {
 function makeLoadByPeriod(rule) {
   var retVal = "";
   retVal += "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
+  retVal += "<span class='rule_label'>includeFuture</span><input type='text' name='includeFuture' " + "value='" + true + "'/>";
   retVal += "<button type='button' class='add_tier'>Add Another Tier</button>";
   if (rule.tieredReplicants === undefined) {
     retVal += makeTierLoad(null, 0);
@@ -152,7 +153,10 @@ function makeDropByInterval(rule) {
 }
 
 function makeDropByPeriod(rule) {
-  return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
+  var retVal = "";
+  retVal += "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
+  retVal += "<span class='rule_label'>includeFuture</span><input type='text' name='includeFuture' " + "value='" + true + "'/>";
+  return retVal;
 }
 
 function makeDropBeforeByPeriod(rule) {

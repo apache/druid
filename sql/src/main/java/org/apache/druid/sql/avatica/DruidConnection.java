@@ -20,7 +20,6 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -29,7 +28,6 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.HashMap;
 import java.util.Map;
@@ -85,17 +83,9 @@ public class DruidConnection
 
       // remove sensitive fields from the context, only the connection's context needs to have authentication
       // credentials
-      Map<String, Object> sanitizedContext = new HashMap<>();
-      sanitizedContext = Maps.filterEntries(
+      Map<String, Object> sanitizedContext = Maps.filterEntries(
           context,
-          new Predicate<Map.Entry<String, Object>>()
-          {
-            @Override
-            public boolean apply(@Nullable Map.Entry<String, Object> input)
-            {
-              return !SENSITIVE_CONTEXT_FIELDS.contains(input.getKey());
-            }
-          }
+          e -> !SENSITIVE_CONTEXT_FIELDS.contains(e.getKey())
       );
 
       final DruidStatement statement = new DruidStatement(

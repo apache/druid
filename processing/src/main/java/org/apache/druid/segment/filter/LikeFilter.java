@@ -174,7 +174,7 @@ public class LikeFilter implements Filter
         return new IntIterator()
         {
           int currIndex = startIndex;
-          int found = -1;
+          int found;
 
           {
             found = findNext();

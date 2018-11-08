@@ -73,6 +73,7 @@ public class PullDependencies implements Runnable
 {
   private static final Logger log = new Logger(PullDependencies.class);
 
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private static final Set<String> exclusions = new HashSet<>(
       /*
 

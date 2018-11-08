@@ -70,7 +70,7 @@ public class IntervalsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getIntervals(@Context final HttpServletRequest req)
   {
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
     final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
         req,
         serverInventoryView,
@@ -80,11 +80,7 @@ public class IntervalsResource
     final Map<Interval, Map<String, Map<String, Object>>> retVal = new TreeMap<>(comparator);
     for (ImmutableDruidDataSource dataSource : datasources) {
       for (DataSegment dataSegment : dataSource.getSegments()) {
-        Map<String, Map<String, Object>> interval = retVal.get(dataSegment.getInterval());
-        if (interval == null) {
-          Map<String, Map<String, Object>> tmp = new HashMap<>();
-          retVal.put(dataSegment.getInterval(), tmp);
-        }
+        retVal.computeIfAbsent(dataSegment.getInterval(), i -> new HashMap<>());
         setProperties(retVal, dataSource, dataSegment);
       }
     }
@@ -109,18 +105,14 @@ public class IntervalsResource
         authorizerMapper
     );
 
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
 
     if (full != null) {
       final Map<Interval, Map<String, Map<String, Object>>> retVal = new TreeMap<>(comparator);
       for (ImmutableDruidDataSource dataSource : datasources) {
         for (DataSegment dataSegment : dataSource.getSegments()) {
           if (theInterval.contains(dataSegment.getInterval())) {
-            Map<String, Map<String, Object>> dataSourceInterval = retVal.get(dataSegment.getInterval());
-            if (dataSourceInterval == null) {
-              Map<String, Map<String, Object>> tmp = new HashMap<>();
-              retVal.put(dataSegment.getInterval(), tmp);
-            }
+            retVal.computeIfAbsent(dataSegment.getInterval(), k -> new HashMap<>());
             setProperties(retVal, dataSource, dataSegment);
           }
         }

@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -170,10 +171,9 @@ public class OrderedMergeIteratorTest
   @Test(expected = NoSuchElementException.class)
   public void testNoElementInNext()
   {
-    final ArrayList<Iterator<Integer>> iterators = new ArrayList<>();
-    OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
+    OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<>(
         Ordering.natural(),
-        iterators.iterator()
+        Collections.emptyIterator()
     );
     iter.next();
   }
@@ -181,10 +181,9 @@ public class OrderedMergeIteratorTest
   @Test(expected = UnsupportedOperationException.class)
   public void testRemove()
   {
-    final ArrayList<Iterator<Integer>> iterators = new ArrayList<>();
-    OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
+    OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<>(
         Ordering.natural(),
-        iterators.iterator()
+        Collections.emptyIterator()
     );
     iter.remove();
   }
