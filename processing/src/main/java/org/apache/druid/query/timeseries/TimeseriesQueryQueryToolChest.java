@@ -73,6 +73,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
       };
 
+  @Deprecated
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
