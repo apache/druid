@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,6 +42,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
@@ -129,7 +129,6 @@ public class KafkaSupervisor implements Supervisor
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
   private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
-  private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
 
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
 
@@ -337,7 +336,7 @@ public class KafkaSupervisor implements Supervisor
     this.futureTimeoutInSeconds = Math.max(
         MINIMUM_FUTURE_TIMEOUT_IN_SECONDS,
         tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
-                                         + KafkaIndexTaskClient.MAX_RETRY_WAIT_SECONDS)
+                                         + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
 
     int chatThreads = (this.tuningConfig.getChatThreads() != null
@@ -466,6 +465,12 @@ public class KafkaSupervisor implements Supervisor
            .emit();
       }
     }
+  }
+
+  private boolean someTaskGroupsPendingCompletion(Integer groupId)
+  {
+    CopyOnWriteArrayList<TaskGroup> taskGroups = pendingCompletionTaskGroups.get(groupId);
+    return taskGroups != null && taskGroups.size() > 0;
   }
 
   @Override
@@ -1341,7 +1346,7 @@ public class KafkaSupervisor implements Supervisor
                     partitionOffset.getValue() :
                     latestOffsetsFromDb.getOrDefault(partitionOffset.getKey(), partitionOffset.getValue())
                 ) == 0) && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
-                pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() > 0
+                someTaskGroupsPendingCompletion(groupId)
                 && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))) {
           final SortedMap<Integer, Map<Integer, Long>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
@@ -1378,7 +1383,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     if ((tasksToKill.size() > 0 && tasksToKill.size() == taskGroup.tasks.size()) ||
-        (taskGroup.tasks.size() == 0 && pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() == 0)) {
+        (taskGroup.tasks.size() == 0 && !someTaskGroupsPendingCompletion(groupId))) {
       // killing all tasks or no task left in the group ?
       // clear state about the taskgroup so that get latest offset information is fetched from metadata store
       log.warn("Clearing task group [%d] information as no valid tasks left the group", groupId);

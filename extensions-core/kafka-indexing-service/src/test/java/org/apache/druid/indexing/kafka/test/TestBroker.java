@@ -29,7 +29,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.apache.kafka.common.utils.SystemTime;
+import org.apache.kafka.common.utils.Time;
 import scala.Some;
 import scala.collection.immutable.List$;
 
@@ -81,7 +81,7 @@ public class TestBroker implements Closeable
 
     final KafkaConfig config = new KafkaConfig(props);
 
-    server = new KafkaServer(config, SystemTime.SYSTEM, Some.apply(StringUtils.format("TestingBroker[%d]-", id)), List$.MODULE$.empty());
+    server = new KafkaServer(config, Time.SYSTEM, Some.apply(StringUtils.format("TestingBroker[%d]-", id)), List$.MODULE$.empty());
     server.startup();
   }
 

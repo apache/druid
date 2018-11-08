@@ -576,7 +576,7 @@ public abstract class WorkerTaskManager
     @Override
     public void handle()
     {
-      TaskAnnouncement announcement = null;
+      TaskAnnouncement announcement;
       synchronized (lock) {
         if (runningTasks.containsKey(task.getId()) || completedTasks.containsKey(task.getId())) {
           log.warn(

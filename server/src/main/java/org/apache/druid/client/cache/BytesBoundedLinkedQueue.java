@@ -137,7 +137,6 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     checkNotNull(e);
     checkSize(e);
     long nanos = unit.toNanos(timeout);
-    boolean added = false;
     putLock.lockInterruptibly();
     try {
       while (currentSize.get() + getBytesSize(e) > capacity) {
@@ -148,16 +147,12 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
       }
       delegate.add(e);
       elementAdded(e);
-      added = true;
     }
     finally {
       putLock.unlock();
     }
-    if (added) {
-      signalNotEmpty();
-    }
-    return added;
-
+    signalNotEmpty();
+    return true;
   }
 
   @Override
@@ -222,12 +217,12 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     if (c == this) {
       throw new IllegalArgumentException();
     }
-    int n = 0;
+    int n;
     takeLock.lock();
     try {
       // elementCount.get provides visibility to first n Nodes
       n = Math.min(maxElements, elementCount.get());
-      if (n < 0) {
+      if (n <= 0) {
         return 0;
       }
       for (int i = 0; i < n; i++) {
@@ -239,9 +234,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
     finally {
       takeLock.unlock();
     }
-    if (n > 0) {
-      signalNotFull();
-    }
+    signalNotFull();
     return n;
   }
 
@@ -250,7 +243,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   {
     checkNotNull(e);
     checkSize(e);
-    boolean added = false;
+    boolean added;
     putLock.lock();
     try {
       if (currentSize.get() + getBytesSize(e) > capacity) {
@@ -274,7 +267,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   @Override
   public E poll()
   {
-    E e = null;
+    E e;
     takeLock.lock();
     try {
       e = delegate.poll();
@@ -295,7 +288,7 @@ public abstract class BytesBoundedLinkedQueue<E> extends AbstractQueue<E> implem
   public E poll(long timeout, TimeUnit unit) throws InterruptedException
   {
     long nanos = unit.toNanos(timeout);
-    E e = null;
+    E e;
     takeLock.lockInterruptibly();
     try {
       while (elementCount.get() == 0) {

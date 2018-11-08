@@ -42,7 +42,8 @@ public class PeriodDropRuleTest
   {
     DateTime now = DateTimes.of("2012-12-31T01:00:00");
     PeriodDropRule rule = new PeriodDropRule(
-        new Period("P5000Y")
+        new Period("P5000Y"),
+        false
     );
 
     Assert.assertTrue(
@@ -70,7 +71,8 @@ public class PeriodDropRuleTest
   {
     DateTime now = DateTimes.of("2012-12-31T01:00:00");
     PeriodDropRule rule = new PeriodDropRule(
-        new Period("P1M")
+        new Period("P1M"),
+        false
     );
 
     Assert.assertTrue(
@@ -98,6 +100,33 @@ public class PeriodDropRuleTest
         rule.appliesTo(
             builder.interval(new Interval(now.minusMonths(2), now.minusDays(1)))
                        .build(),
+            now
+        )
+    );
+  }
+
+  @Test
+  public void testIncludeFuture()
+  {
+    DateTime now = DateTimes.of("2012-12-31T01:00:00");
+    PeriodDropRule includeFutureRule = new PeriodDropRule(
+        new Period("P2D"),
+        true
+    );
+    PeriodDropRule notIncludeFutureRule = new PeriodDropRule(
+        new Period("P2D"),
+        false
+    );
+
+    Assert.assertTrue(
+        includeFutureRule.appliesTo(
+            builder.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
+            now
+        )
+    );
+    Assert.assertFalse(
+        notIncludeFutureRule.appliesTo(
+            builder.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
             now
         )
     );

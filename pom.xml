@@ -134,6 +134,7 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
+        <module>extensions-core/parquet-extensions</module>
         <module>extensions-core/postgresql-metadata-storage</module>
         <module>extensions-core/protobuf-extensions</module>
         <module>extensions-core/lookups-cached-global</module>
@@ -151,7 +152,6 @@
         <module>extensions-contrib/kafka-eight-simpleConsumer</module>
         <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
-        <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/orc-extensions</module>
         <module>extensions-contrib/time-min-max</module>
@@ -337,7 +337,7 @@
             <dependency>
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_annotations</artifactId>
-                <version>2.2.0</version>
+                <version>2.3.2</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>
@@ -1265,8 +1265,8 @@
                                 <arg>-Xep:PreconditionsInvalidPlaceholder:ERROR</arg>
                                 <arg>-Xep:MissingOverride:ERROR</arg>
                                 <arg>-Xep:DefaultCharset:ERROR</arg>
+                                <arg>-Xep:QualifierOrScopeOnInjectMethod:ERROR</arg>
 
-                                <arg>-Xep:ArgumentParameterSwap</arg>
                                 <arg>-Xep:AssistedInjectAndInjectOnSameConstructor</arg>
                                 <arg>-Xep:AutoFactoryAtInject</arg>
                                 <arg>-Xep:ClassName</arg>
@@ -1289,7 +1289,6 @@
                                 <arg>-Xep:NumericEquality</arg>
                                 <arg>-Xep:ParameterPackage</arg>
                                 <arg>-Xep:ProtoStringFieldReferenceEquality</arg>
-                                <arg>-Xep:QualifierOnMethodWithoutProvides</arg>
                                 <arg>-Xep:UnlockMethod</arg>
                             </compilerArgs>
                         </configuration>
@@ -1297,14 +1296,14 @@
                             <dependency>
                                 <groupId>org.codehaus.plexus</groupId>
                                 <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                                <version>2.8.1</version>
+                                <version>2.8.5</version>
                             </dependency>
                             <!-- override plexus-compiler-javac-errorprone's dependency on
                                  Error Prone with the latest version -->
                             <dependency>
                                 <groupId>com.google.errorprone</groupId>
                                 <artifactId>error_prone_core</artifactId>
-                                <version>2.0.19</version>
+                                <version>2.3.2</version>
                             </dependency>
                         </dependencies>
                     </plugin>
@@ -1441,6 +1440,8 @@
                                 <exclude>.travis.yml</exclude>
                                 <!--DEV and IT-TESTS-->
                                 <exclude>**/*.json</exclude>
+                                <exclude>**/*.parq</exclude>
+                                <exclude>**/*.parquet</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/quickstart/protobuf/**</exclude>
                                 <exclude>**/tutorial/conf/**</exclude>

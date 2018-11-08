@@ -50,6 +50,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
@@ -88,6 +89,8 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVERS_TABLE = "servers";
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
+
+  private static final EmittingLogger log = new EmittingLogger(SystemSchema.class);
 
   private static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -414,7 +417,8 @@ public class SystemSchema extends AbstractSchema
     try {
       request = coordinatorClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/coordinator/v1/metadata/segments")
+          StringUtils.format("/druid/coordinator/v1/metadata/segments"),
+          false
       );
     }
     catch (IOException e) {
@@ -424,6 +428,7 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
+
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
     {
     });
@@ -433,7 +438,8 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper
+        jsonMapper,
+        responseHandler
     );
   }
 
@@ -671,7 +677,8 @@ public class SystemSchema extends AbstractSchema
     try {
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/indexer/v1/tasks")
+          StringUtils.format("/druid/indexer/v1/tasks"),
+          false
       );
     }
     catch (IOException e) {
@@ -681,6 +688,7 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
+
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
     {
     });
@@ -690,7 +698,8 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper
+        jsonMapper,
+        responseHandler
     );
   }
 

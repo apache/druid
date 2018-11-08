@@ -20,22 +20,16 @@
 package org.apache.druid.data.input.avro;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.NestedDataParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.Parser;
 
-import java.util.Objects;
-
-public class AvroParseSpec extends ParseSpec
+public class AvroParseSpec extends NestedDataParseSpec<JSONPathSpec>
 {
-
-  @JsonIgnore
-  private final JSONPathSpec flattenSpec;
-
   @JsonCreator
   public AvroParseSpec(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
@@ -45,16 +39,9 @@ public class AvroParseSpec extends ParseSpec
   {
     super(
         timestampSpec != null ? timestampSpec : new TimestampSpec(null, null, null),
-        dimensionsSpec != null ? dimensionsSpec : new DimensionsSpec(null, null, null)
+        dimensionsSpec != null ? dimensionsSpec : DimensionsSpec.EMPTY,
+        flattenSpec != null ? flattenSpec : JSONPathSpec.DEFAULT
     );
-
-    this.flattenSpec = flattenSpec != null ? flattenSpec : JSONPathSpec.DEFAULT;
-  }
-
-  @JsonProperty
-  public JSONPathSpec getFlattenSpec()
-  {
-    return flattenSpec;
   }
 
   @Override
@@ -67,34 +54,12 @@ public class AvroParseSpec extends ParseSpec
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new AvroParseSpec(spec, getDimensionsSpec(), flattenSpec);
+    return new AvroParseSpec(spec, getDimensionsSpec(), getFlattenSpec());
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new AvroParseSpec(getTimestampSpec(), spec, flattenSpec);
-  }
-
-  @Override
-  public boolean equals(final Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    final AvroParseSpec that = (AvroParseSpec) o;
-    return Objects.equals(flattenSpec, that.flattenSpec);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(super.hashCode(), flattenSpec);
+    return new AvroParseSpec(getTimestampSpec(), spec, getFlattenSpec());
   }
 }

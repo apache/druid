@@ -78,7 +78,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class IndexIO
 {
@@ -482,14 +481,6 @@ public class IndexIO
                   .build()
           );
         }
-      }
-
-      Set<String> colSet = new TreeSet<>();
-      for (String dimension : index.getAvailableDimensions()) {
-        colSet.add(dimension);
-      }
-      for (String metric : index.getAvailableMetrics()) {
-        colSet.add(metric);
       }
 
       columns.put(

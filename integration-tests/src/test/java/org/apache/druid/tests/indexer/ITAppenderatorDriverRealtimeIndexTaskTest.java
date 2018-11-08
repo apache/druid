@@ -61,7 +61,7 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
     final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_NAME);
     eventReceiverSelector.start();
     BufferedReader reader = null;
-    InputStreamReader isr = null;
+    InputStreamReader isr;
     try {
       isr = new InputStreamReader(
           ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE),

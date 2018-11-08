@@ -2874,6 +2874,9 @@ public class CachingClusteredClientTest
       @Override
       public boolean equals(Object o)
       {
+        if (!(o instanceof DataSegment)) {
+          return false;
+        }
         return baseSegment.equals(o);
       }
 

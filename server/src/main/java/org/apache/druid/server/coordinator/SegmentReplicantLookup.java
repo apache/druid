@@ -48,7 +48,7 @@ public class SegmentReplicantLookup
           if (numReplicants == null) {
             numReplicants = 0;
           }
-          segmentsInCluster.put(segment.getId(), server.getTier(), ++numReplicants);
+          segmentsInCluster.put(segment.getId(), server.getTier(), numReplicants + 1);
         }
 
         // Also account for queued segments
@@ -57,7 +57,7 @@ public class SegmentReplicantLookup
           if (numReplicants == null) {
             numReplicants = 0;
           }
-          loadingSegments.put(segment.getId(), server.getTier(), ++numReplicants);
+          loadingSegments.put(segment.getId(), server.getTier(), numReplicants + 1);
         }
       }
     }
