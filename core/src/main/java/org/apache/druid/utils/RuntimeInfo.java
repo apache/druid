@@ -17,47 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.common.utils;
+package org.apache.druid.utils;
 
 import org.apache.druid.java.util.common.UOE;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationTargetException;
 
-public class VMUtils
+public class RuntimeInfo
 {
-  private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
-
-  public static boolean isThreadCpuTimeEnabled()
+  public int getAvailableProcessors()
   {
-    return THREAD_MX_BEAN.isThreadCpuTimeSupported() && THREAD_MX_BEAN.isThreadCpuTimeEnabled();
+    return Runtime.getRuntime().availableProcessors();
   }
 
-  public static long safeGetThreadCpuTime()
+  public long getMaxHeapSizeBytes()
   {
-    if (!isThreadCpuTimeEnabled()) {
-      return 0L;
-    } else {
-      return getCurrentThreadCpuTime();
-    }
+    return Runtime.getRuntime().maxMemory();
   }
 
-  /**
-   * Returns the total CPU time for current thread.
-   * This method should be called after verifying that cpu time measurement for current thread is supported by JVM
-   *
-   * @return total CPU time for the current thread in nanoseconds.
-   *
-   * @throws UnsupportedOperationException if the Java virtual machine does not support CPU time measurement for
-   * the current thread.
-   */
-  public static long getCurrentThreadCpuTime()
+  public long getTotalHeapSizeBytes()
   {
-    return THREAD_MX_BEAN.getCurrentThreadCpuTime();
+    return Runtime.getRuntime().totalMemory();
   }
 
-  public static long getMaxDirectMemory() throws UnsupportedOperationException
+  public long getFreeHeapSizeBytes()
+  {
+    return Runtime.getRuntime().freeMemory();
+  }
+
+  public long getDirectMemorySizeBytes()
   {
     try {
       Class<?> vmClass = Class.forName("sun.misc.VM");

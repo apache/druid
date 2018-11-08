@@ -17,43 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.worker.config;
+package org.apache.druid.utils;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.server.DruidNode;
-import org.apache.druid.utils.JvmUtils;
+import org.junit.Assert;
+import org.junit.Test;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
-
-/**
- */
-public class WorkerConfig
+public class JvmUtilsTest
 {
-  @JsonProperty
-  @NotNull
-  private String ip = DruidNode.getDefaultHost();
-
-  @JsonProperty
-  @NotNull
-  private String version = "0";
-
-  @JsonProperty
-  @Min(1)
-  private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
-
-  public String getIp()
+  @Test
+  public void testgetMaxDirectMemory()
   {
-    return ip;
-  }
-
-  public String getVersion()
-  {
-    return version;
-  }
-
-  public int getCapacity()
-  {
-    return capacity;
+    try {
+      long maxMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      Assert.assertTrue((maxMemory > 0));
+    }
+    catch (UnsupportedOperationException expected) {
+      Assert.assertTrue(true);
+    }
+    catch (RuntimeException expected) {
+      Assert.assertTrue(true);
+    }
   }
 }

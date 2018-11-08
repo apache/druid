@@ -29,6 +29,8 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -103,7 +105,7 @@ public class StatusResource
     {
       this.version = getDruidVersion();
       this.modules = getExtensionVersions(modules);
-      this.memory = new Memory(Runtime.getRuntime());
+      this.memory = new Memory(JvmUtils.getRuntimeInfo());
     }
 
     private String getDruidVersion()
@@ -215,13 +217,15 @@ public class StatusResource
     final long totalMemory;
     final long freeMemory;
     final long usedMemory;
+    final long directMemory;
 
-    public Memory(Runtime runtime)
+    public Memory(RuntimeInfo runtime)
     {
-      maxMemory = runtime.maxMemory();
-      totalMemory = runtime.totalMemory();
-      freeMemory = runtime.freeMemory();
+      maxMemory = runtime.getMaxHeapSizeBytes();
+      totalMemory = runtime.getTotalHeapSizeBytes();
+      freeMemory = runtime.getFreeHeapSizeBytes();
       usedMemory = totalMemory - freeMemory;
+      directMemory = runtime.getDirectMemorySizeBytes();
     }
 
     @JsonProperty
@@ -246,6 +250,12 @@ public class StatusResource
     public long getUsedMemory()
     {
       return usedMemory;
+    }
+
+    @JsonProperty
+    public long getDirectMemory()
+    {
+      return directMemory;
     }
   }
 }
