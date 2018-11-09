@@ -42,7 +42,7 @@ public class StatsDEmitterTest
         new ObjectMapper(),
         client
     );
-    client.gauge("broker.query.cache.total.hitRate", 54);
+    client.gauge("broker.query.cache.total.hitRate", 54, new String[0]);
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
@@ -61,7 +61,7 @@ public class StatsDEmitterTest
         new ObjectMapper(),
         client
     );
-    client.time("broker.query.time.data-source.groupBy", 10);
+    client.time("broker.query.time.data-source.groupBy", 10, new String[0]);
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
@@ -89,7 +89,7 @@ public class StatsDEmitterTest
         new ObjectMapper(),
         client
     );
-    client.time("brokerHost1#broker#query#time#data-source#groupBy", 10);
+    client.time("brokerHost1#broker#query#time#data-source#groupBy", 10, new String[0]);
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
@@ -117,7 +117,7 @@ public class StatsDEmitterTest
         new ObjectMapper(),
         client
     );
-    client.count("brokerHost1.broker.jvm.gc.count.G1-GC", 1);
+    client.count("brokerHost1.broker.jvm.gc.count.G1-GC", 1, new String[0]);
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("gcName", "G1 GC")

@@ -43,6 +43,7 @@ public class StatsDEmitter implements Emitter
   private static final char DRUID_METRIC_SEPARATOR = '/';
   private static final Pattern STATSD_SEPARATOR = Pattern.compile("[:|]");
   private static final Pattern BLANK = Pattern.compile("\\s+");
+  private static final String[] EMPTY_ARRAY = new String[0];
 
   static final StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
@@ -50,6 +51,7 @@ public class StatsDEmitter implements Emitter
         config.getPrefix(),
         config.getHostname(),
         config.getPort(),
+        EMPTY_ARRAY,
         new StatsDClientErrorHandler()
         {
           private int exceptionCount = 0;
@@ -111,13 +113,13 @@ public class StatsDEmitter implements Emitter
         long val = statsDMetric.convertRange ? Math.round(value.doubleValue() * 100) : value.longValue();
         switch (statsDMetric.type) {
           case count:
-            statsd.count(fullName, val);
+            statsd.count(fullName, val, EMPTY_ARRAY);
             break;
           case timer:
-            statsd.time(fullName, val);
+            statsd.time(fullName, val, EMPTY_ARRAY);
             break;
           case gauge:
-            statsd.gauge(fullName, val);
+            statsd.gauge(fullName, val, EMPTY_ARRAY);
             break;
         }
       } else {
