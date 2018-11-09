@@ -27,8 +27,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.apache.druid.query.filter.BloomDimFilter;
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
-import org.apache.hive.common.util.BloomKFilter;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
