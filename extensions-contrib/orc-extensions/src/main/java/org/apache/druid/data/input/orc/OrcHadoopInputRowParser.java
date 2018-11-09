@@ -130,15 +130,14 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
     DateTime dateTime = timestampSpec.extractTimestamp(map);
 
-    final List<String> dimensions = !this.dimensions.isEmpty()
-                                    ? this.dimensions
-                                    : Lists.newArrayList(
-                                        Sets.difference(
-                                            map.keySet(),
-                                            parseSpec.getDimensionsSpec()
-                                                     .getDimensionExclusions()
-                                        )
-                                    );
+    final List<String> dimensions;
+    if (!this.dimensions.isEmpty()) {
+      dimensions = this.dimensions;
+    } else {
+      dimensions = Lists.newArrayList(
+          Sets.difference(map.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
+      );
+    }
     return ImmutableList.of(new MapBasedInputRow(dateTime, dimensions, map));
   }
 

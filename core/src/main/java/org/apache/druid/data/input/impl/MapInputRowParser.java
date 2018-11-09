@@ -50,15 +50,14 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   @Override
   public List<InputRow> parseBatch(Map<String, Object> theMap)
   {
-    final List<String> dimensions = !this.dimensions.isEmpty()
-                                    ? this.dimensions
-                                    : Lists.newArrayList(
-                                        Sets.difference(
-                                            theMap.keySet(),
-                                            parseSpec.getDimensionsSpec()
-                                                     .getDimensionExclusions()
-                                        )
-                                    );
+    final List<String> dimensions;
+    if (!this.dimensions.isEmpty()) {
+      dimensions = this.dimensions;
+    } else {
+      dimensions = Lists.newArrayList(
+          Sets.difference(theMap.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
+      );
+    }
 
     final DateTime timestamp;
     try {
@@ -77,7 +76,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       throw new ParseException(e, "Unparseable timestamp found! Event: %s", theMap);
     }
 
-    return ImmutableList.of(new MapBasedInputRow(timestamp.getMillis(), dimensions, theMap));
+    return ImmutableList.of(new MapBasedInputRow(timestamp, dimensions, theMap));
   }
 
   @JsonProperty

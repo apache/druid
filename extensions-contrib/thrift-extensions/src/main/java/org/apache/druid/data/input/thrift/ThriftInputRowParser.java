@@ -143,15 +143,14 @@ public class ThriftInputRowParser implements InputRowParser<Object>
     }
 
     Map<String, Object> record = parser.parseToMap(json);
-    final List<String> dimensions = !this.dimensions.isEmpty()
-                                    ? this.dimensions
-                                    : Lists.newArrayList(
-                                        Sets.difference(
-                                            record.keySet(),
-                                            parseSpec.getDimensionsSpec()
-                                                     .getDimensionExclusions()
-                                        )
-                                    );
+    final List<String> dimensions;
+    if (!this.dimensions.isEmpty()) {
+      dimensions = this.dimensions;
+    } else {
+      dimensions = Lists.newArrayList(
+          Sets.difference(record.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
+      );
+    }
     return ImmutableList.of(new MapBasedInputRow(
         parseSpec.getTimestampSpec().extractTimestamp(record),
         dimensions,
