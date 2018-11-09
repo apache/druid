@@ -292,7 +292,7 @@ Returns total size and count for each datasource for each interval within given 
 
 #### GET
 
-* `/druid/coordinator/v1/config/compaction/`
+* `/druid/coordinator/v1/config/compaction`
 
 Returns all compaction configs.
 
@@ -310,7 +310,7 @@ The actual max number of compaction tasks is `min(maxSlots, slotRatio * total ta
 Note that `slotRatio` and `maxSlots` are optional and can be omitted. If they are omitted, default values (0.1 and unbounded)
 will be set for them.
 
-* `/druid/coordinator/v1/config/compaction/{dataSource}`
+* `/druid/coordinator/v1/config/compaction`
 
 Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
 

@@ -796,13 +796,11 @@ An example of compaction config is:
 
 ```json
 {
-  "dataSource": "wikiticker",
-  "targetCompactionSizeBytes": 800000000,
-  "skipOffsetFromLatest": "P1D"
+  "dataSource": "wikiticker"
 }
 ```
 
-For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large values to avoid frequent compact task failures.
+For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large value to avoid frequent compact task failures.
 
 ## Overlord
 
