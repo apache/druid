@@ -63,7 +63,6 @@ public class BloomKFilter
   private static final int DEFAULT_BLOCK_OFFSET_MASK = DEFAULT_BLOCK_SIZE - 1;
   private static final int DEFAULT_BIT_OFFSET_MASK = Long.SIZE - 1;
   private final ThreadLocal<byte[]> BYTE_ARRAY_4 = ThreadLocal.withInitial(() -> new byte[4]);
-  private final ThreadLocal<long[]> masks = ThreadLocal.withInitial(() -> new long[DEFAULT_BLOCK_SIZE]);
   private final BitSet bitSet;
   private final int m;
   private final int k;
@@ -330,7 +329,6 @@ public class BloomKFilter
     final int blockIdx = firstHash % totalBlockCount;
     final int blockBaseOffset = blockIdx << DEFAULT_BLOCK_SIZE_BITS;
 
-    final long[] masks = this.masks.get();
 
     // iterate and update masks array
     for (int i = 1; i <= k; i++) {
@@ -341,23 +339,16 @@ public class BloomKFilter
       }
       // LSB 3 bits is used to locate offset within the block
       final int wordOffset = combinedHash & DEFAULT_BLOCK_OFFSET_MASK;
+      final int absOffset = blockBaseOffset + wordOffset;
+
       // Next 6 bits are used to locate offset within a long/word
       final int bitPos = (combinedHash >>> DEFAULT_BLOCK_SIZE_BITS) & DEFAULT_BIT_OFFSET_MASK;
-      masks[wordOffset] |= (1L << bitPos);
+      final long bloomWord = bitSet.data[absOffset];
+      if (0 == (bloomWord & (1L << bitPos))) {
+        return false;
+      }
     }
-
-    // traverse data and masks array together, check for set bits
-    long expected = 0;
-    for (int i = 0; i < DEFAULT_BLOCK_SIZE; i++) {
-      final long mask = masks[i];
-      expected |= (bitSet.data[blockBaseOffset + i] & mask) ^ mask;
-    }
-
-    // clear the mask for array reuse (this is to avoid masks array allocation in inner loop)
-    Arrays.fill(masks, 0);
-
-    // if all bits are set, expected should be 0
-    return expected == 0;
+    return true;
   }
 
   public boolean testString(String val)
