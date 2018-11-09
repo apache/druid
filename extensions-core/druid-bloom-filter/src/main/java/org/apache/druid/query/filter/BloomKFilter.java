@@ -33,10 +33,13 @@ import java.util.Arrays;
  * This is a direct modification of the Apache Hive 'BloomKFilter', found at:
  * https://github.com/apache/hive/blob/master/storage-api/src/java/org/apache/hive/common/util/BloomKFilter.java
  * modified to store variables which are re-used instead of re-allocated per call as {@link ThreadLocal} so multiple
- * threads can share the same filter object. Note that this is snapshot at hive-storag-api version 2.7.0, 3.2.0+ break
- * compatibility with how int/float are stored in a bloom filter in this commit:
+ * threads can share the same filter object. Note that this is snapshot at hive-storag-api version 2.7.0, latest
+ * versions break compatibility with how int/float are stored in a bloom filter in this commit:
  * https://github.com/apache/hive/commit/87ce36b458350db141c4cb4b6336a9a01796370f#diff-e65fc506757ee058dc951d15a9a526c3L238
- * as part of this issue https://issues.apache.org/jira/browse/HIVE-20101
+ * and this linked issue https://issues.apache.org/jira/browse/HIVE-20101.
+ *
+ * Todo: remove this and begin using hive-storage-api version again once https://issues.apache.org/jira/browse/HIVE-20893 is released
+ *
  * begin copy-pasta:
  *
  * BloomKFilter is variation of {@link org.apache.hive.common.util.BloomFilter}. Unlike BloomFilter, BloomKFilter will spread
