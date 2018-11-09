@@ -363,6 +363,25 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
+  public void removeTasksBefore(final DateTime createdTime)
+  {
+    giant.lock();
+
+    try {
+      List<String> taskIds = tasks.entrySet().stream()
+                                  .filter(entry -> entry.getValue().getStatus().isComplete()
+                                                   && entry.getValue().getCreatedDate().isBefore(createdTime))
+                                  .map(entry -> entry.getKey())
+                                  .collect(Collectors.toList());
+
+      taskIds.stream().forEach(taskId -> tasks.remove(taskId));
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
   public List<TaskLock> getLocks(final String taskid)
   {
     giant.lock();

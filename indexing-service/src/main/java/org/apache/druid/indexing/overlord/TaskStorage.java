@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.EntryExistsException;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -36,8 +37,9 @@ public interface TaskStorage
   /**
    * Adds a task to the storage facility with a particular status.
    *
-   * @param task task to add
+   * @param task   task to add
    * @param status task status
+   *
    * @throws EntryExistsException if the task ID already exists
    */
   void insert(Task task, TaskStatus status) throws EntryExistsException;
@@ -52,7 +54,8 @@ public interface TaskStorage
 
   /**
    * Persists lock state in the storage facility.
-   * @param taskid task ID
+   *
+   * @param taskid   task ID
    * @param taskLock lock state
    */
   void addLock(String taskid, TaskLock taskLock);
@@ -70,10 +73,17 @@ public interface TaskStorage
    * Removes lock state from the storage facility. It is harmless to keep old locks in the storage facility, but
    * this method can help reclaim wasted space.
    *
-   * @param taskid task ID
+   * @param taskid   task ID
    * @param taskLock lock state
    */
   void removeLock(String taskid, TaskLock taskLock);
+
+  /**
+   * Remove the tasks created order than the given createdTime.
+   *
+   * @param createdTime datetime to check the {@code created_date} of tasks
+   */
+  void removeTasksBefore(DateTime createdTime);
 
   /**
    * Returns task as stored in the storage facility. If the task ID does not exist, this will return an
@@ -91,6 +101,7 @@ public interface TaskStorage
    * an absentee Optional.
    *
    * @param taskid task ID
+   *
    * @return task status
    */
   Optional<TaskStatus> getStatus(String taskid);
@@ -101,10 +112,9 @@ public interface TaskStorage
   /**
    * Add an action taken by a task to the audit log.
    *
-   * @param task task to record action for
+   * @param task       task to record action for
    * @param taskAction task action to record
-   *
-   * @param <T> task action return type
+   * @param <T>        task action return type
    */
   @Deprecated
   <T> void addAuditLog(Task task, TaskAction<T> taskAction);
@@ -113,6 +123,7 @@ public interface TaskStorage
    * Returns all actions taken by a task.
    *
    * @param taskid task ID
+   *
    * @return list of task actions
    */
   @Deprecated
@@ -156,6 +167,7 @@ public interface TaskStorage
    * Returns a list of locks for a particular task.
    *
    * @param taskid task ID
+   *
    * @return list of TaskLocks for the given task
    */
   List<TaskLock> getLocks(String taskid);

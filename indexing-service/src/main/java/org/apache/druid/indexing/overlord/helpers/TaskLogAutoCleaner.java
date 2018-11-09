@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.overlord.helpers;
 
 import com.google.inject.Inject;
+import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogKiller;
@@ -35,15 +37,18 @@ public class TaskLogAutoCleaner implements OverlordHelper
 
   private final TaskLogKiller taskLogKiller;
   private final TaskLogAutoCleanerConfig config;
+  private final TaskStorage taskStorage;
 
   @Inject
   public TaskLogAutoCleaner(
       TaskLogKiller taskLogKiller,
-      TaskLogAutoCleanerConfig config
+      TaskLogAutoCleanerConfig config,
+      TaskStorage taskStorage
   )
   {
     this.taskLogKiller = taskLogKiller;
     this.config = config;
+    this.taskStorage = taskStorage;
   }
 
   @Override
@@ -68,6 +73,7 @@ public class TaskLogAutoCleaner implements OverlordHelper
           {
             try {
               taskLogKiller.killOlderThan(System.currentTimeMillis() - config.getDurationToRetain());
+              taskStorage.removeTasksBefore(DateTimes.nowUtc().minus(config.getDurationToRetain()));
             }
             catch (Exception ex) {
               log.error(ex, "Failed to clean-up the task logs");

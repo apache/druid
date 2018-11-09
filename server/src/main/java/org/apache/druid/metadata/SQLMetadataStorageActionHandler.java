@@ -439,6 +439,26 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
+  @Override
+  public void removeTasksBefore(final DateTime createdTime)
+  {
+    connector.retryWithHandle(
+        (HandleCallback<Void>) handle -> {
+          log.info("Deleting tasks before [%s] and inactive at metastore.", createdTime.toString());
+          handle.createStatement(
+              StringUtils.format(
+                  "DELETE FROM %s WHERE created_date < :created_date AND active = false",
+                  entryTable
+              )
+          )
+                .bind("created_date", createdTime.toString())
+                .execute();
+
+          return null;
+        }
+    );
+  }
+
   private int removeLock(Handle handle, long lockId)
   {
     return handle.createStatement(StringUtils.format("DELETE FROM %s WHERE id = :id", lockTable))

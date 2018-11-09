@@ -32,13 +32,14 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
 {
   /**
    * Creates a new entry.
-   * 
-   * @param id entry id
-   * @param timestamp timestamp this entry was created
+   *
+   * @param id         entry id
+   * @param timestamp  timestamp this entry was created
    * @param dataSource datasource associated with this entry
-   * @param entry object representing this entry
-   * @param active active or inactive flag
-   * @param status status object associated wit this object, can be null
+   * @param entry      object representing this entry
+   * @param active     active or inactive flag
+   * @param status     status object associated wit this object, can be null
+   *
    * @throws EntryExistsException
    */
   void insert(
@@ -56,8 +57,9 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * Once an entry has been set inactive, its status cannot be updated anymore.
    *
    * @param entryId entry id
-   * @param active active
-   * @param status status
+   * @param active  active
+   * @param status  status
+   *
    * @return true if the status was updated, false if the entry did not exist of if the entry was inactive
    */
   boolean setStatus(String entryId, boolean active, StatusType status);
@@ -66,6 +68,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * Retrieves the entry with the given id.
    *
    * @param entryId entry id
+   *
    * @return optional entry, absent if the given id does not exist
    */
   Optional<EntryType> getEntry(String entryId);
@@ -74,6 +77,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * Retrieve the status for the entry with the given id.
    *
    * @param entryId entry id
+   *
    * @return optional status, absent if entry does not exist or status is not set
    */
   Optional<StatusType> getStatus(String entryId);
@@ -107,7 +111,8 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * Add a lock to the given entry
    *
    * @param entryId entry id
-   * @param lock lock to add
+   * @param lock    lock to add
+   *
    * @return true if the lock was added
    */
   boolean addLock(String entryId, LockType lock);
@@ -131,6 +136,13 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   void removeLock(long lockId);
 
   /**
+   * Remove the tasks created order than the given createdTime.
+   *
+   * @param createdTime datetime to check the {@code created_date} of tasks
+   */
+  void removeTasksBefore(DateTime createdTime);
+
+  /**
    * Add a log to the entry with the given id.
    *
    * @param entryId entry id
@@ -143,6 +155,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * Returns the logs for the entry with the given id.
    *
    * @param entryId entry id
+   *
    * @return list of logs
    */
   List<LogType> getLogs(String entryId);
@@ -151,6 +164,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * Returns the locks for the given entry
    *
    * @param entryId entry id
+   *
    * @return map of lockId to lock
    */
   Map<Long, LockType> getLocks(String entryId);
