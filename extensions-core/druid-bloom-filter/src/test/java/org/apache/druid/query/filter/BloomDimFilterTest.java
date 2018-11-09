@@ -41,7 +41,6 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.filter.BaseFilterTest;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.hive.common.util.BloomKFilter;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -49,6 +48,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
@@ -358,6 +358,78 @@ public class BloomDimFilterTest extends BaseFilterTest
     // actual size is 86 bytes instead of 7794075 bytes of old key format
     final int actualSize = bloomDimFilter.getCacheKey().length;
     Assert.assertTrue(actualSize < 100);
+  }
+
+  @Test
+  public void testStringHiveCompat() throws IOException
+  {
+    org.apache.hive.common.util.BloomKFilter hiveFilter =
+        new org.apache.hive.common.util.BloomKFilter(1500);
+    hiveFilter.addString("myTestString");
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    org.apache.hive.common.util.BloomKFilter.serialize(byteArrayOutputStream, hiveFilter);
+    byte[] bytes = byteArrayOutputStream.toByteArray();
+
+    BloomKFilter druidFilter = BloomFilterSerializersModule.bloomKFilterFromBytes(bytes);
+
+    Assert.assertTrue(druidFilter.testString("myTestString"));
+    Assert.assertFalse(druidFilter.testString("not_match"));
+  }
+
+
+  @Test
+  public void testFloatHiveCompat() throws IOException
+  {
+    org.apache.hive.common.util.BloomKFilter hiveFilter =
+        new org.apache.hive.common.util.BloomKFilter(1500);
+    hiveFilter.addFloat(32.0F);
+    hiveFilter.addFloat(66.4F);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    org.apache.hive.common.util.BloomKFilter.serialize(byteArrayOutputStream, hiveFilter);
+    byte[] bytes = byteArrayOutputStream.toByteArray();
+
+    BloomKFilter druidFilter = BloomFilterSerializersModule.bloomKFilterFromBytes(bytes);
+
+    Assert.assertTrue(druidFilter.testFloat(32.0F));
+    Assert.assertTrue(druidFilter.testFloat(66.4F));
+    Assert.assertFalse(druidFilter.testFloat(0.3F));
+  }
+
+
+  @Test
+  public void testDoubleHiveCompat() throws IOException
+  {
+    org.apache.hive.common.util.BloomKFilter hiveFilter =
+        new org.apache.hive.common.util.BloomKFilter(1500);
+    hiveFilter.addDouble(32.0D);
+    hiveFilter.addDouble(66.4D);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    org.apache.hive.common.util.BloomKFilter.serialize(byteArrayOutputStream, hiveFilter);
+    byte[] bytes = byteArrayOutputStream.toByteArray();
+
+    BloomKFilter druidFilter = BloomFilterSerializersModule.bloomKFilterFromBytes(bytes);
+
+    Assert.assertTrue(druidFilter.testDouble(32.0D));
+    Assert.assertTrue(druidFilter.testDouble(66.4D));
+    Assert.assertFalse(druidFilter.testDouble(0.3D));
+  }
+
+  @Test
+  public void testLongHiveCompat() throws IOException
+  {
+    org.apache.hive.common.util.BloomKFilter hiveFilter =
+        new org.apache.hive.common.util.BloomKFilter(1500);
+    hiveFilter.addLong(32L);
+    hiveFilter.addLong(664L);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    org.apache.hive.common.util.BloomKFilter.serialize(byteArrayOutputStream, hiveFilter);
+    byte[] bytes = byteArrayOutputStream.toByteArray();
+
+    BloomKFilter druidFilter = BloomFilterSerializersModule.bloomKFilterFromBytes(bytes);
+
+    Assert.assertTrue(druidFilter.testLong(32L));
+    Assert.assertTrue(druidFilter.testLong(664L));
+    Assert.assertFalse(druidFilter.testLong(3L));
   }
 
   private static BloomKFilterHolder bloomKFilter(int expectedEntries, String... values) throws IOException
