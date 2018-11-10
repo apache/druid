@@ -26,30 +26,30 @@
     <description>Druid Server</description>
 
     <parent>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.13.0-SNAPSHOT</version>
+        <version>0.13.0-incubating-SNAPSHOT</version>
     </parent>
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-aws-common</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-console</artifactId>
-            <version>0.0.2</version>
+            <version>0.0.4</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>java-util</artifactId>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
@@ -160,14 +160,6 @@
             <artifactId>jetty-servlets</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.ircclouds.irc</groupId>
-            <artifactId>irc-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.maxmind.geoip2</groupId>
-            <artifactId>geoip2</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.apache.derby</groupId>
             <artifactId>derby</artifactId>
             <version>10.11.1.1</version>
@@ -210,7 +202,14 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>

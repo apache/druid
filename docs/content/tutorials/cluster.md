@@ -58,23 +58,25 @@ First, download and unpack the release archive. It's best to do this on a single
 since you will be editing the configurations and then copying the modified distribution out to all
 of your servers.
 
+[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/#{DRUIDVERSION}/apache-druid-#{DRUIDVERSION}-bin.tar.gz)
+the #{DRUIDVERSION} release.
+
+Extract Druid by running the following commands in your terminal:
+
 ```bash
-curl -O http://static.druid.io/artifacts/releases/druid-#{DRUIDVERSION}-bin.tar.gz
-tar -xzf druid-#{DRUIDVERSION}-bin.tar.gz
-cd druid-#{DRUIDVERSION}
+tar -xzf apache-druid-#{DRUIDVERSION}-bin.tar.gz
+cd apache-druid-#{DRUIDVERSION}
 ```
 
-In this package, you'll find:
+In the package, you should find:
 
-
-* `LICENSE` - the license files.
-* `bin/` - scripts related to the [single-machine quickstart](quickstart.html).
-* `conf/*` - template configurations for a clustered setup.
-* `conf-quickstart/*` - configurations for the [single-machine quickstart](quickstart.html).
-* `extensions/*` - all Druid extensions.
-* `hadoop-dependencies/*` - Druid Hadoop dependencies.
-* `lib/*` - all included software packages for core Druid.
-* `quickstart/*` - files related to the [single-machine quickstart](quickstart.html).
+* `DISCLAIMER`, `LICENSE`, and `NOTICE` files
+* `bin/*` - scripts related to the [single-machine quickstart](quickstart.html)
+* `conf/*` - template configurations for a clustered setup
+* `extensions/*` - core Druid extensions
+* `hadoop-dependencies/*` - Druid Hadoop dependencies
+* `lib/*` - libraries and dependencies for core Druid
+* `quickstart/*` - files related to the [single-machine quickstart](quickstart.html)
 
 We'll be editing the files in `conf/` in order to get things running.
 
@@ -285,7 +287,7 @@ server. If you have been editing the configurations on your local machine, you c
 copy them:
 
 ```bash
-rsync -az druid-#{DRUIDVERSION}/ COORDINATION_SERVER:druid-#{DRUIDVERSION}/
+rsync -az apache-druid-#{DRUIDVERSION}/ COORDINATION_SERVER:apache-druid-#{DRUIDVERSION}/
 ```
 
 Log on to your coordination server and install Zookeeper:
@@ -305,8 +307,8 @@ In production, we also recommend running a ZooKeeper cluster on its own dedicate
 On your coordination server, *cd* into the distribution and start up the coordination services (you should do this in different windows or pipe the log to a file):
 
 ```bash
-java `cat conf/druid/coordinator/jvm.config | xargs` -cp conf/druid/_common:conf/druid/coordinator:lib/* io.druid.cli.Main server coordinator
-java `cat conf/druid/overlord/jvm.config | xargs` -cp conf/druid/_common:conf/druid/overlord:lib/* io.druid.cli.Main server overlord
+java `cat conf/druid/coordinator/jvm.config | xargs` -cp conf/druid/_common:conf/druid/coordinator:lib/* org.apache.druid.cli.Main server coordinator
+java `cat conf/druid/overlord/jvm.config | xargs` -cp conf/druid/_common:conf/druid/overlord:lib/* org.apache.druid.cli.Main server overlord
 ```
 
 You should see a log message printed out for each service that starts up. You can view detailed logs
@@ -319,8 +321,8 @@ Copy the Druid distribution and your edited configurations to your servers set a
 On each one, *cd* into the distribution and run this command to start a Data server:
 
 ```bash
-java `cat conf/druid/historical/jvm.config | xargs` -cp conf/druid/_common:conf/druid/historical:lib/* io.druid.cli.Main server historical
-java `cat conf/druid/middleManager/jvm.config | xargs` -cp conf/druid/_common:conf/druid/middleManager:lib/* io.druid.cli.Main server middleManager
+java `cat conf/druid/historical/jvm.config | xargs` -cp conf/druid/_common:conf/druid/historical:lib/* org.apache.druid.cli.Main server historical
+java `cat conf/druid/middleManager/jvm.config | xargs` -cp conf/druid/_common:conf/druid/middleManager:lib/* org.apache.druid.cli.Main server middleManager
 ```
 
 You can add more servers with Druid Historicals and MiddleManagers as needed.
@@ -350,7 +352,7 @@ Copy the Druid distribution and your edited configurations to your servers set a
 On each one, *cd* into the distribution and run this command to start a Broker (you may want to pipe the output to a log file):
 
 ```bash
-java `cat conf/druid/broker/jvm.config | xargs` -cp conf/druid/_common:conf/druid/broker:lib/* io.druid.cli.Main server broker
+java `cat conf/druid/broker/jvm.config | xargs` -cp conf/druid/_common:conf/druid/broker:lib/* org.apache.druid.cli.Main server broker
 ```
 
 You can add more Brokers as needed based on query load.
@@ -358,4 +360,4 @@ You can add more Brokers as needed based on query load.
 ## Loading data
 
 Congratulations, you now have a Druid cluster! The next step is to learn about recommended ways to load data into
-Druid based on your use case. Read more about [loading data](ingestion.html).
+Druid based on your use case. Read more about [loading data](../ingestion/index.html).

@@ -11,7 +11,7 @@ For additional data formats, please see our [extensions list](../development/ext
 
 ## Formatting the Data
 
-The following are some samples of the data used in the [Wikipedia example](../tutorials/quickstart.html).
+The following samples show data formats that are natively supported in Druid:
 
 _JSON_
 

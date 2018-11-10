@@ -21,22 +21,22 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.druid.extensions.contrib</groupId>
+    <groupId>org.apache.druid.extensions.contrib</groupId>
     <artifactId>druid-google-extensions</artifactId>
     <name>druid-google-extensions</name>
     <description>druid-google-extensions</description>
 
     <parent>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.13.0-SNAPSHOT</version>
+        <version>0.13.0-incubating-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>druid-api</artifactId>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -50,16 +50,32 @@
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client-jackson2</artifactId>
             <version>1.22.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-guice</artifactId>
             <version>${jackson.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Tests -->
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
@@ -71,7 +87,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>

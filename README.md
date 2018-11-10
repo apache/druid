@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/druid-io/druid/badge.svg?branch=master)](https://coveralls.io/r/druid-io/druid?branch=master) [![IRC#druid-dev](https://img.shields.io/badge/IRC-druid--dev-blue.svg)](https://webchat.freenode.net?channels=druid-dev)
+[![Build Status](https://travis-ci.org/apache/incubator-druid.svg?branch=master)](https://travis-ci.org/apache/incubator-druid) [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) [![Coverage Status](https://coveralls.io/repos/apache/incubator-druid/badge.svg?branch=master)](https://coveralls.io/r/apache/incubator-druid?branch=master) [![IRC#druid-dev](https://img.shields.io/badge/IRC-druid--dev-blue.svg)](https://webchat.freenode.net?channels=druid-dev)
 
 ## Apache Druid (incubating)
 
@@ -28,7 +28,7 @@ You can get started with Druid with our [quickstart](http://druid.io/docs/latest
 
 ### Reporting Issues
 
-If you find any bugs, please file a [GitHub issue](https://github.com/druid-io/druid/issues).
+If you find any bugs, please file a [GitHub issue](https://github.com/apache/incubator-druid/issues).
 
 ### Community
 

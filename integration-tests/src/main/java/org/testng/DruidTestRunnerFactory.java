@@ -17,22 +17,25 @@
  * under the License.
  */
 
+
+//CHECKSTYLE.OFF: PackageName
 package org.testng;
+//CHECKSTYLE.ON: PackageName
 
 import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.java.util.common.logger.Logger;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.StatusResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHolder;
-import io.druid.testing.IntegrationTestingConfig;
-import io.druid.testing.guice.DruidTestModuleFactory;
-import io.druid.testing.guice.TestClient;
-import io.druid.testing.utils.RetryUtil;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.testing.utils.RetryUtil;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.internal.IConfiguration;
@@ -43,6 +46,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * This class must be in package org.testng to access protected methods like TestNG.getDefault().getConfiguration()
+ */
 public class DruidTestRunnerFactory implements ITestRunnerFactory
 {
   private static final Logger LOG = new Logger(DruidTestRunnerFactory.class);

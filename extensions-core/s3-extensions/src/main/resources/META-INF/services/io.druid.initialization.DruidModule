@@ -1,2 +1,0 @@
-io.druid.storage.s3.S3StorageDruidModule
-io.druid.firehose.s3.S3FirehoseDruidModule

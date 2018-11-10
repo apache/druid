@@ -23,37 +23,37 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>druid</artifactId>
-        <groupId>io.druid</groupId>
-        <version>0.13.0-SNAPSHOT</version>
+        <groupId>org.apache.druid</groupId>
+        <version>0.13.0-incubating-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.druid.extensions.contrib</groupId>
+    <groupId>org.apache.druid.extensions.contrib</groupId>
     <artifactId>materialized-view-selection</artifactId>
     <name>materialized-view-selection</name>
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions.contrib</groupId>
+            <groupId>org.apache.druid.extensions.contrib</groupId>
             <artifactId>materialized-view-maintenance</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
             <type>test-jar</type>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>

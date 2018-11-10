@@ -6,6 +6,24 @@ layout: doc_page
 
 Make sure to [include](../../operations/including-extensions.html) `mysql-metadata-storage` as an extension.
 
+<div class="note caution">
+The MySQL extension requires the MySQL Connector/J library which is not included in the Druid distribution. 
+Refer to the following section for instructions on how to install this library.
+</div>
+
+## Installing the MySQL connector library
+
+This extension uses Oracle's MySQL JDBC driver which is not included in the Druid distribution and must be
+installed separately. There are a few ways to obtain this library:
+
+- It can be downloaded from the MySQL site at: https://dev.mysql.com/downloads/connector/j/
+- It can be fetched from Maven Central at: http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar
+- It may be available through your package manager, e.g. as `libmysql-java` on APT for a Debian-based OS
+
+This should fetch a JAR file named similar to 'mysql-connector-java-x.x.xx.jar'.
+
+Copy or symlink this file to `extensions/mysql-metadata-storage` under the distribution root directory.
+
 ## Setting up MySQL
 
 1. Install MySQL
@@ -46,7 +64,7 @@ Make sure to [include](../../operations/including-extensions.html) `mysql-metada
   druid.metadata.storage.type=mysql
   druid.metadata.storage.connector.connectURI=jdbc:mysql://<host>/druid
   druid.metadata.storage.connector.user=druid
-  druid.metadata.storage.connector.password=diurd
+  druid.metadata.storage.connector.password=druid
   ```
 
   Note: the metadata storage extension is not packaged within the main Druid tarball; it is

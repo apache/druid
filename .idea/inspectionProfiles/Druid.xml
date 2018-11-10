@@ -11,25 +11,35 @@
     <inspection_tool class="ArrayObjectsEquals" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ArraysAsListWithZeroOrOneArgument" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="AssertWithSideEffects" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="CapturingCleaner" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CastConflictsWithInstanceof" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CastToIncompatibleInterface" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="CatchMayIgnoreException" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_ignoreCatchBlocksWithComments" value="false" />
+    </inspection_tool>
     <inspection_tool class="CheckValidXmlInScriptTagBody" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="ClassGetClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ClassNewInstance" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="CollectionAddedToSelf" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ComparableImplementedButEqualsNotOverridden" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ComparatorMethodParameterNotUsed" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="ComparatorResultComparison" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CompareToUsesNonFinalVariable" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ConstantAssertCondition" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="Contract" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="CopyConstructorMissesField" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CovariantEquals" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EmptyInitializer" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EmptyStatementBody" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="m_reportEmptyBlocks" value="true" />
       <option name="commentsAreContent" value="true" />
     </inspection_tool>
+    <inspection_tool class="EndlessStream" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsAndHashcode" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="EqualsBetweenInconvertibleTypes" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="EqualsOnSuspiciousObject" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="EqualsWhichDoesntCheckParameterClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsWithItself" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="FieldCanBeLocal" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="EXCLUDE_ANNOS">
@@ -60,16 +70,26 @@
     <inspection_tool class="InvalidComparatorMethodReference" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="JavadocReference" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MalformedFormatString" enabled="true" level="ERROR" enabled_by_default="true">
-      <option name="additionalClasses" value="io.druid.java.util.common.StringUtils,io.druid.java.util.common.logger.Logger" />
+      <option name="additionalClasses" value="org.apache.druid.java.util.common.StringUtils,org.apache.druid.java.util.common.logger.Logger" />
       <option name="additionalMethods" value="trace,debug,info,warn,error,wtf,format,nonStrictFormat" />
     </inspection_tool>
     <inspection_tool class="MalformedRegex" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MathRandomCastToInt" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MavenModelInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MismatchedArrayReadWrite" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="MismatchedCollectionQueryUpdate" enabled="true" level="ERROR" enabled_by_default="true">
+      <option name="queryNames">
+        <value />
+      </option>
+      <option name="updateNames">
+        <value />
+      </option>
+      <option name="ignoredClasses">
+        <value />
+      </option>
+    </inspection_tool>
     <inspection_tool class="MismatchedStringBuilderQueryUpdate" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MissingOverrideAnnotation" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
@@ -91,6 +111,7 @@
     </inspection_tool>
     <inspection_tool class="ObjectEqualsNull" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ObjectToString" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="OverwrittenKey" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PrimitiveArrayArgumentToVariableArgMethod" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantThrows" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantTypeArguments" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -110,11 +131,88 @@
       <searchConfiguration name="Suboptimal IndexedInts iteration" text="$x$ &lt; $y$.size()" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
         <constraint name="x" within="" contains="" />
-        <constraint name="y" nameOfExprType="IndexedInts" exprTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="y" nameOfExprType="IndexedInts" expressionTypes="IndexedInts" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Lists.newArrayList() with a single argument. Use Collections.singletonList() instead" created="1532737126203" text="Lists.newArrayList($x$)" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="x" nameOfExprType="java\.lang\.Iterable|java\.util\.Iterator|Object\[\]" expressionTypes="java.lang.Iterable|java.util.Iterator|Object[]" exprTypeWithinHierarchy="true" negateName="true" negateExprType="true" within="" contains="" />
         <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Math.abs(rnd.nextInt()) doensn't guarantee positive result. Use nextInt() &amp; Integer.MAX_VALUE or nextInt(Integer.MAX_VALUE)" created="1535067616084" text="$Math$.abs($x$.nextInt())" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exceptedTypes="java.util.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="Math" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Math.abs(rnd.nextLong()) doesn't guarantee positive result. Use nextLong() &amp; Long.MAX_VALUE" created="1535067616084" text="$Math$.abs($x$.nextLong())" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exceptedTypes="java.util.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="Math" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use nextInt(bound) instead" created="1535068047572" text="$x$.nextInt() % $a$" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exceptedTypes="java.util.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="a" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use RE (a Druid's class)" created="1539352150701" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.RuntimeException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use RE (a Druid's class) with cause" created="1539353059868" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.RuntimeException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use ISE (a Druid's class)" created="1539353519594" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalStateException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use ISE (a Druid's class) with cause" created="1539353595734" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalStateException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IAE (a Druid's class)" created="1539353691746" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalArgumentException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IAE (a Druid's class) with cause" created="1539353766336" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalArgumentException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IOE (a Druid's class)" created="1539353913074" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.io\.IOException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IOE (a Druid's class) with cause" created="1539354009031" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.io\.IOException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use UOE (a Druid's class)" created="1539354091201" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.UnsupportedOperationException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use TypeReference&lt;List&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;ArrayList&lt;$E$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use TypeReference&lt;Map&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;HashMap&lt;$K$, $V$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="K" within="" contains="" />
+        <constraint name="V" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use TypeReference&lt;Set&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;HashSet&lt;$E$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" within="" contains="" />
       </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
@@ -122,16 +220,19 @@
       <option name="processLiterals" value="true" />
       <option name="processComments" value="true" />
     </inspection_tool>
-    <inspection_tool class="StaticCallOnSubclass" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="StaticFieldReferenceOnSubclass" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="StaticCallOnSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="StaticFieldReferenceOnSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInMessageFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationMissingWhitespace" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="StringEquality" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="StringEqualsCharSequence" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringTokenizerDelimiter" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="SubtractionInCompareTo" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SubtractionInCompareTo" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousArrayCast" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SuspiciousArrayMethodCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousIndentAfterControlStatement" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="SuspiciousListRemoveInLoop" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousMethodCalls" enabled="true" level="ERROR" enabled_by_default="true">
       <option name="REPORT_CONVERTIBLE_METHOD_CALLS" value="true" />
     </inspection_tool>
@@ -160,6 +261,11 @@
       <option name="ignoreInModuleStatements" value="true" />
     </inspection_tool>
     <inspection_tool class="UnnecessaryInterfaceModifier" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="UnusedAssignment" enabled="true" level="ERROR" enabled_by_default="true">
+      <option name="REPORT_PREFIX_EXPRESSIONS" value="true" />
+      <option name="REPORT_POSTFIX_EXPRESSIONS" value="true" />
+      <option name="REPORT_REDUNDANT_INITIALIZER" value="true" />
+    </inspection_tool>
     <inspection_tool class="UnusedCatchParameter" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="m_ignoreCatchBlocksWithComments" value="false" />
       <option name="m_ignoreTestCases" value="false" />

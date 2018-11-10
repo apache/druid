@@ -27,14 +27,14 @@
   <description>Druid SQL</description>
 
   <parent>
-    <groupId>io.druid</groupId>
+    <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-SNAPSHOT</version>
+    <version>0.13.0-incubating-SNAPSHOT</version>
   </parent>
 
   <dependencies>
     <dependency>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
@@ -89,14 +89,21 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-core</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>

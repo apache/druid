@@ -22,9 +22,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.13.0-SNAPSHOT</version>
+        <version>0.13.0-incubating-SNAPSHOT</version>
     </parent>
 
     <artifactId>druid-hll</artifactId>
@@ -40,8 +40,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>java-util</artifactId>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>

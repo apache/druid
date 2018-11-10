@@ -100,7 +100,7 @@ java
 -Ddruid.extensions.loadList=[\"mysql-metadata-storage\",\"druid-hdfs-storage\"] 
 -Ddruid.storage.type=hdfs
 -cp $DRUID_CLASSPATH 
-io.druid.cli.Main tools insert-segment-to-db --workingDir hdfs://host:port//druid/storage/wikipedia --updateDescriptor true
+org.apache.druid.cli.Main tools insert-segment-to-db --workingDir hdfs://host:port//druid/storage/wikipedia --updateDescriptor true
 ```
 
 In this example, `mysql` and deep storage type are provided through Java JVM arguments, you can optionally put all
@@ -127,7 +127,7 @@ java
 -Ddruid.storage.baseKey=druid/storage/wikipedia
 -Ddruid.storage.maxListingLength=1000
 -cp $DRUID_CLASSPATH
-io.druid.cli.Main tools insert-segment-to-db --workingDir "druid/storage/wikipedia" --updateDescriptor true
+org.apache.druid.cli.Main tools insert-segment-to-db --workingDir "druid/storage/wikipedia" --updateDescriptor true
 ```
 
  Note that you can provide the location of segments with either `druid.storage.baseKey` or `--workingDir`. If both are 

@@ -33,7 +33,9 @@ Available Metrics
 |`query/node/time`|Milliseconds taken to query individual historical/realtime nodes.|id, status, server.|< 1s|
 |`query/node/bytes`|number of bytes returned from querying individual historical/realtime nodes.|id, status, server.| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until broker starts receiving the response from individual historical/realtime nodes.|id, status, server.|< 1s|
+|`query/node/backpressure`|Milliseconds that the channel to this node has spent suspended due to backpressure.|id, status, server.| |
 |`query/intervalChunk/time`|Only emitted if interval chunking is enabled. Milliseconds required to query an interval chunk.|id, status, chunkInterval (if interval chunking is enabled).|< 1s|
+|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
@@ -48,6 +50,7 @@ Available Metrics
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the historical node).|id, segment.|several hundred milliseconds|
 |`query/cpu/time`|Microseconds of CPU time taken to complete a query|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|Varies|
+|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
@@ -59,6 +62,7 @@ Available Metrics
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
+|`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
@@ -88,6 +92,9 @@ Available Metrics
 |`*/averageByte`|Average cache entry byte size.||Varies.|
 |`*/timeouts`|Number of cache timeouts.||0|
 |`*/errors`|Number of cache errors.||0|
+|`*/put/ok`|Number of new cache entries successfully cached.||Varies, but more than zero.|
+|`*/put/error`|Number of new cache entries that could not be cached due to errors.||Varies, but more than zero.|
+|`*/put/oversized`|Number of potential new cache entries that were skipped due to being too large (based on `druid.{broker,historical,realtime}.cache.maxEntrySize` properties).||Varies.|
 
 #### Memcached only metrics
 
@@ -162,7 +169,7 @@ These metrics are for the Druid coordinator and are reset each time the coordina
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
 
-If `emitBalancingStats` is set to `true` in the coordinator [dynamic configuration](../configuration/coordinator.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `io.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
+If `emitBalancingStats` is set to `true` in the coordinator [dynamic configuration](../configuration/index.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
 
 ## General Health
 
@@ -193,8 +200,8 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/mem/max`|Max memory.|memKind.|Varies.|
 |`jvm/mem/used`|Used memory.|memKind.|< max memory|
 |`jvm/mem/committed`|Committed memory.|memKind.|close to max memory|
-|`jvm/gc/count`|Garbage collection count.|gcName.|< 100|
-|`jvm/gc/time`|Garbage collection time.|gcName.|< 1s|	
+|`jvm/gc/count`|Garbage collection count.|gcName (cms/g1/parallel/etc.), gcGen (old/young)|Varies.|
+|`jvm/gc/cpu`|Cpu time in Nanoseconds spent on garbage collection.|gcName, gcGen|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.html#enabling-metrics)) |
 
 ### EventReceiverFirehose
 

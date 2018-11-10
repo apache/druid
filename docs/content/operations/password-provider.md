@@ -1,4 +1,8 @@
-#### Password Provider
+---
+layout: doc_page
+---
+
+# Password Provider
 
 Druid needs some passwords for accessing various secured systems like metadata store, Key Store containing server certificates etc.
 All these passwords have corresponding runtime properties associated with them, for example `druid.metadata.storage.connector.password` corresponds to the metadata store password.

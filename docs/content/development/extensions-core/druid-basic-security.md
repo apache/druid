@@ -10,7 +10,7 @@ This extension adds:
 
 Make sure to [include](../../operations/including-extensions.html) `druid-basic-security` as an extension.
 
-Please see [Authentication and Authorization](../../configuration/auth.html) for more information on the extension interfaces being implemented.
+Please see [Authentication and Authorization](../../design/auth.html) for more information on the extension interfaces being implemented.
 
 ## Configuration
 
@@ -53,8 +53,8 @@ The configuration examples in the rest of this document will use "MyBasicAuthent
 #### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.authenticator.MyBasicAuthenticator.initialAdminPassword`|Initial password for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will affect its password.|null|No|
-|`druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword`|Initial password for the default internal system user, used for internal node communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.html) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.html) for the default internal system user, used for internal node communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.enableCacheNotifications`|If true, the coordinator will notify Druid nodes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
@@ -252,7 +252,8 @@ There are two possible resource names for the "CONFIG" resource type, "CONFIG" a
 
 |Endpoint|Node Type|
 |--------|---------|
-|`/druid/coordinator/v1/security`|coordinator|
+|`/druid-ext/basic-security/authentication`|coordinator|
+|`/druid-ext/basic-security/authorization`|coordinator|
 
 ### STATE
 There is only one possible resource name for the "STATE" config resource type, "STATE". Granting a user access to STATE resources allows them to access the following endpoints.
@@ -282,6 +283,12 @@ There is only one possible resource name for the "STATE" config resource type, "
 |`/druid-internal/v1/segments/`|peon|
 |`/druid-internal/v1/segments/`|realtime|
 |`/status`|all nodes|
+
+### HTTP methods
+
+For information on what HTTP methods are supported on a particular request endpoint, please refer to the [API documentation](../../operations/api-reference.html).
+
+GET requires READ permission, while POST and DELETE require WRITE permission.
 
 ## Configuration Propagation
 

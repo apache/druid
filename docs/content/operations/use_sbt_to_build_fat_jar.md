@@ -9,7 +9,7 @@ libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk" % "1.9.23" exclude("common-logging", "common-logging"),
   "org.joda" % "joda-convert" % "1.7",
   "joda-time" % "joda-time" % "2.7",
-  "io.druid" % "druid" % "0.8.1" excludeAll (
+  "org.apache.druid" % "druid" % "0.8.1" excludeAll (
     ExclusionRule("org.ow2.asm"),
     ExclusionRule("com.fasterxml.jackson.core"),
     ExclusionRule("com.fasterxml.jackson.datatype"),
@@ -17,7 +17,7 @@ libraryDependencies ++= Seq(
     ExclusionRule("com.fasterxml.jackson.jaxrs"),
     ExclusionRule("com.fasterxml.jackson.module")
   ),
-  "io.druid" % "druid-services" % "0.8.1" excludeAll (
+  "org.apache.druid" % "druid-services" % "0.8.1" excludeAll (
     ExclusionRule("org.ow2.asm"),
     ExclusionRule("com.fasterxml.jackson.core"),
     ExclusionRule("com.fasterxml.jackson.datatype"),
@@ -25,7 +25,7 @@ libraryDependencies ++= Seq(
     ExclusionRule("com.fasterxml.jackson.jaxrs"),
     ExclusionRule("com.fasterxml.jackson.module")
   ),
-  "io.druid" % "druid-indexing-service" % "0.8.1" excludeAll (
+  "org.apache.druid" % "druid-indexing-service" % "0.8.1" excludeAll (
     ExclusionRule("org.ow2.asm"),
     ExclusionRule("com.fasterxml.jackson.core"),
     ExclusionRule("com.fasterxml.jackson.datatype"),
@@ -33,7 +33,7 @@ libraryDependencies ++= Seq(
     ExclusionRule("com.fasterxml.jackson.jaxrs"),
     ExclusionRule("com.fasterxml.jackson.module")
   ),
-  "io.druid" % "druid-indexing-hadoop" % "0.8.1" excludeAll (
+  "org.apache.druid" % "druid-indexing-hadoop" % "0.8.1" excludeAll (
     ExclusionRule("org.ow2.asm"),
     ExclusionRule("com.fasterxml.jackson.core"),
     ExclusionRule("com.fasterxml.jackson.datatype"),
@@ -41,7 +41,7 @@ libraryDependencies ++= Seq(
     ExclusionRule("com.fasterxml.jackson.jaxrs"),
     ExclusionRule("com.fasterxml.jackson.module")
   ),
-  "io.druid.extensions" % "mysql-metadata-storage" % "0.8.1" excludeAll (
+  "org.apache.druid.extensions" % "mysql-metadata-storage" % "0.8.1" excludeAll (
     ExclusionRule("org.ow2.asm"),
     ExclusionRule("com.fasterxml.jackson.core"),
     ExclusionRule("com.fasterxml.jackson.datatype"),
@@ -49,7 +49,7 @@ libraryDependencies ++= Seq(
     ExclusionRule("com.fasterxml.jackson.jaxrs"),
     ExclusionRule("com.fasterxml.jackson.module")
   ),
-  "io.druid.extensions" % "druid-s3-extensions" % "0.8.1" excludeAll (
+  "org.apache.druid.extensions" % "druid-s3-extensions" % "0.8.1" excludeAll (
     ExclusionRule("org.ow2.asm"),
     ExclusionRule("com.fasterxml.jackson.core"),
     ExclusionRule("com.fasterxml.jackson.datatype"),
@@ -57,7 +57,7 @@ libraryDependencies ++= Seq(
     ExclusionRule("com.fasterxml.jackson.jaxrs"),
     ExclusionRule("com.fasterxml.jackson.module")
   ),
-  "io.druid.extensions" % "druid-histogram" % "0.8.1" excludeAll (
+  "org.apache.druid.extensions" % "druid-histogram" % "0.8.1" excludeAll (
     ExclusionRule("org.ow2.asm"),
     ExclusionRule("com.fasterxml.jackson.core"),
     ExclusionRule("com.fasterxml.jackson.datatype"),
@@ -65,7 +65,7 @@ libraryDependencies ++= Seq(
     ExclusionRule("com.fasterxml.jackson.jaxrs"),
     ExclusionRule("com.fasterxml.jackson.module")
   ),
-  "io.druid.extensions" % "druid-hdfs-storage" % "0.8.1" excludeAll (
+  "org.apache.druid.extensions" % "druid-hdfs-storage" % "0.8.1" excludeAll (
     ExclusionRule("org.ow2.asm"),
     ExclusionRule("com.fasterxml.jackson.core"),
     ExclusionRule("com.fasterxml.jackson.datatype"),

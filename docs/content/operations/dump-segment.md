@@ -10,7 +10,7 @@ complex metric values may not be complete.
 To run the tool, point it at a segment directory and provide a file for writing output:
 
 ```
-java io.druid.cli.Main tools dump-segment \
+java org.apache.druid.cli.Main tools dump-segment \
   --directory /home/druid/path/to/segment/ \
   --out /home/druid/output.txt
 ```

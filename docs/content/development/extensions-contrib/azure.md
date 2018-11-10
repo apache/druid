@@ -33,6 +33,9 @@ The storage account is shared with the one used for Azure deep storage functiona
 
 As with the S3 blobstore, it is assumed to be gzipped if the extension ends in .gz
 
+This firehose is _splittable_ and can be used by [native parallel index tasks](../../ingestion/native_tasks.html#parallel-index-task).
+Since each split represents an object in this firehose, each worker task of `index_parallel` will read an object.
+
 Sample spec:
 
 ```json

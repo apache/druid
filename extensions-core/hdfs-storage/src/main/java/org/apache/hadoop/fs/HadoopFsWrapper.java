@@ -17,10 +17,12 @@
  * under the License.
  */
 
+//CHECKSTYLE.OFF: PackageName
 package org.apache.hadoop.fs;
+//CHECKSTYLE.ON: PackageName
 
 import com.google.common.base.Throwables;
-import io.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -54,7 +56,7 @@ public class HadoopFsWrapper
     try {
       // Note: Using reflection instead of simpler
       // fs.rename(from, to, Options.Rename.NONE);
-      // due to the issues discussed in https://github.com/druid-io/druid/pull/3787
+      // due to the issues discussed in https://github.com/apache/incubator-druid/pull/3787
       Method renameMethod = findRenameMethodRecursively(fs.getClass());
       renameMethod.invoke(fs, from, to, new Options.Rename[]{Options.Rename.NONE});
       return true;

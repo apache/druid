@@ -1,0 +1,49 @@
+{
+  "type" : "index",
+  "spec" : {
+    "dataSchema" : {
+      "dataSource" : "updates-tutorial",
+      "parser" : {
+        "type" : "string",
+        "parseSpec" : {
+          "format" : "json",
+          "dimensionsSpec" : {
+            "dimensions" : [
+              "animal"
+            ]
+          },
+          "timestampSpec": {
+            "column": "timestamp",
+            "format": "iso"
+          }
+        }
+      },
+      "metricsSpec" : [
+        { "type" : "count", "name" : "count" },
+        { "type" : "longSum", "name" : "number", "fieldName" : "number" }
+      ],
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "week",
+        "queryGranularity" : "minute",
+        "intervals" : ["2018-01-01/2018-01-03"],
+        "rollup" : true
+      }
+    },
+    "ioConfig" : {
+      "type" : "index",
+      "firehose" : {
+        "type" : "local",
+        "baseDir" : "quickstart/tutorial",
+        "filter" : "updates-data2.json"
+      },
+      "appendToExisting" : false
+    },
+    "tuningConfig" : {
+      "type" : "index",
+      "targetPartitionSize" : 5000000,
+      "maxRowsInMemory" : 25000,
+      "forceExtendableShardSpecs" : true
+    }
+  }
+}

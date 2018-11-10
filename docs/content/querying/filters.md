@@ -213,6 +213,8 @@ The grammar for a IN filter is as follows:
 
 The IN filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
+If an empty `values` array is passed to the IN filter, it will simply return an empty result.
+
 ### Like filter
 
 Like filters can be used for basic wildcard searches. They are equivalent to the SQL LIKE operator. Special characters
@@ -434,9 +436,9 @@ Filtering on a range of values, `10 <= myFloatColumn < 20`:
   "type": "bound",
   "dimension": "myFloatColumn",
   "ordering": "numeric",
-  "lowerBound": "10",
+  "lower": "10",
   "lowerStrict": false,
-  "upperBound": "20",
+  "upper": "20",
   "upperStrict": true
 }
 ```
@@ -492,5 +494,6 @@ Filtering on a set of ISO 8601 intervals:
 The true filter is a filter which matches all values.  It can be used to temporarily disable other filters without removing the filter. 
 
 ```json
+
 { "type" : "true" }
 ```

@@ -22,15 +22,15 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  <groupId>io.druid.extensions.contrib</groupId>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>druid-thrift-extensions</artifactId>
   <name>druid-thrift-extensions</name>
   <description>druid-thrift-extensions</description>
 
   <parent>
     <artifactId>druid</artifactId>
-    <groupId>io.druid</groupId>
-    <version>0.13.0-SNAPSHOT</version>
+    <groupId>org.apache.druid</groupId>
+    <version>0.13.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -61,7 +61,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-indexing-hadoop</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>

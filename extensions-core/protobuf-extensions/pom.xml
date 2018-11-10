@@ -23,15 +23,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.druid.extensions</groupId>
+  <groupId>org.apache.druid.extensions</groupId>
   <artifactId>druid-protobuf-extensions</artifactId>
   <name>druid-protobuf-extensions</name>
   <description>druid-protobuf-extensions</description>
 
   <parent>
     <artifactId>druid</artifactId>
-    <groupId>io.druid</groupId>
-    <version>0.13.0-SNAPSHOT</version>
+    <groupId>org.apache.druid</groupId>
+    <version>0.13.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -41,8 +41,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>druid-common</artifactId>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>

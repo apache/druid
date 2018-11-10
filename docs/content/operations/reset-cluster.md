@@ -12,20 +12,20 @@ used in the command must have all the necessary druid configuration files.
 It can be run in one of the following ways.
 
 ```
-java io.druid.cli.Main tools reset-cluster [--metadataStore] [--segmentFiles] [--taskLogs] [--hadoopWorkingPath]
+java org.apache.druid.cli.Main tools reset-cluster [--metadataStore] [--segmentFiles] [--taskLogs] [--hadoopWorkingPath]
 ```
 
 or
 
 ```
-java io.druid.cli.Main tools reset-cluster --all
+java org.apache.druid.cli.Main tools reset-cluster --all
 ```
 
 # Further Description
 Usage documentation can be printed by running following command.
 
 ```
-java io.druid.cli.Main help tools reset-cluster
+java org.apache.druid.cli.Main help tools reset-cluster
 ```
 
 ```

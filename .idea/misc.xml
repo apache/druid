@@ -8,18 +8,18 @@
       <item index="3" class="java.lang.String" itemvalue="com.google.inject.Inject" />
       <item index="4" class="java.lang.String" itemvalue="com.google.inject.Provides" />
       <item index="5" class="java.lang.String" itemvalue="io.airlift.airline.Command" />
-      <item index="6" class="java.lang.String" itemvalue="io.druid.annotations.UsedByJUnitParamsRunner" />
-      <item index="7" class="java.lang.String" itemvalue="io.druid.annotations.UsedInGeneratedCode" />
-      <item index="8" class="java.lang.String" itemvalue="io.druid.guice.annotations.ExtensionPoint" />
-      <item index="9" class="java.lang.String" itemvalue="io.druid.guice.annotations.PublicApi" />
-      <item index="10" class="java.lang.String" itemvalue="io.druid.java.util.common.lifecycle.LifecycleStart" />
-      <item index="11" class="java.lang.String" itemvalue="io.druid.java.util.common.lifecycle.LifecycleStop" />
+      <item index="6" class="java.lang.String" itemvalue="org.apache.druid.annotations.UsedByJUnitParamsRunner" />
+      <item index="7" class="java.lang.String" itemvalue="org.apache.druid.annotations.UsedInGeneratedCode" />
+      <item index="8" class="java.lang.String" itemvalue="org.apache.druid.guice.annotations.ExtensionPoint" />
+      <item index="9" class="java.lang.String" itemvalue="org.apache.druid.guice.annotations.PublicApi" />
+      <item index="10" class="java.lang.String" itemvalue="org.apache.druid.java.util.common.lifecycle.LifecycleStart" />
+      <item index="11" class="java.lang.String" itemvalue="org.apache.druid.java.util.common.lifecycle.LifecycleStop" />
       <item index="12" class="java.lang.String" itemvalue="javax.inject.Inject" />
       <item index="13" class="java.lang.String" itemvalue="org.openjdk.jmh.annotations.Benchmark" />
     </list>
-    <pattern value="io.druid.cli.GuiceRunnable" hierarchically="true" method="run" />
-    <pattern value="io.druid.cli.GuiceRunnable" hierarchically="true" />
-    <pattern value="io.druid.initialization.DruidModule" hierarchically="true" method="getJacksonModules" />
+    <pattern value="org.apache.druid.cli.GuiceRunnable" hierarchically="true" method="run" />
+    <pattern value="org.apache.druid.cli.GuiceRunnable" hierarchically="true" />
+    <pattern value="org.apache.druid.initialization.DruidModule" hierarchically="true" method="getJacksonModules" />
     <writeAnnotations>
       <writeAnnotation name="com.fasterxml.jackson.annotation.JacksonInject" />
       <writeAnnotation name="com.fasterxml.jackson.annotation.JsonProperty" />
@@ -40,26 +40,35 @@
   </component>
   <component name="NullableNotNullManager">
     <option name="myDefaultNullable" value="javax.annotation.Nullable" />
-    <option name="myDefaultNotNull" value="org.jetbrains.annotations.NotNull" />
+    <option name="myDefaultNotNull" value="javax.annotation.Nonnull" />
     <option name="myNullables">
       <value>
-        <list size="6">
+        <list size="10">
           <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.Nullable" />
           <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nullable" />
           <item index="2" class="java.lang.String" itemvalue="javax.annotation.CheckForNull" />
           <item index="3" class="java.lang.String" itemvalue="org.springframework.lang.Nullable" />
           <item index="4" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.Nullable" />
           <item index="5" class="java.lang.String" itemvalue="android.support.annotation.Nullable" />
+          <item index="6" class="java.lang.String" itemvalue="androidx.annotation.Nullable" />
+          <item index="7" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.qual.Nullable" />
+          <item index="8" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NullableDecl" />
+          <item index="9" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NullableType" />
         </list>
       </value>
     </option>
     <option name="myNotNulls">
       <value>
-        <list size="4">
+        <list size="9">
           <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.NotNull" />
           <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nonnull" />
           <item index="2" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.NonNull" />
           <item index="3" class="java.lang.String" itemvalue="android.support.annotation.NonNull" />
+          <item index="4" class="java.lang.String" itemvalue="javax.validation.constraints.NotNull" />
+          <item index="5" class="java.lang.String" itemvalue="androidx.annotation.NonNull" />
+          <item index="6" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.qual.NonNull" />
+          <item index="7" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NonNullDecl" />
+          <item index="8" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NonNullType" />
         </list>
       </value>
     </option>

@@ -1,0 +1,35 @@
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = /tls/cert_db.txt
+x509_extensions	= usr_cert
+name_opt = ca_default
+cert_opt = ca_default
+default_days = 365
+default_crl_days= 30
+default_md = default
+preserve = no
+policy = policy_match
+
+[req]
+default_bits = 4096
+prompt = no
+default_md = sha256
+req_extensions = v3_ca
+distinguished_name = dn
+
+[ dn ]
+C=DR
+ST=DR
+L=Druid City
+O=Druid
+OU=IntegrationTests
+emailAddress=integration-test@druid.io
+CN = itroot
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign

@@ -26,9 +26,9 @@
     <description>druid-integration-tests</description>
 
     <parent>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.13.0-SNAPSHOT</version>
+        <version>0.13.0-incubating-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -37,22 +37,22 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>druid-common</artifactId>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-s3-extensions</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-datasketches</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-kafka-eight</artifactId>
             <version>${project.parent.version}</version>
             <exclusions>
@@ -63,17 +63,17 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-histogram</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>mysql-metadata-storage</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-kafka-indexing-service</artifactId>
             <version>${project.parent.version}</version>
             <exclusions>
@@ -84,17 +84,22 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>io.druid.extensions</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-basic-security</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>simple-client-sslcontext</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
@@ -227,6 +232,12 @@
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
                                 -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
+                                -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
+                                -Ddruid.client.https.trustStorePassword=druid123
+                                -Ddruid.client.https.keyStorePath=client_tls/client.jks
+                                -Ddruid.client.https.certAlias=druid
+                                -Ddruid.client.https.keyManagerPassword=druid123
+                                -Ddruid.client.https.keyStorePassword=druid123
                             </argLine>
                             <suiteXmlFiles>
                                 <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
@@ -276,6 +287,12 @@
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.type=configFile
                                 -Ddruid.test.config.configFile=${env.CONFIG_FILE}
+                                -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
+                                -Ddruid.client.https.trustStorePassword=druid123
+                                -Ddruid.client.https.keyStorePath=client_tls/client.jks
+                                -Ddruid.client.https.certAlias=druid
+                                -Ddruid.client.https.keyManagerPassword=druid123
+                                -Ddruid.client.https.keyStorePassword=druid123
                             </argLine>
                             <suiteXmlFiles>
                                 <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>

@@ -18,9 +18,9 @@
   ~ under the License.
   -->
 
-<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3"
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3 http://maven.apache.org/xsd/assembly-1.1.3.xsd">
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
     <id>bin</id>
     <formats>
         <format>tar.gz</format>
@@ -31,9 +31,6 @@
             <includes>
                 <include>*/*</include>
             </includes>
-            <excludes>
-                <exclude>mysql-metadata-storage/**</exclude>
-            </excludes>
             <outputDirectory>extensions</outputDirectory>
         </fileSet>
 
@@ -52,70 +49,99 @@
             </includes>
             <outputDirectory>quickstart</outputDirectory>
         </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/druid</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/druid</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/druid/_common</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/druid/_common/</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/druid/broker</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/druid/broker</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/druid/coordinator</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/druid/coordinator</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/druid/historical</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/druid/historical</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/druid/overlord</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/druid/overlord</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/druid/middleManager</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/druid/middleManager</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/tranquility</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/tranquility</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/zk</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/zk</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/hadoop</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/hadoop</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/quickstart/tutorial/hadoop/docker</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/hadoop/docker</outputDirectory>
+        </fileSet>
 
-        <fileSet>
-            <directory>../examples/conf-quickstart</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf-quickstart/druid</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart/druid</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf-quickstart/druid/_common</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart/druid/_common/</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf-quickstart/druid/broker</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart/druid/broker</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf-quickstart/druid/coordinator</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart/druid/coordinator</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf-quickstart/druid/historical</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart/druid/historical</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf-quickstart/druid/overlord</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart/druid/overlord</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf-quickstart/druid/middleManager</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart/druid/middleManager</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/conf-quickstart/tranquility</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>conf-quickstart/tranquility</outputDirectory>
-        </fileSet>
+
         <fileSet>
             <directory>../examples/quickstart/protobuf</directory>
             <includes>
@@ -194,6 +220,7 @@
             <includes>
                 <include>LICENSE</include>
                 <include>NOTICE</include>
+                <include>DISCLAIMER</include>
             </includes>
         </fileSet>
     </fileSets>
@@ -203,13 +230,13 @@
             <useTransitiveDependencies>true</useTransitiveDependencies>
             <outputDirectory>lib</outputDirectory>
             <excludes>
-                <exclude>io.druid:extensions-distribution</exclude>
+                <exclude>org.apache.druid:extensions-distribution</exclude>
             </excludes>
         </dependencySet>
         <dependencySet>
             <unpack>true</unpack>
             <includes>
-                <include>io.druid:extensions-distribution</include>
+                <include>org.apache.druid:extensions-distribution</include>
             </includes>
         </dependencySet>
     </dependencySets>
