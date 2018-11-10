@@ -52,7 +52,7 @@ The following built-in functions are available.
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
 |strlen|strlen(expr) returns length of a string in UTF-16 code units|
-|strpos|strpos(haystack, needle) returns the position of the needle within the haystack, with indexes starting from 0. If the needle is not found then the function returns -1.|
+|strpos|strpos(haystack, needle[, fromIndex]) returns the position of the needle within the haystack, with indexes starting from 0. The search will begin at fromIndex, or 0 if fromIndex is not specified. If the needle is not found then the function returns -1.|
 |trim|trim(expr[, chars]) remove leading and trailing characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
 |ltrim|ltrim(expr[, chars]) remove leading characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
 |rtrim|rtrim(expr[, chars]) remove trailing characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|

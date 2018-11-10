@@ -199,6 +199,42 @@ public class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
+  public void testPosition()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',0) + 1)"),
+        2L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s"),
+            rexBuilder.makeExactLiteral(BigDecimal.valueOf(2))
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',(2 - 1)) + 1)"),
+        2L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s"),
+            rexBuilder.makeExactLiteral(BigDecimal.valueOf(3))
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',(3 - 1)) + 1)"),
+        0L
+    );
+  }
+
+  @Test
   public void testPower()
   {
     testExpression(
