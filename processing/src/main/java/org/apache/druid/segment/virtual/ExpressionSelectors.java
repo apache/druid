@@ -39,6 +39,7 @@ import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -140,7 +141,8 @@ public class ExpressionSelectors
         // Optimization for expressions that hit one long column and nothing else.
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
-            expression
+            expression,
+            !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
         );
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING

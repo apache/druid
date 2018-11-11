@@ -41,6 +41,9 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
   private final ColumnValueSelector selector;
   private final Expr expression;
+  private final SingleInputBindings bindings = new SingleInputBindings();
+
+  @Nullable
   private final LruEvalCache lruEvalCache;
 
   // Last read input value.
@@ -52,7 +55,8 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
   public SingleLongInputCachingExpressionColumnValueSelector(
       final ColumnValueSelector selector,
-      final Expr expression
+      final Expr expression,
+      final boolean useLruCache
   )
   {
     // Verify expression has just one binding.
@@ -62,7 +66,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.lruEvalCache = new LruEvalCache(expression);
+    this.lruEvalCache = useLruCache ? new LruEvalCache(expression) : null;
   }
 
   @Override
@@ -99,7 +103,13 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
     final boolean cached = input == lastInput && lastOutput != null;
 
     if (!cached) {
-      lastOutput = lruEvalCache.compute(input);
+      if (lruEvalCache == null) {
+        bindings.set(input);
+        lastOutput = expression.eval(bindings);
+      } else {
+        lastOutput = lruEvalCache.compute(input);
+      }
+
       lastInput = input;
     }
 
@@ -121,10 +131,9 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
     return getObject().isNumericNull();
   }
 
-  public static class LruEvalCache
+  public class LruEvalCache
   {
     private final Expr expression;
-    private final SingleInputBindings bindings = new SingleInputBindings();
     private final Long2ObjectLinkedOpenHashMap<ExprEval> m = new Long2ObjectLinkedOpenHashMap<>(CACHE_SIZE);
 
     public LruEvalCache(final Expr expression)
