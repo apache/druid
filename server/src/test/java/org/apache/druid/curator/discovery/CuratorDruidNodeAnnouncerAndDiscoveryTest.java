@@ -39,7 +39,6 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -129,13 +128,13 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
             coordNodes.addAll(nodes);
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
             coordNodes.removeAll(nodes);
           }
@@ -147,13 +146,13 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
             overlordNodes.addAll(nodes);
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
             overlordNodes.removeAll(nodes);
           }

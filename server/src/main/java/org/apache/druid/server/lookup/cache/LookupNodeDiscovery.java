@@ -78,7 +78,7 @@ public class LookupNodeDiscovery
   {
     ImmutableSet.Builder<String> builder = new ImmutableSet.Builder<>();
 
-    druidNodeDiscovery.getAllNodes().stream().forEach(
+    druidNodeDiscovery.getAllNodes().forEach(
         node -> builder.add(((LookupNodeService) node.getServices()
                                                      .get(LookupNodeService.DISCOVERY_SERVICE_KEY)).getLookupTier())
     );
