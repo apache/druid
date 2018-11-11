@@ -430,6 +430,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           // if stop is requested or task's end offset is set by call to setEndOffsets method with finish set to true
           if (stopRequested.get() || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
+          }
+
+          if (stopRequested.get()) {
             break;
           }
 
