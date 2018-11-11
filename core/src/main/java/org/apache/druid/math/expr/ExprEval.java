@@ -30,17 +30,9 @@ import javax.annotation.Nullable;
  */
 public abstract class ExprEval<T>
 {
-  // Cached values of various types. Protected so they can be used by subclasses.
-  protected boolean intValueValid = false;
-  protected boolean longValueValid = false;
-  protected boolean doubleValueValid = false;
-  protected boolean stringValueValid = false;
-  protected boolean booleanValueValid = false;
-  protected int intValue;
-  protected long longValue;
-  protected double doubleValue;
-  protected String stringValue;
-  protected boolean booleanValue;
+  // Cached String values. Protected so they can be used by subclasses.
+  private boolean stringValueValid = false;
+  private String stringValue;
 
   public static ExprEval ofLong(@Nullable Number longValue)
   {
@@ -268,6 +260,16 @@ public abstract class ExprEval<T>
 
   private static class StringExprEval extends ExprEval<String>
   {
+    // Cached primitive values.
+    private boolean intValueValid = false;
+    private boolean longValueValid = false;
+    private boolean doubleValueValid = false;
+    private boolean booleanValueValid = false;
+    private int intValue;
+    private long longValue;
+    private double doubleValue;
+    private boolean booleanValue;
+
     private static final StringExprEval OF_NULL = new StringExprEval(null);
 
     private Number numericVal;

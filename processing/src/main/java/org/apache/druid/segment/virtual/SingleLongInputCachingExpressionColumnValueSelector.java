@@ -66,7 +66,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.lruEvalCache = useLruCache ? new LruEvalCache(expression) : null;
+    this.lruEvalCache = useLruCache ? new LruEvalCache() : null;
   }
 
   @Override
@@ -133,13 +133,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
   public class LruEvalCache
   {
-    private final Expr expression;
     private final Long2ObjectLinkedOpenHashMap<ExprEval> m = new Long2ObjectLinkedOpenHashMap<>(CACHE_SIZE);
-
-    public LruEvalCache(final Expr expression)
-    {
-      this.expression = expression;
-    }
 
     public ExprEval compute(final long n)
     {
