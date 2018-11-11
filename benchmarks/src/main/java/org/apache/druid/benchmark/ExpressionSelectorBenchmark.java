@@ -155,10 +155,7 @@ public class ExpressionSelectorBenchmark
     final List<?> results = cursors
         .map(cursor -> {
           final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          while (!cursor.isDone()) {
-            blackhole.consume(selector.getLong());
-            cursor.advance();
-          }
+          consumeLong(cursor, selector, blackhole);
           return null;
         })
         .toList();
@@ -226,6 +223,71 @@ public class ExpressionSelectorBenchmark
     }
 
     blackhole.consume(count);
+  }
+
+  @Benchmark
+  public void timeFormatUsingExpression(Blackhole blackhole)
+  {
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn(
+                    "v",
+                    "timestamp_format(__time, 'yyyy-MM-dd')",
+                    ValueType.STRING,
+                    TestExprMacroTable.INSTANCE
+                )
+            )
+        ),
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = cursors
+        .map(cursor -> {
+          final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(
+              DefaultDimensionSpec.of("v")
+          );
+          consumeDimension(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
+
+    blackhole.consume(results);
+  }
+
+  @Benchmark
+  public void timeFormatUsingExtractionFn(Blackhole blackhole)
+  {
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = cursors
+        .map(cursor -> {
+          final DimensionSelector selector = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(
+                  new ExtractionDimensionSpec(
+                      ColumnHolder.TIME_COLUMN_NAME,
+                      "v",
+                      new TimeFormatExtractionFn("yyyy-MM-dd", null, null, null, false)
+                  )
+              );
+          consumeDimension(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
+
+    blackhole.consume(results);
   }
 
   @Benchmark
