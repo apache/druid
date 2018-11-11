@@ -73,6 +73,15 @@ import java.util.HashMap;
  */
 public class HdfsDataSegmentPusherTest
 {
+  static TestObjectMapper objectMapper;
+
+  static {
+    objectMapper = new TestObjectMapper();
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ObjectMapper.class, objectMapper);
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    objectMapper.setInjectableValues(injectableValues);
+  }
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -80,22 +89,14 @@ public class HdfsDataSegmentPusherTest
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
-  static TestObjectMapper objectMapper = new TestObjectMapper();
-
   private HdfsDataSegmentPusher hdfsDataSegmentPusher;
+
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConf = new HdfsDataSegmentPusherConfig();
     hdfsDataSegmentPusherConf.setStorageDirectory("path/to/");
     hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true), objectMapper);
-  }
-  static {
-    objectMapper = new TestObjectMapper();
-    InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(ObjectMapper.class, objectMapper);
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    objectMapper.setInjectableValues(injectableValues);
   }
 
   @Test

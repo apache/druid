@@ -322,7 +322,7 @@ public class JavaScriptAggregatorTest
 
     // warmup
     int i = 0;
-    long t = 0;
+    long t;
     while (i < 10000) {
       aggregate(selector, aggRhino);
       ++i;

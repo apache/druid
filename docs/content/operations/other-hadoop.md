@@ -201,7 +201,7 @@ If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat j
   </dependency>
 
   <dependency>
-      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-parquet-extensions</artifactId>
       <version>${project.parent.version}</version>
   </dependency>

@@ -639,7 +639,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     MetadataStorageConnectorConfig connectorConfig = getConfig();
 
-    BasicDataSource dataSource = null;
+    BasicDataSource dataSource;
 
     try {
       Properties dbcpProperties = connectorConfig.getDbcpProperties();

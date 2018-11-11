@@ -183,7 +183,7 @@ public class BytesBoundedLinkedQueueTest
     Assert.assertFalse(q.offer(new TestObject(2), delayMS, TimeUnit.MILLISECONDS));
   }
 
- // @Test
+  @Test
   public void testConcurrentOperations() throws Exception
   {
     final BlockingQueue<TestObject> q = getQueue(Integer.MAX_VALUE);
@@ -240,8 +240,7 @@ public class BytesBoundedLinkedQueueTest
                 public Boolean call()
                 {
                   while (!stopTest.get()) {
-                    System.out
-                          .println("drained elements : " + q.drainTo(new ArrayList<TestObject>(), Integer.MAX_VALUE));
+                    q.drainTo(new ArrayList<>(), Integer.MAX_VALUE);
                   }
                   return true;
                 }

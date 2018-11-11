@@ -52,6 +52,9 @@ public abstract class ExprEval<T>
 
   public static ExprEval of(@Nullable String stringValue)
   {
+    if (stringValue == null) {
+      return StringExprEval.OF_NULL;
+    }
     return new StringExprEval(stringValue);
   }
 
@@ -180,7 +183,11 @@ public abstract class ExprEval<T>
         case DOUBLE:
           return this;
         case LONG:
-          return ExprEval.of(value == null ? null : asLong());
+          if (value == null) {
+            return ExprEval.of(null);
+          } else {
+            return ExprEval.of(asLong());
+          }
         case STRING:
           return ExprEval.of(asString());
       }
@@ -218,7 +225,11 @@ public abstract class ExprEval<T>
     {
       switch (castTo) {
         case DOUBLE:
-          return ExprEval.of(value == null ? null : asDouble());
+          if (value == null) {
+            return ExprEval.of(null);
+          } else {
+            return ExprEval.of(asDouble());
+          }
         case LONG:
           return this;
         case STRING:
@@ -236,6 +247,8 @@ public abstract class ExprEval<T>
 
   private static class StringExprEval extends ExprEval<String>
   {
+    private static final StringExprEval OF_NULL = new StringExprEval(null);
+
     private Number numericVal;
 
     private StringExprEval(@Nullable String value)
