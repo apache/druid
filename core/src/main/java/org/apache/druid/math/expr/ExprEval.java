@@ -30,6 +30,18 @@ import javax.annotation.Nullable;
  */
 public abstract class ExprEval<T>
 {
+  // Cached values of various types. Protected so they can be used by subclasses.
+  protected boolean intValueValid = false;
+  protected boolean longValueValid = false;
+  protected boolean doubleValueValid = false;
+  protected boolean stringValueValid = false;
+  protected boolean booleanValueValid = false;
+  protected int intValue;
+  protected long longValue;
+  protected double doubleValue;
+  protected String stringValue;
+  protected boolean booleanValue;
+
   public static ExprEval ofLong(@Nullable Number longValue)
   {
     return new LongExprEval(longValue);
@@ -89,7 +101,7 @@ public abstract class ExprEval<T>
   @Nullable
   final T value;
 
-  private ExprEval(T value)
+  private ExprEval(@Nullable T value)
   {
     this.value = value;
   }
@@ -115,7 +127,17 @@ public abstract class ExprEval<T>
   @Nullable
   public String asString()
   {
-    return value == null ? null : String.valueOf(value);
+    if (!stringValueValid) {
+      if (value == null) {
+        stringValue = null;
+      } else {
+        stringValue = String.valueOf(value);
+      }
+
+      stringValueValid = true;
+    }
+
+    return stringValue;
   }
 
   public abstract boolean asBoolean();
@@ -126,7 +148,6 @@ public abstract class ExprEval<T>
 
   private abstract static class NumericExprEval extends ExprEval<Number>
   {
-
     private NumericExprEval(@Nullable Number value)
     {
       super(value);
@@ -263,9 +284,48 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final int asInt()
+    public int asInt()
     {
-      Number number = asNumber();
+      if (!intValueValid) {
+        intValue = computeInt();
+        intValueValid = true;
+      }
+
+      return intValue;
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (!longValueValid) {
+        longValue = computeLong();
+        longValueValid = true;
+      }
+
+      return longValue;
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (!doubleValueValid) {
+        doubleValue = computeDouble();
+        doubleValueValid = true;
+      }
+
+      return doubleValue;
+    }
+
+    @Nullable
+    @Override
+    public String asString()
+    {
+      return value;
+    }
+
+    private int computeInt()
+    {
+      Number number = computeNumber();
       if (number == null) {
         assert NullHandling.replaceWithDefault();
         return 0;
@@ -273,10 +333,9 @@ public abstract class ExprEval<T>
       return number.intValue();
     }
 
-    @Override
-    public final long asLong()
+    private long computeLong()
     {
-      Number number = asNumber();
+      Number number = computeNumber();
       if (number == null) {
         assert NullHandling.replaceWithDefault();
         return 0L;
@@ -284,10 +343,9 @@ public abstract class ExprEval<T>
       return number.longValue();
     }
 
-    @Override
-    public final double asDouble()
+    private double computeDouble()
     {
-      Number number = asNumber();
+      Number number = computeNumber();
       if (number == null) {
         assert NullHandling.replaceWithDefault();
         return 0.0d;
@@ -296,7 +354,7 @@ public abstract class ExprEval<T>
     }
 
     @Nullable
-    private Number asNumber()
+    private Number computeNumber()
     {
       if (value == null) {
         return null;
@@ -321,13 +379,18 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
-      return asNumber() == null;
+      return computeNumber() == null;
     }
 
     @Override
     public final boolean asBoolean()
     {
-      return Evals.asBoolean(value);
+      if (!booleanValueValid) {
+        booleanValue = Evals.asBoolean(value);
+        booleanValueValid = true;
+      }
+
+      return booleanValue;
     }
 
     @Override
@@ -335,9 +398,9 @@ public abstract class ExprEval<T>
     {
       switch (castTo) {
         case DOUBLE:
-          return ExprEval.ofDouble(asNumber());
+          return ExprEval.ofDouble(computeNumber());
         case LONG:
-          return ExprEval.ofLong(asNumber());
+          return ExprEval.ofLong(computeNumber());
         case STRING:
           return this;
       }
