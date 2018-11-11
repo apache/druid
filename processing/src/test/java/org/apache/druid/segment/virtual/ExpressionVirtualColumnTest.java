@@ -100,6 +100,12 @@ public class ExpressionVirtualColumnTest
       ValueType.STRING,
       TestExprMacroTable.INSTANCE
   );
+  private static final ExpressionVirtualColumn ZCONCATNONEXISTENT = new ExpressionVirtualColumn(
+      "expr",
+      "concat(z, nonexistent)",
+      ValueType.STRING,
+      TestExprMacroTable.INSTANCE
+  );
   private static final ExpressionVirtualColumn TIMEFLOOR = new ExpressionVirtualColumn(
       "expr",
       "timestamp_floor(__time, 'P1D')",
@@ -298,6 +304,39 @@ public class ExpressionVirtualColumnTest
     CURRENT_ROW.set(ROW3);
     Assert.assertEquals(1, selector.getRow().size());
     Assert.assertEquals("foobar2", selector.lookupName(selector.getRow().get(0)));
+  }
+
+  @Test
+  public void testDimensionSelectorUsingNonexistentColumn()
+  {
+    final DimensionSelector selector = ZCONCATNONEXISTENT.makeDimensionSelector(
+        new DefaultDimensionSpec("expr", "expr"),
+        COLUMN_SELECTOR_FACTORY
+    );
+
+    Assert.assertNotNull(selector);
+
+    CURRENT_ROW.set(ROW0);
+    Assert.assertEquals(1, selector.getRow().size());
+    Assert.assertNull(selector.lookupName(selector.getRow().get(0)));
+
+    CURRENT_ROW.set(ROW1);
+    Assert.assertEquals(1, selector.getRow().size());
+    Assert.assertNull(selector.lookupName(selector.getRow().get(0)));
+
+    CURRENT_ROW.set(ROW2);
+    Assert.assertEquals(1, selector.getRow().size());
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? "foobar" : null,
+        selector.lookupName(selector.getRow().get(0))
+    );
+
+    CURRENT_ROW.set(ROW3);
+    Assert.assertEquals(1, selector.getRow().size());
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? "foobar" : null,
+        selector.lookupName(selector.getRow().get(0))
+    );
   }
 
   @Test

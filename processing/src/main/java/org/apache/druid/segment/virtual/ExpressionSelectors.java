@@ -236,7 +236,8 @@ public class ExpressionSelectors
   private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory)
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
-    for (String columnName : Parser.findRequiredBindings(expression)) {
+    final List<String> columns = Parser.findRequiredBindings(expression);
+    for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
@@ -274,8 +275,9 @@ public class ExpressionSelectors
 
     if (suppliers.isEmpty()) {
       return ExprUtils.nilBindings();
-    } else if (suppliers.size() == 1) {
-      // If there's only one supplier, we can skip the Map and just use that supplier when asked for something.
+    } else if (suppliers.size() == 1 && columns.size() == 1) {
+      // If there's only one column (and it has a supplier), we can skip the Map and just use that supplier when
+      // asked for something.
       final String column = Iterables.getOnlyElement(suppliers.keySet());
       final Supplier<Object> supplier = Iterables.getOnlyElement(suppliers.values());
 
