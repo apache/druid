@@ -380,13 +380,14 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       // No need to wait on CountDownLatch, because we are holding the lock under which it could only be counted down.
       if (cacheInitialized.getCount() == 0) {
         List<DiscoveryDruidNode> nodeRemoved = ImmutableList.of(druidNode);
-        for (Listener listener : nodeListeners)
+        for (Listener listener : nodeListeners) {
           safeSchedule(
               () -> listener.nodesRemoved(nodeRemoved),
               "Exception occured in nodeRemoved(node=[%s]) in listener [%s].",
               druidNode.getDruidNode().getHostAndPortToUse(),
               listener
           );
+        }
       }
     }
 
