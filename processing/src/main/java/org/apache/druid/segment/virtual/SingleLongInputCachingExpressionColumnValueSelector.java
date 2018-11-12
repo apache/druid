@@ -133,7 +133,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
   public class LruEvalCache
   {
-    private final Long2ObjectLinkedOpenHashMap<ExprEval> m = new Long2ObjectLinkedOpenHashMap<>(CACHE_SIZE);
+    private final Long2ObjectLinkedOpenHashMap<ExprEval> m = new Long2ObjectLinkedOpenHashMap<>();
 
     public ExprEval compute(final long n)
     {
