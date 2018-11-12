@@ -74,10 +74,11 @@ public class CoordinatorCompactionConfigsResource
   }
 
   @POST
+  @Path("/taskslots")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response setCompactionTaskLimit(
-      @QueryParam("slotRatio") Double compactionTaskSlotRatio,
-      @QueryParam("maxSlots") Integer maxCompactionTaskSlots,
+      @QueryParam("ratio") Double compactionTaskSlotRatio,
+      @QueryParam("max") Integer maxCompactionTaskSlots,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
       @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
