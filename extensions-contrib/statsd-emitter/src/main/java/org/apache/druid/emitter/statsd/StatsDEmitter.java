@@ -22,6 +22,7 @@ package org.apache.druid.emitter.statsd;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
@@ -95,17 +96,21 @@ public class StatsDEmitter implements Emitter
       Number value = metricEvent.getValue();
 
       ImmutableList.Builder<String> nameBuilder = new ImmutableList.Builder<>();
-      if (config.getIncludeHost()) {
-        nameBuilder.add(host);
-      }
       nameBuilder.add(service);
       nameBuilder.add(metric);
 
-      StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, nameBuilder);
+      ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
+      StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, dimsBuilder);
 
       if (statsDMetric != null) {
+        ImmutableList.Builder<String> fullNameBuilder = new ImmutableList.Builder<>();
+        if (config.getIncludeHost()) {
+          fullNameBuilder.add(host);
+        }
+        fullNameBuilder.addAll(nameBuilder.build());
+        fullNameBuilder.addAll(dimsBuilder.build().values());
 
-        String fullName = Joiner.on(config.getSeparator()).join(nameBuilder.build());
+        String fullName = Joiner.on(config.getSeparator()).join(fullNameBuilder.build());
         fullName = StringUtils.replaceChar(fullName, DRUID_METRIC_SEPARATOR, config.getSeparator());
         fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
         fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
