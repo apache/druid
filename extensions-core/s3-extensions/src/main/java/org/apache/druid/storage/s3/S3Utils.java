@@ -174,12 +174,12 @@ public class S3Utils
 
   static String descriptorPathForSegmentPath(String s3Path)
   {
-    return s3Path.substring(0, s3Path.lastIndexOf("/")) + "/descriptor.json";
+    return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/descriptor.json";
   }
 
   static String indexZipForSegmentPath(String s3Path)
   {
-    return s3Path.substring(0, s3Path.lastIndexOf("/")) + "/index.zip";
+    return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/index.zip";
   }
 
   static String toFilename(String key)
@@ -189,7 +189,7 @@ public class S3Utils
 
   static String toFilename(String key, final String suffix)
   {
-    String filename = key.substring(key.lastIndexOf("/") + 1); // characters after last '/'
+    String filename = key.substring(key.lastIndexOf('/') + 1); // characters after last '/'
     filename = filename.substring(0, filename.length() - suffix.length()); // remove the suffix from the end
     return filename;
   }

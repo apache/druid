@@ -238,7 +238,7 @@ public class FriendlyServersTest
         }
 
         Assert.assertTrue("ChannelException thrown by 'get'", ea instanceof ChannelException);
-        Assert.assertTrue("Expected error message", ea.getCause().getMessage().matches(".*Failed to handshake.*"));
+        Assert.assertTrue("Expected error message", ea.getCause().getMessage().contains("Failed to handshake"));
       }
 
       {

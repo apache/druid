@@ -86,7 +86,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
         mapFieldNameFormat == null ||
         mapFieldNameFormat.indexOf(MAP_PARENT_TAG) < 0 ||
         mapFieldNameFormat.indexOf(MAP_CHILD_TAG) < 0 ? DEFAULT_MAP_FIELD_NAME_FORMAT : mapFieldNameFormat;
-    this.mapParentFieldNameFormat = this.mapFieldNameFormat.replace(MAP_PARENT_TAG, "%s");
+    this.mapParentFieldNameFormat = StringUtils.replace(this.mapFieldNameFormat, MAP_PARENT_TAG, "%s");
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.oip = makeObjectInspector(this.typeString);
   }
@@ -159,7 +159,11 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     if (mapObjectInspector.getMapSize(mapObject) < 0) {
       return;
     }
-    String mapChildFieldNameFormat = StringUtils.format(mapParentFieldNameFormat, parentName).replace(MAP_CHILD_TAG, "%s");
+    String mapChildFieldNameFormat = StringUtils.replace(
+        StringUtils.format(mapParentFieldNameFormat, parentName),
+        MAP_CHILD_TAG,
+        "%s"
+    );
 
     Map objectMap = mapObjectInspector.getMap(mapObject);
     PrimitiveObjectInspector key = (PrimitiveObjectInspector) mapObjectInspector.getMapKeyObjectInspector();

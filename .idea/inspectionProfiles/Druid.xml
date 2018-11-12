@@ -113,9 +113,11 @@
     <inspection_tool class="ObjectToString" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="OverwrittenKey" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PrimitiveArrayArgumentToVariableArgMethod" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="RedundantStringOperation" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantThrows" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="RedundantTypeArguments" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ReflectionForUnavailableAnnotation" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="RemoveToStringInStringTemplate" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ReplaceAllDot" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ResultOfObjectAllocationIgnored" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="Production" level="ERROR" enabled="true" />
@@ -251,6 +253,7 @@
     <inspection_tool class="ToArrayCallWithZeroLengthArrayArgument" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="myMode" value="BY_LEVEL" />
     </inspection_tool>
+    <inspection_tool class="UnnecessaryCallToStringValueOf" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnnecessaryEnumModifier" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnnecessaryFullyQualifiedName" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
@@ -261,6 +264,7 @@
       <option name="ignoreInModuleStatements" value="true" />
     </inspection_tool>
     <inspection_tool class="UnnecessaryInterfaceModifier" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="UnnecessaryToStringCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnusedAssignment" enabled="true" level="ERROR" enabled_by_default="true">
       <option name="REPORT_PREFIX_EXPRESSIONS" value="true" />
       <option name="REPORT_POSTFIX_EXPRESSIONS" value="true" />
