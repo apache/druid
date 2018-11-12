@@ -133,17 +133,34 @@ public class StatsDEmitter implements Emitter
         fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
         fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
 
-        long val = statsDMetric.convertRange ? Math.round(value.doubleValue() * 100) : value.longValue();
-        switch (statsDMetric.type) {
-          case count:
-            statsd.count(fullName, val, tags);
-            break;
-          case timer:
-            statsd.time(fullName, val, tags);
-            break;
-          case gauge:
-            statsd.gauge(fullName, val, tags);
-            break;
+        if (config.getDogstatsd() && (value instanceof Float || value instanceof Double)) {
+          switch (statsDMetric.type) {
+            case count:
+              statsd.count(fullName, value.doubleValue(), tags);
+              break;
+            case timer:
+              statsd.time(fullName, value.longValue(), tags);
+              break;
+            case gauge:
+              statsd.gauge(fullName, value.doubleValue(), tags);
+              break;
+          }
+        } else {
+          long val = statsDMetric.convertRange && !config.getDogstatsd() ?
+              Math.round(value.doubleValue() * 100) :
+              value.longValue();
+
+          switch (statsDMetric.type) {
+            case count:
+              statsd.count(fullName, val, tags);
+              break;
+            case timer:
+              statsd.time(fullName, val, tags);
+              break;
+            case gauge:
+              statsd.gauge(fullName, val, tags);
+              break;
+          }
         }
       } else {
         log.debug("Metric=[%s] has no StatsD type mapping", statsDMetric);

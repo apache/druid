@@ -53,6 +53,25 @@ public class StatsDEmitterTest
   }
 
   @Test
+  public void testConvertRangeWithDogstatsd()
+  {
+    StatsDClient client = createMock(StatsDClient.class);
+    StatsDEmitter emitter = new StatsDEmitter(
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, true),
+        new ObjectMapper(),
+        client
+    );
+    client.gauge("broker.query.cache.total.hitRate", 0.54, new String[0]);
+    replay(client);
+    emitter.emit(new ServiceMetricEvent.Builder()
+                     .setDimension("dataSource", "data-source")
+                     .build(DateTimes.nowUtc(), "query/cache/total/hitRate", 0.54)
+                     .build("broker", "brokerHost1")
+    );
+    verify(client);
+  }
+
+  @Test
   public void testNoConvertRange()
   {
     StatsDClient client = createMock(StatsDClient.class);
