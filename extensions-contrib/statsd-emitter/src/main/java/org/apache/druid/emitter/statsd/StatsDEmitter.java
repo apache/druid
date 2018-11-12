@@ -34,6 +34,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.List;
 
 /**
  */
@@ -103,14 +104,31 @@ public class StatsDEmitter implements Emitter
       StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, dimsBuilder);
 
       if (statsDMetric != null) {
-        ImmutableList.Builder<String> fullNameBuilder = new ImmutableList.Builder<>();
-        if (config.getIncludeHost()) {
-          fullNameBuilder.add(host);
-        }
-        fullNameBuilder.addAll(nameBuilder.build());
-        fullNameBuilder.addAll(dimsBuilder.build().values());
+        List<String> fullNameList;
+        String[] tags;
+        if (config.getDogstatsd()) {
+          if (config.getIncludeHost()) {
+            dimsBuilder.put("hostname", host);
+          }
 
-        String fullName = Joiner.on(config.getSeparator()).join(fullNameBuilder.build());
+          fullNameList = nameBuilder.build();
+          tags = dimsBuilder.build().entrySet()
+            .stream()
+            .map(e -> e.getKey() + ":" + e.getValue())
+            .toArray(String[]::new);
+        } else {
+          ImmutableList.Builder<String> fullNameBuilder = new ImmutableList.Builder<>();
+          if (config.getIncludeHost()) {
+            fullNameBuilder.add(host);
+          }
+          fullNameBuilder.addAll(nameBuilder.build());
+          fullNameBuilder.addAll(dimsBuilder.build().values());
+
+          fullNameList = fullNameBuilder.build();
+          tags = EMPTY_ARRAY;
+        }
+
+        String fullName = Joiner.on(config.getSeparator()).join(fullNameList);
         fullName = StringUtils.replaceChar(fullName, DRUID_METRIC_SEPARATOR, config.getSeparator());
         fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
         fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
@@ -118,13 +136,13 @@ public class StatsDEmitter implements Emitter
         long val = statsDMetric.convertRange ? Math.round(value.doubleValue() * 100) : value.longValue();
         switch (statsDMetric.type) {
           case count:
-            statsd.count(fullName, val, EMPTY_ARRAY);
+            statsd.count(fullName, val, tags);
             break;
           case timer:
-            statsd.time(fullName, val, EMPTY_ARRAY);
+            statsd.time(fullName, val, tags);
             break;
           case gauge:
-            statsd.gauge(fullName, val, EMPTY_ARRAY);
+            statsd.gauge(fullName, val, tags);
             break;
         }
       } else {

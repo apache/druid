@@ -38,7 +38,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -57,7 +57,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -85,7 +85,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -109,11 +109,40 @@ public class StatsDEmitterTest
   }
 
   @Test
+  public void testDogstatsdEnabled()
+  {
+    StatsDClient client = createMock(StatsDClient.class);
+    StatsDEmitter emitter = new StatsDEmitter(
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, true),
+        new ObjectMapper(),
+        client
+    );
+    client.time("broker#query#time", 10,
+        new String[] {"dataSource:data-source", "type:groupBy", "hostname:brokerHost1"});
+    replay(client);
+    emitter.emit(new ServiceMetricEvent.Builder()
+                     .setDimension("dataSource", "data-source")
+                     .setDimension("type", "groupBy")
+                     .setDimension("interval", "2013/2015")
+                     .setDimension("some_random_dim1", "random_dim_value1")
+                     .setDimension("some_random_dim2", "random_dim_value2")
+                     .setDimension("hasFilters", "no")
+                     .setDimension("duration", "P1D")
+                     .setDimension("remoteAddress", "194.0.90.2")
+                     .setDimension("id", "ID")
+                     .setDimension("context", "{context}")
+                     .build(DateTimes.nowUtc(), "query/time", 10)
+                     .build("broker", "brokerHost1")
+    );
+    verify(client);
+  }
+
+  @Test
   public void testBlankHolderOptions()
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, null),
         new ObjectMapper(),
         client
     );
