@@ -221,18 +221,23 @@ public class StringUtils
     if (pos < 0) {
       return s;
     }
+    int sLength = s.length();
     int targetLength = target.length();
     // This is needed to work correctly with empty target string and mimic String.replace() behavior
     int searchSkip = Math.max(targetLength, 1);
-    StringBuilder sb = new StringBuilder(s.length() - targetLength + replacement.length());
+    StringBuilder sb = new StringBuilder(sLength - targetLength + replacement.length());
     int prevPos = 0;
     do {
       sb.append(s, prevPos, pos);
       sb.append(replacement);
       prevPos = pos + targetLength;
+      // Break from the loop if the target is empty
+      if (pos == sLength) {
+        break;
+      }
       pos = s.indexOf(target, pos + searchSkip);
     } while (pos > 0);
-    sb.append(s, prevPos, s.length());
+    sb.append(s, prevPos, sLength);
     return sb.toString();
   }
 
