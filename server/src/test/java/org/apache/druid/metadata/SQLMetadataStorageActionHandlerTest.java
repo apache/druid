@@ -383,22 +383,25 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testRemoveTasksBefore() throws Exception
+  public void testRemoveTasksOlderThan() throws Exception
   {
     final String entryId1 = "1234";
     Map<String, Integer> entry1 = ImmutableMap.of("numericId", 1234);
     Map<String, Integer> status1 = ImmutableMap.of("count", 42, "temp", 1);
     handler.insert(entryId1, DateTimes.of("2014-01-01T00:00:00.123"), "testDataSource", entry1, false, status1);
+    Assert.assertTrue(handler.addLog(entryId1, ImmutableMap.of("logentry", "created")));
 
     final String entryId2 = "ABC123";
     Map<String, Integer> entry2 = ImmutableMap.of("a", 1);
     Map<String, Integer> status2 = ImmutableMap.of("count", 42);
     handler.insert(entryId2, DateTimes.of("2014-01-01T00:00:00.123"), "test", entry2, true, status2);
+    Assert.assertTrue(handler.addLog(entryId2, ImmutableMap.of("logentry", "created")));
 
     final String entryId3 = "DEF5678";
     Map<String, Integer> entry3 = ImmutableMap.of("numericId", 5678);
     Map<String, Integer> status3 = ImmutableMap.of("count", 21, "temp", 2);
     handler.insert(entryId3, DateTimes.of("2014-01-02T12:00:00.123"), "testDataSource", entry3, false, status3);
+    Assert.assertTrue(handler.addLog(entryId3, ImmutableMap.of("logentry", "created")));
 
     Assert.assertEquals(Optional.of(entry1), handler.getEntry(entryId1));
     Assert.assertEquals(Optional.of(entry2), handler.getEntry(entryId2));
@@ -419,7 +422,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     );
 
-    handler.removeTasksBefore(DateTimes.of("2014-01-02"));
+    handler.removeTasksOlderThan(DateTimes.of("2014-01-02").getMillis());
     // active task not removed.
     Assert.assertEquals(
         ImmutableList.of(entryId2),
@@ -429,11 +432,14 @@ public class SQLMetadataStorageActionHandlerTest
     );
     Assert.assertEquals(
         ImmutableList.of(entryId3),
-        handler.getCompletedTaskInfo(DateTimes.of("2014-01-02"), null, null).stream()
+        handler.getCompletedTaskInfo(DateTimes.of("2014-01-01"), null, null).stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
 
     );
-
+    // tasklogs
+    Assert.assertEquals(0, handler.getLogs(entryId1).size());
+    Assert.assertEquals(1, handler.getLogs(entryId2).size());
+    Assert.assertEquals(1, handler.getLogs(entryId3).size());
   }
 }

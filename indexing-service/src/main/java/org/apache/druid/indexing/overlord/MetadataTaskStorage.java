@@ -44,7 +44,6 @@ import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.MetadataStorageActionHandlerTypes;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -278,9 +277,9 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public void removeTasksBefore(DateTime createdTime)
+  public void removeTasksOlderThan(long timestamp)
   {
-    handler.removeTasksBefore(createdTime);
+    handler.removeTasksOlderThan(timestamp);
   }
 
   @Override
