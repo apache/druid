@@ -22,9 +22,7 @@ package org.apache.druid.server;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidDataSource;
@@ -61,8 +59,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -103,11 +104,11 @@ public class ClientInfoResource
 
   private Map<String, List<DataSegment>> getSegmentsForDatasources()
   {
-    final Map<String, List<DataSegment>> dataSourceMap = Maps.newHashMap();
+    final Map<String, List<DataSegment>> dataSourceMap = new HashMap<>();
     for (DruidServer server : serverInventoryView.getInventory()) {
       for (DruidDataSource dataSource : server.getDataSources()) {
         if (!dataSourceMap.containsKey(dataSource.getName())) {
-          dataSourceMap.put(dataSource.getName(), Lists.newArrayList());
+          dataSourceMap.put(dataSource.getName(), new ArrayList<>());
         }
         List<DataSegment> segments = dataSourceMap.get(dataSource.getName());
         segments.addAll(dataSource.getSegments());
@@ -180,8 +181,8 @@ public class ClientInfoResource
     );
 
     for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
-      final Set<Object> dimensions = Sets.newHashSet();
-      final Set<Object> metrics = Sets.newHashSet();
+      final Set<Object> dimensions = new HashSet<>();
+      final Set<Object> metrics = new HashSet<>();
       final PartitionHolder<ServerSelector> partitionHolder = holder.getObject();
       if (partitionHolder.isComplete()) {
         for (ServerSelector server : partitionHolder.payloads()) {
@@ -231,7 +232,7 @@ public class ClientInfoResource
   )
   {
     final List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
-    final Set<String> dims = Sets.newHashSet();
+    final Set<String> dims = new HashSet<>();
 
     if (segments == null || segments.isEmpty()) {
       return dims;
@@ -265,7 +266,7 @@ public class ClientInfoResource
   )
   {
     final List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
-    final Set<String> metrics = Sets.newHashSet();
+    final Set<String> metrics = new HashSet<>();
 
     if (segments == null || segments.isEmpty()) {
       return metrics;
@@ -299,7 +300,7 @@ public class ClientInfoResource
       @Context final HttpServletRequest req
   )
   {
-    List<Interval> intervalList = Lists.newArrayList();
+    List<Interval> intervalList = new ArrayList<>();
     for (String interval : intervals.split(",")) {
       intervalList.add(Intervals.of(interval.trim()));
     }

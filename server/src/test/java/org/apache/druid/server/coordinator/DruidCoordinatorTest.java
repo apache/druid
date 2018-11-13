@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -65,6 +64,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -583,8 +583,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         interval,
         "dummy_version",
         new ConcurrentHashMap<>(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         null,
         0,
         0L

@@ -25,7 +25,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
@@ -78,6 +77,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -510,8 +510,8 @@ public class ServerManagerTest
     private final CountDownLatch waitLatch;
     private final CountDownLatch waitYieldLatch;
     private final CountDownLatch notifyLatch;
-    private List<SegmentForTesting> adapters = Lists.newArrayList();
-    private List<ReferenceCountingSegment> segmentReferences = Lists.newArrayList();
+    private List<SegmentForTesting> adapters = new ArrayList<>();
+    private List<ReferenceCountingSegment> segmentReferences = new ArrayList<>();
 
 
     public MyQueryRunnerFactory(

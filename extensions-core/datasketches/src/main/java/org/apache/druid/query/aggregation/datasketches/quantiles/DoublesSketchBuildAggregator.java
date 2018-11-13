@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -35,7 +36,7 @@ public class DoublesSketchBuildAggregator implements Aggregator
   {
     this.valueSelector = valueSelector;
     this.size = size;
-    sketch = UpdateDoublesSketch.builder().setK(size).build();
+    sketch = DoublesSketch.builder().setK(size).build();
   }
 
   @Override

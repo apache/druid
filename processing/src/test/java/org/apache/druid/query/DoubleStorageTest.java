@@ -21,7 +21,6 @@ package org.apache.druid.query;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -270,7 +269,7 @@ public class DoubleStorageTest
                                                       )
                                                       .merge(true)
                                                       .build();
-    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), Maps.newHashMap()).toList();
+    List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), new HashMap<>()).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
 

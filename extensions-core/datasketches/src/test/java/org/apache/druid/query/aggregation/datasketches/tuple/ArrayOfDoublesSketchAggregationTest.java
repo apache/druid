@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import com.google.common.collect.Lists;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.initialization.DruidModule;
@@ -38,6 +37,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -61,7 +61,7 @@ public class ArrayOfDoublesSketchAggregationTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
       constructors.add(new Object[] {config});
     }

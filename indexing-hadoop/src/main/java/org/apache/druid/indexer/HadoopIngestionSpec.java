@@ -22,7 +22,6 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.indexer.hadoop.DatasourceIngestionSpec;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
@@ -196,7 +195,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
       }
 
       final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segmentsList);
-      final List<WindowedDataSegment> windowedSegments = Lists.newArrayList();
+      final List<WindowedDataSegment> windowedSegments = new ArrayList<>();
       for (Interval interval : ingestionSpecObj.getIntervals()) {
         final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(interval);
 

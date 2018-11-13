@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
@@ -59,7 +58,7 @@ public class OrFilter implements BooleanFilter
       return filters.get(0).getBitmapResult(selector, bitmapResultFactory);
     }
 
-    List<T> bitmapResults = Lists.newArrayList();
+    List<T> bitmapResults = new ArrayList<>();
     for (Filter filter : filters) {
       bitmapResults.add(filter.getBitmapResult(selector, bitmapResultFactory));
     }

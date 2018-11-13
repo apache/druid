@@ -22,7 +22,6 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -63,6 +62,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -177,7 +177,7 @@ public class WorkerTaskMonitorTest
                       @Override
                       public List<StorageLocationConfig> getLocations()
                       {
-                        return Lists.newArrayList();
+                        return new ArrayList<>();
                       }
                     },
                     jsonMapper

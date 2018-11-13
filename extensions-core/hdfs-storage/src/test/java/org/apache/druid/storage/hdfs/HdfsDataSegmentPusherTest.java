@@ -32,8 +32,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.Bucket;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -67,12 +65,23 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  */
 public class HdfsDataSegmentPusherTest
 {
+  static TestObjectMapper objectMapper;
+
+  static {
+    objectMapper = new TestObjectMapper();
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ObjectMapper.class, objectMapper);
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    objectMapper.setInjectableValues(injectableValues);
+  }
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -80,22 +89,14 @@ public class HdfsDataSegmentPusherTest
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
-  static TestObjectMapper objectMapper = new TestObjectMapper();
-
   private HdfsDataSegmentPusher hdfsDataSegmentPusher;
+
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConf = new HdfsDataSegmentPusherConfig();
     hdfsDataSegmentPusherConf.setStorageDirectory("path/to/");
     hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true), objectMapper);
-  }
-  static {
-    objectMapper = new TestObjectMapper();
-    InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(ObjectMapper.class, objectMapper);
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    objectMapper.setInjectableValues(injectableValues);
   }
 
   @Test
@@ -150,9 +151,9 @@ public class HdfsDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         size
@@ -195,9 +196,9 @@ public class HdfsDataSegmentPusherTest
           "foo",
           Intervals.of("2015/2016"),
           "0",
-          Maps.newHashMap(),
-          Lists.newArrayList(),
-          Lists.newArrayList(),
+          new HashMap<>(),
+          new ArrayList<>(),
+          new ArrayList<>(),
           new NumberedShardSpec(i, i),
           0,
           size
@@ -301,9 +302,9 @@ public class HdfsDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         size

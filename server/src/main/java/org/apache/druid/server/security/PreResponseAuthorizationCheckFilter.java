@@ -20,12 +20,10 @@
 package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
-import org.eclipse.jetty.server.Response;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -38,6 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -94,7 +93,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       );
     }
 
-    if (authInfoChecked != null && !authInfoChecked && response.getStatus() != Response.SC_FORBIDDEN) {
+    if (authInfoChecked != null && !authInfoChecked && response.getStatus() != HttpServletResponse.SC_FORBIDDEN) {
       handleAuthorizationCheckError(
           "Request's authorization check failed but status code was not 403.",
           request,
@@ -116,7 +115,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     // Since this is the last filter in the chain, some previous authentication filter
     // should have placed an authentication result in the request.
     // If not, send an authentication challenge.
-    Set<String> supportedAuthSchemes = Sets.newHashSet();
+    Set<String> supportedAuthSchemes = new HashSet<>();
     for (Authenticator authenticator : authenticators) {
       String challengeHeader = authenticator.getAuthChallengeHeader();
       if (challengeHeader != null) {
@@ -134,7 +133,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     );
     unauthorizedError.setStackTrace(new StackTraceElement[0]);
     OutputStream out = response.getOutputStream();
-    sendJsonError(response, Response.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
+    sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
     out.close();
     return;
   }
@@ -157,7 +156,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       throw new ISE(errorMsg);
     } else {
       try {
-        servletResponse.sendError(Response.SC_FORBIDDEN);
+        servletResponse.sendError(HttpServletResponse.SC_FORBIDDEN);
       }
       catch (Exception e) {
         throw new RuntimeException(e);

@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -173,7 +174,7 @@ public class CacheKeyBuilder
     }
   }
 
-  private final List<Item> items = Lists.newArrayList();
+  private final List<Item> items = new ArrayList<>();
   private final byte id;
   private int size;
 

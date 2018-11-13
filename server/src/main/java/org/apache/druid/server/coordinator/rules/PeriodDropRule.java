@@ -30,14 +30,19 @@ import org.joda.time.Period;
  */
 public class PeriodDropRule extends DropRule
 {
+  private static final boolean DEFAULT_INCLUDE_FUTURE = true;
+
   private final Period period;
+  private final boolean includeFuture;
 
   @JsonCreator
   public PeriodDropRule(
-      @JsonProperty("period") Period period
+      @JsonProperty("period") Period period,
+      @JsonProperty("includeFuture") Boolean includeFuture
   )
   {
     this.period = period;
+    this.includeFuture = includeFuture == null ? DEFAULT_INCLUDE_FUTURE : includeFuture;
   }
 
   @Override
@@ -53,6 +58,12 @@ public class PeriodDropRule extends DropRule
     return period;
   }
 
+  @JsonProperty
+  public boolean isIncludeFuture()
+  {
+    return includeFuture;
+  }
+
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
@@ -63,6 +74,10 @@ public class PeriodDropRule extends DropRule
   public boolean appliesTo(Interval theInterval, DateTime referenceTimestamp)
   {
     final Interval currInterval = new Interval(period, referenceTimestamp);
-    return currInterval.contains(theInterval);
+    if (includeFuture) {
+      return currInterval.getStartMillis() <= theInterval.getStartMillis();
+    } else {
+      return currInterval.contains(theInterval);
+    }
   }
 }

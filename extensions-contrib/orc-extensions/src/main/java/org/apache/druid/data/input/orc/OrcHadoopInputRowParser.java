@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -95,7 +95,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   @Override
   public List<InputRow> parseBatch(OrcStruct input)
   {
-    Map<String, Object> map = Maps.newHashMap();
+    Map<String, Object> map = new HashMap<>();
     List<? extends StructField> fields = oip.getAllStructFieldRefs();
     for (StructField field : fields) {
       ObjectInspector objectInspector = field.getFieldObjectInspector();

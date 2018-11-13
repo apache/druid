@@ -29,7 +29,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.FutureCallback;
@@ -432,6 +431,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           // if stop is requested or task's end offset is set by call to setEndOffsets method with finish set to true
           if (stopRequested.get() || sequences.size() == 0 || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
+          }
+
+          if (stopRequested.get()) {
             break;
           }
 
@@ -916,7 +918,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
 
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
-    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         savedParseExceptions
     );
@@ -928,7 +930,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
 
   private Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metrics = Maps.newHashMap();
+    Map<String, Object> metrics = new HashMap<>();
     metrics.put(
         RowIngestionMeters.BUILD_SEGMENTS,
         rowIngestionMeters.getTotals()
@@ -963,7 +965,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private Set<Integer> assignPartitionsAndSeekToNext(KafkaConsumer consumer, String topic)
   {
     // Initialize consumer assignment.
-    final Set<Integer> assignment = Sets.newHashSet();
+    final Set<Integer> assignment = new HashSet<>();
     for (Map.Entry<Integer, Long> entry : nextOffsets.entrySet()) {
       final long endOffset = endOffsets.get(entry.getKey());
       if (entry.getValue() < endOffset) {
@@ -1031,7 +1033,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
       TaskToolbox taskToolbox
   ) throws InterruptedException, IOException
   {
-    final Map<TopicPartition, Long> resetPartitions = Maps.newHashMap();
+    final Map<TopicPartition, Long> resetPartitions = new HashMap<>();
     boolean doReset = false;
     if (tuningConfig.isResetOffsetAutomatically()) {
       for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
@@ -1110,7 +1112,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
       throws IOException
   {
-    Map<Integer, Long> partitionOffsetMap = Maps.newHashMap();
+    Map<Integer, Long> partitionOffsetMap = new HashMap<>();
     for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
       partitionOffsetMap.put(outOfRangePartition.getKey().partition(), outOfRangePartition.getValue());
     }
@@ -1281,9 +1283,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   )
   {
     authorizationCheck(req, Action.READ);
-    Map<String, Object> returnMap = Maps.newHashMap();
-    Map<String, Object> totalsMap = Maps.newHashMap();
-    Map<String, Object> averagesMap = Maps.newHashMap();
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> totalsMap = new HashMap<>();
+    Map<String, Object> averagesMap = new HashMap<>();
 
     totalsMap.put(
         RowIngestionMeters.BUILD_SEGMENTS,

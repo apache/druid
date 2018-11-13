@@ -20,7 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.junit.Assert;
@@ -28,6 +27,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -76,7 +76,7 @@ public class IncrementalIndexRowCompTest
 
   private MapBasedInputRow toMapRow(long time, Object... dimAndVal)
   {
-    Map<String, Object> data = Maps.newHashMap();
+    Map<String, Object> data = new HashMap<>();
     for (int i = 0; i < dimAndVal.length; i += 2) {
       data.put((String) dimAndVal[i], dimAndVal[i + 1]);
     }

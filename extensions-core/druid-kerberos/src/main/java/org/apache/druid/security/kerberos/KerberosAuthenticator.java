@@ -248,7 +248,7 @@ public class KerberosAuthenticator implements Authenticator
         if (isExcluded(path)) {
           filterChain.doFilter(request, response);
         } else {
-          String clientPrincipal = null;
+          String clientPrincipal;
           try {
             Cookie[] cookies = httpReq.getCookies();
             if (cookies == null) {

@@ -19,13 +19,13 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +59,7 @@ public class MapCache implements Cache
     this.byteCountingLRUMap = byteCountingLRUMap;
     this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
 
-    namespaceId = Maps.newHashMap();
+    namespaceId = new HashMap<>();
     ids = new AtomicInteger();
   }
 
@@ -103,7 +103,7 @@ public class MapCache implements Cache
   @Override
   public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
   {
-    Map<NamedKey, byte[]> retVal = Maps.newHashMap();
+    Map<NamedKey, byte[]> retVal = new HashMap<>();
     for (NamedKey key : keys) {
       final byte[] value = get(key);
       if (value != null) {

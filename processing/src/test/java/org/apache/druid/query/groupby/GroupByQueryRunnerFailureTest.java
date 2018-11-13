@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
@@ -54,6 +53,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -174,7 +174,7 @@ public class GroupByQueryRunnerFailureTest
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
-    final List<Object[]> args = Lists.newArrayList();
+    final List<Object[]> args = new ArrayList<>();
     for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
       args.add(new Object[]{runner});
     }

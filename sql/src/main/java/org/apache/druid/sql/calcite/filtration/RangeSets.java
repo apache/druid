@@ -21,13 +21,13 @@ package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class RangeSets
@@ -109,7 +109,7 @@ public class RangeSets
 
   public static List<Interval> toIntervals(final RangeSet<Long> rangeSet)
   {
-    final List<Interval> retVal = Lists.newArrayList();
+    final List<Interval> retVal = new ArrayList<>();
 
     for (Range<Long> range : rangeSet.asRanges()) {
       final long start;

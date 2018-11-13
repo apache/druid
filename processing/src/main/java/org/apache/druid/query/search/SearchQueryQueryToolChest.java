@@ -26,7 +26,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
@@ -53,6 +52,7 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -232,7 +232,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           {
             List<Object> result = (List<Object>) input;
             boolean needsRename = false;
-            final Map<String, String> outputNameMap = Maps.newHashMap();
+            final Map<String, String> outputNameMap = new HashMap<>();
             if (hasOutputName(result)) {
               List<String> cachedOutputNames = (List) result.get(2);
               Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
@@ -285,22 +285,22 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                               @Override
                               public SearchHit apply(@Nullable Object input)
                               {
-                                String dim = null;
-                                String val = null;
-                                Integer cnt = null;
+                                String dim;
+                                String val;
+                                Integer count;
                                 if (input instanceof Map) {
                                   dim = outputNameMap.get((String) ((Map) input).get("dimension"));
                                   val = (String) ((Map) input).get("value");
-                                  cnt = (Integer) ((Map) input).get("count");
+                                  count = (Integer) ((Map) input).get("count");
                                 } else if (input instanceof SearchHit) {
                                   SearchHit cached = (SearchHit) input;
                                   dim = outputNameMap.get(cached.getDimension());
                                   val = cached.getValue();
-                                  cnt = cached.getCount();
+                                  count = cached.getCount();
                                 } else {
                                   throw new IAE("Unknown format [%s]", input.getClass());
                                 }
-                                return new SearchHit(dim, val, cnt);
+                                return new SearchHit(dim, val, count);
                               }
                             }
                         )

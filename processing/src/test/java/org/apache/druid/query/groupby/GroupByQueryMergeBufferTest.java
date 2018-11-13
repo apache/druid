@@ -49,6 +49,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -211,7 +212,7 @@ public class GroupByQueryMergeBufferTest
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
-    final List<Object[]> args = Lists.newArrayList();
+    final List<Object[]> args = new ArrayList<>();
     for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
       args.add(new Object[]{runner});
     }

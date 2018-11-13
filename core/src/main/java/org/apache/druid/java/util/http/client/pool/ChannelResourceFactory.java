@@ -77,7 +77,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
   public ChannelFuture generate(final String hostname)
   {
     log.debug("Generating: %s", hostname);
-    URL url = null;
+    URL url;
     try {
       url = new URL(hostname);
     }

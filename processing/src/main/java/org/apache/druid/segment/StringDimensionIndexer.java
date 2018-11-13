@@ -50,6 +50,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -77,7 +78,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     private final Object2IntMap<String> valueToId = new Object2IntOpenHashMap<>();
 
-    private final List<String> idToValue = Lists.newArrayList();
+    private final List<String> idToValue = new ArrayList<>();
     private final ReentrantReadWriteLock lock;
 
     public DimensionDictionary()

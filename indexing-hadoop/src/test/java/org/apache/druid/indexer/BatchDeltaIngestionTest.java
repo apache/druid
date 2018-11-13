@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
@@ -64,6 +63,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -419,7 +419,7 @@ public class BatchDeltaIngestionTest
         null
     );
 
-    List<InputRow> rows = Lists.newArrayList();
+    List<InputRow> rows = new ArrayList<>();
     while (firehose.hasMore()) {
       rows.add(firehose.nextRow());
     }

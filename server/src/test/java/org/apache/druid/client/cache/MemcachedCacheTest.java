@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -65,6 +64,7 @@ import org.junit.Test;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -674,7 +674,7 @@ class MockMemcachedClient implements MemcachedClientIF
       @Override
       public Map<String, T> get()
       {
-        Map<String, T> retVal = Maps.newHashMap();
+        Map<String, T> retVal = new HashMap<>();
 
         while (keys.hasNext()) {
           String key = keys.next();

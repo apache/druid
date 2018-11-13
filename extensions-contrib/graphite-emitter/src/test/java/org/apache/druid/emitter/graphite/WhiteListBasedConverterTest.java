@@ -19,7 +19,6 @@
 
 package org.apache.druid.emitter.graphite;
 
-import com.google.common.collect.Maps;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.commons.io.IOUtils;
@@ -38,6 +37,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 
 
 @RunWith(JUnitParamsRunner.class)
@@ -65,7 +65,7 @@ public class WhiteListBasedConverterTest
     EasyMock.expect(event.getHost()).andReturn(hostname).anyTimes();
     EasyMock.expect(event.getService()).andReturn(serviceName).anyTimes();
     EasyMock.expect(event.getCreatedTime()).andReturn(createdTime).anyTimes();
-    EasyMock.expect(event.getUserDims()).andReturn(Maps.newHashMap()).anyTimes();
+    EasyMock.expect(event.getUserDims()).andReturn(new HashMap<>()).anyTimes();
     EasyMock.expect(event.getValue()).andReturn(10).anyTimes();
   }
 

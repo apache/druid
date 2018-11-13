@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.rel;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -31,6 +30,7 @@ import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -56,7 +56,7 @@ public class Grouping
     this.outputRowSignature = outputRowSignature;
 
     // Verify no collisions.
-    final Set<String> seen = Sets.newHashSet();
+    final Set<String> seen = new HashSet<>();
     for (DimensionExpression dimensionExpression : dimensions) {
       if (!seen.add(dimensionExpression.getOutputName())) {
         throw new ISE("Duplicate field name: %s", dimensionExpression.getOutputName());

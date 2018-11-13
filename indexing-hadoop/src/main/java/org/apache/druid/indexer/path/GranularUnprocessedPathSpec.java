@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.hadoop.FSSpideringIterator;
 import org.apache.druid.java.util.common.DateTimes;
@@ -42,6 +41,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  */
@@ -87,7 +87,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
       inputModifiedTimes.put(key.getMillis(), currVal == null ? mTime : Math.max(currVal, mTime));
     }
 
-    Set<Interval> bucketsToRun = Sets.newTreeSet(Comparators.intervals());
+    Set<Interval> bucketsToRun = new TreeSet<>(Comparators.intervals());
     for (Map.Entry<Long, Long> entry : inputModifiedTimes.entrySet()) {
       DateTime timeBucket = DateTimes.utc(entry.getKey());
       long mTime = entry.getValue();

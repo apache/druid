@@ -26,8 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
@@ -85,6 +83,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -104,8 +103,8 @@ public class GroupByLimitPushDownInsufficientBufferTest
   private File tmpDir;
   private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
   private QueryRunnerFactory<Row, GroupByQuery> tooSmallGroupByFactory;
-  private List<IncrementalIndex> incrementalIndices = Lists.newArrayList();
-  private List<QueryableIndex> groupByIndices = Lists.newArrayList();
+  private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
+  private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
   private Closer resourceCloser;
 
@@ -485,7 +484,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -579,7 +578,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         )
         .build();
 
-    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<Row> queryResult = theRunner3.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -606,7 +605,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
 
   private List<QueryRunner<Row>> getRunner1()
   {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryableIndex index = groupByIndices.get(0);
     QueryRunner<Row> runner = makeQueryRunner(
         groupByFactory,
@@ -619,7 +618,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
 
   private List<QueryRunner<Row>> getRunner2()
   {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryableIndex index2 = groupByIndices.get(1);
     QueryRunner<Row> tooSmallRunner = makeQueryRunner(
         tooSmallGroupByFactory,

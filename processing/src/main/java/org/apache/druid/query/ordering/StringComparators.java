@@ -122,7 +122,7 @@ public class StringComparators
         int ch1 = str1.codePointAt(pos[0]);
         int ch2 = str2.codePointAt(pos[1]);
 
-        int result = 0;
+        int result;
 
         if (isDigit(ch1)) {
           result = isDigit(ch2) ? compareNumbers(str1, str2, pos) : -1;
@@ -135,7 +135,7 @@ public class StringComparators
         }
       }
 
-      return str1.length() - str2.length();
+      return Integer.compare(str1.length(), str2.length());
     }
 
     private int compareNumbers(String str0, String str1, int[] pos)

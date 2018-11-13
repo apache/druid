@@ -20,13 +20,13 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import junit.framework.Assert;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -68,7 +68,7 @@ public class UnionQueryRunnerTest
                     .intervals("2014-01-01T00:00:00Z/2015-01-01T00:00:00Z")
                     .aggregators(QueryRunnerTestHelper.commonDoubleAggregators)
                     .build();
-    Map<String, Object> responseContext = Maps.newHashMap();
+    Map<String, Object> responseContext = new HashMap<>();
     Sequence<?> result = runner.run(QueryPlus.wrap(q), responseContext);
     List res = result.toList();
     Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6), res);

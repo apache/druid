@@ -44,6 +44,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -57,7 +58,7 @@ public class EC2AutoScalerTest
   private static final String INSTANCE_ID = "theInstance";
   public static final EC2EnvironmentConfig ENV_CONFIG = new EC2EnvironmentConfig(
       "us-east-1a",
-      new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.newArrayList(), "foo", "mySubnet", null, null),
+      new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, new ArrayList<>(), "foo", "mySubnet", null, null),
       new GalaxyEC2UserData(new DefaultObjectMapper(), "env", "version", "type")
   );
   private static final String IP = "dummyIP";

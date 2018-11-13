@@ -19,7 +19,6 @@
 
 package org.apache.druid.client.indexing;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
@@ -28,6 +27,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -39,7 +39,7 @@ public class ClientMergeQueryTest
   private static final DataSegment DATA_SEGMENT =
       new DataSegment(DATA_SOURCE, INTERVAL, START.toString(), null, null, null, null, 0, 0);
   private static final List<DataSegment> SEGMENT_LIST = Collections.singletonList(DATA_SEGMENT);
-  private static final List<AggregatorFactory> AGGREGATOR_LIST = Lists.newArrayList();
+  private static final List<AggregatorFactory> AGGREGATOR_LIST = new ArrayList<>();
   private static final ClientMergeQuery CLIENT_MERGE_QUERY =
       new ClientMergeQuery(DATA_SOURCE, SEGMENT_LIST, AGGREGATOR_LIST);
 

@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -48,6 +47,7 @@ import org.joda.time.DateTime;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -145,7 +145,7 @@ public class WorkerHolder
 
   private Set<String> getAvailabilityGroups()
   {
-    Set<String> retVal = Sets.newHashSet();
+    Set<String> retVal = new HashSet<>();
     for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
       retVal.add(taskAnnouncement.getTaskResource().getAvailabilityGroup());
     }

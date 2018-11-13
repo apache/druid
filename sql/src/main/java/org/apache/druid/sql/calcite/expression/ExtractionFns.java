@@ -19,12 +19,12 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.extraction.CascadeExtractionFn;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -84,7 +84,7 @@ public class ExtractionFns
     } else if (g == null) {
       return f;
     } else {
-      final List<ExtractionFn> extractionFns = Lists.newArrayList();
+      final List<ExtractionFn> extractionFns = new ArrayList<>();
 
       // Apply g, then f, unwrapping if they are already cascades.
 

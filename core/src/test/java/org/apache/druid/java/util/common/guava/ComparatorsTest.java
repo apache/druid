@@ -32,34 +32,6 @@ import java.util.Comparator;
 public class ComparatorsTest
 {
   @Test
-  public void testInverse()
-  {
-    Comparator<Integer> normal = Comparators.comparable();
-    Comparator<Integer> inverted = Comparators.inverse(normal);
-
-    Assert.assertEquals(-1, normal.compare(0, 1));
-    Assert.assertEquals(1, normal.compare(1, 0));
-    Assert.assertEquals(0, normal.compare(1, 1));
-    Assert.assertEquals(1, inverted.compare(0, 1));
-    Assert.assertEquals(-1, inverted.compare(1, 0));
-    Assert.assertEquals(0, inverted.compare(1, 1));
-  }
-
-  @Test
-  public void testInverseOverflow()
-  {
-    Comparator<Integer> invertedSimpleIntegerComparator = Comparators.inverse(new Comparator<Integer>()
-    {
-      @Override
-      public int compare(Integer o1, Integer o2)
-      {
-        return o1 - o2;
-      }
-    });
-    Assert.assertTrue(invertedSimpleIntegerComparator.compare(0, Integer.MIN_VALUE) < 0);
-  }
-
-  @Test
   public void testIntervalsByStartThenEnd()
   {
     Comparator<Interval> comp = Comparators.intervalsByStartThenEnd();

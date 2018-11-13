@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
@@ -31,7 +30,9 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.stats.DruidStatsModule;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +70,7 @@ public class VarianceTestHelper extends QueryRunnerTestHelper
   public static class RowBuilder
   {
     private final String[] names;
-    private final List<Row> rows = Lists.newArrayList();
+    private final List<Row> rows = new ArrayList<>();
 
     public RowBuilder(String[] names)
     {
@@ -96,7 +97,7 @@ public class VarianceTestHelper extends QueryRunnerTestHelper
     {
       Preconditions.checkArgument(names.length == values.length);
 
-      Map<String, Object> theVals = Maps.newHashMap();
+      Map<String, Object> theVals = new HashMap<>();
       for (int i = 0; i < values.length; i++) {
         theVals.put(names[i], values[i]);
       }

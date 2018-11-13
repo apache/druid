@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -55,7 +54,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Writer;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
@@ -71,11 +70,13 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 @RunWith(Parameterized.class)
 public class IndexGeneratorJobTest
@@ -380,7 +381,7 @@ public class IndexGeneratorJobTest
     );
 
     // Run each baseConstructor with/without forceExtendableShardSpecs.
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
     for (Object[] baseConstructor : baseConstructors) {
       for (int forceExtendableShardSpecs = 0; forceExtendableShardSpecs < 2; forceExtendableShardSpecs++) {
         final Object[] fullConstructor = new Object[baseConstructor.length + 1];
@@ -523,7 +524,7 @@ public class IndexGeneratorJobTest
                 false,
                 false,
                 false,
-                ImmutableMap.of(JobContext.NUM_REDUCES, "0"), //verifies that set num reducers is ignored
+                ImmutableMap.of(MRJobConfig.NUM_REDUCES, "0"), //verifies that set num reducers is ignored
                 false,
                 useCombiner,
                 null,
@@ -544,7 +545,7 @@ public class IndexGeneratorJobTest
 
   private List<ShardSpec> constructShardSpecFromShardInfo(String partitionType, Object[][] shardInfoForEachShard)
   {
-    List<ShardSpec> specs = Lists.newArrayList();
+    List<ShardSpec> specs = new ArrayList<>();
     if ("hashed".equals(partitionType)) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
         specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], null, HadoopDruidIndexerConfig.JSON_MAPPER));
@@ -566,7 +567,7 @@ public class IndexGeneratorJobTest
       Object[][][] shardInfoForEachShard
   )
   {
-    Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
+    Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
     int shardCount = 0;
     int segmentNum = 0;
     for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {

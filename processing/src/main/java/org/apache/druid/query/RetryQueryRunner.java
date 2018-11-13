@@ -22,7 +22,6 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -33,6 +32,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.SegmentMissingException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -58,7 +58,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> context)
   {
-    final List<Sequence<T>> listOfSequences = Lists.newArrayList();
+    final List<Sequence<T>> listOfSequences = new ArrayList<>();
     listOfSequences.add(baseRunner.run(queryPlus, context));
 
     return new YieldingSequenceBase<T>()
@@ -72,7 +72,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           for (int i = 0; i < config.getNumTries(); i++) {
             log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
-            context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+            context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
             final QueryPlus<T> retryQueryPlus = queryPlus.withQuerySegmentSpec(
                 new MultipleSpecificSegmentSpec(
                     missingSegments
@@ -104,7 +104,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   {
     final Object maybeMissingSegments = context.get(Result.MISSING_SEGMENTS_KEY);
     if (maybeMissingSegments == null) {
-      return Lists.newArrayList();
+      return new ArrayList<>();
     }
 
     return jsonMapper.convertValue(
