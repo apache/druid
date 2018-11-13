@@ -43,13 +43,13 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
-import org.apache.hive.common.util.BloomKFilter;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation.bloom;
 
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.hive.common.util.BloomKFilter;
 
 import javax.annotation.Nullable;
 

@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation.bloom.types;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
-import org.apache.hive.common.util.BloomKFilter;
 
 public class FloatBloomFilterAggregatorColumnSelectorStrategy
     implements BloomFilterAggregatorColumnSelectorStrategy<BaseFloatColumnValueSelector>

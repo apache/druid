@@ -33,9 +33,9 @@ import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColum
 import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColumnSelectorStrategyFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.hive.common.util.BloomKFilter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;

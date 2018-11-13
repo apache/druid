@@ -22,7 +22,7 @@ package org.apache.druid.query.aggregation.bloom;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColumnSelectorStrategy;
-import org.apache.hive.common.util.BloomKFilter;
+import org.apache.druid.query.filter.BloomKFilter;
 
 import javax.annotation.Nullable;
 

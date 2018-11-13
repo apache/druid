@@ -22,9 +22,9 @@ package org.apache.druid.query.aggregation.bloom;
 import com.fasterxml.jackson.databind.util.ByteBufferBackedOutputStream;
 import org.apache.druid.io.ByteBufferInputStream;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.hive.common.util.BloomKFilter;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

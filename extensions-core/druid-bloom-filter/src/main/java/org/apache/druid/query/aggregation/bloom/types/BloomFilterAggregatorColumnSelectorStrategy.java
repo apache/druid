@@ -20,7 +20,7 @@
 package org.apache.druid.query.aggregation.bloom.types;
 
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
-import org.apache.hive.common.util.BloomKFilter;
+import org.apache.druid.query.filter.BloomKFilter;
 
 public interface BloomFilterAggregatorColumnSelectorStrategy<TValueSelector> extends ColumnSelectorStrategy
 {

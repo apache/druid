@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.bloom.types;
 
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.hive.common.util.BloomKFilter;
 
 public class StringBloomFilterAggregatorColumnSelectorStrategy
     implements BloomFilterAggregatorColumnSelectorStrategy<DimensionSelector>
