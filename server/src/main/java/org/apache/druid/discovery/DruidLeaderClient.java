@@ -122,11 +122,21 @@ public class DruidLeaderClient
 
   /**
    * Make a Request object aimed at the leader. Throws IOException if the leader cannot be located.
+   *
+   * @param cached Uses cached leader if true, else uses the current leader
+   */
+  public Request makeRequest(HttpMethod httpMethod, String urlPath, boolean cached) throws IOException
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(cached), urlPath)));
+  }
+
+  /**
+   * Make a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
   public Request makeRequest(HttpMethod httpMethod, String urlPath) throws IOException
   {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
+    return makeRequest(httpMethod, urlPath, true);
   }
 
   public FullResponseHolder go(Request request) throws IOException, InterruptedException
