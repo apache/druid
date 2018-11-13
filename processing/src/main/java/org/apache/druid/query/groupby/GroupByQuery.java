@@ -737,6 +737,15 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public static class Builder
   {
+    @Nullable
+    private static List<List<String>> copySubtotalSpec(@Nullable List<List<String>> subtotalsSpec)
+    {
+      if (subtotalsSpec == null) {
+        return null;
+      }
+      return subtotalsSpec.stream().map(ArrayList::new).collect(Collectors.toList());
+    }
+
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private VirtualColumns virtualColumns;
@@ -788,6 +797,7 @@ public class GroupByQuery extends BaseQuery<Row>
       postAggregatorSpecs = builder.postAggregatorSpecs;
       havingSpec = builder.havingSpec;
       limitSpec = builder.limitSpec;
+      subtotalsSpec = copySubtotalSpec(builder.subtotalsSpec);
       postProcessingFn = builder.postProcessingFn;
       limit = builder.limit;
       orderByColumnSpecs = new ArrayList<>(builder.orderByColumnSpecs);
