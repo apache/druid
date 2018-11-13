@@ -803,8 +803,7 @@ public class KafkaIndexTaskTest
             consumerProps,
             true,
             null,
-            null,
-            false
+            null
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);

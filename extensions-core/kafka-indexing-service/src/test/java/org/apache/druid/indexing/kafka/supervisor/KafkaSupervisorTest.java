@@ -2544,9 +2544,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetCurrentTotalStats() throws Exception
+  public void testGetCurrentTotalStats()
   {
-    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition(0),
         ImmutableMap.of(0, 0L),
