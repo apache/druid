@@ -1,10 +1,29 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
 
 ### Build from Source
 
-You can build Druid directly from source. Please note that these instructions are for building the latest stable of Druid. 
+You can build Druid directly from source. Please note that these instructions are for building the latest stable version of Druid.
 For building the latest code in master, follow the instructions [here](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md).
 
 
@@ -24,22 +43,23 @@ cd druid
 
 #### Building the source
 
-##### Building the Druid binary distribution tarball:
+The basic command to build Druid from source is:
 
 ```bash
-mvn clean install -Pdist -Dtar -DskipTests
+mvn clean install
 ```
 
-Once it succeeds, you can find the Druid binary (`druid-VERSION-bin.tar.gz`)
-and `mysql-metadata-storage` extension under `${DRUID_ROOT}/distribution/target/`.
+This will run static analysis, unit tests, compile classes, and package the projects into JARs. It will _not_ generate the source or binary distribution tarball.
 
-If you want Druid to load `mysql-metadata-storage`, you can 
-first untar `druid-VERSION-bin.tar.gz`, then go to ```druid-<version>/extensions```, untar `mysql-metadata-storage-bin.tar.gz` 
-there. Now just specifiy `mysql-metadata-storage` in `druid.extensions.loadList` so that Druid will pick it up. 
-See [Including Extensions](../operations/including-extensions.html) for more information.
+In addition to the basic stages, you may also want to add the following profiles and properties:
 
-##### Building the source code only:
+- **-Pdist** - Distribution profile: Generates the binary distribution tarball by pulling in core extensions and dependencies and packaging the files as `distribution/target/apache-druid-x.x.x-bin.tar.gz`
+- **-Papache-release** - Apache release profile: Generates GPG signature and checksums, and builds the source distribution tarball as `distribution/target/apache-druid-x.x.x-src.tar.gz`
+- **-Prat** - Apache Rat profile: Runs the Apache Rat license audit tool
+- **-DskipTests** - Skips unit tests (which reduces build time)
+
+Putting these together, if you wish to build the source and binary distributions with signatures and checksums, audit licenses, and skip the unit tests, you would run:
 
 ```bash
-mvn clean install -DskipTests
+mvn clean install -Papache-release,dist,rat -DskipTests
 ```
