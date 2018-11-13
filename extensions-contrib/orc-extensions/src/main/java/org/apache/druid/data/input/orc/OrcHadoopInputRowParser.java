@@ -84,8 +84,8 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     this.typeString = typeString == null ? typeStringFromParseSpec(parseSpec) : typeString;
     this.mapFieldNameFormat =
         mapFieldNameFormat == null ||
-        mapFieldNameFormat.indexOf(MAP_PARENT_TAG) < 0 ||
-        mapFieldNameFormat.indexOf(MAP_CHILD_TAG) < 0 ? DEFAULT_MAP_FIELD_NAME_FORMAT : mapFieldNameFormat;
+        !mapFieldNameFormat.contains(MAP_PARENT_TAG) ||
+        !mapFieldNameFormat.contains(MAP_CHILD_TAG) ? DEFAULT_MAP_FIELD_NAME_FORMAT : mapFieldNameFormat;
     this.mapParentFieldNameFormat = StringUtils.replace(this.mapFieldNameFormat, MAP_PARENT_TAG, "%s");
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.oip = makeObjectInspector(this.typeString);

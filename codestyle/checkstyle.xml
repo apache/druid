@@ -207,13 +207,6 @@
     </module>
 
     <module name="Regexp">
-      <property name="id" value="lastIndexOf"/>
-      <property name="format" value="lastIndexOf\(&quot;.&quot;\)"/>
-      <property name="illegalPattern" value="true"/>
-      <property name="message" value="Pass char instead of String to lastIndexOf()"/>
-    </module>
-
-    <module name="Regexp">
       <property
           name="format"
           value='(?&lt;!ImmutableMap.of|Types.mapOf|orderedMap|makeSelectResults|makeListOfPairs)\(\s*\n +([^,\n\(\{"&lt;/]+|[^,\n\(\{" /]+&gt; [a-zA-Z0-9_]+)\, ++[^,\n/]+'
