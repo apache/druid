@@ -197,7 +197,7 @@ public abstract class ExprEval<T>
           return this;
         case LONG:
           if (value == null) {
-            return ExprEval.of(null);
+            return ExprEval.ofLong(null);
           } else {
             return ExprEval.of(asLong());
           }
@@ -239,7 +239,7 @@ public abstract class ExprEval<T>
       switch (castTo) {
         case DOUBLE:
           if (value == null) {
-            return ExprEval.of(null);
+            return ExprEval.ofDouble(null);
           } else {
             return ExprEval.of(asDouble());
           }
