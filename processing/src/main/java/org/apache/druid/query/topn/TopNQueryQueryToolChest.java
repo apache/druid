@@ -70,6 +70,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   };
 
   private final TopNQueryConfig config;
+  @Deprecated
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TopNQueryMetricsFactory queryMetricsFactory;
 

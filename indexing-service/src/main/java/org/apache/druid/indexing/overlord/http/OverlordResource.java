@@ -627,7 +627,7 @@ public class OverlordResource
   public Response getTasks(
       @QueryParam("state") final String state,
       @QueryParam("datasource") final String dataSource,
-      @PathParam("interval") final String interval,
+      @QueryParam("interval") final String interval,
       @QueryParam("max") final Integer maxCompletedTasks,
       @QueryParam("type") final String type,
       @Context final HttpServletRequest req

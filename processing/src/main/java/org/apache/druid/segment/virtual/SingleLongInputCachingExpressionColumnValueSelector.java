@@ -20,6 +20,7 @@
 package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Preconditions;
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -28,6 +29,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Like {@link ExpressionColumnValueSelector}, but caches the most recently computed value and re-uses it in the case
@@ -35,30 +37,26 @@ import javax.annotation.Nonnull;
  */
 public class SingleLongInputCachingExpressionColumnValueSelector implements ColumnValueSelector<ExprEval>
 {
-  enum Validity
-  {
-    NONE,
-    DOUBLE,
-    LONG,
-    EVAL
-  }
+  private static final int CACHE_SIZE = 1000;
 
   private final ColumnValueSelector selector;
   private final Expr expression;
   private final SingleInputBindings bindings = new SingleInputBindings();
 
-  // Last read input value
+  @Nullable
+  private final LruEvalCache lruEvalCache;
+
+  // Last read input value.
   private long lastInput;
 
-  // Last computed output values (validity determined by "validity" field)
-  private Validity validity = Validity.NONE;
-  private double lastDoubleOutput;
-  private long lastLongOutput;
-  private ExprEval lastEvalOutput;
+  // Last computed output value, or null if there is none.
+  @Nullable
+  private ExprEval lastOutput;
 
   public SingleLongInputCachingExpressionColumnValueSelector(
       final ColumnValueSelector selector,
-      final Expr expression
+      final Expr expression,
+      final boolean useLruCache
   )
   {
     // Verify expression has just one binding.
@@ -68,6 +66,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
     this.selector = Preconditions.checkNotNull(selector, "selector");
     this.expression = Preconditions.checkNotNull(expression, "expression");
+    this.lruEvalCache = useLruCache ? new LruEvalCache() : null;
   }
 
   @Override
@@ -80,71 +79,47 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public double getDouble()
   {
-    // No Assert for null handling as delegate selector already have it.
-    final long currentInput = selector.getLong();
-
-    if (lastInput == currentInput && validity == Validity.DOUBLE) {
-      return lastDoubleOutput;
-    } else {
-      final double output = eval(currentInput).asDouble();
-      lastInput = currentInput;
-      lastDoubleOutput = output;
-      validity = Validity.DOUBLE;
-      return output;
-    }
+    return getObject().asDouble();
   }
 
   @Override
   public float getFloat()
   {
-    // No Assert for null handling as delegate selector already have it.
-    return (float) getDouble();
+    return (float) getObject().asDouble();
   }
 
   @Override
   public long getLong()
   {
-    // No Assert for null handling as delegate selector already have it.
-    final long currentInput = selector.getLong();
-
-    if (lastInput == currentInput && validity == Validity.LONG) {
-      return lastLongOutput;
-    } else {
-      final long output = eval(currentInput).asLong();
-      lastInput = currentInput;
-      lastLongOutput = output;
-      validity = Validity.LONG;
-      return output;
-    }
+    return getObject().asLong();
   }
 
   @Nonnull
   @Override
   public ExprEval getObject()
   {
-    final long currentInput = selector.getLong();
+    // No assert for null handling, as the delegate selector already has it.
+    final long input = selector.getLong();
+    final boolean cached = input == lastInput && lastOutput != null;
 
-    if (lastInput == currentInput && validity == Validity.EVAL) {
-      return lastEvalOutput;
-    } else {
-      final ExprEval output = eval(currentInput);
-      lastInput = currentInput;
-      lastEvalOutput = output;
-      validity = Validity.EVAL;
-      return output;
+    if (!cached) {
+      if (lruEvalCache == null) {
+        bindings.set(input);
+        lastOutput = expression.eval(bindings);
+      } else {
+        lastOutput = lruEvalCache.compute(input);
+      }
+
+      lastInput = input;
     }
+
+    return lastOutput;
   }
 
   @Override
   public Class<ExprEval> classOfObject()
   {
     return ExprEval.class;
-  }
-
-  private ExprEval eval(final long value)
-  {
-    bindings.set(value);
-    return expression.eval(bindings);
   }
 
   @Override
@@ -154,5 +129,27 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
     // as a primitive long/float/double.
     // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
     return getObject().isNumericNull();
+  }
+
+  public class LruEvalCache
+  {
+    private final Long2ObjectLinkedOpenHashMap<ExprEval> m = new Long2ObjectLinkedOpenHashMap<>();
+
+    public ExprEval compute(final long n)
+    {
+      ExprEval value = m.getAndMoveToFirst(n);
+
+      if (value == null) {
+        bindings.set(n);
+        value = expression.eval(bindings);
+        m.putAndMoveToFirst(n, value);
+
+        if (m.size() > CACHE_SIZE) {
+          m.removeLast();
+        }
+      }
+
+      return value;
+    }
   }
 }
