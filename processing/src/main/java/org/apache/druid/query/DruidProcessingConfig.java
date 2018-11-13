@@ -33,6 +33,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
 
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
   public static final int DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = -1;
+  public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
@@ -46,7 +47,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   {
     int sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
     if (sizeBytesConfigured != DEFAULT_PROCESSING_BUFFER_SIZE_BYTES) {
-      return sizeBytesConfigured;
+      return Math.min(sizeBytesConfigured, Integer.MAX_VALUE);
     } else if (computedBufferSizeBytes.get() != null) {
       return computedBufferSizeBytes.get();
     }
@@ -58,7 +59,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     int totalNumBuffers = numMergeBuffers + numProcessingThreads;
     int sizePerBuffer = (int) ((double) directSizeBytes / (double) (totalNumBuffers + 1));
 
-    final int computedSizePerBuffer = Math.min(sizePerBuffer, (1 << 31) - 1);
+    final int computedSizePerBuffer = Math.min(sizePerBuffer, MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
     if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
       log.info(
           "Auto sizing buffers to [%,d] bytes for [%,d] processing and [%,d] merge buffers out of [%,d] total",

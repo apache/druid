@@ -105,6 +105,19 @@ public class DruidProcessingConfigTest
   }
 
   @Test
+  public void testDefaultsLargeDirect()
+  {
+    // test that auto sized buffer is no larger than 1
+    Injector injector = makeInjector(1, bufferSize * 100L, heapSize);
+    DruidProcessingConfig config = injector.getInstance(DruidProcessingConfig.class);
+
+    Assert.assertEquals(
+        DruidProcessingConfig.MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES,
+        config.intermediateComputeSizeBytes()
+    );
+  }
+
+  @Test
   public void testReplacements()
   {
     Properties props = new Properties();
