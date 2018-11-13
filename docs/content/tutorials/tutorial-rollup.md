@@ -95,7 +95,7 @@ We will see how these definitions are used after we load this data.
 
 ## Load the example data
 
-From the druid-#{DRUIDVERSION} package root, run the following command:
+From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/rollup-index.json 

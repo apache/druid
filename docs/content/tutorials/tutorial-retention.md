@@ -15,7 +15,7 @@ It will also be helpful to have finished [Tutorial: Loading a file](../tutorials
 
 For this tutorial, we'll be using the Wikipedia edits sample data, with an ingestion task spec that will create a separate segment for each hour in the input data.
 
-The ingestion spec can be found at `quickstart/retention-index.json`. Let's submit that spec, which will create a datasource called `retention-tutorial`:
+The ingestion spec can be found at `quickstart/tutorial/retention-index.json`. Let's submit that spec, which will create a datasource called `retention-tutorial`:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/retention-index.json 
