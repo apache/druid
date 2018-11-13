@@ -58,17 +58,14 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     int totalNumBuffers = numMergeBuffers + numProcessingThreads;
     int sizePerBuffer = (int) ((double) directSizeBytes / (double) (totalNumBuffers + 1));
 
-    // align down to nearest 64kb boundary
-    int rem = sizePerBuffer % (1 << 16);
-    sizePerBuffer -= rem;
-
     final int computedSizePerBuffer = Math.min(sizePerBuffer, (1 << 31) - 1);
     if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
       log.info(
-          "Auto sizing buffers to [%,d] bytes for [%,d] processing buffers and [%,d] merge buffers",
+          "Auto sizing buffers to [%,d] bytes for [%,d] processing and [%,d] merge buffers out of [%,d] total",
           computedSizePerBuffer,
           numProcessingThreads,
-          numMergeBuffers
+          numMergeBuffers,
+          directSizeBytes
       );
     }
     return computedSizePerBuffer;

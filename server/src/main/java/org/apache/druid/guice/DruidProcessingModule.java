@@ -142,7 +142,7 @@ public class DruidProcessingModule implements Module
       final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
                                 (config.getNumMergeBuffers() + config.getNumThreads() + 1);
 
-      if (maxDirectMemory < memoryNeeded) {
+      if (maxDirectMemory <= memoryNeeded) {
         throw new ProvisionException(
             StringUtils.format(
                 "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, druid.processing.numThreads, or druid.processing.numMergeBuffers: "
