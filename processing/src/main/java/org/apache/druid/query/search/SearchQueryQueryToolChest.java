@@ -69,6 +69,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   };
 
   private final SearchQueryConfig config;
+  @Deprecated
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final SearchQueryMetricsFactory queryMetricsFactory;
 
@@ -285,22 +286,22 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                               @Override
                               public SearchHit apply(@Nullable Object input)
                               {
-                                String dim = null;
-                                String val = null;
-                                Integer cnt = null;
+                                String dim;
+                                String val;
+                                Integer count;
                                 if (input instanceof Map) {
                                   dim = outputNameMap.get((String) ((Map) input).get("dimension"));
                                   val = (String) ((Map) input).get("value");
-                                  cnt = (Integer) ((Map) input).get("count");
+                                  count = (Integer) ((Map) input).get("count");
                                 } else if (input instanceof SearchHit) {
                                   SearchHit cached = (SearchHit) input;
                                   dim = outputNameMap.get(cached.getDimension());
                                   val = cached.getValue();
-                                  cnt = cached.getCount();
+                                  count = cached.getCount();
                                 } else {
                                   throw new IAE("Unknown format [%s]", input.getClass());
                                 }
-                                return new SearchHit(dim, val, cnt);
+                                return new SearchHit(dim, val, count);
                               }
                             }
                         )

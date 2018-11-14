@@ -84,7 +84,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
     PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(storageAdapter, singleMetricQuery, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;
-    int[] dimValSelector = null;
+    int[] dimValSelector;
     try {
       singleMetricParam = singleMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor());
       singleMetricAlgo.run(

@@ -30,9 +30,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 public class AppenderatorPlumberTest
 {
   private final AppenderatorPlumber plumber;
@@ -94,43 +91,29 @@ public class AppenderatorPlumberTest
   @Test
   public void testSimpleIngestion() throws Exception
   {
-
-    final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();    
-    
     Appenderator appenderator = appenderatorTester.getAppenderator();
 
     // startJob
     Assert.assertEquals(null, plumber.startJob());
 
     // getDataSource
-    Assert.assertEquals(AppenderatorTester.DATASOURCE,
-        appenderator.getDataSource());
+    Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
     InputRow[] rows = new InputRow[] {AppenderatorTest.IR("2000", "foo", 1), 
         AppenderatorTest.IR("2000", "bar", 2), AppenderatorTest.IR("2000", "qux", 4)};
     // add
-    commitMetadata.put("x", "1");
-    Assert.assertEquals(
-        1,
-        plumber.add(rows[0], null).getRowCount());
+    Assert.assertEquals(1, plumber.add(rows[0], null).getRowCount());
 
-    commitMetadata.put("x", "2");
-    Assert.assertEquals(
-        2,
-        plumber.add(rows[1], null).getRowCount());
+    Assert.assertEquals(2, plumber.add(rows[1], null).getRowCount());
 
-    commitMetadata.put("x", "3");
-    Assert.assertEquals(
-        3,
-        plumber.add(rows[2], null).getRowCount());
+    Assert.assertEquals(3, plumber.add(rows[2], null).getRowCount());
 
     
     Assert.assertEquals(1, plumber.getSegmentsView().size());
     
     SegmentIdentifier si = plumber.getSegmentsView().values().toArray(new SegmentIdentifier[0])[0];
     
-    Assert.assertEquals(3,
-        appenderator.getRowCount(si));
+    Assert.assertEquals(3, appenderator.getRowCount(si));
 
     appenderator.clear();    
     Assert.assertTrue(appenderator.getSegments().isEmpty());

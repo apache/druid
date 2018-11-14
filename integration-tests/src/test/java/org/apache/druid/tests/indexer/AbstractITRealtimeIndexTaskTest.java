@@ -100,7 +100,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       TimeUnit.SECONDS.sleep(5);
 
       // put the timestamps into the query structure
-      String query_response_template = null;
+      String query_response_template;
       InputStream is = ITRealtimeIndexTaskTest.class.getResourceAsStream(getQueriesResource());
       if (null == is) {
         throw new ISE("could not open query file: %s", getQueriesResource());
