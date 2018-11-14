@@ -718,7 +718,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   {
     synchronized (stateChangeLock) {
       if (started) {
-        log.warn("SUpervisor was already started, skipping init");
+        log.warn("Supervisor was already started, skipping init");
         return;
       }
 
@@ -1053,33 +1053,28 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
     Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
     if (taskRunner.isPresent()) {
-      try {
-        taskRunner.get().registerListener(
-            new TaskRunnerListener()
+      taskRunner.get().registerListener(
+          new TaskRunnerListener()
+          {
+            @Override
+            public String getListenerId()
             {
-              @Override
-              public String getListenerId()
-              {
-                return supervisorId;
-              }
+              return supervisorId;
+            }
 
-              @Override
-              public void locationChanged(final String taskId, final TaskLocation newLocation)
-              {
-                // do nothing
-              }
+            @Override
+            public void locationChanged(final String taskId, final TaskLocation newLocation)
+            {
+              // do nothing
+            }
 
-              @Override
-              public void statusChanged(String taskId, TaskStatus status)
-              {
-                notices.add(new RunNotice());
-              }
-            }, MoreExecutors.sameThreadExecutor()
-        );
-      }
-      catch (ISE e) {
-        log.info("listener already registered with taskrunner.");
-      }
+            @Override
+            public void statusChanged(String taskId, TaskStatus status)
+            {
+              notices.add(new RunNotice());
+            }
+          }, MoreExecutors.sameThreadExecutor()
+      );
       listenerRegistered = true;
     }
   }
@@ -1088,8 +1083,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   protected void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
-      for (Entry<String, TaskData> entry :
-          taskGroup.tasks.entrySet()) {
+      for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
         if (taskInfoProvider.getTaskLocation(entry.getKey()).equals(TaskLocation.unknown())) {
           killTask(entry.getKey());
         } else {
@@ -1250,7 +1244,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
     for (Task task : tasks) {
-      if (!checkTaskInstance(task) || !dataSource.equals(task.getDataSource())) {
+      if (!doesTaskTypeMatchSupervisor(task) || !dataSource.equals(task.getDataSource())) {
         continue;
       }
 
@@ -1656,7 +1650,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private boolean isTaskCurrent(int taskGroupId, String taskId)
   {
     Optional<Task> taskOptional = taskStorage.getTask(taskId);
-    if (!taskOptional.isPresent() || !checkTaskInstance(taskOptional.get())) {
+    if (!taskOptional.isPresent() || !doesTaskTypeMatchSupervisor(taskOptional.get())) {
       return false;
     }
 
@@ -1719,14 +1713,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private void updatePartitionDataFromStream()
   {
     Set<PartitionType> partitionIds;
-    try {
-      synchronized (recordSupplierLock) {
-        partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
-      }
-    }
-    catch (Exception e) {
-      log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getStream());
-      return;
+    synchronized (recordSupplierLock) {
+      partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
     }
 
     if (partitionIds == null || partitionIds.size() == 0) {
@@ -2298,16 +2286,9 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   }
 
-  protected void addNotice(Notice notice)
+  private void addNotice(Notice notice)
   {
     notices.add(notice);
-  }
-
-  @VisibleForTesting
-  @Nullable
-  protected TaskGroup removeTaskGroup(int taskGroupId)
-  {
-    return activelyReadingTaskGroups.remove(taskGroupId);
   }
 
   @VisibleForTesting
@@ -2478,9 +2459,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         rowIngestionMetersFactory
     );
 
-    for (int i = 0; i < replicas; i++) {
+    for (SeekableStreamIndexTask indexTask : taskList) {
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
-      SeekableStreamIndexTask indexTask = taskList.get(i);
       if (taskQueue.isPresent()) {
         try {
           taskQueue.get().add(indexTask);
@@ -2704,7 +2684,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    *
    * @return true if isInstance else false
    */
-  protected abstract boolean checkTaskInstance(Task task);
+  protected abstract boolean doesTaskTypeMatchSupervisor(Task task);
 
   /**
    * creates a specific instance of kafka/kinesis datasource metadata

@@ -163,7 +163,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
-  protected boolean checkTaskInstance(Task task)
+  protected boolean doesTaskTypeMatchSupervisor(Task task)
   {
     return task instanceof KafkaIndexTask;
   }

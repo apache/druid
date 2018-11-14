@@ -218,7 +218,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected boolean checkTaskInstance(Task task)
+  protected boolean doesTaskTypeMatchSupervisor(Task task)
   {
     return task instanceof KinesisIndexTask;
   }
