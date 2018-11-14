@@ -146,9 +146,9 @@ public interface TaskStorage
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<Task, TaskStatus>> getFinishedTaskInfoByCreatedTimeDuration(
+  List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses,
-      @Nullable Duration createdTimeDuration,
+      @Nullable Duration durationBeforeNow,
       @Nullable String datasource
   );
 

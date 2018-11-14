@@ -64,7 +64,7 @@ public class TaskStorageQueryAdapter
       @Nullable String dataSource
   )
   {
-    return storage.getFinishedTaskInfoByCreatedTimeDuration(maxTaskStatuses, duration, dataSource);
+    return storage.getRecentlyCreatedAlreadyFinishedTaskInfo(maxTaskStatuses, duration, dataSource);
   }
 
   public Optional<Task> getTask(final String taskid)

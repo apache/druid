@@ -221,9 +221,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getFinishedTaskInfoByCreatedTimeDuration(
+  public List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses,
-      @Nullable Duration createdTimeDuration,
+      @Nullable Duration durationBeforeNow,
       @Nullable String datasource
   )
   {
@@ -240,18 +240,18 @@ public class HeapMemoryTaskStorage implements TaskStorage
       }.reverse();
 
       return maxTaskStatuses == null ?
-             getFinishedTaskInfoSince(
-                 DateTimes.nowUtc().minus(createdTimeDuration == null ? config.getRecentlyFinishedThreshold() : createdTimeDuration),
+             getRecentlyCreatedAlreadyFinishedTaskInfoSince(
+                 DateTimes.nowUtc().minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
                  createdDateDesc
              ) :
-             getNFinishedTaskInfo(maxTaskStatuses, createdDateDesc);
+             getNRecentlyCreatedAlreadyFinishedTaskInfo(maxTaskStatuses, createdDateDesc);
     }
     finally {
       giant.unlock();
     }
   }
 
-  private List<TaskInfo<Task, TaskStatus>> getFinishedTaskInfoSince(
+  private List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfoSince(
       DateTime start,
       Ordering<TaskStuff> createdDateDesc
   )
@@ -283,7 +283,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
-  private List<TaskInfo<Task, TaskStatus>> getNFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
+  private List<TaskInfo<Task, TaskStatus>> getNRecentlyCreatedAlreadyFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
   {
     giant.lock();
 
