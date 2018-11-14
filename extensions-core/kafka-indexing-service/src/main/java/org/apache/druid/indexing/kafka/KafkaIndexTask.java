@@ -95,7 +95,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   }
 
   @Override
-  protected RecordSupplier<Integer, Long> getRecordSupplier()
+  protected RecordSupplier<Integer, Long> newRecordSupplier()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {

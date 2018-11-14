@@ -74,12 +74,13 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
   protected final SeekableStreamTuningConfig tuningConfig;
   protected final SeekableStreamIOConfig<PartitionType, SequenceType> ioConfig;
   protected final Optional<ChatHandlerProvider> chatHandlerProvider;
+  private final SeekableStreamIndexTaskRunner<PartitionType, SequenceType> runner;
   protected final String type;
   protected final Map<String, Object> context;
   protected final AuthorizerMapper authorizerMapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
   protected CircularBuffer<Throwable> savedParseExceptions;
-  private final SeekableStreamIndexTaskRunner<PartitionType, SequenceType> runner;
+
 
   @JsonCreator
   public SeekableStreamIndexTask(
@@ -119,8 +120,6 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
     this.runner = createTaskRunner();
   }
 
-  protected abstract SeekableStreamIndexTaskRunner<PartitionType, SequenceType> createTaskRunner();
-
 
   private static String makeTaskId(String dataSource, int randomBits, String type)
   {
@@ -131,89 +130,6 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
     return Joiner.on("_").join(type, dataSource, suffix);
   }
 
-  public StreamAppenderatorDriver newDriver(
-      final Appenderator appenderator,
-      final TaskToolbox toolbox,
-      final FireDepartmentMetrics metrics
-  )
-  {
-    return new StreamAppenderatorDriver(
-        appenderator,
-        new ActionBasedSegmentAllocator(
-            toolbox.getTaskActionClient(),
-            dataSchema,
-            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SegmentAllocateAction(
-                schema.getDataSource(),
-                row.getTimestamp(),
-                schema.getGranularitySpec().getQueryGranularity(),
-                schema.getGranularitySpec().getSegmentGranularity(),
-                sequenceName,
-                previousSegmentId,
-                skipSegmentLineageCheck
-            )
-        ),
-        toolbox.getSegmentHandoffNotifierFactory(),
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
-        toolbox.getDataSegmentKiller(),
-        toolbox.getObjectMapper(),
-        metrics
-    );
-  }
-
-  public Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
-  {
-    return Appenderators.createRealtime(
-        dataSchema,
-        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
-        metrics,
-        toolbox.getSegmentPusher(),
-        toolbox.getObjectMapper(),
-        toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9(),
-        toolbox.getQueryRunnerFactoryConglomerate(),
-        toolbox.getSegmentAnnouncer(),
-        toolbox.getEmitter(),
-        toolbox.getQueryExecutorService(),
-        toolbox.getCache(),
-        toolbox.getCacheConfig(),
-        toolbox.getCachePopulatorStats()
-    );
-  }
-
-  public boolean withinMinMaxRecordTime(final InputRow row)
-  {
-    final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
-                                             && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
-
-    final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
-                                            && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
-
-    if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
-      final String errorMsg = StringUtils.format(
-          "Encountered row with timestamp that cannot be represented as a long: [%s]",
-          row
-      );
-      throw new ParseException(errorMsg);
-    }
-
-    if (log.isDebugEnabled()) {
-      if (beforeMinimumMessageTime) {
-        log.debug(
-            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
-            row.getTimestamp(),
-            ioConfig.getMinimumMessageTime().get()
-        );
-      } else if (afterMaximumMessageTime) {
-        log.debug(
-            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
-            row.getTimestamp(),
-            ioConfig.getMaximumMessageTime().get()
-        );
-      }
-    }
-
-    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
-  }
 
   @Override
   public int getPriority()
@@ -280,7 +196,93 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
     return (queryPlus, responseContext) -> queryPlus.run(runner.getAppenderator(), responseContext);
   }
 
-  protected abstract RecordSupplier<PartitionType, SequenceType> getRecordSupplier();
+  public Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
+  {
+    return Appenderators.createRealtime(
+        dataSchema,
+        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+        metrics,
+        toolbox.getSegmentPusher(),
+        toolbox.getObjectMapper(),
+        toolbox.getIndexIO(),
+        toolbox.getIndexMergerV9(),
+        toolbox.getQueryRunnerFactoryConglomerate(),
+        toolbox.getSegmentAnnouncer(),
+        toolbox.getEmitter(),
+        toolbox.getQueryExecutorService(),
+        toolbox.getCache(),
+        toolbox.getCacheConfig(),
+        toolbox.getCachePopulatorStats()
+    );
+  }
+
+  public StreamAppenderatorDriver newDriver(
+      final Appenderator appenderator,
+      final TaskToolbox toolbox,
+      final FireDepartmentMetrics metrics
+  )
+  {
+    return new StreamAppenderatorDriver(
+        appenderator,
+        new ActionBasedSegmentAllocator(
+            toolbox.getTaskActionClient(),
+            dataSchema,
+            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SegmentAllocateAction(
+                schema.getDataSource(),
+                row.getTimestamp(),
+                schema.getGranularitySpec().getQueryGranularity(),
+                schema.getGranularitySpec().getSegmentGranularity(),
+                sequenceName,
+                previousSegmentId,
+                skipSegmentLineageCheck
+            )
+        ),
+        toolbox.getSegmentHandoffNotifierFactory(),
+        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        toolbox.getDataSegmentKiller(),
+        toolbox.getObjectMapper(),
+        metrics
+    );
+  }
+
+  protected abstract RecordSupplier<PartitionType, SequenceType> newRecordSupplier();
+
+  public boolean withinMinMaxRecordTime(final InputRow row)
+  {
+    final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
+                                             && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
+
+    final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
+                                            && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
+
+    if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
+      final String errorMsg = StringUtils.format(
+          "Encountered row with timestamp that cannot be represented as a long: [%s]",
+          row
+      );
+      throw new ParseException(errorMsg);
+    }
+
+    if (log.isDebugEnabled()) {
+      if (beforeMinimumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            row.getTimestamp(),
+            ioConfig.getMinimumMessageTime().get()
+        );
+      } else if (afterMaximumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            row.getTimestamp(),
+            ioConfig.getMaximumMessageTime().get()
+        );
+      }
+    }
+
+    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
+  }
+
+  protected abstract SeekableStreamIndexTaskRunner<PartitionType, SequenceType> createTaskRunner();
 
   @VisibleForTesting
   public Appenderator getAppenderator()

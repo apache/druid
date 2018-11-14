@@ -657,8 +657,8 @@ public class KinesisIndexTaskTest
       Thread.sleep(10);
     }
     final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets) || checkpoint2.getPartitionOffsetMap()
-                                                                                               .equals(currentOffsets));
+    Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets) || checkpoint2.getPartitionSequenceNumberMap()
+                                                                                                       .equals(currentOffsets));
     task.getRunner().setEndOffsets(currentOffsets, false);
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());

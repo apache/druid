@@ -1713,8 +1713,15 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private void updatePartitionDataFromStream()
   {
     Set<PartitionType> partitionIds;
-    synchronized (recordSupplierLock) {
-      partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
+    try {
+      synchronized (recordSupplierLock) {
+        partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
+      }
+    }
+    catch (Exception e) {
+      log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getStream());
+      log.debug(e, "full stack trace");
+      return;
     }
 
     if (partitionIds == null || partitionIds.size() == 0) {

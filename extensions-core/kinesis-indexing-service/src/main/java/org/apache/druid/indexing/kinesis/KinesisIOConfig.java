@@ -76,7 +76,7 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
         maximumMessageTime,
         true
     );
-    Preconditions.checkArgument(endPartitions.getPartitionOffsetMap()
+    Preconditions.checkArgument(endPartitions.getPartitionSequenceNumberMap()
                                              .values()
                                              .stream()
                                              .noneMatch(x -> x.equals(OrderedPartitionableRecord.END_OF_SHARD_MARKER)));

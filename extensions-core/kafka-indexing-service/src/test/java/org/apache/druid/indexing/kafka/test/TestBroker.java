@@ -83,7 +83,7 @@ public class TestBroker implements Closeable
 
     server = new KafkaServer(
         config,
-        SystemTime.SYSTEM,
+        Time.SYSTEM,
         Some.apply(StringUtils.format("TestingBroker[%d]-", id)),
         List$.MODULE$.empty()
     );

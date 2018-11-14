@@ -69,7 +69,6 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -79,6 +78,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.CompressionUtils;
@@ -548,8 +548,9 @@ public class KafkaIndexTaskTest
       Thread.sleep(10);
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets) || checkpoint2.getPartitionSequenceNumberMap()
-                                                                                                       .equals(currentOffsets));
+    Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets)
+                      || checkpoint2.getPartitionSequenceNumberMap()
+                                    .equals(currentOffsets));
     task.getRunner().setEndOffsets(currentOffsets, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -827,7 +828,10 @@ public class KafkaIndexTaskTest
                 DATA_SCHEMA.getDataSource(),
                 0,
                 new KafkaDataSourceMetadata(startPartitions),
-                new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, checkpoint.getPartitionSequenceNumberMap()))
+                new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(
+                    topic,
+                    checkpoint.getPartitionSequenceNumberMap()
+                ))
             )
         )
     );
@@ -881,9 +885,18 @@ public class KafkaIndexTaskTest
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
 
-    final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L));
-    final KafkaPartitions checkpoint1 = new KafkaPartitions(topic, ImmutableMap.of(0, 5L));
-    final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 7L));
+    final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(0, 0L)
+    );
+    final SeekableStreamPartitions<Integer, Long> checkpoint1 = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(0, 5L)
+    );
+    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(0, 7L)
+    );
 
     final KafkaIndexTask task = createTask(
         null,
@@ -900,11 +913,11 @@ public class KafkaIndexTaskTest
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
-    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
+    while (task.getRunner().getStatus() != Status.PAUSED) {
       Thread.sleep(10);
     }
     final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets));
+    Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets));
 
     // actual checkpoint offset is 5, but simulating behavior of publishing set end offset call, to ensure this task
     // will continue reading through the end offset of the checkpointed sequence
@@ -2173,7 +2186,10 @@ public class KafkaIndexTaskTest
         maxSavedParseExceptions
     );
     final Map<String, Object> context = isIncrementalHandoffSupported
-                                        ? ImmutableMap.of(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
+                                        ? ImmutableMap.of(
+        SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED,
+        true
+    )
                                         : null;
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,
@@ -2219,7 +2235,7 @@ public class KafkaIndexTaskTest
         maxSavedParseExceptions
     );
     if (isIncrementalHandoffSupported) {
-      context.put(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
+      context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
     }
 
     final KafkaIndexTask task = new KafkaIndexTask(
