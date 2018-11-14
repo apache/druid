@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +51,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   {
     final List<String> dimensions = parseSpec.getDimensionsSpec().hasCustomDimensions()
                                     ? parseSpec.getDimensionsSpec().getDimensionNames()
-                                    : Lists.newArrayList(
+                                    : new ArrayList<>(
                                         Sets.difference(
                                             theMap.keySet(),
                                             parseSpec.getDimensionsSpec()
