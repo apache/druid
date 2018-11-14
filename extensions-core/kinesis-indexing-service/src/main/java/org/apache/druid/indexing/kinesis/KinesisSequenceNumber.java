@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kinesis;
 
 
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
@@ -30,14 +31,23 @@ import java.util.Objects;
 public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
 {
 
+  // this flag is used to indicate either END_OF_SHARD_MARKER
+  // or NO_END_SEQUENCE_NUMBER so that they can be properly compared
+  // with other sequence numbers
+  private final boolean isMaxSequenceNumber;
   private final BigInteger intSequence;
 
   private KinesisSequenceNumber(@NotNull String sequenceNumber, boolean isExclusive)
   {
     super(sequenceNumber, isExclusive);
-    this.intSequence = OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(sequenceNumber)
-                       ? new BigInteger("-1")
-                       : new BigInteger(sequenceNumber);
+    if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(sequenceNumber)
+        || SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
+      isMaxSequenceNumber = true;
+      this.intSequence = null;
+    } else {
+      isMaxSequenceNumber = false;
+      this.intSequence = new BigInteger(sequenceNumber);
+    }
   }
 
   public static KinesisSequenceNumber of(String sequenceNumber)
@@ -63,7 +73,16 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   @Override
   public int compareTo(@NotNull OrderedSequenceNumber<String> o)
   {
-    return this.intSequence.compareTo(new BigInteger(o.get()));
+    KinesisSequenceNumber num = (KinesisSequenceNumber) o;
+    if (isMaxSequenceNumber && num.isMaxSequenceNumber) {
+      return 0;
+    } else if (isMaxSequenceNumber) {
+      return 1;
+    } else if (num.isMaxSequenceNumber) {
+      return -1;
+    } else {
+      return this.intSequence.compareTo(new BigInteger(o.get()));
+    }
   }
 
   @Override

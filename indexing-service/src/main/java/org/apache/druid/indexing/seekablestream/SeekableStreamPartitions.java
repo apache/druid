@@ -39,7 +39,7 @@ import java.util.Objects;
  * <p>
  * Redundant getters
  * are used for proper Jackson serialization/deserialization when processing terminologies
- * used by Kafka and kinesis (i.e. topic vs. name)
+ * used by Kafka and kinesis (i.e. topic vs. stream)
  *
  * @param <PartitionType> partition id type
  * @param <SequenceType>  sequence number type
@@ -49,7 +49,7 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
   public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
 
   // stream/topic
-  private final String name;
+  private final String stream;
   // partitionId -> sequence number
   private final Map<PartitionType, SequenceType> map;
 
@@ -61,31 +61,34 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
       @JsonProperty("partitionOffsetMap") final Map<PartitionType, SequenceType> partitionOffsetMap
   )
   {
-    this.name = stream == null ? topic : stream;
+    this.stream = stream == null ? topic : stream;
     this.map = ImmutableMap.copyOf(partitionOffsetMap == null
                                    ? partitionSequenceNumberMap
                                    : partitionOffsetMap);
-    Preconditions.checkArgument(this.name != null);
+    Preconditions.checkArgument(this.stream != null);
     Preconditions.checkArgument(map != null);
   }
 
   // constructor for backward compatibility
-  public SeekableStreamPartitions(@NotNull final String id, final Map<PartitionType, SequenceType> partitionOffsetMap)
+  public SeekableStreamPartitions(
+      @NotNull final String stream,
+      final Map<PartitionType, SequenceType> partitionOffsetMap
+  )
   {
-    this(id, null, partitionOffsetMap, null);
+    this(stream, null, partitionOffsetMap, null);
   }
 
   @JsonProperty
   public String getStream()
   {
-    return name;
+    return stream;
   }
 
   @DoNotCall
   @JsonProperty
   public final String getTopic()
   {
-    return name;
+    return stream;
   }
 
   @JsonProperty
@@ -111,21 +114,21 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
       return false;
     }
     SeekableStreamPartitions that = (SeekableStreamPartitions) o;
-    return Objects.equals(name, that.name) &&
+    return Objects.equals(stream, that.stream) &&
            Objects.equals(map, that.map);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, map);
+    return Objects.hash(stream, map);
   }
 
   @Override
   public String toString()
   {
     return "SeekableStreamPartitions{" +
-           "name/topic='" + name + '\'' +
+           "stream/topic='" + stream + '\'' +
            ", partitionSequenceNumberMap/partitionOffsetMap=" + map +
            '}';
   }

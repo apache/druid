@@ -52,8 +52,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -65,8 +63,8 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * Supervisor responsible for managing the KinesisIndexTask for a single dataSource. At a high level, the class accepts a
- * {@link KinesisSupervisorSpec} which includes the Kafka topic and configuration as well as an ingestion spec which will
- * be used to generate the indexing tasks. The run loop periodically refreshes its view of the Kafka topic's partitions
+ * {@link KinesisSupervisorSpec} which includes the Kinesis stream and configuration as well as an ingestion spec which will
+ * be used to generate the indexing tasks. The run loop periodically refreshes its view of the Kinesis stream's partitions
  * and the list of running indexing tasks and ensures that all partitions are being read from and that there are enough
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * Kinesis sequences.
@@ -97,24 +95,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         mapper,
         spec,
         rowIngestionMetersFactory,
-        true,
-        false
+        true
     );
 
     this.spec = spec;
-  }
-
-
-  @Override
-  public void checkpoint(
-      @Nullable Integer taskGroupId,
-      @Deprecated String baseSequenceName,
-      DataSourceMetadata previousCheckPoint,
-      DataSourceMetadata currentCheckPoint
-  )
-  {
-    // not supported right now
-    throw new UnsupportedOperationException("kinesis supervisor does not yet support checkpoints");
   }
 
   @Override
@@ -197,7 +181,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         taskTuningConfig.getRecordBufferSize(),
         taskTuningConfig.getRecordBufferOfferTimeout(),
         taskTuningConfig.getRecordBufferFullWait(),
-        taskTuningConfig.getFetchSequenceNumberTimeout()
+        taskTuningConfig.getFetchSequenceNumberTimeout(),
+        taskTuningConfig.getMaxRecordsPerPoll()
     );
   }
 
@@ -324,15 +309,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   protected int getNoticesQueueSize()
   {
     return super.getNoticesQueueSize();
-  }
-
-  @Override
-  protected boolean checkSequenceAvailability(@NotNull String partition, @NotNull String sequenceFromMetadata)
-      throws TimeoutException
-  {
-    String earliestSequence = super.getOffsetFromStreamForPartition(partition, true);
-    return earliestSequence != null
-           && KinesisSequenceNumber.of(earliestSequence).compareTo(KinesisSequenceNumber.of(sequenceFromMetadata)) <= 0;
   }
 
   @Override

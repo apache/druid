@@ -32,6 +32,7 @@ import java.util.Set;
 public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
+  private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
   @Nullable
   private final Integer taskGroupId;
@@ -41,6 +42,8 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
+  private final boolean skipOffsetGaps;
+
 
   @JsonCreator
   public SeekableStreamIOConfig(
@@ -50,7 +53,8 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
       @JsonProperty("endPartitions") SeekableStreamPartitions<PartitionType, SequenceType> endPartitions,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
-      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime
+      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
+      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
   )
   {
     this.taskGroupId = taskGroupId;
@@ -60,6 +64,7 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
+    this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
 
     Preconditions.checkArgument(
         startPartitions.getStream().equals(endPartitions.getStream()),
@@ -115,6 +120,12 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
   public Optional<DateTime> getMinimumMessageTime()
   {
     return minimumMessageTime;
+  }
+
+  @JsonProperty
+  public boolean isSkipOffsetGaps()
+  {
+    return skipOffsetGaps;
   }
 
   // exclusive starting sequence partitions are used only for kinesis where the starting

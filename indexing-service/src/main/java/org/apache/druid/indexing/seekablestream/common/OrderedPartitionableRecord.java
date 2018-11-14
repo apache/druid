@@ -71,7 +71,7 @@ public class OrderedPartitionableRecord<PartitionType, SequenceType>
     return data;
   }
 
-  public StreamPartition getStreamPartition()
+  public StreamPartition<PartitionType> getStreamPartition()
   {
     return StreamPartition.of(stream, partitionId);
   }

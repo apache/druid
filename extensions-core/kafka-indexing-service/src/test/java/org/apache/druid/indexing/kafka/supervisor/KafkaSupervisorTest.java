@@ -59,8 +59,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask.Status;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.java.util.common.DateTimes;
@@ -2321,7 +2320,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertTrue(serviceEmitter.getStackTrace()
                                     .startsWith("org.apache.druid.java.util.common.ISE: WTH?! cannot find"));
     Assert.assertEquals(
-        "WTH?! cannot find taskGroup [0] among all taskGroups [{}]",
+        "WTH?! cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
         serviceEmitter.getExceptionMessage()
     );
     Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
@@ -2518,11 +2517,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
     expect(taskClient.getStatusAsync("id1"))
-        .andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.PUBLISHING));
+        .andReturn(Futures.immediateFuture(Status.PUBLISHING));
     expect(taskClient.getStatusAsync("id2"))
-        .andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+        .andReturn(Futures.immediateFuture(Status.READING));
     expect(taskClient.getStatusAsync("id3"))
-        .andReturn(Futures.immediateFuture(SeekableStreamIndexTask.Status.READING));
+        .andReturn(Futures.immediateFuture(Status.READING));
     expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
     expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
@@ -2667,7 +2666,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetCurrentTotalStats() throws Exception
+  public void testGetCurrentTotalStats()
   {
     supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false);
     supervisor.addTaskGroupToActivelyReadingTaskGroup(

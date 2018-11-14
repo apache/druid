@@ -121,7 +121,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
       }
 
       while (true) {
-        if (getStatus(id) == SeekableStreamIndexTask.Status.PAUSED) {
+        if (getStatus(id) == SeekableStreamIndexTaskRunner.Status.PAUSED) {
           return getCurrentOffsets(id, true);
         }
 
@@ -152,16 +152,16 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
     }
   }
 
-  public SeekableStreamIndexTask.Status getStatus(final String id)
+  public SeekableStreamIndexTaskRunner.Status getStatus(final String id)
   {
     log.debug("GetStatus task[%s]", id);
 
     try {
       final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "status", null, true);
-      return deserialize(response.getContent(), SeekableStreamIndexTask.Status.class);
+      return deserialize(response.getContent(), SeekableStreamIndexTaskRunner.Status.class);
     }
     catch (NoTaskLocationException e) {
-      return SeekableStreamIndexTask.Status.NOT_STARTED;
+      return SeekableStreamIndexTaskRunner.Status.NOT_STARTED;
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -349,7 +349,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
   }
 
 
-  public ListenableFuture<SeekableStreamIndexTask.Status> getStatusAsync(final String id)
+  public ListenableFuture<SeekableStreamIndexTaskRunner.Status> getStatusAsync(final String id)
   {
     return doAsync(() -> getStatus(id));
   }

@@ -74,7 +74,7 @@ public class KinesisTuningConfigTest
     Assert.assertEquals(10000, config.getRecordBufferSize());
     Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(5000, config.getRecordBufferFullWait());
-    Assert.assertEquals(60000, config.getFetchSequenceNumberTimeout());
+    Assert.assertEquals(10000, config.getFetchSequenceNumberTimeout());
     Assert.assertNull(config.getFetchThreads());
     Assert.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertFalse(config.isResetOffsetAutomatically());
@@ -165,6 +165,7 @@ public class KinesisTuningConfigTest
         1,
         (long) 3,
         2,
+        100L,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -182,6 +183,8 @@ public class KinesisTuningConfigTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     KinesisTuningConfig copy = original.copyOf();
@@ -189,6 +192,7 @@ public class KinesisTuningConfigTest
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
     Assert.assertEquals(3, copy.getMaxBytesInMemory());
     Assert.assertEquals(2, copy.getMaxRowsPerSegment());
+    Assert.assertEquals(100L, (long) copy.getMaxTotalRows());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
     Assert.assertEquals(0, copy.getMaxPendingPersists());
@@ -203,5 +207,7 @@ public class KinesisTuningConfigTest
     Assert.assertEquals(2, (int) copy.getFetchThreads());
     Assert.assertFalse(copy.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertTrue(copy.isResetOffsetAutomatically());
+    Assert.assertEquals(5, copy.getMaxRecordsPerPoll());
+    Assert.assertEquals(new Period().withDays(Integer.MAX_VALUE), copy.getIntermediateHandoffPeriod());
   }
 }

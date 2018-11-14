@@ -78,7 +78,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   @JsonProperty
   public String getTopic()
   {
-    return getId();
+    return getStream();
   }
 
   @JsonProperty

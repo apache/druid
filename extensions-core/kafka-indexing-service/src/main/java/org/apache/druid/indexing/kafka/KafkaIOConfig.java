@@ -32,10 +32,7 @@ import java.util.Set;
 
 public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
 {
-  private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
-
   private final Map<String, Object> consumerProperties;
-  private final boolean skipOffsetGaps;
 
   @JsonCreator
   public KafkaIOConfig(
@@ -57,11 +54,11 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
         endPartitions,
         useTransaction,
         minimumMessageTime,
-        maximumMessageTime
+        maximumMessageTime,
+        skipOffsetGaps
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
-    this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
 
     for (int partition : endPartitions.getPartitionSequenceNumberMap().keySet()) {
       Preconditions.checkArgument(
@@ -89,12 +86,6 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
     return consumerProperties;
   }
 
-  @JsonProperty
-  public boolean isSkipOffsetGaps()
-  {
-    return skipOffsetGaps;
-  }
-
   @Override
   public String toString()
   {
@@ -107,7 +98,7 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
            ", useTransaction=" + isUseTransaction() +
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +
-           ", skipOffsetGaps=" + skipOffsetGaps +
+           ", skipOffsetGaps=" + isSkipOffsetGaps() +
            '}';
   }
 }

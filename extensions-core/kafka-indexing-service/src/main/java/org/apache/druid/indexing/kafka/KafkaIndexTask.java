@@ -24,29 +24,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
-import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.NoopQueryRunner;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
-import org.apache.druid.segment.realtime.appenderator.Appenderator;
-import org.apache.druid.segment.realtime.appenderator.Appenderators;
-import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -54,6 +39,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -65,9 +51,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTask.class);
   static final long POLL_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(100);
-  static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
 
-  private final SeekableStreamIndexTaskRunner<Integer, Long> runner;
+  private final KafkaIOConfig ioConfig;
   private final ObjectMapper configMapper;
 
   // This value can be tuned in some tests
@@ -100,26 +85,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         "index_kafka"
     );
     this.configMapper = configMapper;
-    if (context != null && context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
-        && ((boolean) context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
-      runner = new IncrementalPublishingKafkaIndexTaskRunner(
-          this,
-          parser,
-          authorizerMapper,
-          this.chatHandlerProvider,
-          savedParseExceptions,
-          rowIngestionMetersFactory
-      );
-    } else {
-      runner = new LegacyKafkaIndexTaskRunner(
-          this,
-          parser,
-          authorizerMapper,
-          this.chatHandlerProvider,
-          savedParseExceptions,
-          rowIngestionMetersFactory
-      );
-    }
+    this.ioConfig = ioConfig;
+
   }
 
   long getPollRetryMs()
@@ -128,83 +95,26 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox)
+  protected RecordSupplier<Integer, Long> getRecordSupplier()
   {
-    return runner.run(toolbox);
-  }
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-  @Override
-  public boolean canRestore()
-  {
-    return true;
-  }
+      final Map<String, Object> props = new HashMap<>(ioConfig.getConsumerProperties());
 
-  @Override
-  public void stopGracefully()
-  {
-    runner.stopGracefully();
-  }
+      props.put("auto.offset.reset", "none");
+      props.put("key.deserializer", ByteArrayDeserializer.class.getName());
+      props.put("value.deserializer", ByteArrayDeserializer.class.getName());
 
-  @Override
-  public <T> QueryRunner<T> getQueryRunner(Query<T> query)
-  {
-    if (runner.getAppenderator() == null) {
-      // Not yet initialized, no data yet, just return a noop runner.
-      return new NoopQueryRunner<>();
+      return new KafkaRecordSupplier(props, configMapper);
     }
-
-    return (queryPlus, responseContext) -> queryPlus.run(runner.getAppenderator(), responseContext);
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
   }
 
-  Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
-  {
-    return Appenderators.createRealtime(
-        dataSchema,
-        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
-        metrics,
-        toolbox.getSegmentPusher(),
-        toolbox.getObjectMapper(),
-        toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9(),
-        toolbox.getQueryRunnerFactoryConglomerate(),
-        toolbox.getSegmentAnnouncer(),
-        toolbox.getEmitter(),
-        toolbox.getQueryExecutorService(),
-        toolbox.getCache(),
-        toolbox.getCacheConfig(),
-        toolbox.getCachePopulatorStats()
-    );
-  }
-
-  StreamAppenderatorDriver newDriver(
-      final Appenderator appenderator,
-      final TaskToolbox toolbox,
-      final FireDepartmentMetrics metrics
-  )
-  {
-    return new StreamAppenderatorDriver(
-        appenderator,
-        new ActionBasedSegmentAllocator(
-            toolbox.getTaskActionClient(),
-            dataSchema,
-            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SegmentAllocateAction(
-                schema.getDataSource(),
-                row.getTimestamp(),
-                schema.getGranularitySpec().getQueryGranularity(),
-                schema.getGranularitySpec().getSegmentGranularity(),
-                sequenceName,
-                previousSegmentId,
-                skipSegmentLineageCheck
-            )
-        ),
-        toolbox.getSegmentHandoffNotifierFactory(),
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
-        toolbox.getDataSegmentKiller(),
-        toolbox.getObjectMapper(),
-        metrics
-    );
-  }
-
+  @Deprecated
   KafkaConsumer<byte[], byte[]> newConsumer()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
@@ -231,7 +141,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     }
   }
 
-
   static void assignPartitions(
       final KafkaConsumer consumer,
       final String topic,
@@ -245,39 +154,29 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     );
   }
 
-  boolean withinMinMaxRecordTime(final InputRow row)
+  @Override
+  protected SeekableStreamIndexTaskRunner<Integer, Long> createTaskRunner()
   {
-    final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
-                                             && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
-
-    final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
-                                            && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
-
-    if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
-      final String errorMsg = StringUtils.format(
-          "Encountered row with timestamp that cannot be represented as a long: [%s]",
-          row
+    if (context != null && context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
+        && ((boolean) context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
+      return new IncrementalPublishingKafkaIndexTaskRunner(
+          this,
+          parser,
+          authorizerMapper,
+          chatHandlerProvider,
+          savedParseExceptions,
+          rowIngestionMetersFactory
       );
-      throw new ParseException(errorMsg);
+    } else {
+      return new LegacyKafkaIndexTaskRunner(
+          this,
+          parser,
+          authorizerMapper,
+          chatHandlerProvider,
+          savedParseExceptions,
+          rowIngestionMetersFactory
+      );
     }
-
-    if (log.isDebugEnabled()) {
-      if (beforeMinimumMessageTime) {
-        log.debug(
-            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
-            row.getTimestamp(),
-            ioConfig.getMinimumMessageTime().get()
-        );
-      } else if (afterMaximumMessageTime) {
-        log.debug(
-            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
-            row.getTimestamp(),
-            ioConfig.getMaximumMessageTime().get()
-        );
-      }
-    }
-
-    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 
   @Override
@@ -291,18 +190,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   void setPollRetryMs(long retryMs)
   {
     this.pollRetryMs = retryMs;
-  }
-
-  @VisibleForTesting
-  Appenderator getAppenderator()
-  {
-    return runner.getAppenderator();
-  }
-
-  @VisibleForTesting
-  SeekableStreamIndexTaskRunner<Integer, Long> getRunner()
-  {
-    return runner;
   }
 
   @Override

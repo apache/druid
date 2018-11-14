@@ -125,8 +125,8 @@ public class KinesisDataSourceMetadataTest
     );
   }
 
-  private static KinesisDataSourceMetadata KM(String stream, Map<String, String> offsets)
+  private static KinesisDataSourceMetadata KM(String stream, Map<String, String> sequences)
   {
-    return new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, offsets));
+    return new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, sequences));
   }
 }

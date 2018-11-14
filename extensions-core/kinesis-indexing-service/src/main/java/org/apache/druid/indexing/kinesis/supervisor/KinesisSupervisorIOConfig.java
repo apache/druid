@@ -169,11 +169,4 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", deaggregate=" + deaggregate +
            '}';
   }
-
-  @JsonProperty
-  public String getStream()
-  {
-    return getId();
-  }
-
 }

@@ -27,7 +27,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -43,22 +42,17 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 {
-  private static final EmittingLogger log = new EmittingLogger(KafkaRecordSupplier.class);
   private static final Random RANDOM = ThreadLocalRandom.current();
 
   private final KafkaConsumer<byte[], byte[]> consumer;
   private final Map<String, Object> consumerProperties;
   private final ObjectMapper sortingMapper;
   private boolean closed;
-  private final BlockingQueue<OrderedPartitionableRecord<Integer, Long>> records;
-
 
   public KafkaRecordSupplier(
       Map<String, Object> consumerProperties,
@@ -68,7 +62,6 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     this.consumerProperties = consumerProperties;
     this.sortingMapper = sortingMapper;
     this.consumer = getKafkaConsumer();
-    this.records = new LinkedBlockingQueue<>();
   }
 
   @Override
@@ -78,18 +71,13 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
                         .stream()
                         .map(x -> new TopicPartition(x.getStream(), x.getPartitionId()))
                         .collect(Collectors.toSet()));
+    seekToEarliest(streamPartitions);
   }
 
   @Override
   public void seek(StreamPartition<Integer> partition, Long sequenceNumber)
   {
     consumer.seek(new TopicPartition(partition.getStream(), partition.getPartitionId()), sequenceNumber);
-  }
-
-  @Override
-  public void seekAfter(StreamPartition<Integer> partition, Long sequenceNumber)
-  {
-    seek(partition, sequenceNumber + 1);
   }
 
   @Override
@@ -157,7 +145,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   }
 
   @Override
-  public Long position(StreamPartition<Integer> partition)
+  public Long getPosition(StreamPartition<Integer> partition)
   {
     return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
   }

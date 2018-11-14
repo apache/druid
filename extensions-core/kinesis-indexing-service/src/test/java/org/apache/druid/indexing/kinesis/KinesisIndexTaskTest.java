@@ -83,7 +83,7 @@ import org.apache.druid.indexing.overlord.MetadataTaskStorage;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -172,14 +172,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @RunWith(LocalstackDockerTestRunner.class)
@@ -246,6 +251,7 @@ public class KinesisIndexTaskTest
           "1",
           JB("2049", "f", "y", "10", "20.0", "notanumber")
       ),
+      generateRequestEntry("1", StringUtils.toUtf8("END_OF_PARTITION")),
       generateRequestEntry(
           "123123",
           JB("2012", "g", "y", "10", "20.0", "1.0")
@@ -253,7 +259,8 @@ public class KinesisIndexTaskTest
       generateRequestEntry(
           "123123",
           JB("2011", "h", "y", "10", "20.0", "1.0")
-      )
+      ),
+      generateRequestEntry("123123", StringUtils.toUtf8("END_OF_PARTITION"))
   );
 
 
@@ -270,8 +277,10 @@ public class KinesisIndexTaskTest
   private boolean resetOffsetAutomatically = false;
   private boolean doHandoff = true;
   private int maxRowsInMemory = 1000;
+  private Integer maxRowsPerSegment = null;
   private Long maxTotalRows = null;
   private Period intermediateHandoffPeriod = null;
+  private int maxRecordsPerPoll;
 
   private TaskToolboxFactory toolboxFactory;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
@@ -363,7 +372,7 @@ public class KinesisIndexTaskTest
     EmittingLogger.registerEmitter(emitter);
     taskExec = MoreExecutors.listeningDecorator(
         Executors.newCachedThreadPool(
-            Execs.makeThreadFactory("kafka-task-test-%d")
+            Execs.makeThreadFactory("kinesis-task-test-%d")
         )
     );
   }
@@ -379,6 +388,7 @@ public class KinesisIndexTaskTest
     doHandoff = true;
     stream = getStreamName();
     reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
+    maxRecordsPerPoll = 1;
 
     // sleep required because of kinesalite
     Thread.sleep(500);
@@ -424,7 +434,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -449,9 +459,9 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(3, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
@@ -462,7 +472,7 @@ public class KinesisIndexTaskTest
             stream,
             ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )
         )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -502,7 +512,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
-                OrderedPartitionableRecord.END_OF_SHARD_MARKER
+                SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER
             )),
             true,
             null,
@@ -523,24 +533,30 @@ public class KinesisIndexTaskTest
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
-    // Wait for the task to start reading
-    while (task.getStatus() != SeekableStreamIndexTask.Status.READING) {
+
+    // Wait for the task to start readingtestRunConfli
+    while (task.getRunner().getStatus() != Status.READING) {
       Thread.sleep(10);
     }
 
     // Insert data
     List<PutRecordsResultEntry> res2 = insertData(kinesis, generateRecordsRequests(stream));
 
-    // force shard 0 to close
-    kinesis.splitShard(stream, shardId0, "somenewshardpls234234234");
+    while (task.getRunner().getRowIngestionMeters().getProcessed() < 3) {
+      Thread.sleep(10);
+    }
+
+    // force shard to close
+    kinesis.splitShard(stream, shardId0, "somerandomshardidhah1213123");
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
+
     // Check metrics
-    Assert.assertEquals(3, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     SegmentDescriptor desc1 = SD(task, "2011/P1D", 0);
@@ -565,6 +581,380 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("z"), readSegmentColumn("dim1", desc3));
   }
 
+  @Test(timeout = 120_000L)
+  public void testIncrementalHandOff() throws Exception
+  {
+    final String baseSequenceName = "sequence0";
+    // as soon as any segment has more than one record, incremental publishing should happen
+    maxRowsPerSegment = 2;
+    maxRecordsPerPoll = 1;
+
+    // Insert data
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    final SeekableStreamPartitions<String, String> startPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0),
+            shardId0,
+            getSequenceNumber(res, shardId0, 0)
+        )
+    );
+    // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
+    // of events fetched across two partitions from Kafka
+    final SeekableStreamPartitions<String, String> checkpoint1 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 5),
+            shardId0,
+            getSequenceNumber(res, shardId0, 0)
+        )
+    );
+    final SeekableStreamPartitions<String, String> checkpoint2 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 4),
+            shardId0,
+            getSequenceNumber(res, shardId0, 2)
+        )
+    );
+    final SeekableStreamPartitions<String, String> endPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 10),
+            shardId0,
+            getSequenceNumber(res, shardId0, 2)
+        )
+    );
+    final KinesisIndexTask task = createTask(
+        null,
+        new KinesisIOConfig(
+            baseSequenceName,
+            startPartitions,
+            endPartitions,
+            true,
+            null,
+            null,
+            null,
+            LocalstackTestRunner.getEndpointKinesis(),
+            null,
+            null,
+            TestUtils.TEST_ACCESS_KEY,
+            TestUtils.TEST_SECRET_KEY,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+    final ListenableFuture<TaskStatus> future = runTask(task);
+    while (task.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+    Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets) || checkpoint2.getPartitionOffsetMap()
+                                                                                               .equals(currentOffsets));
+    task.getRunner().setEndOffsets(currentOffsets, false);
+
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    Assert.assertEquals(1, checkpointRequestsHash.size());
+    Assert.assertTrue(
+        checkpointRequestsHash.contains(
+            Objects.hash(
+                DATA_SCHEMA.getDataSource(),
+                0,
+                new KinesisDataSourceMetadata(startPartitions),
+                new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, currentOffsets))
+            )
+        )
+    );
+
+    // Check metrics
+    Assert.assertEquals(8, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
+    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc4 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc5 = SD(task, "2011/P1D", 1);
+    SegmentDescriptor desc6 = SD(task, "2012/P1D", 0);
+    SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 10),
+            shardId0,
+            getSequenceNumber(res, shardId0, 2)
+        ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", desc2));
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc3));
+    Assert.assertTrue((ImmutableList.of("d", "e").equals(readSegmentColumn("dim1", desc4))
+                       && ImmutableList.of("h").equals(readSegmentColumn("dim1", desc5))) ||
+                      (ImmutableList.of("d", "h").equals(readSegmentColumn("dim1", desc4))
+                       && ImmutableList.of("e").equals(readSegmentColumn("dim1", desc5))));
+    Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", desc6));
+    Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc7));
+  }
+
+  @Test(timeout = 120_000L)
+  public void testIncrementalHandOffMaxTotalRows() throws Exception
+  {
+    final String baseSequenceName = "sequence0";
+    // incremental publish should happen every 3 records
+    maxRowsPerSegment = Integer.MAX_VALUE;
+    maxTotalRows = 3L;
+
+    // Insert data
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream, 0, 13));
+    final SeekableStreamPartitions<String, String> startPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0)
+        )
+    );
+    // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
+    // of events fetched across two partitions from Kafka
+    final SeekableStreamPartitions<String, String> checkpoint1 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 3)
+        )
+    );
+    final SeekableStreamPartitions<String, String> checkpoint2 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 10)
+        )
+    );
+    final SeekableStreamPartitions<String, String> endPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 11)
+        )
+    );
+
+    final KinesisIndexTask task = createTask(
+        null,
+        new KinesisIOConfig(
+            baseSequenceName,
+            startPartitions,
+            endPartitions,
+            true,
+            null,
+            null,
+            null,
+            LocalstackTestRunner.getEndpointKinesis(),
+            null,
+            null,
+            TestUtils.TEST_ACCESS_KEY,
+            TestUtils.TEST_SECRET_KEY,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+    while (task.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+
+    Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
+    task.getRunner().setEndOffsets(currentOffsets, false);
+
+    while (task.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+
+    final Map<String, String> nextOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), nextOffsets);
+
+    task.getRunner().setEndOffsets(nextOffsets, false);
+
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    Assert.assertEquals(2, checkpointRequestsHash.size());
+    Assert.assertTrue(
+        checkpointRequestsHash.contains(
+            Objects.hash(
+                DATA_SCHEMA.getDataSource(),
+                0,
+                new KinesisDataSourceMetadata(startPartitions),
+                new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, currentOffsets))
+            )
+        )
+    );
+    Assert.assertTrue(
+        checkpointRequestsHash.contains(
+            Objects.hash(
+                DATA_SCHEMA.getDataSource(),
+                0,
+                new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, currentOffsets)),
+                new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, nextOffsets))
+            )
+        )
+    );
+
+    // Check metrics
+    Assert.assertEquals(6, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
+    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc4 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc5 = SD(task, "2049/P1D", 0);
+    SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc7), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 11)
+        ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", desc2));
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc3));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc4));
+    Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc5));
+    Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc7));
+  }
+
+  @Test(timeout = 120_000L)
+  public void testTimeBasedIncrementalHandOff() throws Exception
+  {
+
+    final String baseSequenceName = "sequence0";
+    // as soon as any segment hits maxRowsPerSegment or intermediateHandoffPeriod, incremental publishing should happen
+    maxRowsPerSegment = Integer.MAX_VALUE;
+    intermediateHandoffPeriod = new Period().withSeconds(0);
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream, 0, 13));
+
+    final SeekableStreamPartitions<String, String> startPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 0)
+        )
+    );
+    // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
+    // of events fetched across two partitions from Kafka
+    final SeekableStreamPartitions<String, String> checkpoint = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 1)
+        )
+    );
+
+    final SeekableStreamPartitions<String, String> endPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 2)
+        )
+    );
+
+
+    final KinesisIndexTask task = createTask(
+        null,
+        new KinesisIOConfig(
+            baseSequenceName,
+            startPartitions,
+            endPartitions,
+            true,
+            null,
+            null,
+            null,
+            LocalstackTestRunner.getEndpointKinesis(),
+            null,
+            null,
+            TestUtils.TEST_ACCESS_KEY,
+            TestUtils.TEST_SECRET_KEY,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // task will pause for checkpointing
+    while (task.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint.getPartitionSequenceNumberMap(), currentOffsets);
+    task.getRunner().setEndOffsets(currentOffsets, false);
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    Assert.assertEquals(1, checkpointRequestsHash.size());
+    Assert.assertTrue(
+        checkpointRequestsHash.contains(
+            Objects.hash(
+                DATA_SCHEMA.getDataSource(),
+                0,
+                new KinesisDataSourceMetadata(startPartitions),
+                new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(
+                    stream,
+                    checkpoint.getPartitionSequenceNumberMap()
+                ))
+            )
+        )
+    );
+
+    // Check metrics
+    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 2)
+        ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", desc2));
+  }
+
 
   @Test(timeout = 120_000L)
   public void testRunWithMinimumMessageTime() throws Exception
@@ -582,7 +972,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -603,7 +993,7 @@ public class KinesisIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getStatus() != SeekableStreamIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != Status.READING) {
       Thread.sleep(10);
     }
 
@@ -611,9 +1001,9 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(3, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(2, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
@@ -625,7 +1015,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 4)
+                    getSequenceNumber(res, shardId1, 5)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -652,7 +1042,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -673,7 +1063,7 @@ public class KinesisIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getStatus() != SeekableStreamIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != Status.READING) {
       Thread.sleep(10);
     }
 
@@ -681,9 +1071,9 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(3, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(2, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
@@ -696,7 +1086,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 4)
+                    getSequenceNumber(res, shardId1, 5)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -732,7 +1122,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -753,7 +1143,7 @@ public class KinesisIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getStatus() != SeekableStreamIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != Status.READING) {
       Thread.sleep(10);
     }
 
@@ -761,9 +1151,9 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(1, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(4, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     SegmentDescriptor desc1 = SD(task, "2009/P1D", 0);
@@ -774,7 +1164,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 4)
+                    getSequenceNumber(res, shardId1, 5)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -825,13 +1215,144 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(0, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
   }
+
+  @Test(timeout = 60_000L)
+  public void testHandoffConditionTimeoutWhenHandoffOccurs() throws Exception
+  {
+    handoffConditionTimeout = 5_000;
+
+    // Insert data
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    final KinesisIndexTask task = createTask(
+        null,
+        new KinesisIOConfig(
+            "sequence0",
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 2)
+            )),
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 5)
+            )),
+            true,
+            null,
+            null,
+            null,
+            LocalstackTestRunner.getEndpointKinesis(),
+            null,
+            null,
+            TestUtils.TEST_ACCESS_KEY,
+            TestUtils.TEST_SECRET_KEY,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 5)
+        ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
+  }
+
+
+  @Test(timeout = 60_000L)
+  public void testHandoffConditionTimeoutWhenHandoffDoesNotOccur() throws Exception
+  {
+    doHandoff = false;
+    handoffConditionTimeout = 100;
+
+    // Insert data
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream));
+
+    final KinesisIndexTask task = createTask(
+        null,
+        new KinesisIOConfig(
+            "sequence0",
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 2)
+            )),
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 5)
+            )),
+            true,
+            null,
+            null,
+            null,
+            LocalstackTestRunner.getEndpointKinesis(),
+            null,
+            null,
+            TestUtils.TEST_ACCESS_KEY,
+            TestUtils.TEST_SECRET_KEY,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 5)
+        ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
+  }
+
 
   @Test(timeout = 120_000L)
   public void testReportParseExceptions() throws Exception
@@ -879,9 +1400,9 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.FAILED, future.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(3, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(1, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
@@ -909,7 +1430,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 12)
+                getSequenceNumber(res, shardId1, 13)
             )),
             true,
             null,
@@ -929,6 +1450,8 @@ public class KinesisIndexTaskTest
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
+    kinesis.splitShard(stream, shardId1, "somerandomshardidhah1213123");
+
     TaskStatus status = future.get();
 
     // Wait for task to exit
@@ -936,9 +1459,9 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(null, status.getErrorMsg());
 
     // Check metrics
-    Assert.assertEquals(4, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(3, task.getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(4, task.getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessedWithError());
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getUnparseable());
 
     // Check published metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
@@ -952,7 +1475,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 12)
+                    getSequenceNumber(res, shardId1, 13)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1008,7 +1531,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 9)
+                getSequenceNumber(res, shardId1, 10)
             )),
             true,
             null,
@@ -1035,10 +1558,10 @@ public class KinesisIndexTaskTest
     IndexTaskTest.checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     // Check metrics
-    Assert.assertEquals(3, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(3, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessedWithError());
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
     Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
@@ -1085,7 +1608,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -1112,7 +1635,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -1138,12 +1661,12 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(3, task1.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
@@ -1155,7 +1678,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 4)
+                    getSequenceNumber(res, shardId1, 5)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1183,7 +1706,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -1210,7 +1733,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 9)
+                getSequenceNumber(res, shardId1, 10)
             )),
             true,
             null,
@@ -1237,12 +1760,12 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.FAILED, future2.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(3, task1.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(4, task2.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(4, task2.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata, should all be from the first task
     SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
@@ -1254,7 +1777,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 4)
+                    getSequenceNumber(res, shardId1, 5)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1282,7 +1805,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             false,
             null,
@@ -1309,7 +1832,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 9)
+                getSequenceNumber(res, shardId1, 10)
             )),
             false,
             null,
@@ -1342,12 +1865,12 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(3, task1.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(4, task2.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(4, task2.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
     SegmentDescriptor desc3 = SD(task2, "2011/P1D", 1);
@@ -1381,9 +1904,9 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4),
+                getSequenceNumber(res, shardId1, 5),
                 shardId0,
-                getSequenceNumber(res, shardId0, 1)
+                getSequenceNumber(res, shardId0, 2)
             )),
             true,
             null,
@@ -1403,30 +1926,31 @@ public class KinesisIndexTaskTest
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
+    while (countEvents(task) < 5) {
+      Thread.sleep(10);
+    }
+
+    kinesis.splitShard(stream, shardId0, "somerandomshardidhah1213123");
 
     // Wait for tasks to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(5, task.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(5, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-    // desc3 will not be created in KinesisIndexTask (0.12.x) as it does not create per Kafka partition Druid segments
-    SegmentDescriptor desc3 = SD(task, "2011/P1D", 1);
     SegmentDescriptor desc4 = SD(task, "2012/P1D", 0);
-    Assert.assertEquals(isIncrementalHandoffSupported
-                        ? ImmutableSet.of(desc1, desc2, desc4)
-                        : ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 4),
+            getSequenceNumber(res, shardId1, 5),
             shardId0,
-            getSequenceNumber(res, shardId0, 1)
+            getSequenceNumber(res, shardId0, 2)
         ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
@@ -1437,12 +1961,8 @@ public class KinesisIndexTaskTest
 
     // Check desc2/desc3 without strong ordering because two partitions are interleaved nondeterministically
     Assert.assertEquals(
-        isIncrementalHandoffSupported
-        ? ImmutableSet.of(ImmutableList.of("d", "e", "h"))
-        : ImmutableSet.of(ImmutableList.of("d", "e"), ImmutableList.of("h")),
-        isIncrementalHandoffSupported
-        ? ImmutableSet.of(readSegmentColumn("dim1", desc2))
-        : ImmutableSet.of(readSegmentColumn("dim1", desc2), readSegmentColumn("dim1", desc3))
+        ImmutableSet.of(ImmutableList.of("d", "e", "h")),
+        ImmutableSet.of(readSegmentColumn("dim1", desc2))
     );
   }
 
@@ -1463,7 +1983,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -1490,7 +2010,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
-                getSequenceNumber(res, shardId0, 1)
+                SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER
             )),
             true,
             null,
@@ -1511,17 +2031,23 @@ public class KinesisIndexTaskTest
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
 
+    while (countEvents(task2) < 2) {
+      Thread.sleep(10);
+    }
+
+    kinesis.splitShard(stream, shardId0, "somerandomshardidhah1213123");
+
     // Wait for tasks to exit
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(3, task1.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(2, task2.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(2, task2.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
@@ -1534,9 +2060,9 @@ public class KinesisIndexTaskTest
         new KinesisDataSourceMetadata(
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 4),
+                getSequenceNumber(res, shardId1, 5),
                 shardId0,
-                getSequenceNumber(res, shardId0, 1)
+                OrderedPartitionableRecord.END_OF_SHARD_MARKER
             ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
@@ -1545,12 +2071,8 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
     // Check desc2/desc3 without strong ordering because two partitions are interleaved nondeterministically
     Assert.assertEquals(
-        isIncrementalHandoffSupported
-        ? ImmutableSet.of(ImmutableList.of("d", "e", "h"))
-        : ImmutableSet.of(ImmutableList.of("d", "e"), ImmutableList.of("h")),
-        isIncrementalHandoffSupported
-        ? ImmutableSet.of(readSegmentColumn("dim1", desc2))
-        : ImmutableSet.of(readSegmentColumn("dim1", desc2), readSegmentColumn("dim1", desc3))
+        ImmutableSet.of(ImmutableList.of("d", "e"), ImmutableList.of("h")),
+        ImmutableSet.of(readSegmentColumn("dim1", desc2), readSegmentColumn("dim1", desc3))
     );
     Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", desc4));
   }
@@ -1604,7 +2126,7 @@ public class KinesisIndexTaskTest
 
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 
-    List<PutRecordsResultEntry> res2 = insertData(kinesis, generateRecordsRequests(stream, 4, 5));
+    insertData(kinesis, generateRecordsRequests(stream, 4, 5));
 
     // Start a new task
     final KinesisIndexTask task2 = createTask(
@@ -1617,7 +2139,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                OrderedPartitionableRecord.END_OF_SHARD_MARKER
+                SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER
             )),
             true,
             null,
@@ -1637,23 +2159,24 @@ public class KinesisIndexTaskTest
 
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
 
-    while (countEvents(task2) < 1) {
+    while (countEvents(task2) < 3) {
       Thread.sleep(25);
     }
 
-    // force shard to close
+    Assert.assertEquals(3, countEvents(task2));
+
     kinesis.splitShard(stream, shardId1, "somerandomshardidhah1213123");
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(2, task1.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(1, task2.getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(2, task1.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
@@ -1665,6 +2188,176 @@ public class KinesisIndexTaskTest
                 shardId1,
                 OrderedPartitionableRecord.END_OF_SHARD_MARKER
             ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
+  }
+
+  @Test(timeout = 120_000L)
+  public void testRunWithPauseAndResume() throws Exception
+  {
+    // Insert data
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream, 0, 5));
+
+    final KinesisIndexTask task = createTask(
+        "task1",
+        new KinesisIOConfig(
+            "sequence0",
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 2)
+            )),
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER
+            )),
+            true,
+            null,
+            null,
+            null,
+            LocalstackTestRunner.getEndpointKinesis(),
+            null,
+            null,
+            TestUtils.TEST_ACCESS_KEY,
+            TestUtils.TEST_SECRET_KEY,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+
+    while (countEvents(task) != 3) {
+      Thread.sleep(25);
+    }
+
+    Assert.assertEquals(3, countEvents(task));
+    Assert.assertEquals(Status.READING, task.getRunner().getStatus());
+
+    task.getRunner().pause();
+
+    while (task.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    Assert.assertEquals(Status.PAUSED, task.getRunner().getStatus());
+
+    Map<String, String> currentOffsets = task.getRunner().getCurrentOffsets();
+
+    try {
+      future.get(10, TimeUnit.SECONDS);
+      Assert.fail("Task completed when it should have been paused");
+    }
+    catch (TimeoutException e) {
+      // carry on..
+    }
+
+    Assert.assertEquals(currentOffsets, task.getRunner().getCurrentOffsets());
+
+    task.getRunner().setEndOffsets(currentOffsets, true);
+
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
+
+    // Check metrics
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(
+            stream,
+            ImmutableMap.of(
+                shardId1,
+                currentOffsets.get(shardId1)
+            )
+        )),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
+  }
+
+
+  @Test(timeout = 60_000L)
+  public void testRunContextSequenceAheadOfStartingOffsets() throws Exception
+  {
+    // This tests the case when a replacement task is created in place of a failed test
+    // which has done some incremental handoffs, thus the context will contain starting
+    // sequence sequences from which the task should start reading and ignore the start sequences
+    // Insert data
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream, 0, 6));
+
+    final TreeMap<Integer, Map<String, String>> sequences = new TreeMap<>();
+    // Here the sequence number is 1 meaning that one incremental handoff was done by the failed task
+    // and this task should start reading from stream 2 for partition 0
+    sequences.put(1, ImmutableMap.of(shardId1, getSequenceNumber(res, shardId1, 2)));
+    final Map<String, Object> context = new HashMap<>();
+    context.put("checkpoints", objectMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<String, String>>>()
+    {
+    }).writeValueAsString(sequences));
+
+
+    final KinesisIndexTask task = createTask(
+        "task1",
+        new KinesisIOConfig(
+            "sequence0",
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 0)
+            )),
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                getSequenceNumber(res, shardId1, 5)
+            )),
+            true,
+            null,
+            null,
+            null,
+            LocalstackTestRunner.getEndpointKinesis(),
+            null,
+            null,
+            TestUtils.TEST_ACCESS_KEY,
+            TestUtils.TEST_SECRET_KEY,
+            null,
+            null,
+            null,
+            false
+        ),
+        context
+    );
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+            shardId1,
+            getSequenceNumber(res, shardId1, 5)
+        ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
@@ -1745,7 +2438,8 @@ public class KinesisIndexTaskTest
     final KinesisTuningConfig tuningConfig = new KinesisTuningConfig(
         1000,
         null,
-        null,
+        maxRowsPerSegment,
+        maxTotalRows,
         new Period("P1Y"),
         null,
         null,
@@ -1758,12 +2452,14 @@ public class KinesisIndexTaskTest
         null,
         null,
         null,
-        null,
+        5000,
         null,
         null,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        maxRecordsPerPoll,
+        intermediateHandoffPeriod
     );
     final Map<String, Object> context = null;
     final KinesisIndexTask task = new KinesisIndexTask(
@@ -1791,7 +2487,8 @@ public class KinesisIndexTaskTest
     final KinesisTuningConfig tuningConfig = new KinesisTuningConfig(
         maxRowsInMemory,
         null,
-        null,
+        maxRowsPerSegment,
+        maxTotalRows,
         new Period("P1Y"),
         null,
         null,
@@ -1809,11 +2506,11 @@ public class KinesisIndexTaskTest
         null,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        maxRecordsPerPoll,
+        intermediateHandoffPeriod
     );
-    if (isIncrementalHandoffSupported) {
-      context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
-    }
+    context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
 
     final KinesisIndexTask task = new KinesisIndexTask(
         taskId,
@@ -2099,6 +2796,21 @@ public class KinesisIndexTaskTest
     return values;
   }
 
+  private void stopShards(Set<String> shards, AmazonKinesis kinesis)
+  {
+    shards.forEach(s -> kinesis.splitShard(stream, s, "somerandomshardidhah" + getRandomShardName()));
+  }
+
+  private String getRandomShardName()
+  {
+    Random random = ThreadLocalRandom.current();
+    StringBuilder s = new StringBuilder();
+    for (int i = 0; i < 10; i++) {
+      s.append((char) random.nextInt(27) + 'a');
+    }
+    return s.toString();
+  }
+
 
   public long countEvents(final Task task)
   {
@@ -2167,13 +2879,13 @@ public class KinesisIndexTaskTest
     return kinesis;
   }
 
-  private static String getSequenceNumber(List<PutRecordsResultEntry> entries, String shardId, int offset)
+  private static String getSequenceNumber(List<PutRecordsResultEntry> entries, String shardId, int stream)
   {
     List<PutRecordsResultEntry> sortedEntries = entries.stream()
                                                        .filter(e -> e.getShardId().equals(shardId))
                                                        .sorted(Comparator.comparing(e -> KinesisSequenceNumber.of(e.getSequenceNumber())))
                                                        .collect(Collectors.toList());
-    return sortedEntries.get(offset).getSequenceNumber();
+    return sortedEntries.get(stream).getSequenceNumber();
   }
 
 

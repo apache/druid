@@ -407,27 +407,27 @@ public class KafkaRecordSupplierTest
 
     recordSupplier.assign(partitions);
 
-    Assert.assertEquals(0L, (long) recordSupplier.position(partition0));
-    Assert.assertEquals(0L, (long) recordSupplier.position(partition1));
+    Assert.assertEquals(0L, (long) recordSupplier.getPosition(partition0));
+    Assert.assertEquals(0L, (long) recordSupplier.getPosition(partition1));
 
     recordSupplier.seek(partition0, 4L);
     recordSupplier.seek(partition1, 5L);
 
-    Assert.assertEquals(4L, (long) recordSupplier.position(partition0));
-    Assert.assertEquals(5L, (long) recordSupplier.position(partition1));
+    Assert.assertEquals(4L, (long) recordSupplier.getPosition(partition0));
+    Assert.assertEquals(5L, (long) recordSupplier.getPosition(partition1));
 
     recordSupplier.seekToEarliest(Collections.singleton(partition0));
-    Assert.assertEquals(0L, (long) recordSupplier.position(partition0));
+    Assert.assertEquals(0L, (long) recordSupplier.getPosition(partition0));
 
     recordSupplier.seekToLatest(Collections.singleton(partition0));
-    Assert.assertEquals(11L, (long) recordSupplier.position(partition0));
+    Assert.assertEquals(11L, (long) recordSupplier.getPosition(partition0));
 
-    long prevPos = recordSupplier.position(partition0);
+    long prevPos = recordSupplier.getPosition(partition0);
     recordSupplier.getEarliestSequenceNumber(partition0);
-    Assert.assertEquals(prevPos, (long) recordSupplier.position(partition0));
+    Assert.assertEquals(prevPos, (long) recordSupplier.getPosition(partition0));
 
     recordSupplier.getLatestSequenceNumber(partition0);
-    Assert.assertEquals(prevPos, (long) recordSupplier.position(partition0));
+    Assert.assertEquals(prevPos, (long) recordSupplier.getPosition(partition0));
 
 
     recordSupplier.close();

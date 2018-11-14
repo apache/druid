@@ -27,7 +27,7 @@ import org.joda.time.Period;
 
 public abstract class SeekableStreamSupervisorIOConfig
 {
-  private final String id;
+  private final String stream;
   private final Integer replicas;
   private final Integer taskCount;
   private final Duration taskDuration;
@@ -39,7 +39,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   private final Optional<Duration> earlyMessageRejectionPeriod;
 
   public SeekableStreamSupervisorIOConfig(
-      String id,
+      String stream,
       Integer replicas,
       Integer taskCount,
       Period taskDuration,
@@ -51,7 +51,7 @@ public abstract class SeekableStreamSupervisorIOConfig
       Period earlyMessageRejectionPeriod
   )
   {
-    this.id = Preconditions.checkNotNull(id, "id cannot be null");
+    this.stream = Preconditions.checkNotNull(stream, "stream cannot be null");
     this.replicas = replicas != null ? replicas : 1;
     this.taskCount = taskCount != null ? taskCount : 1;
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
@@ -72,9 +72,9 @@ public abstract class SeekableStreamSupervisorIOConfig
     return (period == null ? new Period(theDefault) : period).toStandardDuration();
   }
 
-  public String getId()
+  public String getStream()
   {
-    return id;
+    return stream;
   }
 
   @JsonProperty

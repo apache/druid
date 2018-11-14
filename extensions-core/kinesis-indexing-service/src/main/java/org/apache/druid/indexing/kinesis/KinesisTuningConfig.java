@@ -37,7 +37,8 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
   private static final int DEFAULT_RECORD_BUFFER_SIZE = 10000;
   private static final int DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT = 5000;
   private static final int DEFAULT_RECORD_BUFFER_FULL_WAIT = 5000;
-  private static final int DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT = 60000;
+  private static final int DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT = 10000;
+  private static final int DEFAULT_MAX_RECORDS_PER_POLL = 5;
 
 
   private final int recordBufferSize;
@@ -45,12 +46,14 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
   private final int recordBufferFullWait;
   private final int fetchSequenceNumberTimeout;
   private final Integer fetchThreads;
+  private final int maxRecordsPerPoll;
 
   @JsonCreator
   public KinesisTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
+      @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
@@ -68,14 +71,16 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod
   )
   {
     super(
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
-        null,
+        maxTotalRows,
         intermediatePersistPeriod,
         basePersistDirectory,
         maxPendingPersists,
@@ -86,7 +91,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         resetOffsetAutomatically,
         skipSequenceNumberAvailabilityCheck,
         segmentWriteOutMediumFactory,
-        null,
+        intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions
@@ -99,6 +104,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
     this.fetchSequenceNumberTimeout = fetchSequenceNumberTimeout
                                       == null ? DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT : fetchSequenceNumberTimeout;
     this.fetchThreads = fetchThreads; // we handle this being null later
+    this.maxRecordsPerPoll = maxRecordsPerPoll == null ? DEFAULT_MAX_RECORDS_PER_POLL : maxRecordsPerPoll;
 
     Preconditions.checkArgument(
         !(super.isResetOffsetAutomatically() && super.isSkipSequenceNumberAvailabilityCheck()),
@@ -113,6 +119,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),
+        getMaxTotalRows(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
         0,
@@ -130,7 +137,9 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getSegmentWriteOutMediumFactory(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        getMaxRecordsPerPoll(),
+        getIntermediateHandoffPeriod()
     );
   }
 
@@ -164,6 +173,12 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
     return fetchThreads;
   }
 
+  @JsonProperty
+  public int getMaxRecordsPerPoll()
+  {
+    return maxRecordsPerPoll;
+  }
+
   @Override
   public KinesisTuningConfig withBasePersistDirectory(File dir)
   {
@@ -171,6 +186,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),
+        getMaxTotalRows(),
         getIntermediatePersistPeriod(),
         dir,
         0,
@@ -188,7 +204,9 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         getSegmentWriteOutMediumFactory(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        getMaxRecordsPerPoll(),
+        getIntermediateHandoffPeriod()
     );
   }
 
@@ -277,6 +295,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
            ", logParseExceptions=" + isLogParseExceptions() +
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
+           ", maxRecordsPerPoll=" + maxRecordsPerPoll +
            '}';
   }
 }

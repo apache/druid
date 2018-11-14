@@ -30,7 +30,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -150,7 +150,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     Assert.assertFalse(client.resume(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
-    Assert.assertEquals(SeekableStreamIndexTask.Status.NOT_STARTED, client.getStatus(TEST_ID));
+    Assert.assertEquals(Status.NOT_STARTED, client.getStatus(TEST_ID));
     Assert.assertNull(client.getStartTime(TEST_ID));
     Assert.assertEquals(ImmutableMap.of(), client.getCurrentOffsets(TEST_ID, true));
     Assert.assertEquals(ImmutableMap.of(), client.getEndOffsets(TEST_ID));
@@ -421,7 +421,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testGetStatus() throws Exception
   {
-    SeekableStreamIndexTask.Status status = SeekableStreamIndexTask.Status.READING;
+    Status status = Status.READING;
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
@@ -435,7 +435,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    SeekableStreamIndexTask.Status results = client.getStatus(TEST_ID);
+    Status results = client.getStatus(TEST_ID);
     verifyAll();
 
     Request request = captured.getValue();
@@ -806,13 +806,13 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     replayAll();
 
     List<URL> expectedUrls = new ArrayList<>();
-    List<ListenableFuture<SeekableStreamIndexTask.Status>> futures = new ArrayList<>();
+    List<ListenableFuture<Status>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "status")));
       futures.add(client.getStatusAsync(testId));
     }
 
-    List<SeekableStreamIndexTask.Status> responses = Futures.allAsList(futures).get();
+    List<Status> responses = Futures.allAsList(futures).get();
 
     verifyAll();
     List<Request> requests = captured.getValues();
@@ -822,7 +822,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(SeekableStreamIndexTask.Status.READING, responses.get(i));
+      Assert.assertEquals(Status.READING, responses.get(i));
     }
   }
 

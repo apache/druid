@@ -78,7 +78,7 @@ public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceTy
     final SeekableStreamDataSourceMetadata<partitionType, sequenceType> that = (SeekableStreamDataSourceMetadata<partitionType, sequenceType>) other;
 
     if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
-      // Same topic, merge offsets.
+      // Same stream, merge sequences.
       final Map<partitionType, sequenceType> newMap = new HashMap<>();
 
       for (Map.Entry<partitionType, sequenceType> entry : seekableStreamPartitions.getPartitionSequenceNumberMap().entrySet()) {
@@ -91,7 +91,7 @@ public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceTy
 
       return createConcreteDataSourceMetaData(seekableStreamPartitions.getStream(), newMap);
     } else {
-      // Different topic, prefer "other".
+      // Different stream, prefer "other".
       return other;
     }
   }
