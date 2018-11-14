@@ -278,8 +278,9 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
    * @param taskid task ID to clean up resources for
    */
   @Override
-  public void shutdown(final String taskid)
+  public void shutdown(final String taskid, String reason)
   {
+    log.info("Shutdown [%s] because: [%s]", taskid, reason);
     if (runningItem != null && runningItem.getTask().getId().equals(taskid)) {
       runningItem.getResult().cancel(true);
     }
