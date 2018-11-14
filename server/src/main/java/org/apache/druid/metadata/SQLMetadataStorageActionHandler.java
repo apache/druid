@@ -454,23 +454,23 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     connector.retryWithHandle(
         (HandleCallback<Void>) handle -> {
-          DateTime createdTime = DateTimes.utc(timestamp);
-          log.info("Deleting tasks before [%s] and inactive at metastore.", createdTime.toString());
+          DateTime dateTime = DateTimes.utc(timestamp);
+          log.info("Deleting tasks older than [%s] and inactive at metastore.", dateTime.toString());
           handle.createStatement(
               StringUtils.format(
                   getSqlRemoveLogsOlderThan(),
                   logTable, entryTable
               )
           )
-                .bind("created_date", createdTime.toString())
+                .bind("date_time", dateTime.toString())
                 .execute();
           handle.createStatement(
               StringUtils.format(
-                  "DELETE FROM %s WHERE created_date < :created_date AND active = false",
+                  "DELETE FROM %s WHERE created_date < :date_time AND active = false",
                   entryTable
               )
           )
-                .bind("created_date", createdTime.toString())
+                .bind("date_time", dateTime.toString())
                 .execute();
 
           return null;
@@ -551,7 +551,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public String getSqlRemoveLogsOlderThan()
   {
     return StringUtils.format("DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
-                              + "WHERE b.created_date < :created_date and b.active = false",
+                              + "WHERE b.created_date < :date_time and b.active = false",
                               logTable, entryTable, entryTypeName
     );
   }

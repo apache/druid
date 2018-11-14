@@ -131,9 +131,9 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   void removeLock(long lockId);
 
   /**
-   * Remove the tasks created order than the given createdTime.
+   * Remove the tasks with timestamp older than given timestamp.
    * 
-   * @param timestamp timestamp to check the {@code created_date} of tasks
+   * @param timestamp timestamp in milliseconds
    */
   void removeTasksOlderThan(long timestamp);
 

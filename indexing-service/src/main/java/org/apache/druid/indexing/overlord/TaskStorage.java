@@ -76,9 +76,9 @@ public interface TaskStorage
   void removeLock(String taskid, TaskLock taskLock);
 
   /**
-   * Remove the tasks created order than the given createdTime.
+   * Remove the tasks created older than the given timestamp.
    *
-   * @param timestamp timestamp to check the {@code created_date} of tasks
+   * @param timestamp timestamp in milliseconds
    */
   void removeTasksOlderThan(long timestamp);
 
