@@ -747,7 +747,7 @@ public class KafkaSupervisor implements Supervisor
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
       log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
-      taskGroups.values().forEach(this::killTasksInGroup);
+      taskGroups.values().forEach(group -> killTasksInGroup(group, "DataSourceMetadata is not found while reset"));
       taskGroups.clear();
       partitionGroups.clear();
     } else if (!(dataSourceMetadata instanceof KafkaDataSourceMetadata)) {
@@ -811,7 +811,7 @@ public class KafkaSupervisor implements Supervisor
         if (metadataUpdateSuccess) {
           resetKafkaMetadata.getKafkaPartitions().getPartitionOffsetMap().keySet().forEach(partition -> {
             final int groupId = getTaskGroupIdForPartition(partition);
-            killTaskGroupForPartitions(ImmutableSet.of(partition));
+            killTaskGroupForPartitions(ImmutableSet.of(partition), "DataSourceMetadata is updated while reset");
             taskGroups.remove(groupId);
             partitionGroups.get(groupId).replaceAll((partitionId, offset) -> NOT_SET);
           });
@@ -828,18 +828,18 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private void killTaskGroupForPartitions(Set<Integer> partitions)
+  private void killTaskGroupForPartitions(Set<Integer> partitions, String reasonFormat, Object... args)
   {
     for (Integer partition : partitions) {
-      killTasksInGroup(taskGroups.get(getTaskGroupIdForPartition(partition)));
+      killTasksInGroup(taskGroups.get(getTaskGroupIdForPartition(partition)), reasonFormat, args);
     }
   }
 
-  private void killTasksInGroup(TaskGroup taskGroup)
+  private void killTasksInGroup(TaskGroup taskGroup, String reasonFormat, Object... args)
   {
     if (taskGroup != null) {
       for (String taskId : taskGroup.tasks.keySet()) {
-        killTask(taskId, "Killing task [%s] in the task group[%s]", taskId, taskGroup.groupId);
+        killTask(taskId, reasonFormat, args);
       }
     }
   }
@@ -1781,12 +1781,20 @@ public class KafkaSupervisor implements Supervisor
           // reset partitions offsets for this task group so that they will be re-read from metadata storage
           partitionGroups.get(groupId).replaceAll((partition, offset) -> NOT_SET);
           // kill all the tasks in this pending completion group
-          killTasksInGroup(group);
+          killTasksInGroup(
+              group,
+              "No task in pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              groupId
+          );
           // set a flag so the other pending completion groups for this set of partitions will also stop
           stopTasksInTaskGroup = true;
 
           // kill all the tasks in the currently reading task group and remove the bad task group
-          killTasksInGroup(taskGroups.remove(groupId));
+          killTasksInGroup(
+              taskGroups.remove(groupId),
+              "No task in the corresponding pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              groupId
+          );
           toRemove.add(group);
         }
       }

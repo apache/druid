@@ -1960,8 +1960,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     reset(taskQueue, indexerMetadataStorageCoordinator);
     expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id2", "Killing task [%s] in the task group[%s]", "id2", 0);
-    taskQueue.shutdown("id3", "Killing task [%s] in the task group[%s]", "id3", 0);
+    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
     replay(taskQueue, indexerMetadataStorageCoordinator);
 
     supervisor.resetInternal(null);
@@ -2046,9 +2046,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     reset(taskQueue, indexerMetadataStorageCoordinator);
     expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id1", "Killing task [%s] in the task group[%s]", "id1", 0);
-    taskQueue.shutdown("id2", "Killing task [%s] in the task group[%s]", "id2", 0);
-    taskQueue.shutdown("id3", "Killing task [%s] in the task group[%s]", "id3", 0);
+    taskQueue.shutdown("id1", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
     replay(taskQueue, indexerMetadataStorageCoordinator);
 
     supervisor.resetInternal(null);
