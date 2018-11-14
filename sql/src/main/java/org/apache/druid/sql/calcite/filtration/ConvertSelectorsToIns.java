@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -29,6 +28,8 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +55,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
       final List<DimFilter> children = Lists.newArrayList(((OrDimFilter) filter).getFields());
 
       // Group filters by dimension and extractionFn.
-      final Map<BoundRefKey, List<SelectorDimFilter>> selectors = Maps.newHashMap();
+      final Map<BoundRefKey, List<SelectorDimFilter>> selectors = new HashMap<>();
 
       for (DimFilter child : children) {
         if (child instanceof SelectorDimFilter) {
@@ -67,7 +68,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
           );
           List<SelectorDimFilter> filterList = selectors.get(boundRefKey);
           if (filterList == null) {
-            filterList = Lists.newArrayList();
+            filterList = new ArrayList<>();
             selectors.put(boundRefKey, filterList);
           }
           filterList.add(selector);
@@ -79,7 +80,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
         final List<SelectorDimFilter> filterList = entry.getValue();
         if (filterList.size() > 1) {
           // We found a simplification. Remove the old filters and add new ones.
-          final List<String> values = Lists.newArrayList();
+          final List<String> values = new ArrayList<>();
 
           for (final SelectorDimFilter selector : filterList) {
             values.add(selector.getValue());

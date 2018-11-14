@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
@@ -56,6 +55,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -72,8 +72,8 @@ public class CardinalityAggregatorTest
 
     public TestDimensionSelector(Iterable<String[]> values, ExtractionFn exFn)
     {
-      this.lookup = Maps.newHashMap();
-      this.ids = Maps.newHashMap();
+      this.lookup = new HashMap<>();
+      this.ids = new HashMap<>();
       this.exFn = exFn;
 
       int index = 0;
@@ -89,25 +89,14 @@ public class CardinalityAggregatorTest
 
       this.column = Lists.newArrayList(
           Iterables.transform(
-              values, new Function<String[], Integer[]>()
+              values,
+              new Function<String[], Integer[]>()
               {
                 @Nullable
                 @Override
                 public Integer[] apply(@Nullable String[] input)
                 {
-                  return Iterators.toArray(
-                      Iterators.transform(
-                          Iterators.forArray(input), new Function<String, Integer>()
-                          {
-                            @Nullable
-                            @Override
-                            public Integer apply(@Nullable String input)
-                            {
-                              return ids.get(input);
-                            }
-                          }
-                      ), Integer.class
-                  );
+                  return Iterators.toArray(Iterators.transform(Iterators.forArray(input), ids::get), Integer.class);
                 }
               }
           )

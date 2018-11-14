@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
@@ -72,6 +71,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -116,9 +116,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(
-      final String dataSource, final List<Interval> intervals
-  )
+  public List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
   {
     return connector.retryWithHandle(
         new HandleCallback<List<DataSegment>>()
@@ -172,7 +170,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval
   ) throws IOException
   {
-    final List<SegmentIdentifier> identifiers = Lists.newArrayList();
+    final List<SegmentIdentifier> identifiers = new ArrayList<>();
 
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
@@ -302,7 +300,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // Find which segments are used (i.e. not overshadowed).
-    final Set<DataSegment> usedSegments = Sets.newHashSet();
+    final Set<DataSegment> usedSegments = new HashSet<>();
     List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
         VersionedIntervalTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
     for (TimelineObjectHolder<String, DataSegment> holder : segmentHolders) {
@@ -326,7 +324,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               // Set definitelyNotUpdated back to false upon retrying.
               definitelyNotUpdated.set(false);
 
-              final Set<DataSegment> inserted = Sets.newHashSet();
+              final Set<DataSegment> inserted = new HashSet<>();
 
               if (startMetadata != null) {
                 final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
@@ -387,11 +385,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(interval, "interval");
     Preconditions.checkNotNull(maxVersion, "maxVersion");
 
-    return connector.retryTransaction(
-        new TransactionCallback<SegmentIdentifier>()
+    return connector.retryWithHandle(
+        new HandleCallback<SegmentIdentifier>()
         {
           @Override
-          public SegmentIdentifier inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          public SegmentIdentifier withHandle(Handle handle) throws Exception
           {
             return skipSegmentLineageCheck ?
                    allocatePendingSegment(handle, dataSource, sequenceName, interval, maxVersion) :
@@ -404,9 +402,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        maxVersion
                    );
           }
-        },
-        ALLOCATE_SEGMENT_QUIET_TRIES,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+        }
     );
   }
 
@@ -1014,9 +1010,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public boolean resetDataSourceMetadata(
-      final String dataSource, final DataSourceMetadata dataSourceMetadata
-  ) throws IOException
+  public boolean resetDataSourceMetadata(final String dataSource, final DataSourceMetadata dataSourceMetadata)
+      throws IOException
   {
     final byte[] newCommitMetadataBytes = jsonMapper.writeValueAsBytes(dataSourceMetadata);
     final String newCommitMetadataSha1 = BaseEncoding.base16().encode(
@@ -1137,7 +1132,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 .bind("end", interval.getEnd().toString())
                 .map(ByteArrayMapper.FIRST)
                 .fold(
-                    Lists.newArrayList(),
+                    new ArrayList<>(),
                     new Folder3<List<DataSegment>, byte[]>()
                     {
                       @Override

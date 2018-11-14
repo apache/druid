@@ -21,8 +21,6 @@ package org.apache.druid.java.util.common.io.smoosh;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -50,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A class that concatenates files together into configurable sized chunks,
@@ -77,12 +76,12 @@ public class FileSmoosher implements Closeable
   private final File baseDir;
   private final int maxChunkSize;
 
-  private final List<File> outFiles = Lists.newArrayList();
-  private final Map<String, Metadata> internalFiles = Maps.newTreeMap();
+  private final List<File> outFiles = new ArrayList<>();
+  private final Map<String, Metadata> internalFiles = new TreeMap<>();
   // list of files completed writing content using delegated smooshedWriter.
-  private List<File> completedFiles = Lists.newArrayList();
+  private List<File> completedFiles = new ArrayList<>();
   // list of files in process writing content using delegated smooshedWriter.
-  private List<File> filesInProcess = Lists.newArrayList();
+  private List<File> filesInProcess = new ArrayList<>();
 
   private Outer currOut = null;
   private boolean writerCurrentlyInUse = false;
@@ -250,7 +249,7 @@ public class FileSmoosher implements Closeable
   {
     // Get processed elements from the stack and write.
     List<File> fileToProcess = new ArrayList<>(completedFiles);
-    completedFiles = Lists.newArrayList();
+    completedFiles = new ArrayList<>();
     for (File file : fileToProcess) {
       add(file);
       if (!file.delete()) {

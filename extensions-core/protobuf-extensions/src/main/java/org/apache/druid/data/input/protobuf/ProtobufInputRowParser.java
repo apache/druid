@@ -111,7 +111,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
 
     fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
     if (fin == null) {
-      URL url = null;
+      URL url;
       try {
         url = new URL(descriptorFilePath);
       }
@@ -126,7 +126,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
       }
     }
 
-    DynamicSchema dynamicSchema = null;
+    DynamicSchema dynamicSchema;
     try {
       dynamicSchema = DynamicSchema.parseFrom(fin);
     }

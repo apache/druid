@@ -20,7 +20,6 @@
 package org.apache.druid.security.basic.authentication.endpoint;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -50,7 +49,7 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
   {
     this.cacheManager = cacheManager;
 
-    this.authenticatorMap = Maps.newHashMap();
+    this.authenticatorMap = new HashMap<>();
     for (Map.Entry<String, Authenticator> authenticatorEntry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
       final String authenticatorName = authenticatorEntry.getKey();
       final Authenticator authenticator = authenticatorEntry.getValue();

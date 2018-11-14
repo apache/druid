@@ -22,8 +22,6 @@ package org.apache.druid.sql.calcite.table;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -39,6 +37,8 @@ import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +54,7 @@ public class RowSignature
 
   private RowSignature(final List<Pair<String, ValueType>> columnTypeList)
   {
-    final Map<String, ValueType> columnTypes0 = Maps.newHashMap();
+    final Map<String, ValueType> columnTypes0 = new HashMap<>();
     final ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
 
     int i = 0;
@@ -228,7 +228,7 @@ public class RowSignature
 
     private Builder()
     {
-      this.columnTypeList = Lists.newArrayList();
+      this.columnTypeList = new ArrayList<>();
     }
 
     public Builder add(String columnName, ValueType columnType)

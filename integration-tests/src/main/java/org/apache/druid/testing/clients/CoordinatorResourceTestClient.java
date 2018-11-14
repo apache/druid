@@ -88,12 +88,12 @@ public class CoordinatorResourceTestClient
   // return a list of the segment dates for the specified datasource
   public List<String> getMetadataSegments(final String dataSource)
   {
-    ArrayList<String> segments = null;
+    ArrayList<String> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getMetadataSegmentsURL(dataSource));
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<ArrayList<String>>()
+          response.getContent(), new TypeReference<List<String>>()
           {
           }
       );
@@ -107,12 +107,12 @@ public class CoordinatorResourceTestClient
   // return a list of the segment dates for the specified datasource
   public List<String> getSegmentIntervals(final String dataSource)
   {
-    ArrayList<String> segments = null;
+    ArrayList<String> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<ArrayList<String>>()
+          response.getContent(), new TypeReference<List<String>>()
           {
           }
       );
@@ -125,7 +125,7 @@ public class CoordinatorResourceTestClient
 
   private Map<String, Integer> getLoadStatus()
   {
-    Map<String, Integer> status = null;
+    Map<String, Integer> status;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getLoadStatusURL());
 

@@ -20,13 +20,13 @@
 package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -52,7 +52,7 @@ public class MatchingDimExtractionFnTest
     String regex = ".*[Tt][Oo].*";
     ExtractionFn extractionFn = new MatchingDimExtractionFn(regex);
     List<String> expected = Arrays.asList("Quito", "Tokyo", "Stockholm", "Pretoria", "Wellington");
-    Set<String> extracted = Sets.newHashSet();
+    Set<String> extracted = new HashSet<>();
 
     for (String str : testStrings) {
       String res = extractionFn.apply(str);

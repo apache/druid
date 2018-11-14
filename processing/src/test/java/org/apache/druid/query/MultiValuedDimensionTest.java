@@ -22,8 +22,6 @@ package org.apache.druid.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableStupidPool;
@@ -70,9 +68,11 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -84,7 +84,7 @@ public class MultiValuedDimensionTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
       constructors.add(new Object[]{config, TmpFileSegmentWriteOutMediumFactory.instance()});
       constructors.add(new Object[]{config, OffHeapMemorySegmentWriteOutMediumFactory.instance()});
@@ -279,7 +279,7 @@ public class MultiValuedDimensionTest
           new QueryableIndexSegment("sid1", queryableIndex),
           null
       );
-      Map<String, Object> context = Maps.newHashMap();
+      Map<String, Object> context = new HashMap<>();
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<TopNResultValue>(

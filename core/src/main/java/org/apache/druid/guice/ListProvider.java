@@ -25,13 +25,14 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  */
 public class ListProvider<T> implements Provider<List<T>>
 {
-  private final List<Key<? extends T>> itemsToLoad = Lists.newArrayList();
+  private final List<Key<? extends T>> itemsToLoad = new ArrayList<>();
   private Injector injector;
 
   public ListProvider<T> add(Class<? extends T> clazz)

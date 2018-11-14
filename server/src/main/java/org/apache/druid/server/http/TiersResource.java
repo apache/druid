@@ -23,8 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -43,6 +41,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -71,12 +71,12 @@ public class TiersResource
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
     if (simple != null) {
-      Map<String, Map<String, Long>> metadata = Maps.newHashMap();
+      Map<String, Map<String, Long>> metadata = new HashMap<>();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
         Map<String, Long> tierMetadata = metadata.get(druidServer.getTier());
 
         if (tierMetadata == null) {
-          tierMetadata = Maps.newHashMap();
+          tierMetadata = new HashMap<>();
           metadata.put(druidServer.getTier(), tierMetadata);
         }
 
@@ -89,7 +89,7 @@ public class TiersResource
       return builder.entity(metadata).build();
     }
 
-    Set<String> tiers = Sets.newHashSet();
+    Set<String> tiers = new HashSet<>();
     for (DruidServer server : serverInventoryView.getInventory()) {
       tiers.add(server.getTier());
     }
@@ -112,7 +112,7 @@ public class TiersResource
           for (DataSegment dataSegment : druidServer.getSegments().values()) {
             Map<String, Object> properties = retVal.get(dataSegment.getDataSource(), dataSegment.getInterval());
             if (properties == null) {
-              properties = Maps.newHashMap();
+              properties = new HashMap<>();
               retVal.put(dataSegment.getDataSource(), dataSegment.getInterval(), properties);
             }
             properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
@@ -124,7 +124,7 @@ public class TiersResource
       return Response.ok(retVal.rowMap()).build();
     }
 
-    Set<String> retVal = Sets.newHashSet();
+    Set<String> retVal = new HashSet<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       if (druidServer.getTier().equalsIgnoreCase(tierName)) {
         retVal.addAll(

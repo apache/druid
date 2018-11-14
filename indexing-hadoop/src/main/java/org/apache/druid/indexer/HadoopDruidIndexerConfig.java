@@ -31,7 +31,6 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -75,6 +74,7 @@ import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -109,7 +109,9 @@ public class HadoopDruidIndexerConfig
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, false, null, null, true, false)
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("hadoop-indexer", null, false, null, null, true, false)
                 );
                 JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
               }
@@ -162,9 +164,7 @@ public class HadoopDruidIndexerConfig
   {
     try {
       return fromMap(
-          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-          )
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (IOException e) {
@@ -178,9 +178,7 @@ public class HadoopDruidIndexerConfig
     // This is a map to try and prevent dependency screwbally-ness
     try {
       return fromMap(
-          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              str, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-          )
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(str, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (IOException e) {
@@ -197,9 +195,7 @@ public class HadoopDruidIndexerConfig
       Reader reader = new InputStreamReader(fs.open(pt), StandardCharsets.UTF_8);
 
       return fromMap(
-          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              reader, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-          )
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(reader, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (Exception e) {
@@ -216,8 +212,8 @@ public class HadoopDruidIndexerConfig
 
   private HadoopIngestionSpec schema;
   private PathSpec pathSpec;
-  private final Map<Long, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
-  private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
+  private final Map<Long, ShardSpecLookup> shardSpecLookups = new HashMap<>();
+  private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = new HashMap<>();
   private final Granularity rollupGran;
   private final List<String> allowedHadoopPrefix;
 
@@ -248,7 +244,7 @@ public class HadoopDruidIndexerConfig
           )
       );
 
-      Map<ShardSpec, HadoopyShardSpec> innerHadoopShardSpecLookup = Maps.newHashMap();
+      Map<ShardSpec, HadoopyShardSpec> innerHadoopShardSpecLookup = new HashMap<>();
       for (HadoopyShardSpec hadoopyShardSpec : entry.getValue()) {
         innerHadoopShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
       }

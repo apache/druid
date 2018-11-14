@@ -58,14 +58,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   {
     final Iterable<CompressionStrategy> compressionStrategies = Iterables.transform(
         CompressionStrategyTest.compressionStrategies(),
-        new Function<Object[], CompressionStrategy>()
-        {
-          @Override
-          public CompressionStrategy apply(Object[] input)
-          {
-            return (CompressionStrategy) input[0];
-          }
-        }
+        (Object[] input) -> (CompressionStrategy) input[0]
     );
 
     Set<List<Object>> combinations = Sets.cartesianProduct(
@@ -74,14 +67,8 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
     );
 
     return Iterables.transform(
-        combinations, new Function<List, Object[]>()
-        {
-          @Override
-          public Object[] apply(List input)
-          {
-            return new Object[]{input.get(0), input.get(1)};
-          }
-        }
+        combinations,
+        (Function<List, Object[]>) input -> new Object[]{input.get(0), input.get(1)}
     );
   }
 

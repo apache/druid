@@ -77,9 +77,7 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(
-      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
-  )
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return baseFilter.supportsSelectivityEstimation(columnSelector, indexSelector);
   }

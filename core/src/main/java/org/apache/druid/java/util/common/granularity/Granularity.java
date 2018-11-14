@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.DateTimes;
@@ -31,6 +30,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -78,7 +78,7 @@ public abstract class Granularity implements Cacheable
 
   public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
   {
-    final List<Granularity> retVal = Lists.newArrayList();
+    final List<Granularity> retVal = new ArrayList<>();
     final DateTime origin = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getOrigin() : null;
     final DateTimeZone tz = (gran0 instanceof PeriodGranularity) ? ((PeriodGranularity) gran0).getTimeZone() : null;
     for (GranularityType gran : GranularityType.values()) {

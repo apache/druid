@@ -68,10 +68,12 @@ public class UriExtractionNamespaceTest
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
     mapper.setAnnotationIntrospectors(
         new AnnotationIntrospectorPair(
-            guiceIntrospector, mapper.getSerializationConfig().getAnnotationIntrospector()
+            guiceIntrospector,
+            mapper.getSerializationConfig().getAnnotationIntrospector()
         ),
         new AnnotationIntrospectorPair(
-            guiceIntrospector, mapper.getDeserializationConfig().getAnnotationIntrospector()
+            guiceIntrospector,
+            mapper.getDeserializationConfig().getAnnotationIntrospector()
         )
     );
     return mapper;

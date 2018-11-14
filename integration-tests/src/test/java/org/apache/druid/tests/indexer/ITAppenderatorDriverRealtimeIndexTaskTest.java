@@ -61,7 +61,7 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
     final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_NAME);
     eventReceiverSelector.start();
     BufferedReader reader = null;
-    InputStreamReader isr = null;
+    InputStreamReader isr;
     try {
       isr = new InputStreamReader(
           ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE),
@@ -102,11 +102,7 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
         String event = line.replace(TIME_PLACEHOLDER, EVENT_FMT.print(dt));
         LOG.info("sending event: [%s]\n", event);
         Collection<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
-        events.add(
-            this.jsonMapper.readValue(
-                event, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-            )
-        );
+        events.add(this.jsonMapper.readValue(event, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT));
         int eventsPosted = client.postEvents(events, this.jsonMapper, MediaType.APPLICATION_JSON);
         if (eventsPosted != events.size()) {
           throw new ISE("Event not posted");

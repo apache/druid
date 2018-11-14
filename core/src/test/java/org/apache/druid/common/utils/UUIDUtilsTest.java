@@ -57,7 +57,8 @@ public class UUIDUtilsTest
       args.add(new String[]{possibleArg});
     }
     return Collections2.transform(
-        args, new Function<String[], Object[]>()
+        args,
+        new Function<String[], Object[]>()
         {
           @Override
           public Object[] apply(String[] input)

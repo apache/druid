@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -51,6 +50,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -128,7 +128,7 @@ public class GroupByQueryRunnerFactoryTest
         }
     );
 
-    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<Row> result = mergedRunner.run(QueryPlus.wrap(query), new HashMap<>());
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),

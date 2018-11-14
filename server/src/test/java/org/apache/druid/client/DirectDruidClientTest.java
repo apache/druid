@@ -20,8 +20,6 @@
 package org.apache.druid.client;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -61,6 +59,7 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -123,9 +122,9 @@ public class DirectDruidClientTest
             "test",
             Intervals.of("2013-01-01/2013-01-02"),
             DateTimes.of("2013-01-01").toString(),
-            Maps.newHashMap(),
-            Lists.newArrayList(),
-            Lists.newArrayList(),
+            new HashMap<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
             NoneShardSpec.instance(),
             0,
             0L
@@ -241,9 +240,9 @@ public class DirectDruidClientTest
             "test",
             Intervals.of("2013-01-01/2013-01-02"),
             DateTimes.of("2013-01-01").toString(),
-            Maps.newHashMap(),
-            Lists.newArrayList(),
-            Lists.newArrayList(),
+            new HashMap<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
             NoneShardSpec.instance(),
             0,
             0L
@@ -310,9 +309,9 @@ public class DirectDruidClientTest
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
         DateTimes.of("2013-01-01").toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         0L

@@ -20,13 +20,13 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class CoordinatorStatsTest
@@ -95,7 +95,7 @@ public class CoordinatorStatsTest
         "tier2", 2L,
         "tier3", 3L
     );
-    final Map<String, Long> actual = Maps.newHashMap();
+    final Map<String, Long> actual = new HashMap<>();
 
     expected.forEach(
         (tier, count) -> stats.addToTieredStat("stat", tier, count)

@@ -134,9 +134,7 @@ public class KafkaSupervisorIOConfigTest
                      + "   \"ssl.key.password\":\"mykeypassword\"}\n"
                      + "}";
 
-    KafkaSupervisorIOConfig config = mapper.readValue(
-        jsonStr, KafkaSupervisorIOConfig.class
-    );
+    KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
     Properties props = new Properties();
     KafkaIndexTask.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
 

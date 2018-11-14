@@ -96,7 +96,7 @@
         <hadoop.compile.version>2.8.3</hadoop.compile.version>
         <hive.version>2.0.0</hive.version>
         <powermock.version>1.6.6</powermock.version>
-        <aws.sdk.bundle.version>1.11.199</aws.sdk.bundle.version>
+        <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
@@ -134,6 +134,7 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
+        <module>extensions-core/parquet-extensions</module>
         <module>extensions-core/postgresql-metadata-storage</module>
         <module>extensions-core/protobuf-extensions</module>
         <module>extensions-core/lookups-cached-global</module>
@@ -151,7 +152,6 @@
         <module>extensions-contrib/kafka-eight-simpleConsumer</module>
         <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
-        <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/orc-extensions</module>
         <module>extensions-contrib/time-min-max</module>
@@ -207,8 +207,13 @@
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bundle</artifactId>
-                <version>${aws.sdk.bundle.version}</version>
+                <artifactId>aws-java-sdk-ec2</artifactId>
+                <version>${aws.sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-s3</artifactId>
+                <version>${aws.sdk.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
@@ -332,7 +337,7 @@
             <dependency>
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_annotations</artifactId>
-                <version>2.2.0</version>
+                <version>2.3.2</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>
@@ -1071,13 +1076,34 @@
                     </excludeProperties>
                     <gitDescribe>
                         <skip>false</skip>
-                        <always>false</always>
+                        <always>true</always>
                         <abbrev>7</abbrev>
                         <dirty>-dirty</dirty>
                         <forceLongFormat>true</forceLongFormat>
                     </gitDescribe>
                 </configuration>
-            </plugin>            
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-remote-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>process-resource-bundles</id>
+                        <goals>
+                            <goal>process</goal>
+                        </goals>
+                        <configuration>
+                            <properties>
+                                <projectName>Apache Druid (incubating)</projectName>
+                            </properties>
+                            <resourceBundles>
+                                <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5-SNAPSHOT</resourceBundle>
+                                <resourceBundle>org.apache.apache.resources:apache-incubator-disclaimer-resource-bundle:1.2-SNAPSHOT</resourceBundle>
+                            </resourceBundles>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -1222,16 +1248,6 @@
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
-                <!-- Prevent the process-resource-bundles execution defined in the Apache parent POM from running -->
-                <plugin>
-                    <artifactId>maven-remote-resources-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <id>process-resource-bundles</id>
-                            <phase>none</phase>
-                        </execution>
-                    </executions>
-                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -1260,8 +1276,8 @@
                                 <arg>-Xep:PreconditionsInvalidPlaceholder:ERROR</arg>
                                 <arg>-Xep:MissingOverride:ERROR</arg>
                                 <arg>-Xep:DefaultCharset:ERROR</arg>
+                                <arg>-Xep:QualifierOrScopeOnInjectMethod:ERROR</arg>
 
-                                <arg>-Xep:ArgumentParameterSwap</arg>
                                 <arg>-Xep:AssistedInjectAndInjectOnSameConstructor</arg>
                                 <arg>-Xep:AutoFactoryAtInject</arg>
                                 <arg>-Xep:ClassName</arg>
@@ -1284,7 +1300,6 @@
                                 <arg>-Xep:NumericEquality</arg>
                                 <arg>-Xep:ParameterPackage</arg>
                                 <arg>-Xep:ProtoStringFieldReferenceEquality</arg>
-                                <arg>-Xep:QualifierOnMethodWithoutProvides</arg>
                                 <arg>-Xep:UnlockMethod</arg>
                             </compilerArgs>
                         </configuration>
@@ -1292,14 +1307,14 @@
                             <dependency>
                                 <groupId>org.codehaus.plexus</groupId>
                                 <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                                <version>2.8.1</version>
+                                <version>2.8.5</version>
                             </dependency>
                             <!-- override plexus-compiler-javac-errorprone's dependency on
                                  Error Prone with the latest version -->
                             <dependency>
                                 <groupId>com.google.errorprone</groupId>
                                 <artifactId>error_prone_core</artifactId>
-                                <version>2.0.19</version>
+                                <version>2.3.2</version>
                             </dependency>
                         </dependencies>
                     </plugin>
@@ -1342,13 +1357,10 @@
                 </plugins>
             </build>
         </profile>
+        <!-- Run Apache Rat license checks in a separate profile, because during local builds it doesn't skip files
+        that are not checked into Git -->
         <profile>
-            <!-- Run Apache Rat license checks in a separate profile, because during local builds it doesn't skip files
-            that are not checked into Git -->
             <id>rat</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -1415,37 +1427,19 @@
                                 </licenseFamily>
                             </licenseFamilies>
                             <excludes>
-                                <!--DOCS-->
-                                <exclude>**/*.md</exclude>
                                 <exclude>publications/**</exclude>
-                                <exclude>docs/**</exclude>
-                                <!--CODE STYLE-->
-                                <exclude>codestyle/*</exclude>
-                                <exclude>eclipse.importorder</exclude>
-                                <!--CODE RESOURCES-->
-                                <exclude>**/javax.annotation.processing.Processor</exclude>
-                                <exclude>**/org.apache.druid.initialization.DruidModule</exclude>
-                                <exclude>**/org/apache/druid/math/expr/antlr/Expr.g4</exclude>
-                                <exclude>**/dependency-reduced-pom.xml</exclude>
-                                <!--BUILD and TESTS-->
-                                <exclude>**/target/**</exclude>
-                                <exclude>**/build/**</exclude>
+                                <exclude>codestyle/*-forbidden-apis.txt</exclude>
+                                <exclude>quickstart/tutorial/conf/**</exclude>
+                                <exclude>docker/*.conf</exclude>
+                                <exclude>target/**</exclude>
                                 <exclude>**/test/resources/**</exclude>
-                                <exclude>**/src/test/avro/**</exclude>
-                                <exclude>**/src/test/thrift/**</exclude>
-                                <exclude>.travis.yml</exclude>
-                                <!--DEV and IT-TESTS-->
-                                <exclude>**/*.json</exclude>
-                                <exclude>**/jvm.config</exclude>
-                                <exclude>**/quickstart/protobuf/**</exclude>
-                                <exclude>**/tutorial/conf/**</exclude>
                                 <exclude>**/derby.log</exclude>
-                                <exclude>**/docker/**</exclude>
-                                <exclude>**/client_tls/**</exclude>
-                                <!--IDE MODULE FILES-->
+                                <exclude>**/jvm.config</exclude>
+                                <exclude>**/*.avsc</exclude>
                                 <exclude>**/*.iml</exclude>
-                                <!--CRASH LOGS-->
-                                <exclude>**/hs_err_pid*.log</exclude>
+                                <exclude>**/*.json</exclude>
+                                <exclude>**/*.parq</exclude>
+                                <exclude>**/*.parquet</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

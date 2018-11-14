@@ -21,7 +21,6 @@ package org.apache.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.BaseQuery;
@@ -34,6 +33,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -101,7 +101,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   )
   {
     if (results == null || results.isEmpty()) {
-      return Lists.newArrayList();
+      return new ArrayList<>();
     }
 
     DateTime max = DateTimes.MIN;

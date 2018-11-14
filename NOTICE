@@ -12,7 +12,7 @@ This product contains a modified version of Andrew Duffy's java-alphanum library
   * HOMEPAGE:
     * https://github.com/amjjd/java-alphanum
 
-This product contains conjunctive normal form conversion code and a variance aggregator algorithm adapted from Apache Hive
+This product contains conjunctive normal form conversion code, a variance aggregator algorithm, and bloom filter adapted from Apache Hive
   * LICENSE:
     * https://github.com/apache/hive/blob/branch-2.0/LICENSE (Apache License, Version 2.0)
   * HOMEPAGE:

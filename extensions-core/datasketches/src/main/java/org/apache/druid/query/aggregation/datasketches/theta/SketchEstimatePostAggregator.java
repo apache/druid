@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -31,6 +30,7 @@ import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 public class SketchEstimatePostAggregator implements PostAggregator
@@ -55,7 +55,7 @@ public class SketchEstimatePostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    Set<String> dependentFields = Sets.newHashSet();
+    Set<String> dependentFields = new HashSet<>();
     dependentFields.addAll(field.getDependentFields());
     return dependentFields;
   }

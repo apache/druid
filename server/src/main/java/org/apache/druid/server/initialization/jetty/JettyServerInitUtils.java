@@ -57,7 +57,7 @@ public class JettyServerInitUtils
     for (ServletFilterHolder servletFilterHolder : extensionFilters) {
       // Check the Filter first to guard against people who don't read the docs and return the Class even
       // when they have an instance.
-      FilterHolder holder = null;
+      FilterHolder holder;
       if (servletFilterHolder.getFilter() != null) {
         holder = new FilterHolder(servletFilterHolder.getFilter());
       } else if (servletFilterHolder.getFilterClass() != null) {

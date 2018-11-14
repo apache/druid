@@ -133,7 +133,12 @@ public class SupervisorManager
       for (String id : supervisors.keySet()) {
         SupervisorSpec spec = supervisors.get(id);
         if (!(spec instanceof NoopSupervisorSpec)) {
-          createAndStartSupervisorInternal(spec, false);
+          try {
+            createAndStartSupervisorInternal(spec, false);
+          }
+          catch (Exception ex) {
+            log.error(ex, "Failed to start supervisor: [%s]", spec.getId());
+          }
         }
       }
 
@@ -284,7 +289,7 @@ public class SupervisorManager
       metadataSupervisorManager.insert(id, spec);
     }
 
-    Supervisor supervisor = null;
+    Supervisor supervisor;
     try {
       supervisor = spec.createSupervisor();
       supervisor.start();

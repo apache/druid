@@ -20,18 +20,18 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.SocketException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class PortFinder
 {
-  private final Set<Integer> usedPorts = Sets.newHashSet();
+  private final Set<Integer> usedPorts = new HashSet<>();
   private final int startPort;
   private final int endPort;
   private final List<Integer> candidatePorts;

@@ -20,9 +20,9 @@
 package org.apache.druid.cli.convert;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -56,7 +56,7 @@ public class DataSegmentPusherDefaultConverter implements PropertyConverter
     }
 
     // It's an s3 property, which means we need to set the type and convert the other values.
-    Map<String, String> retVal = Maps.newHashMap();
+    Map<String, String> retVal = new HashMap<>();
 
     retVal.put("druid.pusher.type", type);
     retVal.putAll(new Rename("druid.pusher.s3.bucket", "druid.storage.bucket").convert(props));

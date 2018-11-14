@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -135,7 +136,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
 
   private WritableMemory getMemory(final ByteBuffer buf)
   {
-    return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b));
+    return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b, ByteOrder.LITTLE_ENDIAN));
   }
 
   /**

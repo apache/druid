@@ -21,12 +21,12 @@ package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class BottomUpTransform implements Function<Filtration, Filtration>
@@ -54,7 +54,7 @@ public abstract class BottomUpTransform implements Function<Filtration, Filtrati
   {
     if (filter instanceof AndDimFilter) {
       final List<DimFilter> oldFilters = ((AndDimFilter) filter).getFields();
-      final List<DimFilter> newFilters = Lists.newArrayList();
+      final List<DimFilter> newFilters = new ArrayList<>();
       for (DimFilter oldFilter : oldFilters) {
         final DimFilter newFilter = apply0(oldFilter);
         if (newFilter != null) {
@@ -68,7 +68,7 @@ public abstract class BottomUpTransform implements Function<Filtration, Filtrati
       }
     } else if (filter instanceof OrDimFilter) {
       final List<DimFilter> oldFilters = ((OrDimFilter) filter).getFields();
-      final List<DimFilter> newFilters = Lists.newArrayList();
+      final List<DimFilter> newFilters = new ArrayList<>();
       for (DimFilter oldFilter : oldFilters) {
         final DimFilter newFilter = apply0(oldFilter);
         if (newFilter != null) {

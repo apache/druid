@@ -81,7 +81,9 @@ public class IndexGeneratorCombinerTest
                     new HyperUniquesAggregatorFactory("unique_hosts", "host")
                 },
                 new UniformGranularitySpec(
-                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2010/2011"))
+                    Granularities.DAY,
+                    Granularities.NONE,
+                    ImmutableList.of(Intervals.of("2010/2011"))
                 ),
                 null,
                 HadoopDruidIndexerConfig.JSON_MAPPER

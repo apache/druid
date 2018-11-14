@@ -80,14 +80,18 @@ public class ClientInfoResourceTest
     addSegment(timeline, server, "2015-02-01/2015-02-07", ImmutableList.of("d1"), ImmutableList.of("m1"), "v1");
     addSegment(timeline, server, "2015-02-07/2015-02-13", ImmutableList.of("d1"), ImmutableList.of("m1"), "v1");
     addSegmentWithShardSpec(
-        timeline, server, "2015-02-03/2015-02-05",
+        timeline,
+        server,
+        "2015-02-03/2015-02-05",
         ImmutableList.of("d1", "d2"),
         ImmutableList.of("m1", "m2"),
         "v2",
         new NumberedShardSpec(0, 2)
     );
     addSegmentWithShardSpec(
-        timeline, server, "2015-02-03/2015-02-05",
+        timeline,
+        server,
+        "2015-02-03/2015-02-05",
         ImmutableList.of("d1", "d2", "d3"),
         ImmutableList.of("m1", "m2", "m3"),
         "v2",
@@ -111,7 +115,9 @@ public class ClientInfoResourceTest
 
     // imcomplete segment
     addSegmentWithShardSpec(
-        timeline, server, "2015-04-03/2015-04-05",
+        timeline,
+        server,
+        "2015-04-03/2015-04-05",
         ImmutableList.of("d4"),
         ImmutableList.of("m4"),
         "v7",
@@ -126,10 +132,7 @@ public class ClientInfoResourceTest
 
     EasyMock.replay(serverInventoryView, timelineServerView);
 
-    resource = getResourceTestHelper(
-        serverInventoryView, timelineServerView,
-        new SegmentMetadataQueryConfig()
-    );
+    resource = getResourceTestHelper(serverInventoryView, timelineServerView, new SegmentMetadataQueryConfig());
   }
 
   @Test
@@ -195,15 +198,14 @@ public class ClientInfoResourceTest
   public void testGetDatasourceWithConfiguredDefaultInterval()
   {
     ClientInfoResource defaultResource = getResourceTestHelper(
-        serverInventoryView, timelineServerView,
+        serverInventoryView,
+        timelineServerView,
         new SegmentMetadataQueryConfig("P100Y")
     );
 
     Map<String, Object> expected = ImmutableMap.of(
-        KEY_DIMENSIONS,
-        ImmutableSet.of("d1", "d2", "d3", "d4", "d5"),
-        KEY_METRICS,
-        ImmutableSet.of("m1", "m2", "m3", "m4", "m5")
+        KEY_DIMENSIONS, ImmutableSet.of("d1", "d2", "d3", "d4", "d5"),
+        KEY_METRICS, ImmutableSet.of("m1", "m2", "m3", "m4", "m5")
     );
 
     Map<String, Object> actual = defaultResource.getDatasource(dataSource, null, null);

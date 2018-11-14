@@ -21,13 +21,12 @@ package org.apache.druid.query.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.timeline.partition.ShardSpec;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,14 +116,14 @@ public class DimFilterUtils
   public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter,
                                         Map<String, Optional<RangeSet<String>>> dimensionRangeCache)
   {
-    Set<T> retSet = Sets.newLinkedHashSet();
+    Set<T> retSet = new LinkedHashSet<>();
 
     for (T obj : input) {
       ShardSpec shard = converter.apply(obj);
       boolean include = true;
 
       if (dimFilter != null && shard != null) {
-        Map<String, RangeSet<String>> filterDomain = Maps.newHashMap();
+        Map<String, RangeSet<String>> filterDomain = new HashMap<>();
         List<String> dimensions = shard.getDomainDimensions();
         for (String dimension : dimensions) {
           Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
