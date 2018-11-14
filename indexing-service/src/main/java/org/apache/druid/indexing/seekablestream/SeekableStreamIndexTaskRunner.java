@@ -209,7 +209,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
   private volatile StreamAppenderatorDriver driver;
   private volatile IngestionState ingestionState;
 
-  private volatile boolean pauseRequested = false;
+  protected volatile boolean pauseRequested = false;
   private volatile long nextCheckpointTime;
 
   private volatile CopyOnWriteArrayList<SequenceMetadata> sequences;
