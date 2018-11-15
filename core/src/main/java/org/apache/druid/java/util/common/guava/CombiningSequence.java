@@ -17,14 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.common.guava;
+package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.guava.Accumulator;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 
 import java.io.IOException;

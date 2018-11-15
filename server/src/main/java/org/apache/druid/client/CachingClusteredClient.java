@@ -32,25 +32,33 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.inject.Inject;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.client.ProcessingThreadResourcePool.ReserveResult;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.guice.annotations.Client;
+import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
+import org.apache.druid.java.util.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.ParallelMergeCombineSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -60,6 +68,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.ThreadResource;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -86,6 +95,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
@@ -101,6 +111,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final CachePopulator cachePopulator;
   private final CacheConfig cacheConfig;
   private final DruidHttpClientConfig httpClientConfig;
+  private final ExecutorService processingPool;
+  private final ProcessingThreadResourcePool processingThreadResourcePool;
 
   @Inject
   public CachingClusteredClient(
@@ -110,7 +122,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Smile ObjectMapper objectMapper,
       CachePopulator cachePopulator,
       CacheConfig cacheConfig,
-      @Client DruidHttpClientConfig httpClientConfig
+      @Client DruidHttpClientConfig httpClientConfig,
+      @Processing ExecutorService processingPool,
+      DruidProcessingConfig processingConfig
   )
   {
     this.warehouse = warehouse;
@@ -120,6 +134,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.cachePopulator = cachePopulator;
     this.cacheConfig = cacheConfig;
     this.httpClientConfig = httpClientConfig;
+    this.processingPool = processingPool;
+    this.processingThreadResourcePool = new ProcessingThreadResourcePool(processingConfig.getNumThreads());
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -285,10 +301,70 @@ public class CachingClusteredClient implements QuerySegmentWalker
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
         addSequencesFromServer(sequencesByInterval, segmentsByServer);
-        return Sequences
-            .simple(sequencesByInterval)
-            .flatMerge(seq -> seq, query.getResultOrdering());
+        return merge(sequencesByInterval);
       });
+    }
+
+    private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)
+    {
+      final int numParallelCombineThreads = QueryContexts.getNumBrokerParallelCombineThreads(query);
+
+      if (numParallelCombineThreads > 0) {
+        final ReserveResult reserveResult = processingThreadResourcePool.reserve(query, numParallelCombineThreads);
+        if (!reserveResult.isOk()) {
+          throw new ISE(
+              "Not enough processing threads. The query needs [%d] threads, but only [%d] were available",
+              numParallelCombineThreads,
+              reserveResult.getNumAvailableResources()
+          );
+        }
+        return parallelMerge(sequencesByInterval, reserveResult.getResources());
+      } else if (numParallelCombineThreads == QueryContexts.NUM_CURRENT_AVAILABLE_THREADS) {
+        final ReserveResult reserveResult = processingThreadResourcePool.reserve(query, numParallelCombineThreads);
+        if (reserveResult.isOk()) {
+          return parallelMerge(sequencesByInterval, reserveResult.getResources());
+        } else {
+          return sequentialMerge(sequencesByInterval);
+        }
+      } else if (numParallelCombineThreads == QueryContexts.NO_PARALLEL_COMBINE_THREADS) {
+        return sequentialMerge(sequencesByInterval);
+      } else {
+        throw new ISE(
+            "Unknown value[%d] for [%s]",
+            numParallelCombineThreads,
+            QueryContexts.NUM_BROKER_PARALLEL_COMBINE_THREADS
+        );
+      }
+    }
+
+    private Sequence<T> parallelMerge(
+        List<Sequence<T>> sequencesByInterval,
+        List<ReferenceCountingResourceHolder<ThreadResource>> threadResources
+    )
+    {
+      final BinaryFn<T, T, T> mergeFn = toolChest.createMergeFn(query);
+      return CombiningSequence.create(
+          new ParallelMergeCombineSequence<>(
+              processingPool,
+              sequencesByInterval,
+              query.getResultOrdering(),
+              mergeFn,
+              threadResources,
+              QueryContexts.getBrokerParallelCombineQueueSize(query),
+              QueryContexts.hasTimeout(query),
+              QueryContexts.getTimeout(query),
+              QueryContexts.getPriority(query)
+          ),
+          query.getResultOrdering(),
+          mergeFn
+      );
+    }
+
+    private Sequence<T> sequentialMerge(List<Sequence<T>> sequencesByInterval)
+    {
+      return Sequences
+          .simple(sequencesByInterval)
+          .flatMerge(seq -> seq, query.getResultOrdering());
     }
 
     private Set<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)

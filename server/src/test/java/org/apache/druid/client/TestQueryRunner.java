@@ -16,18 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.client.selector;
+package org.apache.druid.client;
 
-import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 
-/**
- * Interface to represent a single server which can participate in query processing. The main implementation is
- * {@link RemoteDruidServer}.
- */
-public interface QueryableDruidServer<T extends QueryRunner>
-{
-  DruidServer getServer();
+import java.util.List;
+import java.util.Map;
 
-  T getQueryRunner();
+public class TestQueryRunner<T> implements QueryRunner<T>
+{
+  private static final Logger log = new Logger(TestQueryRunner.class);
+
+  private final Sequence<T> sequence;
+
+  public TestQueryRunner(List<T> iterable)
+  {
+    sequence = Sequences.simple(iterable);
+  }
+
+  @Override
+  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+  {
+    return sequence;
+  }
 }

@@ -99,26 +99,25 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       QueryRunner<Result<SearchResultValue>> runner
   )
   {
-    return new ResultMergeQueryRunner<Result<SearchResultValue>>(runner)
+    return new ResultMergeQueryRunner<Result<SearchResultValue>>(runner, q -> createMergeFn((SearchQuery) q))
     {
       @Override
       protected Ordering<Result<SearchResultValue>> makeOrdering(Query<Result<SearchResultValue>> query)
       {
         return ResultGranularTimestampComparator.create(
-            ((SearchQuery) query).getGranularity(),
+            query.getGranularity(),
             query.isDescending()
         );
       }
-
-      @Override
-      protected BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>> createMergeFn(
-          Query<Result<SearchResultValue>> input
-      )
-      {
-        SearchQuery query = (SearchQuery) input;
-        return new SearchBinaryFn(query.getSort(), query.getGranularity(), query.getLimit());
-      }
     };
+  }
+
+  @Override
+  public BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>> createMergeFn(
+      SearchQuery query
+  )
+  {
+    return new SearchBinaryFn(query.getSort(), query.getGranularity(), query.getLimit());
   }
 
   @Override

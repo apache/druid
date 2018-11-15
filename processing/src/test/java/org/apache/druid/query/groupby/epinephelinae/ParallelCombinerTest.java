@@ -109,7 +109,7 @@ public class ParallelCombinerTest
     }
 
     final int leafNum = 8;
-    final List<TestIterator> iterators = new ArrayList<>(leafNum);
+    final List<CloseableIterator<Entry<Long>>> iterators = new ArrayList<>(leafNum);
     for (int i = 0; i < leafNum; i++) {
       iterators.add(new TestIterator(baseIterator.iterator()));
     }
@@ -121,6 +121,6 @@ public class ParallelCombinerTest
       }
     }
 
-    iterators.forEach(it -> Assert.assertTrue(it.isClosed()));
+    iterators.forEach(it -> Assert.assertTrue(((TestIterator) it).isClosed()));
   }
 }

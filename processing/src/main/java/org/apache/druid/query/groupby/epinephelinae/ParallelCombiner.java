@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
@@ -36,6 +35,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.AbstractPrioritizedCallable;
+import org.apache.druid.query.ParallelCombines;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -50,7 +50,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -132,7 +131,7 @@ public class ParallelCombiner<KeyType>
    * @return an iterator of the root grouper of the combining tree
    */
   public CloseableIterator<Entry<KeyType>> combine(
-      List<? extends CloseableIterator<Entry<KeyType>>> sortedIterators,
+      List<CloseableIterator<Entry<KeyType>>> sortedIterators,
       List<String> mergedDictionary
   )
   {
@@ -160,15 +159,20 @@ public class ParallelCombiner<KeyType>
 
       final Supplier<ByteBuffer> bufferSupplier = createCombineBufferSupplier(combineBuffer, numBuffers, sliceSize);
 
-      final Pair<List<CloseableIterator<Entry<KeyType>>>, List<Future>> combineIteratorAndFutures = buildCombineTree(
-          sortedIterators,
-          bufferSupplier,
-          combiningFactories,
-          leafCombineDegree,
-          mergedDictionary
-      );
+      final Pair<CloseableIterator<Entry<KeyType>>, List<Future>> combineIteratorAndFutures = ParallelCombines
+          .buildCombineTree(
+              sortedIterators,
+              leafCombineDegree,
+              intermediateCombineDegree,
+              subIterators -> runCombiner(
+                  subIterators,
+                  bufferSupplier.get(),
+                  combiningFactories,
+                  mergedDictionary
+              )
+          );
 
-      final CloseableIterator<Entry<KeyType>> combineIterator = Iterables.getOnlyElement(combineIteratorAndFutures.lhs);
+      final CloseableIterator<Entry<KeyType>> combineIterator = combineIteratorAndFutures.lhs;
       final List<Future> combineFutures = combineIteratorAndFutures.rhs;
 
       closer.register(() -> checkCombineFutures(combineFutures));
@@ -277,7 +281,7 @@ public class ParallelCombiner<KeyType>
    *
    * @return minimum number of buffers required for combining tree
    *
-   * @see #buildCombineTree
+   * @see ParallelCombines#buildCombineTree
    */
   private int computeRequiredBufferNum(int numChildNodes, int combineDegree)
   {
@@ -292,87 +296,6 @@ public class ParallelCombiner<KeyType>
     } else {
       return numCurLevelNodes +
              computeRequiredBufferNum(numChildOfParentNodes, intermediateCombineDegree);
-    }
-  }
-
-  /**
-   * Recursively build a combining tree in a bottom-up manner.  Each node of the tree is a task that combines input
-   * iterators asynchronously.
-   *
-   * @param childIterators     all iterators of the child level
-   * @param bufferSupplier     combining buffer supplier
-   * @param combiningFactories array of combining aggregator factories
-   * @param combineDegree      combining degree for the current level
-   * @param dictionary         merged dictionary
-   *
-   * @return a pair of a list of iterators of the current level in the combining tree and a list of futures of all
-   * executed combining tasks
-   */
-  private Pair<List<CloseableIterator<Entry<KeyType>>>, List<Future>> buildCombineTree(
-      List<? extends CloseableIterator<Entry<KeyType>>> childIterators,
-      Supplier<ByteBuffer> bufferSupplier,
-      AggregatorFactory[] combiningFactories,
-      int combineDegree,
-      List<String> dictionary
-  )
-  {
-    final int numChildLevelIterators = childIterators.size();
-    final List<CloseableIterator<Entry<KeyType>>> childIteratorsOfNextLevel = new ArrayList<>();
-    final List<Future> combineFutures = new ArrayList<>();
-
-    // The below algorithm creates the combining nodes of the current level. It first checks that the number of children
-    // to be combined together is 1. If it is, the intermediate combining node for that child is not needed. Instead, it
-    // can be directly connected to a node of the parent level. Here is an example of generated tree when
-    // numLeafNodes = 6 and leafCombineDegree = intermediateCombineDegree = 2. See the description of
-    // MINIMUM_LEAF_COMBINE_DEGREE for more details about leafCombineDegree and intermediateCombineDegree.
-    //
-    //      o
-    //     / \
-    //    o   \
-    //   / \   \
-    //  o   o   o
-    // / \ / \ / \
-    // o o o o o o
-    //
-    // We can expect that the aggregates can be combined as early as possible because the tree is built in a bottom-up
-    // manner.
-
-    for (int i = 0; i < numChildLevelIterators; i += combineDegree) {
-      if (i < numChildLevelIterators - 1) {
-        final List<? extends CloseableIterator<Entry<KeyType>>> subIterators = childIterators.subList(
-            i,
-            Math.min(i + combineDegree, numChildLevelIterators)
-        );
-        final Pair<CloseableIterator<Entry<KeyType>>, Future> iteratorAndFuture = runCombiner(
-            subIterators,
-            bufferSupplier.get(),
-            combiningFactories,
-            dictionary
-        );
-
-        childIteratorsOfNextLevel.add(iteratorAndFuture.lhs);
-        combineFutures.add(iteratorAndFuture.rhs);
-      } else {
-        // If there remains one child, it can be directly connected to a node of the parent level.
-        childIteratorsOfNextLevel.add(childIterators.get(i));
-      }
-    }
-
-    if (childIteratorsOfNextLevel.size() == 1) {
-      // This is the root
-      return Pair.of(childIteratorsOfNextLevel, combineFutures);
-    } else {
-      // Build the parent level iterators
-      final Pair<List<CloseableIterator<Entry<KeyType>>>, List<Future>> parentIteratorsAndFutures =
-          buildCombineTree(
-              childIteratorsOfNextLevel,
-              bufferSupplier,
-              combiningFactories,
-              intermediateCombineDegree,
-              dictionary
-          );
-      combineFutures.addAll(parentIteratorsAndFutures.rhs);
-      return Pair.of(parentIteratorsAndFutures.lhs, combineFutures);
     }
   }
 

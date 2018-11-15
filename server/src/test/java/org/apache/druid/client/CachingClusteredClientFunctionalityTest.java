@@ -32,14 +32,18 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.QueryableDruidServer;
+import org.apache.druid.client.selector.RemoteDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -98,6 +102,21 @@ public class CachingClusteredClientFunctionalityTest
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
+
+    final QueryRunner<Object> emptyQueryRunner = EasyMock.createStrictMock(QueryRunner.class);
+
+    EasyMock.expect(
+        emptyQueryRunner.run(EasyMock.anyObject(), EasyMock.anyObject())
+    ).andReturn(
+        Sequences.empty()
+    ).anyTimes();
+    EasyMock.expect(
+        serverView.getQueryRunner(EasyMock.anyObject())
+    ).andReturn(
+        emptyQueryRunner
+    ).anyTimes();
+
+    EasyMock.replay(serverView, emptyQueryRunner);
     cache = MapCache.create(100000);
     client = makeClient(
         new ForegroundCachePopulator(OBJECT_MAPPER, new CachePopulatorStats(), -1)
@@ -202,7 +221,7 @@ public class CachingClusteredClientFunctionalityTest
                   DataSegment segment
               )
               {
-                return new QueryableDruidServer(
+                return new RemoteDruidServer(
                     new DruidServer("localhost", "localhost", null, 100, ServerType.HISTORICAL, "a", 10),
                     EasyMock.createNiceMock(DirectDruidClient.class)
                 );
@@ -216,7 +235,7 @@ public class CachingClusteredClientFunctionalityTest
               )
               {
                 return Collections.singletonList(
-                    new QueryableDruidServer(
+                    new RemoteDruidServer(
                         new DruidServer("localhost", "localhost", null, 100, ServerType.HISTORICAL, "a", 10),
                         EasyMock.createNiceMock(DirectDruidClient.class)
                     )
@@ -307,11 +326,27 @@ public class CachingClusteredClientFunctionalityTest
             return mergeLimit;
           }
         },
-        new DruidHttpClientConfig() {
+        new DruidHttpClientConfig()
+        {
           @Override
           public long getMaxQueuedBytes()
           {
             return 0L;
+          }
+        },
+        Execs.multiThreaded(2, "caching-clustered-client-functionality-test"),
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return null;
+          }
+
+          @Override
+          public int getNumThreads()
+          {
+            return 2;
           }
         }
     );

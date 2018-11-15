@@ -34,12 +34,14 @@ public interface Cache
 {
   @Nullable
   byte[] get(NamedKey key);
+
   void put(NamedKey key, byte[] value);
 
   /**
    * Resulting map should not contain any null values (i.e. cache misses should not be included)
    *
    * @param keys
+   *
    * @return
    */
   Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
@@ -52,6 +54,7 @@ public interface Cache
 
   /**
    * Custom metrics not covered by CacheStats may be emitted by this method.
+   *
    * @param emitter The service emitter to emit on.
    */
   void doMonitor(ServiceEmitter emitter);
@@ -73,9 +76,9 @@ public interface Cache
     {
       final byte[] nsBytes = StringUtils.toUtf8(this.namespace);
       return ByteBuffer.allocate(Integer.BYTES + nsBytes.length + this.key.length)
-          .putInt(nsBytes.length)
-          .put(nsBytes)
-          .put(this.key).array();
+                       .putInt(nsBytes.length)
+                       .put(nsBytes)
+                       .put(this.key).array();
     }
 
     @Override

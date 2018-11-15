@@ -22,6 +22,8 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.timeline.LogicalSegment;
 
@@ -44,6 +46,16 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * @return a QueryRunner that potentially merges the stream of ordered ResultType objects
    */
   public abstract QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner);
+
+  /**
+   * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
+   * function is basically used in {@link ResultMergeQueryRunner} and can be used in
+   * {@link org.apache.druid.java.util.common.guava.ParallelMergeCombineSequence} for parallel merging.
+   */
+  public BinaryFn<ResultType, ResultType, ResultType> createMergeFn(QueryType query)
+  {
+    throw new UOE("%s doesn't support merge function", query.getClass().getCanonicalName());
+  }
 
   /**
    * Creates a {@link QueryMetrics} object that is used to generate metrics for this specific query type.  This exists

@@ -143,5 +143,4 @@ public class JodaUtilsTest
     final Period period = Intervals.ETERNITY.toDuration().toPeriod();
     Assert.assertEquals(Long.MAX_VALUE, period.getMinutes());
   }
-
 }

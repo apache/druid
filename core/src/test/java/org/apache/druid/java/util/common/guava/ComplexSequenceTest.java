@@ -17,14 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.common.guava;
+package org.apache.druid.java.util.common.guava;
 
 import com.google.common.primitives.Ints;
-import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.junit.Assert;
 import org.junit.Test;

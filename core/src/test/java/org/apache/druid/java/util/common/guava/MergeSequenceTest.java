@@ -21,7 +21,7 @@ package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -161,9 +161,8 @@ public class MergeSequenceTest
   public void testMergeOne() throws Exception
   {
     final Sequence<Integer> mergeOne = new MergeSequence<>(
-        Ordering.natural(), Sequences.simple(
-        Collections.singletonList(TestSequence.create(1))
-    )
+        Ordering.natural(),
+        Sequences.simple(Collections.singletonList(TestSequence.create(1)))
     );
 
     SequenceTestHelper.testAll(mergeOne, Collections.singletonList(1));

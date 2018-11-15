@@ -109,29 +109,28 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       QueryRunner<Result<SelectResultValue>> queryRunner
   )
   {
-    return new ResultMergeQueryRunner<Result<SelectResultValue>>(queryRunner)
+    return new ResultMergeQueryRunner<Result<SelectResultValue>>(queryRunner, q -> createMergeFn((SelectQuery) q))
     {
       @Override
       protected Ordering<Result<SelectResultValue>> makeOrdering(Query<Result<SelectResultValue>> query)
       {
         return ResultGranularTimestampComparator.create(
-            ((SelectQuery) query).getGranularity(), query.isDescending()
-        );
-      }
-
-      @Override
-      protected BinaryFn<Result<SelectResultValue>, Result<SelectResultValue>, Result<SelectResultValue>> createMergeFn(
-          Query<Result<SelectResultValue>> input
-      )
-      {
-        SelectQuery query = (SelectQuery) input;
-        return new SelectBinaryFn(
-            query.getGranularity(),
-            query.getPagingSpec(),
-            query.isDescending()
+            query.getGranularity(), query.isDescending()
         );
       }
     };
+  }
+
+  @Override
+  public BinaryFn<Result<SelectResultValue>, Result<SelectResultValue>, Result<SelectResultValue>> createMergeFn(
+      SelectQuery query
+  )
+  {
+    return new SelectBinaryFn(
+        query.getGranularity(),
+        query.getPagingSpec(),
+        query.isDescending()
+    );
   }
 
   @Override

@@ -214,6 +214,12 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
+  public BinaryFn<Row, Row, Row> createMergeFn(Query<Row> query)
+  {
+    return new GroupByBinaryFnV2((GroupByQuery) query);
+  }
+
+  @Override
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
       final GroupByQuery query,
@@ -222,18 +228,15 @@ public class GroupByStrategyV2 implements GroupByStrategy
   {
     // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
     // involve materialization)
-    final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<Row>(baseRunner)
+    final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<Row>(
+        baseRunner,
+        this::createMergeFn
+    )
     {
       @Override
       protected Ordering<Row> makeOrdering(Query<Row> queryParam)
       {
         return ((GroupByQuery) queryParam).getRowOrdering(true);
-      }
-
-      @Override
-      protected BinaryFn<Row, Row, Row> createMergeFn(Query<Row> queryParam)
-      {
-        return new GroupByBinaryFnV2((GroupByQuery) queryParam);
       }
     };
 

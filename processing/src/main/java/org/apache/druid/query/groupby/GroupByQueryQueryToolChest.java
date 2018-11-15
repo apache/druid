@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
@@ -130,6 +131,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         return runner.run(queryPlus, responseContext);
       }
     };
+  }
+
+  @Override
+  public BinaryFn<Row, Row, Row> createMergeFn(GroupByQuery query)
+  {
+    return strategySelector.strategize(query).createMergeFn(query);
   }
 
   private Sequence<Row> initAndMergeGroupByResults(

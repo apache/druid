@@ -25,7 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
+import org.apache.druid.client.selector.RemoteDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -151,12 +151,12 @@ public class DirectDruidClientTest
         new NoopServiceEmitter()
     );
 
-    QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
+    RemoteDruidServer queryableDruidServer1 = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
-    QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
+    RemoteDruidServer queryableDruidServer2 = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client2
     );
@@ -260,7 +260,7 @@ public class DirectDruidClientTest
         new NoopServiceEmitter()
     );
 
-    QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
+    RemoteDruidServer queryableDruidServer1 = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );
@@ -331,7 +331,7 @@ public class DirectDruidClientTest
         new NoopServiceEmitter()
     );
 
-    QueryableDruidServer queryableDruidServer = new QueryableDruidServer(
+    RemoteDruidServer queryableDruidServer = new RemoteDruidServer(
         new DruidServer("test1", hostName, null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client1
     );

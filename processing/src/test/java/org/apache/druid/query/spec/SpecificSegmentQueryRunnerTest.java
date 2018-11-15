@@ -68,7 +68,7 @@ public class SpecificSegmentQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(QueryPlus queryPlus, Map responseContext)
+          public Sequence<Object> run(QueryPlus queryPlus, Map responseContext)
           {
             return new Sequence()
             {

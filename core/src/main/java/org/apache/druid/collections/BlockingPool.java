@@ -24,7 +24,20 @@ import java.util.List;
 
 public interface BlockingPool<T>
 {
+  /**
+   * Returns the total pool size.
+   */
   int maxSize();
+
+  /**
+   * Returns the number of current available resources.
+   */
+  int available();
+
+  /**
+   * Poll all available resources from the pool. If there's no available resource, it returns an empty list.
+   */
+  List<ReferenceCountingResourceHolder<T>> pollAll();
 
   /**
    * Take a resource from the pool, waiting up to the

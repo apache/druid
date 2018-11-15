@@ -113,32 +113,31 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       QueryRunner<Result<TopNResultValue>> runner
   )
   {
-    return new ResultMergeQueryRunner<Result<TopNResultValue>>(runner)
+    return new ResultMergeQueryRunner<Result<TopNResultValue>>(runner, q -> createMergeFn((TopNQuery) q))
     {
       @Override
       protected Ordering<Result<TopNResultValue>> makeOrdering(Query<Result<TopNResultValue>> query)
       {
         return ResultGranularTimestampComparator.create(
-            ((TopNQuery) query).getGranularity(), query.isDescending()
-        );
-      }
-
-      @Override
-      protected BinaryFn<Result<TopNResultValue>, Result<TopNResultValue>, Result<TopNResultValue>> createMergeFn(
-          Query<Result<TopNResultValue>> input
-      )
-      {
-        TopNQuery query = (TopNQuery) input;
-        return new TopNBinaryFn(
-            query.getGranularity(),
-            query.getDimensionSpec(),
-            query.getTopNMetricSpec(),
-            query.getThreshold(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            query.getGranularity(), query.isDescending()
         );
       }
     };
+  }
+
+  @Override
+  public BinaryFn<Result<TopNResultValue>, Result<TopNResultValue>, Result<TopNResultValue>> createMergeFn(
+      TopNQuery query
+  )
+  {
+    return new TopNBinaryFn(
+        query.getGranularity(),
+        query.getDimensionSpec(),
+        query.getTopNMetricSpec(),
+        query.getThreshold(),
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs()
+    );
   }
 
   @Override

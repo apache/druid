@@ -22,7 +22,9 @@ package org.apache.druid.query.groupby.strategy;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -30,6 +32,7 @@ import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.segment.StorageAdapter;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -66,6 +69,15 @@ public interface GroupByStrategy
       QueryRunner<Row> runner,
       GroupByQueryQueryToolChest toolChest
   );
+
+  /**
+   * See {@link org.apache.druid.query.QueryToolChest#createMergeFn(Query)}.
+   */
+  @Nullable
+  default BinaryFn<Row, Row, Row> createMergeFn(Query<Row> query)
+  {
+    return null;
+  }
 
   Sequence<Row> mergeResults(QueryRunner<Row> baseRunner, GroupByQuery query, Map<String, Object> responseContext);
 

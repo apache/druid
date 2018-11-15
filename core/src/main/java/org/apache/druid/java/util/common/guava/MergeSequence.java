@@ -46,22 +46,20 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
-    PriorityQueue<Yielder<T>> pQueue = new PriorityQueue<>(
-        32,
-        ordering.onResultOf(
-            new Function<Yielder<T>, T>()
-            {
-              @Override
-              public T apply(Yielder<T> input)
-              {
-                return input.get();
-              }
-            }
-        )
-    );
-
-    pQueue = baseSequences.accumulate(
-        pQueue,
+    PriorityQueue<Yielder<T>> pQueue = baseSequences.accumulate(
+        new PriorityQueue<>(
+            32,
+            ordering.onResultOf(
+                new Function<Yielder<T>, T>()
+                {
+                  @Override
+                  public T apply(Yielder<T> input)
+                  {
+                    return input.get();
+                  }
+                }
+            )
+        ),
         (queue, in) -> {
           final Yielder<T> yielder = in.toYielder(
               null,

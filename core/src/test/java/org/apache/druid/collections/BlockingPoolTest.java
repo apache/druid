@@ -86,9 +86,9 @@ public class BlockingPoolTest
   {
     final ReferenceCountingResourceHolder<Integer> holder = pool.take(100);
     assertNotNull(holder);
-    assertEquals(9, pool.getPoolSize());
+    assertEquals(9, pool.available());
     holder.close();
-    assertEquals(10, pool.getPoolSize());
+    assertEquals(10, pool.available());
   }
 
   @Test(timeout = 60_000L)
@@ -106,9 +106,9 @@ public class BlockingPoolTest
     final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(6, 100L);
     assertNotNull(holder);
     assertEquals(6, holder.size());
-    assertEquals(4, pool.getPoolSize());
+    assertEquals(4, pool.available());
     holder.forEach(ReferenceCountingResourceHolder::close);
-    assertEquals(10, pool.getPoolSize());
+    assertEquals(10, pool.available());
   }
 
   @Test(timeout = 60_000L)
@@ -117,7 +117,7 @@ public class BlockingPoolTest
     List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 10);
     assertNotNull(batchHolder);
     assertEquals(10, batchHolder.size());
-    assertEquals(0, pool.getPoolSize());
+    assertEquals(0, pool.available());
 
     final Future<List<ReferenceCountingResourceHolder<Integer>>> future = service.submit(
         () -> pool.takeBatch(8, 100)
@@ -128,10 +128,10 @@ public class BlockingPoolTest
     batchHolder = future.get();
     assertNotNull(batchHolder);
     assertEquals(8, batchHolder.size());
-    assertEquals(2, pool.getPoolSize());
+    assertEquals(2, pool.available());
 
     batchHolder.forEach(ReferenceCountingResourceHolder::close);
-    assertEquals(10, pool.getPoolSize());
+    assertEquals(10, pool.available());
   }
 
   @Test(timeout = 60_000L)
@@ -179,7 +179,7 @@ public class BlockingPoolTest
     final List<ReferenceCountingResourceHolder<Integer>> r1 = f1.get();
     final List<ReferenceCountingResourceHolder<Integer>> r2 = f2.get();
 
-    assertEquals(0, pool.getPoolSize());
+    assertEquals(0, pool.available());
     assertTrue(r1.contains(null) || r2.contains(null));
 
     int nonNullCount = 0;
@@ -224,7 +224,7 @@ public class BlockingPoolTest
     future1.get();
     future2.get();
 
-    assertEquals(pool.maxSize(), pool.getPoolSize());
+    assertEquals(pool.maxSize(), pool.available());
   }
 
   @Test(timeout = 60_000L)
@@ -244,17 +244,17 @@ public class BlockingPoolTest
 
     if (r1 != null) {
       assertTrue(r2.isEmpty());
-      assertEquals(pool.maxSize() - batch1, pool.getPoolSize());
+      assertEquals(pool.maxSize() - batch1, pool.available());
       assertEquals(batch1, r1.size());
       r1.forEach(ReferenceCountingResourceHolder::close);
     } else {
       assertNotNull(r2);
-      assertEquals(pool.maxSize() - batch2, pool.getPoolSize());
+      assertEquals(pool.maxSize() - batch2, pool.available());
       assertEquals(batch2, r2.size());
       r2.forEach(ReferenceCountingResourceHolder::close);
     }
 
-    assertEquals(pool.maxSize(), pool.getPoolSize());
+    assertEquals(pool.maxSize(), pool.available());
   }
 
   @Test(timeout = 60_000L)
@@ -276,7 +276,7 @@ public class BlockingPoolTest
     assertNotNull(r2);
     assertEquals(batch1, r1.size());
     assertEquals(batch2, r2.size());
-    assertEquals(0, pool.getPoolSize());
+    assertEquals(0, pool.available());
 
     final Future future1 = service.submit(new Runnable()
     {
@@ -298,7 +298,7 @@ public class BlockingPoolTest
     future1.get();
     future2.get();
 
-    assertEquals(pool.maxSize(), pool.getPoolSize());
+    assertEquals(pool.maxSize(), pool.available());
   }
 
   @Test(timeout = 60_000L)
@@ -328,9 +328,9 @@ public class BlockingPoolTest
     f1.get();
     assertNotNull(r2);
     assertEquals(10, r2.size());
-    assertEquals(0, pool.getPoolSize());
+    assertEquals(0, pool.available());
 
     r2.forEach(ReferenceCountingResourceHolder::close);
-    assertEquals(pool.maxSize(), pool.getPoolSize());
+    assertEquals(pool.maxSize(), pool.available());
   }
 }

@@ -20,33 +20,37 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.Ordering;
-import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  */
 @PublicApi
 public abstract class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRunner<T>
 {
-  public ResultMergeQueryRunner(
-      QueryRunner<T> baseRunner
-  )
+  private final Function<Query<T>, BinaryFn<T, T, T>> mergeFnGenerator;
+
+  public ResultMergeQueryRunner(QueryRunner<T> baseRunner, Function<Query<T>, BinaryFn<T, T, T>> mergeFnGenerator)
   {
     super(baseRunner);
+    this.mergeFnGenerator = mergeFnGenerator;
   }
 
   @Override
   public Sequence<T> doRun(QueryRunner<T> baseRunner, QueryPlus<T> queryPlus, Map<String, Object> context)
   {
     Query<T> query = queryPlus.getQuery();
-    return CombiningSequence.create(baseRunner.run(queryPlus, context), makeOrdering(query), createMergeFn(query));
+    return CombiningSequence.create(
+        baseRunner.run(queryPlus, context),
+        makeOrdering(query),
+        mergeFnGenerator.apply(query)
+    );
   }
 
   protected abstract Ordering<T> makeOrdering(Query<T> query);
-
-  protected abstract BinaryFn<T, T, T> createMergeFn(Query<T> query);
 }

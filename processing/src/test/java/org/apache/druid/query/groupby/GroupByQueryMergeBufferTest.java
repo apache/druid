@@ -74,7 +74,7 @@ public class GroupByQueryMergeBufferTest
     public ReferenceCountingResourceHolder<ByteBuffer> take(final long timeout)
     {
       final ReferenceCountingResourceHolder<ByteBuffer> holder = super.take(timeout);
-      final int poolSize = getPoolSize();
+      final int poolSize = available();
       if (minRemainBufferNum > poolSize) {
         minRemainBufferNum = poolSize;
       }
@@ -85,7 +85,7 @@ public class GroupByQueryMergeBufferTest
     public List<ReferenceCountingResourceHolder<ByteBuffer>> takeBatch(final int maxElements, final long timeout)
     {
       final List<ReferenceCountingResourceHolder<ByteBuffer>> holder = super.takeBatch(maxElements, timeout);
-      final int poolSize = getPoolSize();
+      final int poolSize = available();
       if (minRemainBufferNum > poolSize) {
         minRemainBufferNum = poolSize;
       }
@@ -245,7 +245,7 @@ public class GroupByQueryMergeBufferTest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
     assertEquals(2, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    assertEquals(3, mergeBufferPool.available());
   }
 
   @Test
@@ -273,7 +273,7 @@ public class GroupByQueryMergeBufferTest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
     assertEquals(1, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    assertEquals(3, mergeBufferPool.available());
   }
 
   @Test
@@ -313,7 +313,7 @@ public class GroupByQueryMergeBufferTest
 
     // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
     assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    assertEquals(3, mergeBufferPool.available());
   }
 
   @Test
@@ -366,6 +366,6 @@ public class GroupByQueryMergeBufferTest
 
     // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
     assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    assertEquals(3, mergeBufferPool.available());
   }
 }

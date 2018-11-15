@@ -105,4 +105,9 @@ public interface Sequence<T>
   {
     return Sequences.withBaggage(this, baggage);
   }
+
+  default Yielder<T> each()
+  {
+    return Yielders.each(this);
+  }
 }

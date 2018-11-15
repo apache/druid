@@ -40,9 +40,10 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
   public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> fn)
   {
     IterType iterator = maker.make();
+    OutType accumulated = initValue;
     try {
       while (iterator.hasNext()) {
-        initValue = fn.accumulate(initValue, iterator.next());
+        accumulated = fn.accumulate(accumulated, iterator.next());
       }
     }
     catch (Throwable t) {
@@ -55,7 +56,7 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
       throw t;
     }
     maker.cleanup(iterator);
-    return initValue;
+    return accumulated;
   }
 
   @Override

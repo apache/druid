@@ -70,10 +70,34 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     return maxSize;
   }
 
-  @VisibleForTesting
-  public int getPoolSize()
+  @Override
+  public int available()
   {
-    return objects.size();
+    final ReentrantLock lock = this.lock;
+    lock.lock();
+    try {
+      return objects.size();
+    }
+    finally {
+      lock.unlock();
+    }
+  }
+
+  @Override
+  public List<ReferenceCountingResourceHolder<T>> pollAll()
+  {
+    checkInitialized();
+    final ReentrantLock lock = this.lock;
+    lock.lock();
+    try {
+      final List<T> list = new ArrayList<>(objects.size());
+      list.addAll(objects);
+      objects.clear();
+      return list.stream().map(this::wrapObject).collect(Collectors.toList());
+    }
+    finally {
+      lock.unlock();
+    }
   }
 
   @Override

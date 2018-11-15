@@ -99,6 +99,11 @@ public final class DateTimes
     return new DateTime(instant, ISOChronology.getInstanceUTC());
   }
 
+  public static DateTime of(String format, Object... formatArgs)
+  {
+    return of(StringUtils.format(format, formatArgs));
+  }
+
   public static DateTime of(
       int year,
       int monthOfYear,

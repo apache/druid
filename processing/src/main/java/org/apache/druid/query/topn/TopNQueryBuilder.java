@@ -246,6 +246,12 @@ public class TopNQueryBuilder
     return this;
   }
 
+  public TopNQueryBuilder aggregators(AggregatorFactory... aggregators)
+  {
+    aggregatorSpecs = Lists.newArrayList(aggregators);
+    return this;
+  }
+
   @SuppressWarnings("unchecked")
   public TopNQueryBuilder aggregators(List<? extends AggregatorFactory> a)
   {

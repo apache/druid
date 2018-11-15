@@ -44,11 +44,11 @@ public class TierSelectorStrategyTest
   public void testHighestPriorityTierSelectorStrategy()
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
-    QueryableDruidServer lowPriority = new QueryableDruidServer(
+    RemoteDruidServer lowPriority = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client
     );
-    QueryableDruidServer highPriority = new QueryableDruidServer(
+    RemoteDruidServer highPriority = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
         client
     );
@@ -63,11 +63,11 @@ public class TierSelectorStrategyTest
   public void testLowestPriorityTierSelectorStrategy()
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
-    QueryableDruidServer lowPriority = new QueryableDruidServer(
+    RemoteDruidServer lowPriority = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client
     );
-    QueryableDruidServer highPriority = new QueryableDruidServer(
+    RemoteDruidServer highPriority = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
         client
     );
@@ -82,15 +82,15 @@ public class TierSelectorStrategyTest
   public void testCustomPriorityTierSelectorStrategy()
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
-    QueryableDruidServer lowPriority = new QueryableDruidServer(
+    RemoteDruidServer lowPriority = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
         client
     );
-    QueryableDruidServer mediumPriority = new QueryableDruidServer(
+    RemoteDruidServer mediumPriority = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client
     );
-    QueryableDruidServer highPriority = new QueryableDruidServer(
+    RemoteDruidServer highPriority = new RemoteDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
         client
     );
@@ -113,7 +113,7 @@ public class TierSelectorStrategyTest
 
   private void testTierSelectorStrategy(
       TierSelectorStrategy tierSelectorStrategy,
-      QueryableDruidServer... expectedSelection
+      RemoteDruidServer... expectedSelection
   )
   {
     final ServerSelector serverSelector = new ServerSelector(
@@ -131,14 +131,14 @@ public class TierSelectorStrategyTest
         tierSelectorStrategy
     );
 
-    List<QueryableDruidServer> servers = new ArrayList<>(Arrays.asList(expectedSelection));
+    List<RemoteDruidServer> servers = new ArrayList<>(Arrays.asList(expectedSelection));
 
     List<DruidServerMetadata> expectedCandidates = new ArrayList<>();
-    for (QueryableDruidServer server : servers) {
+    for (RemoteDruidServer server : servers) {
       expectedCandidates.add(server.getServer().getMetadata());
     }
     Collections.shuffle(servers);
-    for (QueryableDruidServer server : servers) {
+    for (RemoteDruidServer server : servers) {
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
 

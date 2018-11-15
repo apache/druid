@@ -16,18 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.client.selector;
-
-import org.apache.druid.client.DruidServer;
-import org.apache.druid.query.QueryRunner;
+package org.apache.druid.query;
 
 /**
- * Interface to represent a single server which can participate in query processing. The main implementation is
- * {@link RemoteDruidServer}.
+ * This class can be used to represent a single thread resource when multiple callers contend with each other to get
+ * thread resources. See org.apache.druid.client.ProcessingThreadResourcePool as an example.
  */
-public interface QueryableDruidServer<T extends QueryRunner>
+public class ThreadResource
 {
-  DruidServer getServer();
-
-  T getQueryRunner();
 }
