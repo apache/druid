@@ -819,10 +819,10 @@ public class ExpressionsTest extends CalciteTestBase
   )
   {
     final DruidExpression expression = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
-    Assert.assertEquals("Expression for: " + rexNode.toString(), expectedExpression, expression);
+    Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
 
     final ExprEval result = Parser.parse(expression.getExpression(), plannerContext.getExprMacroTable())
                                   .eval(Parser.withMap(bindings));
-    Assert.assertEquals("Result for: " + rexNode.toString(), expectedResult, result.value());
+    Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }
 }

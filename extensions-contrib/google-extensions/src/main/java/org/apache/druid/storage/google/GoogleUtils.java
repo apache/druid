@@ -27,14 +27,12 @@ public class GoogleUtils
 {
   public static String toFilename(String path)
   {
-    String filename = path.substring(path.lastIndexOf("/") + 1); // characters after last '/'
-    filename = filename.substring(0, filename.length());
-    return filename;
+    return path.substring(path.lastIndexOf('/') + 1); // characters after last '/'
   }
 
   public static String indexZipForSegmentPath(String path)
   {
-    return path.substring(0, path.lastIndexOf("/")) + "/index.zip";
+    return path.substring(0, path.lastIndexOf('/')) + "/index.zip";
   }
 
   public static boolean isRetryable(Throwable t)

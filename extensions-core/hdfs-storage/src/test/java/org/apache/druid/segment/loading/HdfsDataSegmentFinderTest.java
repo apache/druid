@@ -306,13 +306,13 @@ public class HdfsDataSegmentFinderTest
   private String getDescriptorPath(DataSegment segment)
   {
     final Path indexzip = new Path(String.valueOf(segment.getLoadSpec().get("path")));
-    return indexzip.getParent().toString() + "/" + DESCRIPTOR_JSON;
+    return indexzip.getParent() + "/" + DESCRIPTOR_JSON;
   }
 
   private String getDescriptorPathWithPartitionNum(DataSegment segment, int partitionNum)
   {
     final Path indexzip = new Path(String.valueOf(segment.getLoadSpec().get("path")));
-    return indexzip.getParent().toString() + "/" + partitionNum + "_" + DESCRIPTOR_JSON;
+    return indexzip.getParent() + "/" + partitionNum + "_" + DESCRIPTOR_JSON;
   }
 
   private String readContent(Path descriptor) throws IOException

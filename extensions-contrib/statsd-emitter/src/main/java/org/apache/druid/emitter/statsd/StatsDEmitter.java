@@ -25,12 +25,14 @@ import com.google.common.collect.ImmutableList;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  */
@@ -38,9 +40,9 @@ public class StatsDEmitter implements Emitter
 {
 
   private static final Logger log = new Logger(StatsDEmitter.class);
-  private static final String DRUID_METRIC_SEPARATOR = "\\/";
-  private static final String STATSD_SEPARATOR = ":|\\|";
-  private static final String BLANK = "\\s+";
+  private static final char DRUID_METRIC_SEPARATOR = '/';
+  private static final Pattern STATSD_SEPARATOR = Pattern.compile("[:|]");
+  private static final Pattern BLANK = Pattern.compile("\\s+");
 
   static final StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
@@ -101,11 +103,10 @@ public class StatsDEmitter implements Emitter
 
       if (statsDMetric != null) {
 
-        String fullName = Joiner.on(config.getSeparator())
-                                .join(nameBuilder.build())
-                                .replaceAll(DRUID_METRIC_SEPARATOR, config.getSeparator())
-                                .replaceAll(STATSD_SEPARATOR, config.getSeparator())
-                                .replaceAll(BLANK, config.getBlankHolder());
+        String fullName = Joiner.on(config.getSeparator()).join(nameBuilder.build());
+        fullName = StringUtils.replaceChar(fullName, DRUID_METRIC_SEPARATOR, config.getSeparator());
+        fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
+        fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
 
         long val = statsDMetric.convertRange ? Math.round(value.doubleValue() * 100) : value.longValue();
         switch (statsDMetric.type) {

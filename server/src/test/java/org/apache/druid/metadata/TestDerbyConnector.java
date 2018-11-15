@@ -67,7 +67,7 @@ public class TestDerbyConnector extends DerbyConnector
 
   public static String dbSafeUUID()
   {
-    return UUID.randomUUID().toString().replace("-", "");
+    return StringUtils.removeChar(UUID.randomUUID().toString(), '-');
   }
 
   public String getJdbcUri()

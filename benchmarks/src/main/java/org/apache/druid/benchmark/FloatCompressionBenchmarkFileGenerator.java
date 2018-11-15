@@ -139,7 +139,7 @@ public class FloatCompressionBenchmarkFileGenerator
     // create compressed files using all combinations of CompressionStrategy and FloatEncoding provided
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
       for (CompressionStrategy compression : compressions) {
-        String name = entry.getKey() + "-" + compression.toString();
+        String name = entry.getKey() + "-" + compression;
         log.info("%s: ", name);
         File compFile = new File(dir, name);
         compFile.delete();

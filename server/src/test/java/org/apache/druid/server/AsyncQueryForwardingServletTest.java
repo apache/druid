@@ -39,6 +39,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -350,11 +351,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             @Override
             protected String rewriteURI(HttpServletRequest request, String scheme, String host)
             {
-              String uri = super.rewriteURI(request, scheme, host).toString();
+              String uri = super.rewriteURI(request, scheme, host);
               if (uri.contains("/druid/v2")) {
-                return URI.create(uri.replace("/druid/v2", "/default")).toString();
+                return URI.create(StringUtils.replace(uri, "/druid/v2", "/default")).toString();
               }
-              return URI.create(uri.replace("/proxy", "")).toString();
+              return URI.create(StringUtils.replace(uri, "/proxy", "")).toString();
             }
           });
       //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
