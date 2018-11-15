@@ -61,7 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Threads(8)
 public class IndexIngestionMultiThreadedBenchmark
 {
-  @Param({"10000"})
+  @Param({"100"})
   private int rowsPerSegmentPerThread;
 
   @Param({"basic"})
@@ -167,10 +167,10 @@ public class IndexIngestionMultiThreadedBenchmark
   @Benchmark
   @BenchmarkMode(Mode.SingleShotTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addRows(Blackhole blackhole, ThreadState threadState) throws Exception
+  public void addRows(Blackhole blackhole, ThreadState threadState, BenchmarkParams params) throws Exception
   {
-    for (int i = 0; i < rowsPerSegmentPerThread; i++) {
-      InputRow row = rows.get(i + threadState.startIndex);
+    for (int i = threadState.startIndex; i < rowsPerSegmentPerThread; i += params.getThreads()) {
+      InputRow row = rows.get(i);
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
