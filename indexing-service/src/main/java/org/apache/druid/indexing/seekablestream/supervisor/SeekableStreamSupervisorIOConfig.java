@@ -72,6 +72,7 @@ public abstract class SeekableStreamSupervisorIOConfig
     return (period == null ? new Period(theDefault) : period).toStandardDuration();
   }
 
+  @JsonProperty
   public String getStream()
   {
     return stream;
