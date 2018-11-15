@@ -346,8 +346,7 @@ public class MaterializedViewSupervisor implements Supervisor
           && !toBuildInterval.get(interval).equals(runningVersion.get(interval))
       ) {
         if (taskMaster.getTaskQueue().isPresent()) {
-          taskMaster.getTaskQueue().get().shutdown(
-              runningTasks.get(interval).getId(), "version mismatch");
+          taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId(), "version mismatch");
           runningTasks.remove(interval);
         }
       }
