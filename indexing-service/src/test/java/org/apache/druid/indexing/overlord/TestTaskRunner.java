@@ -236,7 +236,7 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
   }
 
   @Override
-  public void shutdown(final String taskid)
+  public void shutdown(final String taskid, String reason)
   {
     for (final TaskRunnerWorkItem runningItem : runningItems) {
       if (runningItem.getTaskId().equals(taskid)) {
