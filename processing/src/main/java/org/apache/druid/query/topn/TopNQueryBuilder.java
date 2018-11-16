@@ -248,7 +248,7 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder aggregators(AggregatorFactory... aggregators)
   {
-    aggregatorSpecs = Lists.newArrayList(aggregators);
+    aggregatorSpecs = Arrays.asList(aggregators);
     return this;
   }
 
