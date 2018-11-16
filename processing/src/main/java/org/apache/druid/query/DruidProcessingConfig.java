@@ -47,7 +47,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   {
     int sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
     if (sizeBytesConfigured != DEFAULT_PROCESSING_BUFFER_SIZE_BYTES) {
-      return Math.min(sizeBytesConfigured, Integer.MAX_VALUE);
+      return sizeBytesConfigured;
     } else if (computedBufferSizeBytes.get() != null) {
       return computedBufferSizeBytes.get();
     }
@@ -62,7 +62,8 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     final int computedSizePerBuffer = Math.min(sizePerBuffer, MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
     if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
       log.info(
-          "Auto sizing buffers to [%,d] bytes for [%,d] processing and [%,d] merge buffers out of [%,d] total",
+          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers " +
+          "out of [%,d] max direct memory",
           computedSizePerBuffer,
           numProcessingThreads,
           numMergeBuffers,
