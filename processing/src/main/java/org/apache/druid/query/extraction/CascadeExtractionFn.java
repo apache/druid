@@ -178,8 +178,7 @@ public class CascadeExtractionFn implements ExtractionFn
   @Override
   public String toString()
   {
-    return "CascadeExtractionFn{" +
-           "extractionFns=[" + chainedExtractionFn.toString() + "]}";
+    return "CascadeExtractionFn{extractionFns=[" + chainedExtractionFn + "]}";
   }
 
   private static class ChainedExtractionFn

@@ -26,6 +26,11 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.util.concurrent.ExecutorService;
 
+/**
+ * This class is deprecated and will removed in the future.
+ * See https://github.com/apache/incubator-druid/pull/4004#issuecomment-284171911 for details about deprecation.
+ */
+@Deprecated
 public class IntervalChunkingQueryRunnerDecorator
 {
   private final ExecutorService executor;

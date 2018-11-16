@@ -135,7 +135,7 @@ public class HdfsTaskLogs implements TaskLogs
    */
   private Path getTaskLogFileFromId(String taskId)
   {
-    return new Path(mergePaths(config.getDirectory(), taskId.replaceAll(":", "_")));
+    return new Path(mergePaths(config.getDirectory(), taskId.replace(':', '_')));
   }
 
   /**
@@ -144,7 +144,7 @@ public class HdfsTaskLogs implements TaskLogs
    */
   private Path getTaskReportsFileFromId(String taskId)
   {
-    return new Path(mergePaths(config.getDirectory(), taskId.replaceAll(":", "_") + ".reports.json"));
+    return new Path(mergePaths(config.getDirectory(), taskId.replace(':', '_') + ".reports.json"));
   }
 
   // some hadoop version Path.mergePaths does not exist

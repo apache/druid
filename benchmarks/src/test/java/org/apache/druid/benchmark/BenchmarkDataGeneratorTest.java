@@ -443,7 +443,7 @@ public class BenchmarkDataGeneratorTest
         Collections.sort(valList);
 
         for (Comparable val : valList) {
-          System.out.println(" VAL: " + val.toString() + " CNT: " + valueMap.get(val));
+          System.out.println(" VAL: " + val + " CNT: " + valueMap.get(val));
         }
         System.out.println();
       }

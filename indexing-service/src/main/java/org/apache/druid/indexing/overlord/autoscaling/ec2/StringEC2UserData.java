@@ -24,16 +24,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
+import java.util.Objects;
+
 public class StringEC2UserData implements EC2UserData<StringEC2UserData>
 {
   private final String data;
+  @Nullable
   private final String versionReplacementString;
   private final String version;
 
   @JsonCreator
   public StringEC2UserData(
       @JsonProperty("data") String data,
-      @JsonProperty("versionReplacementString") String versionReplacementString,
+      @JsonProperty("versionReplacementString") @Nullable String versionReplacementString,
       @JsonProperty("version") String version
   )
   {
@@ -48,6 +52,7 @@ public class StringEC2UserData implements EC2UserData<StringEC2UserData>
     return data;
   }
 
+  @Nullable
   @JsonProperty
   public String getVersionReplacementString()
   {
@@ -71,7 +76,7 @@ public class StringEC2UserData implements EC2UserData<StringEC2UserData>
   {
     final String finalData;
     if (versionReplacementString != null && version != null) {
-      finalData = data.replace(versionReplacementString, version);
+      finalData = StringUtils.replace(data, versionReplacementString, version);
     } else {
       finalData = data;
     }
@@ -93,25 +98,16 @@ public class StringEC2UserData implements EC2UserData<StringEC2UserData>
     if (data != null ? !data.equals(that.data) : that.data != null) {
       return false;
     }
-    if (version != null ? !version.equals(that.version) : that.version != null) {
+    if (!Objects.equals(version, that.version)) {
       return false;
     }
-    if (versionReplacementString != null
-        ? !versionReplacementString.equals(that.versionReplacementString)
-        : that.versionReplacementString != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(versionReplacementString, that.versionReplacementString);
   }
 
   @Override
   public int hashCode()
   {
-    int result = data != null ? data.hashCode() : 0;
-    result = 31 * result + (versionReplacementString != null ? versionReplacementString.hashCode() : 0);
-    result = 31 * result + (version != null ? version.hashCode() : 0);
-    return result;
+    return Objects.hash(data, versionReplacementString, version);
   }
 
   @Override

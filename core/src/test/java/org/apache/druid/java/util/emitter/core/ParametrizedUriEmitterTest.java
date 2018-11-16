@@ -137,7 +137,7 @@ public class ParametrizedUriEmitterTest
           protected ListenableFuture<Response> go(Request request)
           {
             results.put(
-                request.getUrl().toString(),
+                request.getUrl(),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
             return GoHandlers.immediateFuture(okResponse());

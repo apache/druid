@@ -70,7 +70,7 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + bitmap.toString();
+    return getClass().getSimpleName() + bitmap;
   }
 
   @Override

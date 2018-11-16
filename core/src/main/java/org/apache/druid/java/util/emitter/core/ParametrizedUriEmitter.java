@@ -22,6 +22,7 @@ package org.apache.druid.java.util.emitter.core;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -48,7 +49,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
     final ParametrizedUriExtractor parametrizedUriExtractor = new ParametrizedUriExtractor(baseUri);
     UriExtractor uriExtractor = parametrizedUriExtractor;
     if (ONLY_FEED_PARAM.equals(parametrizedUriExtractor.getParams())) {
-      uriExtractor = new FeedUriExtractor(baseUri.replace("{feed}", "%s"));
+      uriExtractor = new FeedUriExtractor(StringUtils.replace(baseUri, "{feed}", "%s"));
     }
     return uriExtractor;
   }

@@ -168,7 +168,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         config
     );
 
-    if (segmentsToCompact.getSize() > 1) {
+    if (segmentsToCompact.getNumSegments() > 1) {
       queue.add(new QueueEntry(segmentsToCompact.segments));
     }
   }
@@ -247,13 +247,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final boolean keepSegmentGranularity = config.isKeepSegmentGranularity();
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
     final int maxNumSegmentsToCompact = config.getMaxNumSegmentsToCompact();
-    final List<DataSegment> segmentsToCompact = new ArrayList<>();
-    long totalSegmentsToCompactBytes = 0;
+    final SegmentsToCompact segmentsToCompact = new SegmentsToCompact();
 
     // Finds segments to compact together while iterating timeline from latest to oldest
     while (compactibleTimelineObjectHolderCursor.hasNext()
-           && totalSegmentsToCompactBytes < inputSegmentSize
-           && segmentsToCompact.size() < maxNumSegmentsToCompact) {
+           && segmentsToCompact.getTotalSize() < inputSegmentSize
+           && segmentsToCompact.getNumSegments() < maxNumSegmentsToCompact) {
       final TimelineObjectHolder<String, DataSegment> timeChunkHolder = Preconditions.checkNotNull(
           compactibleTimelineObjectHolderCursor.get(),
           "timelineObjectHolder"
@@ -262,22 +261,26 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final long timeChunkSizeBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
 
       // The segments in a holder should be added all together or not.
-      if (SegmentCompactorUtil.isCompactibleSize(inputSegmentSize, totalSegmentsToCompactBytes, timeChunkSizeBytes)
-          && SegmentCompactorUtil.isCompactibleNum(maxNumSegmentsToCompact, segmentsToCompact.size(), chunks.size())
-          && (!keepSegmentGranularity || segmentsToCompact.size() == 0)) {
+      final boolean isCompactibleSize = SegmentCompactorUtil.isCompactibleSize(
+          inputSegmentSize,
+          segmentsToCompact.getTotalSize(),
+          timeChunkSizeBytes
+      );
+      final boolean isCompactibleNum = SegmentCompactorUtil.isCompactibleNum(
+          maxNumSegmentsToCompact,
+          segmentsToCompact.getNumSegments(),
+          chunks.size()
+      );
+      if (isCompactibleSize && isCompactibleNum && (!keepSegmentGranularity || segmentsToCompact.isEmpty())) {
         chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
-        totalSegmentsToCompactBytes += timeChunkSizeBytes;
       } else {
-        if (segmentsToCompact.size() > 1) {
+        if (segmentsToCompact.getNumSegments() > 1) {
           // We found some segmens to compact and cannot add more. End here.
-          return new SegmentsToCompact(segmentsToCompact);
+          return segmentsToCompact;
         } else {
-          // (*) Discard segments found so far because we can't compact them anyway.
-          final int numSegmentsToCompact = segmentsToCompact.size();
-          segmentsToCompact.clear();
-
           if (!SegmentCompactorUtil.isCompactibleSize(inputSegmentSize, 0, timeChunkSizeBytes)) {
             final DataSegment segment = chunks.get(0).getObject();
+            segmentsToCompact.clear();
             log.warn(
                 "shardSize[%d] for dataSource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
                 + " Continue to the next shard.",
@@ -288,6 +291,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             );
           } else if (maxNumSegmentsToCompact < chunks.size()) {
             final DataSegment segment = chunks.get(0).getObject();
+            segmentsToCompact.clear();
             log.warn(
                 "The number of segments[%d] for dataSource[%s] and interval[%s] is larger than "
                 + "numTargetCompactSegments[%d]. If you see lots of shards are being skipped due to too many "
@@ -299,18 +303,19 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                 maxNumSegmentsToCompact
             );
           } else {
-            if (numSegmentsToCompact == 1) {
+            if (segmentsToCompact.getNumSegments() == 1) {
               // We found a segment which is smaller than targetCompactionSize but too large to compact with other
               // segments. Skip this one.
-              // Note that segmentsToCompact is already cleared at (*).
+              segmentsToCompact.clear();
               chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
-              totalSegmentsToCompactBytes = timeChunkSizeBytes;
             } else {
               throw new ISE(
-                  "Cannot compact segments[%s]. shardBytes[%s], numSegments[%s]",
+                  "Cannot compact segments[%s]. shardBytes[%s], numSegments[%s] "
+                  + "with current segmentsToCompact[%s]",
                   chunks.stream().map(PartitionChunk::getObject).collect(Collectors.toList()),
                   timeChunkSizeBytes,
-                  chunks.size()
+                  chunks.size(),
+                  segmentsToCompact
               );
             }
           }
@@ -320,11 +325,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       compactibleTimelineObjectHolderCursor.next();
     }
 
-    if (segmentsToCompact.size() > 1) {
-      return new SegmentsToCompact(segmentsToCompact);
-    } else {
-      return new SegmentsToCompact(Collections.emptyList());
+    if (segmentsToCompact.getNumSegments() == 1) {
+      // Don't compact a single segment
+      segmentsToCompact.clear();
     }
+
+    return segmentsToCompact;
   }
 
   /**
@@ -394,16 +400,44 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
   private static class SegmentsToCompact
   {
-    private final List<DataSegment> segments;
+    private final List<DataSegment> segments = new ArrayList<>();
+    private long totalSize;
 
-    private SegmentsToCompact(List<DataSegment> segments)
+    private void add(DataSegment segment)
     {
-      this.segments = segments;
+      segments.add(segment);
+      totalSize += segment.getSize();
     }
 
-    private int getSize()
+    private boolean isEmpty()
+    {
+      Preconditions.checkState((totalSize == 0) == segments.isEmpty());
+      return segments.isEmpty();
+    }
+
+    private int getNumSegments()
     {
       return segments.size();
+    }
+
+    private long getTotalSize()
+    {
+      return totalSize;
+    }
+
+    private void clear()
+    {
+      segments.clear();
+      totalSize = 0;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "SegmentsToCompact{" +
+             "segments=" + segments +
+             ", totalSize=" + totalSize +
+             '}';
     }
   }
 }

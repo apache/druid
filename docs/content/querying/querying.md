@@ -39,7 +39,7 @@ Druid's native query language is JSON over HTTP, although many members of the co
 The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
 
  ```bash
- curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:x-jackson-smile' -d @<query_json_file>
+ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/x-jackson-smile' -d @<query_json_file>
  ```
 
 Note: If Accept header is not provided, it defaults to value of 'Content-Type' header.

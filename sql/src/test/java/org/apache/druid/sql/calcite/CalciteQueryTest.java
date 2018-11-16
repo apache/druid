@@ -610,15 +610,21 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testMinOnInformationSchemaColumns() throws Exception
+  public void testAggregatorsOnInformationSchemaColumns() throws Exception
   {
+    // Not including COUNT DISTINCT, since it isn't supported by BindableAggregate, and so it can't work.
     testQuery(
-        "SELECT MIN(JDBC_TYPE)\n"
+        "SELECT\n"
+        + "  COUNT(JDBC_TYPE),\n"
+        + "  SUM(JDBC_TYPE),\n"
+        + "  AVG(JDBC_TYPE),\n"
+        + "  MIN(JDBC_TYPE),\n"
+        + "  MAX(JDBC_TYPE)\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
         + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'",
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{-5L}
+            new Object[]{8L, 1249L, 156L, -5L, 1111L}
         )
     );
   }
