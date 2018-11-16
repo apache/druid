@@ -122,6 +122,12 @@ matrix:
       script:
         - $TRAVIS_BUILD_DIR/ci/travis_script_integration.sh
       after_failure:
+        - for v in ~/shared/tasklogs/*.log ; do
+          if [ "$(grep -c "index_kafka_kafka" $v)" -gt 0 ]; then
+              echo $v failed-kafka-tasklog ========================
+              cat $v
+          fi
+          done
         - for v in ~/shared/logs/*.log ; do
           echo $v logtail ======================== ; tail -100 $v ;
           done
