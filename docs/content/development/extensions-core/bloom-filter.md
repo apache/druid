@@ -43,7 +43,8 @@ Internally, this implementation of bloom filter uses Murmur3 fast non-cryptograp
   "type" : "bloom",
   "dimension" : <dimension_name>,
   "bloomKFilter" : <serialized_bytes_for_BloomKFilter>,
-  "extractionFn" : <extraction_fn>
+  "extractionFn" : <extraction_fn>,
+  "useBitmapIndex" : <boolean>
 }
 ```
 
@@ -53,6 +54,7 @@ Internally, this implementation of bloom filter uses Murmur3 fast non-cryptograp
 |`dimension`              |The dimension to filter over. | yes |
 |`bloomKFilter`           |Base64 encoded Binary representation of `org.apache.hive.common.util.BloomKFilter`| yes |
 |`extractionFn`|[Extraction function](./../dimensionspecs.html#extraction-functions) to apply to the dimension values |no|
+|`useBitmapIndex`         |Use bitmap indexes for filter the dimension. This can be slower for higher cardinality dimensions.|no (default `false`)|
 
 
 ### Serialized Format for BloomKFilter
