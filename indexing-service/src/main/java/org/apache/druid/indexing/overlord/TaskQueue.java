@@ -252,7 +252,7 @@ public class TaskQueue
               }
               catch (Exception e) {
                 log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-                notifyStatus(task, TaskStatus.failure(task.getId()));
+                notifyStatus(task, TaskStatus.failure(task.getId()), "failed because of exception[%s]", e.getClass());
                 continue;
               }
               if (taskIsReady) {
@@ -286,7 +286,11 @@ public class TaskQueue
           log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
           for (final String taskId : tasksToKill) {
             try {
-              taskRunner.shutdown(taskId);
+              taskRunner.shutdown(
+                  taskId,
+                  "task is not in runnerTaskFutures[%s]",
+                  runnerTaskFutures.keySet()
+              );
             }
             catch (Exception e) {
               log.warn(e, "TaskRunner failed to clean up task: %s", taskId);
@@ -356,7 +360,7 @@ public class TaskQueue
    *
    * @param taskId task to kill
    */
-  public void shutdown(final String taskId)
+  public void shutdown(final String taskId, String reasonFormat, Object... args)
   {
     giant.lock();
 
@@ -364,7 +368,7 @@ public class TaskQueue
       Preconditions.checkNotNull(taskId, "taskId");
       for (final Task task : tasks) {
         if (task.getId().equals(taskId)) {
-          notifyStatus(task, TaskStatus.failure(taskId));
+          notifyStatus(task, TaskStatus.failure(taskId), reasonFormat, args);
           break;
         }
       }
@@ -386,7 +390,7 @@ public class TaskQueue
    * @throws IllegalArgumentException if the task ID does not match the status ID
    * @throws IllegalStateException    if this queue is currently shut down
    */
-  private void notifyStatus(final Task task, final TaskStatus taskStatus)
+  private void notifyStatus(final Task task, final TaskStatus taskStatus, String reasonFormat, Object... args)
   {
     giant.lock();
 
@@ -402,7 +406,7 @@ public class TaskQueue
       );
       // Inform taskRunner that this task can be shut down
       try {
-        taskRunner.shutdown(task.getId());
+        taskRunner.shutdown(task.getId(), reasonFormat, args);
       }
       catch (Exception e) {
         log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
@@ -493,7 +497,7 @@ public class TaskQueue
                 return;
               }
 
-              notifyStatus(task, status);
+              notifyStatus(task, status, "notified status change from task");
 
               // Emit event and log, if the task is done
               if (status.isComplete()) {

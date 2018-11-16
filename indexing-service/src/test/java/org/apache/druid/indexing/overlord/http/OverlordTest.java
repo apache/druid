@@ -408,7 +408,7 @@ public class OverlordTest
     }
 
     @Override
-    public void shutdown(String taskid) {}
+    public void shutdown(String taskid, String reason) {}
 
     @Override
     public synchronized Collection<? extends TaskRunnerWorkItem> getRunningTasks()
