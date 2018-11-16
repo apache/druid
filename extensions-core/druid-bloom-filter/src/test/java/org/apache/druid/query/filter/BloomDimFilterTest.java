@@ -125,59 +125,6 @@ public class BloomDimFilterTest extends BaseFilterTest
     BaseFilterTest.tearDown(BloomDimFilterTest.class.getName());
   }
 
-  private static BloomKFilterHolder bloomKFilter(int expectedEntries, String... values) throws IOException
-  {
-    BloomKFilter filter = new BloomKFilter(expectedEntries);
-    for (String value : values) {
-      if (value == null) {
-        filter.addBytes(null, 0, 0);
-      } else {
-        filter.addString(value);
-      }
-    }
-
-    return BloomKFilterHolder.fromBloomKFilter(filter);
-  }
-
-  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Float... values) throws IOException
-  {
-    BloomKFilter filter = new BloomKFilter(expectedEntries);
-    for (Float value : values) {
-      if (value == null) {
-        filter.addBytes(null, 0, 0);
-      } else {
-        filter.addFloat(value);
-      }
-    }
-    return BloomKFilterHolder.fromBloomKFilter(filter);
-  }
-
-  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Double... values) throws IOException
-  {
-    BloomKFilter filter = new BloomKFilter(expectedEntries);
-    for (Double value : values) {
-      if (value == null) {
-        filter.addBytes(null, 0, 0);
-      } else {
-        filter.addDouble(value);
-      }
-    }
-    return BloomKFilterHolder.fromBloomKFilter(filter);
-  }
-
-  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Long... values) throws IOException
-  {
-    BloomKFilter filter = new BloomKFilter(expectedEntries);
-    for (Long value : values) {
-      if (value == null) {
-        filter.addBytes(null, 0, 0);
-      } else {
-        filter.addLong(value);
-      }
-    }
-    return BloomKFilterHolder.fromBloomKFilter(filter);
-  }
-
   @Test
   public void testSerde() throws IOException
   {
@@ -505,5 +452,58 @@ public class BloomDimFilterTest extends BaseFilterTest
     Assert.assertTrue(druidFilter.testLong(32L));
     Assert.assertTrue(druidFilter.testLong(664L));
     Assert.assertFalse(druidFilter.testLong(3L));
+  }
+  
+  private static BloomKFilterHolder bloomKFilter(int expectedEntries, String... values) throws IOException
+  {
+    BloomKFilter filter = new BloomKFilter(expectedEntries);
+    for (String value : values) {
+      if (value == null) {
+        filter.addBytes(null, 0, 0);
+      } else {
+        filter.addString(value);
+      }
+    }
+
+    return BloomKFilterHolder.fromBloomKFilter(filter);
+  }
+
+  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Float... values) throws IOException
+  {
+    BloomKFilter filter = new BloomKFilter(expectedEntries);
+    for (Float value : values) {
+      if (value == null) {
+        filter.addBytes(null, 0, 0);
+      } else {
+        filter.addFloat(value);
+      }
+    }
+    return BloomKFilterHolder.fromBloomKFilter(filter);
+  }
+
+  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Double... values) throws IOException
+  {
+    BloomKFilter filter = new BloomKFilter(expectedEntries);
+    for (Double value : values) {
+      if (value == null) {
+        filter.addBytes(null, 0, 0);
+      } else {
+        filter.addDouble(value);
+      }
+    }
+    return BloomKFilterHolder.fromBloomKFilter(filter);
+  }
+
+  private static BloomKFilterHolder bloomKFilter(int expectedEntries, Long... values) throws IOException
+  {
+    BloomKFilter filter = new BloomKFilter(expectedEntries);
+    for (Long value : values) {
+      if (value == null) {
+        filter.addBytes(null, 0, 0);
+      } else {
+        filter.addLong(value);
+      }
+    }
+    return BloomKFilterHolder.fromBloomKFilter(filter);
   }
 }

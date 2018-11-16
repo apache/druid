@@ -100,7 +100,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(
-                      new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
+                      new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null, false)
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -134,8 +134,8 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(
                       new OrDimFilter(
-                          new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null),
-                          new BloomDimFilter("dim2", BloomKFilterHolder.fromBloomKFilter(filter2), null)
+                          new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null, false),
+                          new BloomDimFilter("dim2", BloomKFilterHolder.fromBloomKFilter(filter2), null, false)
                       )
                   )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))

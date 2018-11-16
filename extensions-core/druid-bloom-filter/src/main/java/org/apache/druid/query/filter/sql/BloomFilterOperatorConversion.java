@@ -91,7 +91,8 @@ public class BloomFilterOperatorConversion implements SqlOperatorConversion
       return new BloomDimFilter(
           druidExpression.getSimpleExtraction().getColumn(),
           holder,
-          druidExpression.getSimpleExtraction().getExtractionFn()
+          druidExpression.getSimpleExtraction().getExtractionFn(),
+          false
       );
     } else {
       // expression virtual columns not currently supported
