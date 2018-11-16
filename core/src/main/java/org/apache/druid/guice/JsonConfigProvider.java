@@ -28,6 +28,7 @@ import com.google.inject.Provider;
 import com.google.inject.util.Types;
 import org.apache.druid.guice.annotations.PublicApi;
 
+import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.util.Properties;
@@ -93,6 +94,24 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   }
 
   @SuppressWarnings("unchecked")
+  public static <T> void bindWithDefault(
+      Binder binder,
+      String propertyBase,
+      Class<T> classToProvide,
+      Class<? extends T> defaultClass
+  )
+  {
+    bind(
+        binder,
+        propertyBase,
+        classToProvide,
+        defaultClass,
+        Key.get(classToProvide),
+        (Key) Key.get(Types.newParameterizedType(Supplier.class, classToProvide))
+    );
+  }
+
+  @SuppressWarnings("unchecked")
   public static <T> void bind(Binder binder, String propertyBase, Class<T> classToProvide, Annotation annotation)
   {
     bind(
@@ -135,6 +154,20 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
   }
 
   @SuppressWarnings("unchecked")
+  public static <T> void bind(
+      Binder binder,
+      String propertyBase,
+      Class<T> clazz,
+      Class<? extends T> defaultClass,
+      Key<T> instanceKey,
+      Key<Supplier<T>> supplierKey
+  )
+  {
+    binder.bind(supplierKey).toProvider(of(propertyBase, clazz, defaultClass)).in(LazySingleton.class);
+    binder.bind(instanceKey).toProvider(new SupplierProvider<>(supplierKey));
+  }
+
+  @SuppressWarnings("unchecked")
   public static <T> void bindInstance(
       Binder binder,
       Key<T> bindKey,
@@ -159,11 +192,21 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
 
   public static <T> JsonConfigProvider<T> of(String propertyBase, Class<T> classToProvide)
   {
-    return new JsonConfigProvider<T>(propertyBase, classToProvide);
+    return of(propertyBase, classToProvide, null);
+  }
+
+  public static <T> JsonConfigProvider<T> of(
+      String propertyBase,
+      Class<T> classToProvide,
+      Class<? extends T> defaultClass
+  )
+  {
+    return new JsonConfigProvider<>(propertyBase, classToProvide, defaultClass);
   }
 
   private final String propertyBase;
   private final Class<T> classToProvide;
+  private final Class<? extends T> defaultClass;
 
   private Properties props;
   private JsonConfigurator configurator;
@@ -172,11 +215,13 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
 
   public JsonConfigProvider(
       String propertyBase,
-      Class<T> classToProvide
+      Class<T> classToProvide,
+      @Nullable Class<? extends T> defaultClass
   )
   {
     this.propertyBase = propertyBase;
     this.classToProvide = classToProvide;
+    this.defaultClass = defaultClass;
   }
 
   @Inject
@@ -197,7 +242,7 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
     }
 
     try {
-      final T config = configurator.configurate(props, propertyBase, classToProvide);
+      final T config = configurator.configurate(props, propertyBase, classToProvide, defaultClass);
       retVal = Suppliers.ofInstance(config);
     }
     catch (RuntimeException e) {

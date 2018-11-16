@@ -309,7 +309,7 @@ All nodes that can serve queries can also log the query requests they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing. How to log every query request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing. How to log every query request.|[required to configure request logging]|
 
 Note that, you can enable sending all the HTTP requests to log by setting  "org.apache.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
