@@ -108,6 +108,7 @@ public abstract class SeekableStreamSupervisorIOConfig
     return period;
   }
 
+  @JsonProperty
   public boolean isUseEarliestSequenceNumber()
   {
     return useEarliestSequenceNumber;

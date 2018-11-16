@@ -620,10 +620,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
       GetRecordsResult recordsResult;
       try {
-        recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1));
+        recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator).withLimit(10000));
       }
       catch (ProvisionedThroughputExceededException e) {
-        log.warn("Exceeded provisioned throughput, retrying in [%,dms]", PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS);
         try {
           Thread.sleep(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS);
           continue;

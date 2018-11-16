@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -115,6 +116,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   {
     KinesisSupervisorIOConfig ioConfig = (KinesisSupervisorIOConfig) ioConfigg;
     return new KinesisIOConfig(
+        groupId,
         baseSequenceName,
         new SeekableStreamPartitions<>(ioConfig.getStream(), startPartitions),
         new SeekableStreamPartitions<>(ioConfig.getStream(), endPartitions),
@@ -143,8 +145,22 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       SeekableStreamIOConfig taskIoConfig,
       SeekableStreamTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
-  )
+  ) throws JsonProcessingException
   {
+    final String checkpoints = sortingMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<String, String>>>()
+    {
+    }).writeValueAsString(sequenceOffsets);
+    final Map<String, Object> context = spec.getContext() == null
+                                        ? ImmutableMap.of(
+        "checkpoints",
+        checkpoints,
+        IS_INCREMENTAL_HANDOFF_SUPPORTED,
+        true
+    ) : ImmutableMap.<String, Object>builder()
+                                            .put("checkpoints", checkpoints)
+                                            .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
+                                            .putAll(spec.getContext())
+                                            .build();
     List<SeekableStreamIndexTask<String, String>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
       String taskId = Joiner.on("_").join(baseSequenceName, getRandomId());
@@ -154,7 +170,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           spec.getDataSchema(),
           (KinesisTuningConfig) taskTuningConfig,
           (KinesisIOConfig) taskIoConfig,
-          spec.getContext(),
+          context,
           null,
           null,
           rowIngestionMetersFactory

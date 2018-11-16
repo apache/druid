@@ -27,6 +27,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
@@ -48,6 +49,7 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
 
   @JsonCreator
   public KinesisIOConfig(
+      @JsonProperty("taskGroupId") @Nullable Integer taskGroupId,
       @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") SeekableStreamPartitions<String, String> startPartitions,
       @JsonProperty("endPartitions") SeekableStreamPartitions<String, String> endPartitions,
@@ -67,7 +69,7 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
   )
   {
     super(
-        null,
+        taskGroupId,
         baseSequenceName,
         startPartitions,
         endPartitions,

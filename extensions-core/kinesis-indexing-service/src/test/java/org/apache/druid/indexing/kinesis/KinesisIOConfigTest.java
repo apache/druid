@@ -66,6 +66,7 @@ public class KinesisIOConfigTest
         ), IOConfig.class
     );
 
+    Assert.assertNull(config.getTaskGroupId());
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mystream", config.getStartPartitions().getStream());
     Assert.assertEquals(
@@ -96,6 +97,7 @@ public class KinesisIOConfigTest
   public void testSerdeWithNonDefaults() throws Exception
   {
     String jsonStr = "{\n"
+                     + "  \"taskGroupId\": 0,\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
@@ -124,6 +126,7 @@ public class KinesisIOConfigTest
         ), IOConfig.class
     );
 
+    Assert.assertEquals((Integer) 0, config.getTaskGroupId());
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mystream", config.getStartPartitions().getStream());
     Assert.assertEquals(

@@ -427,6 +427,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -505,6 +506,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
@@ -634,6 +636,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             baseSequenceName,
             startPartitions,
             endPartitions,
@@ -657,8 +660,9 @@ public class KinesisIndexTaskTest
       Thread.sleep(10);
     }
     final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets) || checkpoint2.getPartitionSequenceNumberMap()
-                                                                                                       .equals(currentOffsets));
+    Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets)
+                      || checkpoint2.getPartitionSequenceNumberMap()
+                                    .equals(currentOffsets));
     task.getRunner().setEndOffsets(currentOffsets, false);
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -756,6 +760,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             baseSequenceName,
             startPartitions,
             endPartitions,
@@ -888,6 +893,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             baseSequenceName,
             startPartitions,
             endPartitions,
@@ -965,6 +971,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1035,6 +1042,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1115,6 +1123,7 @@ public class KinesisIndexTaskTest
             )
         ),
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1184,6 +1193,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1235,6 +1245,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1301,6 +1312,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1369,6 +1381,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1423,6 +1436,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1524,6 +1538,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1601,6 +1616,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task1 = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1628,6 +1644,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task2 = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1699,6 +1716,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task1 = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1726,6 +1744,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task2 = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence1",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1798,6 +1817,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task1 = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1825,6 +1845,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task2 = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence1",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1895,6 +1916,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence1",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -1976,6 +1998,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task1 = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -2003,6 +2026,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task2 = createTask(
         null,
         new KinesisIOConfig(
+            null,
             "sequence1",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId0,
@@ -2087,6 +2111,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task1 = createTask(
         "task1",
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -2132,6 +2157,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task2 = createTask(
         task1.getId(),
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -2206,6 +2232,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         "task1",
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
@@ -2314,6 +2341,7 @@ public class KinesisIndexTaskTest
     final KinesisIndexTask task = createTask(
         "task1",
         new KinesisIOConfig(
+            null,
             "sequence0",
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,

@@ -1122,8 +1122,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       SequenceType sequence = currOffsets.get(streamPartition.getPartitionId());
       if (!tuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
         SequenceType earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
-        if (earliestSequenceNumber == null
-            || createSequencenNumber(earliestSequenceNumber).compareTo(createSequencenNumber(sequence)) > 0) {
+        if (earliestSequenceNumber == null) {
+          log.warn(
+              "unable to verify sequence number[%s] availability, unable to fetch earliest sequence number",
+              sequence
+          );
+        } else if (createSequencenNumber(earliestSequenceNumber).compareTo(createSequencenNumber(sequence)) > 0) {
           if (tuningConfig.isResetOffsetAutomatically()) {
             log.info("Attempting to reset sequences automatically for all partitions");
             try {
