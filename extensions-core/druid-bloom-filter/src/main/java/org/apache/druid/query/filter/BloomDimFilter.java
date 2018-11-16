@@ -26,28 +26,30 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashCode;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
+import java.util.Objects;
 
 /**
  */
 public class BloomDimFilter implements DimFilter
 {
-
   private final String dimension;
   private final BloomKFilter bloomKFilter;
   private final HashCode hash;
   private final ExtractionFn extractionFn;
+  private final boolean useBitmapIndex;
 
   @JsonCreator
   public BloomDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("bloomKFilter") BloomKFilterHolder bloomKFilterHolder,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @Nullable @JsonProperty("useBitmapIndex") Boolean useBitmapIndex
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -56,6 +58,7 @@ public class BloomDimFilter implements DimFilter
     this.bloomKFilter = bloomKFilterHolder.getFilter();
     this.hash = bloomKFilterHolder.getFilterHash();
     this.extractionFn = extractionFn;
+    this.useBitmapIndex = useBitmapIndex != null && useBitmapIndex;
   }
 
   @Override
@@ -153,7 +156,14 @@ public class BloomDimFilter implements DimFilter
           }
         },
         extractionFn
-    );
+    )
+    {
+      @Override
+      public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+      {
+        return useBitmapIndex;
+      }
+    };
   }
 
   @JsonProperty
@@ -174,36 +184,6 @@ public class BloomDimFilter implements DimFilter
     return extractionFn;
   }
 
-  @Override
-  public String toString()
-  {
-    if (extractionFn != null) {
-      return StringUtils.format("%s(%s) = %s", extractionFn, dimension, hash.toString());
-    } else {
-      return StringUtils.format("%s = %s", dimension, hash.toString());
-    }
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    BloomDimFilter that = (BloomDimFilter) o;
-
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    if (hash != null ? !hash.equals(that.hash) : that.hash != null) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-  }
 
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
@@ -218,11 +198,35 @@ public class BloomDimFilter implements DimFilter
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BloomDimFilter that = (BloomDimFilter) o;
+    return useBitmapIndex == that.useBitmapIndex &&
+           Objects.equals(dimension, that.dimension) &&
+           Objects.equals(hash, that.hash) &&
+           Objects.equals(extractionFn, that.extractionFn);
+  }
+
+  @Override
   public int hashCode()
   {
-    int result = dimension.hashCode();
-    result = 31 * result + (hash != null ? hash.hashCode() : 0);
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
+    return Objects.hash(dimension, hash, extractionFn, useBitmapIndex);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "BloomDimFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", hash=" + hash +
+           ", extractionFn=" + extractionFn +
+           ", useBitmapIndex=" + useBitmapIndex +
+           '}';
   }
 }
