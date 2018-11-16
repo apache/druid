@@ -137,12 +137,12 @@ public class ExpressionSelectors
       final String column = Iterables.getOnlyElement(columns);
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
 
-      if (column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-        // Optimization for expressions that hit the __time column and nothing else.
-        // May be worth applying this optimization to all long columns?
+      if (capabilities != null && capabilities.getType() == ValueType.LONG) {
+        // Optimization for expressions that hit one long column and nothing else.
         return new SingleLongInputCachingExpressionColumnValueSelector(
-            columnSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-            expression
+            columnSelectorFactory.makeColumnValueSelector(column),
+            expression,
+            !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
         );
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING

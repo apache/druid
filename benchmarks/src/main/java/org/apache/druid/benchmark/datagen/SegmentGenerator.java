@@ -27,6 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -98,6 +99,9 @@ public class SegmentGenerator implements Closeable
             break;
           case LONG:
             dimensions.add(new LongDimensionSchema(columnSchema.getName()));
+            break;
+          case DOUBLE:
+            dimensions.add(new DoubleDimensionSchema(columnSchema.getName()));
             break;
           case FLOAT:
             dimensions.add(new FloatDimensionSchema(columnSchema.getName()));

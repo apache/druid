@@ -122,7 +122,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         fin = url.openConnection().getInputStream();
       }
       catch (IOException e) {
-        throw new ParseException(e, "Cannot read descriptor file: " + url.toString());
+        throw new ParseException(e, "Cannot read descriptor file: " + url);
       }
     }
 

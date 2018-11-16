@@ -153,16 +153,6 @@ public class StringUtils
     return s.toUpperCase(Locale.ENGLISH);
   }
 
-  public static String removeChar(String s, char c)
-  {
-    for (int i = 0; i < s.length(); i++) {
-      if (s.charAt(i) == c) {
-        return removeChar(s, c, i);
-      }
-    }
-    return s;
-  }
-
   public static String urlEncode(String s)
   {
     try {
@@ -173,16 +163,81 @@ public class StringUtils
     }
   }
 
-  private static String removeChar(String s, char c, int firstOccurranceIndex)
+  /**
+   * Removes all occurrences of the given char from the given string. This method is an optimal version of
+   * {@link String#replace(CharSequence, CharSequence) s.replace("c", "")}.
+   */
+  public static String removeChar(String s, char c)
   {
-    StringBuilder sb = new StringBuilder(s.length() - 1);
-    sb.append(s, 0, firstOccurranceIndex);
-    for (int i = firstOccurranceIndex + 1; i < s.length(); i++) {
-      char charOfString = s.charAt(i);
-      if (charOfString != c) {
-        sb.append(charOfString);
-      }
+    int pos = s.indexOf(c);
+    if (pos < 0) {
+      return s;
     }
+    StringBuilder sb = new StringBuilder(s.length() - 1);
+    int prevPos = 0;
+    do {
+      sb.append(s, prevPos, pos);
+      prevPos = pos + 1;
+      pos = s.indexOf(c, pos + 1);
+    } while (pos > 0);
+    sb.append(s, prevPos, s.length());
+    return sb.toString();
+  }
+
+  /**
+   * Replaces all occurrences of the given char in the given string with the given replacement string. This method is an
+   * optimal version of {@link String#replace(CharSequence, CharSequence) s.replace("c", replacement)}.
+   */
+  public static String replaceChar(String s, char c, String replacement)
+  {
+    int pos = s.indexOf(c);
+    if (pos < 0) {
+      return s;
+    }
+    StringBuilder sb = new StringBuilder(s.length() - 1 + replacement.length());
+    int prevPos = 0;
+    do {
+      sb.append(s, prevPos, pos);
+      sb.append(replacement);
+      prevPos = pos + 1;
+      pos = s.indexOf(c, pos + 1);
+    } while (pos > 0);
+    sb.append(s, prevPos, s.length());
+    return sb.toString();
+  }
+
+  /**
+   * Replaces all occurrences of the given target substring in the given string with the given replacement string. This
+   * method is an optimal version of {@link String#replace(CharSequence, CharSequence) s.replace(target, replacement)}.
+   */
+  public static String replace(String s, String target, String replacement)
+  {
+    // String.replace() is suboptimal in JDK8, but is fixed in JDK9+. When the minimal JDK version supported by Druid is
+    // JDK9+, the implementation of this method should be replaced with simple delegation to String.replace(). However,
+    // the method should still be prohibited to use in all other places except this method body, because it's easy to
+    // suboptimally call String.replace("a", "b"), String.replace("a", ""), String.replace("a", "abc"), which have
+    // better alternatives String.replace('a', 'b'), removeChar() and replaceChar() respectively.
+    int pos = s.indexOf(target);
+    if (pos < 0) {
+      return s;
+    }
+    int sLength = s.length();
+    int targetLength = target.length();
+    // This is needed to work correctly with empty target string and mimic String.replace() behavior
+    int searchSkip = Math.max(targetLength, 1);
+    StringBuilder sb = new StringBuilder(sLength - targetLength + replacement.length());
+    int prevPos = 0;
+    do {
+      sb.append(s, prevPos, pos);
+      sb.append(replacement);
+      prevPos = pos + targetLength;
+      // Break from the loop if the target is empty
+      if (pos == sLength) {
+        break;
+      }
+      pos = s.indexOf(target, pos + searchSkip);
+    } while (pos > 0);
+    sb.append(s, prevPos, sLength);
     return sb.toString();
   }
 

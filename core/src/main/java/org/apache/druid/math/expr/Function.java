@@ -955,8 +955,8 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() != 2) {
-        throw new IAE("Function[%s] needs 2 arguments", name());
+      if (args.size() < 2 || args.size() > 3) {
+        throw new IAE("Function[%s] needs 2 or 3 arguments", name());
       }
 
       final String haystack = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
@@ -965,7 +965,16 @@ interface Function
       if (haystack == null || needle == null) {
         return ExprEval.of(null);
       }
-      return ExprEval.of(haystack.indexOf(needle));
+
+      final int fromIndex;
+
+      if (args.size() >= 3) {
+        fromIndex = args.get(2).eval(bindings).asInt();
+      } else {
+        fromIndex = 0;
+      }
+
+      return ExprEval.of(haystack.indexOf(needle, fromIndex));
     }
   }
 
@@ -1024,14 +1033,12 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      final String pattern = args.get(1).eval(bindings).asString();
-      final String replacement = args.get(2).eval(bindings).asString();
+      final String pattern = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
+      final String replacement = NullHandling.nullToEmptyIfNeeded(args.get(2).eval(bindings).asString());
       if (arg == null) {
         return ExprEval.of(NullHandling.defaultStringValue());
       }
-      return ExprEval.of(
-          arg.replace(NullHandling.nullToEmptyIfNeeded(pattern), NullHandling.nullToEmptyIfNeeded(replacement))
-      );
+      return ExprEval.of(StringUtils.replace(arg, pattern, replacement));
     }
   }
 

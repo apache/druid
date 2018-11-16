@@ -67,7 +67,7 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
       fs = workingDirPath.getFileSystem(config);
 
       log.info(fs.getScheme());
-      log.info("FileSystem URI:" + fs.getUri().toString());
+      log.info("FileSystem URI:" + fs.getUri());
 
       if (!fs.exists(workingDirPath)) {
         throw new SegmentLoadingException("Working directory [%s] doesn't exist.", workingDirPath);

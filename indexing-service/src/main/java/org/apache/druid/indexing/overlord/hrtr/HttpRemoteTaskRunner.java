@@ -1041,7 +1041,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public void shutdown(String taskId)
+  public void shutdown(String taskId, String reason)
   {
     if (!lifecycleLock.awaitStarted(1, TimeUnit.SECONDS)) {
       log.info("This TaskRunner is stopped or not yet started. Ignoring shutdown command for task: %s", taskId);
@@ -1050,6 +1050,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
     WorkerHolder workerHolderRunningTask = null;
     synchronized (statusLock) {
+      log.info("Shutdown [%s] because: [%s]", taskId, reason);
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.remove(taskId);
       if (taskRunnerWorkItem != null) {
         if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {

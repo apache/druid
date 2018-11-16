@@ -42,6 +42,6 @@ public class CuratorServiceUtils
    */
   protected static String makeCanonicalServiceName(String serviceName)
   {
-    return serviceName.replaceAll("/", ":");
+    return serviceName.replace('/', ':');
   }
 }
