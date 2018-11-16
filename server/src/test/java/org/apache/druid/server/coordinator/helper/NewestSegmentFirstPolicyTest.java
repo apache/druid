@@ -29,6 +29,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -42,6 +43,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @RunWith(Parameterized.class)
 public class NewestSegmentFirstPolicyTest
@@ -450,6 +452,47 @@ public class NewestSegmentFirstPolicyTest
         )
     );
 
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testClearSegmentsToCompactWhenSkippingSegments()
+  {
+    final long maxSizeOfSegmentsToCompact = 800000;
+    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+        new SegmentGenerateSpec(
+            Intervals.of("2017-12-03T00:00:00/2017-12-04T00:00:00"),
+            new Period("P1D"),
+            maxSizeOfSegmentsToCompact / 2 + 10,
+            1
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-12-02T00:00:00/2017-12-03T00:00:00"),
+            new Period("P1D"),
+            maxSizeOfSegmentsToCompact + 10, // large segment
+            1
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"),
+            new Period("P1D"),
+            maxSizeOfSegmentsToCompact / 3 + 10,
+            2
+        )
+    );
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(maxSizeOfSegmentsToCompact, 100, new Period("P0D"))),
+        ImmutableMap.of(DATA_SOURCE, timeline)
+    );
+
+    final List<DataSegment> expectedSegmentsToCompact = timeline
+        .lookup(Intervals.of("2017-12-01/2017-12-02"))
+        .stream()
+        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+        .map(PartitionChunk::getObject)
+        .collect(Collectors.toList());
+
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals(expectedSegmentsToCompact, iterator.next());
     Assert.assertFalse(iterator.hasNext());
   }
 

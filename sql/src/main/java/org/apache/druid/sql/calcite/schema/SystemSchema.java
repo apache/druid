@@ -478,7 +478,7 @@ public class SystemSchema extends AbstractSchema
           authorizerMapper
       );
       if (!access.isAllowed()) {
-        throw new ForbiddenException("Insufficient permission to view servers :" + access.toString());
+        throw new ForbiddenException("Insufficient permission to view servers :" + access);
       }
       final FluentIterable<Object[]> results = FluentIterable
           .from(druidServers)

@@ -346,7 +346,7 @@ public class MaterializedViewSupervisor implements Supervisor
           && !toBuildInterval.get(interval).equals(runningVersion.get(interval))
       ) {
         if (taskMaster.getTaskQueue().isPresent()) {
-          taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId());
+          taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId(), "version mismatch");
           runningTasks.remove(interval);
         }
       }
@@ -451,7 +451,7 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     for (HadoopIndexTask task : runningTasks.values()) {
       if (taskMaster.getTaskQueue().isPresent()) {
-        taskMaster.getTaskQueue().get().shutdown(task.getId());
+        taskMaster.getTaskQueue().get().shutdown(task.getId(), "killing all tasks");
       }
     }
     runningTasks.clear();

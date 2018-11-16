@@ -519,7 +519,7 @@ public class DataSourcesResourceTest
   public void testDeleteDataSourceSpecificInterval()
   {
     String interval = "2010-01-01_P1D";
-    Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    Interval theInterval = Intervals.of(interval.replace('_', '/'));
 
     IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
     indexingServiceClient.killSegments("datasource1", theInterval);

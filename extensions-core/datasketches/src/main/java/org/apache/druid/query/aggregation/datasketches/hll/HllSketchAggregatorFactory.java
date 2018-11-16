@@ -19,23 +19,21 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
-
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnValueSelector;
+
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Base class for both build and merge factories
@@ -176,7 +174,7 @@ abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new HllSketchMergeAggregatorFactory(getName(), getName(), getLgK(), getTgtHllType().toString());
+    return new HllSketchMergeAggregatorFactory(getName(), getName(), getLgK(), getTgtHllType());
   }
 
   @Override

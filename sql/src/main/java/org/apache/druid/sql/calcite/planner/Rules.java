@@ -34,6 +34,7 @@ import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.AggregateProjectPullUpConstantsRule;
+import org.apache.calcite.rel.rules.AggregateReduceFunctionsRule;
 import org.apache.calcite.rel.rules.AggregateRemoveRule;
 import org.apache.calcite.rel.rules.AggregateStarTableRule;
 import org.apache.calcite.rel.rules.AggregateValuesRule;
@@ -209,6 +210,7 @@ public class Rules
     return ImmutableList.<RelOptRule>builder()
         .addAll(baseRuleSet(plannerContext, queryMaker))
         .addAll(Bindables.RULES)
+        .add(AggregateReduceFunctionsRule.INSTANCE)
         .build();
   }
 

@@ -42,6 +42,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.easymock.EasyMock.expectLastCall;
 import static org.junit.Assert.assertEquals;
@@ -119,7 +120,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
     Assert.assertTrue(
         segment.getLoadSpec().get("blobPath").toString(),
-        segment.getLoadSpec().get("blobPath").toString().matches(matcher)
+        Pattern.compile(matcher).matcher(segment.getLoadSpec().get("blobPath").toString()).matches()
     );
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());

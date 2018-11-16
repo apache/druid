@@ -144,7 +144,7 @@ public class CuratorTestBase
           druidServer.getType().toString(),
           druidServer.getTier(),
           DateTimes.nowUtc().toString()
-        ) + String.valueOf(batchCtr++)
+        ) + (batchCtr++)
     );
 
 

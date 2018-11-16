@@ -507,7 +507,7 @@ public class HadoopDruidIndexerConfig
             "%s/%s/%s_%s",
             getWorkingPath(),
             schema.getDataSchema().getDataSource(),
-            schema.getTuningConfig().getVersion().replace(":", ""),
+            StringUtils.removeChar(schema.getTuningConfig().getVersion(), ':'),
             schema.getUniqueId()
         )
     );
@@ -547,8 +547,7 @@ public class HadoopDruidIndexerConfig
 
   public Path makeDescriptorInfoPath(DataSegment segment)
   {
-    String fileName = StringUtils.format("%s.json", segment.getId().toString().replace(":", ""));
-    return new Path(makeDescriptorInfoDir(), fileName);
+    return new Path(makeDescriptorInfoDir(), StringUtils.removeChar(segment.getId() + ".json", ':'));
   }
 
   public void addJobProperties(Job job)

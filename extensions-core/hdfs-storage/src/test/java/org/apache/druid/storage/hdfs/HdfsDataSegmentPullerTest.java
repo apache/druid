@@ -118,7 +118,7 @@ public class HdfsDataSegmentPullerTest
 
     final File outTmpDir = com.google.common.io.Files.createTempDir();
 
-    final URI uri = URI.create(uriBase.toString() + zipPath.toString());
+    final URI uri = URI.create(uriBase.toString() + zipPath);
 
     try (final OutputStream stream = new FileOutputStream(tmpFile)) {
       ByteStreams.copy(new ByteArrayInputStream(pathByteContents), stream);
@@ -163,7 +163,7 @@ public class HdfsDataSegmentPullerTest
     final File outFile = new File(outTmpDir, "testZip");
     outFile.delete();
 
-    final URI uri = URI.create(uriBase.toString() + zipPath.toString());
+    final URI uri = URI.create(uriBase.toString() + zipPath);
 
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath);
          final OutputStream gzStream = new GZIPOutputStream(outputStream);
@@ -197,7 +197,7 @@ public class HdfsDataSegmentPullerTest
     final File outFile = new File(outTmpDir, "test.txt");
     outFile.delete();
 
-    final URI uri = URI.create(uriBase.toString() + perTestPath.toString());
+    final URI uri = URI.create(uriBase.toString() + perTestPath);
 
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {

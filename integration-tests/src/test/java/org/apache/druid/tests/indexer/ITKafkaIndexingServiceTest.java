@@ -142,10 +142,10 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
       addFilteredProperties(consumerProperties);
 
-      spec = getTaskAsString(INDEXER_FILE)
-          .replaceAll("%%DATASOURCE%%", DATASOURCE)
-          .replaceAll("%%TOPIC%%", TOPIC_NAME)
-          .replaceAll("%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
+      spec = getTaskAsString(INDEXER_FILE);
+      spec = StringUtils.replace(spec, "%%DATASOURCE%%", DATASOURCE);
+      spec = StringUtils.replace(spec, "%%TOPIC%%", TOPIC_NAME);
+      spec = StringUtils.replace(spec, "%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
       LOG.info("supervisorSpec: [%s]\n", spec);
     }
     catch (Exception e) {
@@ -227,16 +227,16 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       throw new ISE(e, "could not read query file: %s", QUERIES_FILE);
     }
 
-    String queryStr = query_response_template
-        .replaceAll("%%DATASOURCE%%", DATASOURCE)
-        .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-        .replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
-        .replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
-        .replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
-        .replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)))
-        .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-        .replace("%%TIMESERIES_ADDED%%", Integer.toString(added))
-        .replace("%%TIMESERIES_NUMEVENTS%%", Integer.toString(num_events));
+    String queryStr = query_response_template;
+    queryStr = StringUtils.replace(queryStr, "%%DATASOURCE%%", DATASOURCE);
+    queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
+    queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast));
+    queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst));
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst));
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)));
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_ADDED%%", Integer.toString(added));
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_NUMEVENTS%%", Integer.toString(num_events));
 
     // this query will probably be answered from the indexing tasks but possibly from 2 historical segments / 2 indexing
     try {

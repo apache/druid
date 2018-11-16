@@ -76,6 +76,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       };
 
   private final ObjectMapper jsonMapper;
+  @Deprecated
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final SelectQueryMetricsFactory queryMetricsFactory;
 

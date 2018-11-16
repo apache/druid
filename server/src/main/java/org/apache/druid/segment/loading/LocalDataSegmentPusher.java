@@ -135,7 +135,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
   private String makeIntermediateDir()
   {
-    return "intermediate_pushes/" + UUID.randomUUID().toString();
+    return "intermediate_pushes/" + UUID.randomUUID();
   }
 
   private long compressSegment(File dataSegmentFile, File dest) throws IOException

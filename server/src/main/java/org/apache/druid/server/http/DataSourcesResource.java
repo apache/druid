@@ -247,7 +247,7 @@ public class DataSourcesResource
     if (indexingServiceClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
-    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
       indexingServiceClient.killSegments(dataSourceName, theInterval);
     }
@@ -298,7 +298,7 @@ public class DataSourcesResource
       @QueryParam("full") String full
   )
   {
-    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     if (simple == null && full == null) {
       final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
       if (dataSource == null) {
@@ -593,7 +593,7 @@ public class DataSourcesResource
     TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
         new TableDataSource(dataSourceName)
     );
-    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     if (timeline == null) {
       log.debug("No timeline found for datasource[%s]", dataSourceName);
       return Response.ok(new ArrayList<ImmutableSegmentLoadInfo>()).build();
