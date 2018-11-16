@@ -2291,11 +2291,13 @@ public class KafkaSupervisor implements Supervisor
           .collect(Collectors.toSet());
 
       consumer.assign(topicPartitions);
-      consumer.seekToEnd(topicPartitions);
 
-      latestOffsetsFromKafka = topicPartitions
+      final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(topicPartitions);
+
+      latestOffsetsFromKafka = endOffsets
+          .entrySet()
           .stream()
-          .collect(Collectors.toMap(TopicPartition::partition, consumer::position));
+          .collect(Collectors.toMap(e -> e.getKey().partition(), Map.Entry::getValue));
     }
   }
 
