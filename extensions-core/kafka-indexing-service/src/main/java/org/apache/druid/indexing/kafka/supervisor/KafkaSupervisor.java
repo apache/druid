@@ -665,18 +665,21 @@ public class KafkaSupervisor implements Supervisor
             })
             .findAny()
             .map(Entry::getKey);
-        taskGroupId = maybeGroupId.orElse(
-            pendingCompletionTaskGroups
-                .entrySet()
-                .stream()
-                .filter(entry -> {
-                  final List<TaskGroup> taskGroups = entry.getValue();
-                  return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
-                })
-                .findAny()
-                .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
-                .getKey()
-        );
+
+        if (maybeGroupId.isPresent()) {
+          taskGroupId = maybeGroupId.get();
+        } else {
+          taskGroupId = pendingCompletionTaskGroups
+              .entrySet()
+              .stream()
+              .filter(entry -> {
+                final List<TaskGroup> taskGroups = entry.getValue();
+                return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
+              })
+              .findAny()
+              .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
+              .getKey();
+        }
       } else {
         taskGroupId = nullableTaskGroupId;
       }
