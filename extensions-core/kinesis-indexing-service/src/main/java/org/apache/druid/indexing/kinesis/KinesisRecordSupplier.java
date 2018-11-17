@@ -215,7 +215,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         }
         catch (ProvisionedThroughputExceededException e) {
           long retryMs = Math.max(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS, fetchDelayMillis);
-          log.warn("Exceeded provisioned throughput, retrying in [%,dms]", retryMs);
           rescheduleRunnable(retryMs);
         }
         catch (Throwable e) {

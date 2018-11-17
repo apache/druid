@@ -355,10 +355,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
         // so either this is a brand new task or replacement of a failed task
         Preconditions.checkState(sequences.get(0).startOffsets.entrySet().stream().allMatch(
             partitionOffsetEntry ->
-                createSequencenNumber(partitionOffsetEntry.getValue()).compareTo(
-                    createSequencenNumber(ioConfig.getStartPartitions()
-                                                  .getPartitionSequenceNumberMap()
-                                                  .get(partitionOffsetEntry.getKey())
+                createSequenceNumber(partitionOffsetEntry.getValue()).compareTo(
+                    createSequenceNumber(ioConfig.getStartPartitions()
+                                                 .getPartitionSequenceNumberMap()
+                                                 .get(partitionOffsetEntry.getKey())
                     )) >= 0
         ), "Sequence sequences are not compatible with start sequences of task");
         currOffsets.putAll(sequences.get(0).startOffsets);
@@ -513,8 +513,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
             if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(record.getSequenceNumber())) {
               // shard is closed
               currOffsets.put(record.getPartitionId(), record.getSequenceNumber());
-            } else if (createSequencenNumber(record.getSequenceNumber()).compareTo(
-                createSequencenNumber(endOffsets.get(record.getPartitionId()))) < 0) {
+            } else if (createSequenceNumber(record.getSequenceNumber()).compareTo(
+                createSequenceNumber(endOffsets.get(record.getPartitionId()))) < 0) {
 
 
               if (!record.getSequenceNumber().equals(currOffsets.get(record.getPartitionId()))) {
@@ -1041,7 +1041,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       final SequenceType endOffset = endOffsets.get(entry.getKey());
       if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(endOffset)
           || SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset)
-          || createSequencenNumber(entry.getValue()).compareTo(createSequencenNumber(endOffset)) < 0) {
+          || createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(endOffset)) < 0) {
         assignment.add(StreamPartition.of(stream, entry.getKey()));
       } else if (entry.getValue().equals(endOffset)) {
         log.info("Finished reading partition[%s].", entry.getKey());
@@ -1122,12 +1122,16 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       SequenceType sequence = currOffsets.get(streamPartition.getPartitionId());
       if (!tuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
         SequenceType earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
+        /*
         if (earliestSequenceNumber == null) {
           log.warn(
               "unable to verify sequence number[%s] availability, unable to fetch earliest sequence number",
               sequence
           );
-        } else if (createSequencenNumber(earliestSequenceNumber).compareTo(createSequencenNumber(sequence)) > 0) {
+        }
+        */
+        if (earliestSequenceNumber == null
+            || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
           if (tuningConfig.isResetOffsetAutomatically()) {
             log.info("Attempting to reset sequences automatically for all partitions");
             try {
@@ -1752,9 +1756,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
     {
       lock.lock();
       try {
-        final OrderedSequenceNumber<SequenceType> partitionEndOffset = createSequencenNumber(endOffsets.get(record.getPartitionId()));
-        final OrderedSequenceNumber<SequenceType> partitionStartOffset = createSequencenNumber(startOffsets.get(record.getPartitionId()));
-        final OrderedSequenceNumber<SequenceType> recordOffset = createSequencenNumber(record.getSequenceNumber());
+        final OrderedSequenceNumber<SequenceType> partitionEndOffset = createSequenceNumber(endOffsets.get(record.getPartitionId()));
+        final OrderedSequenceNumber<SequenceType> partitionStartOffset = createSequenceNumber(startOffsets.get(record.getPartitionId()));
+        final OrderedSequenceNumber<SequenceType> recordOffset = createSequenceNumber(record.getSequenceNumber());
         return isOpen()
                && recordOffset != null
                && partitionEndOffset != null
@@ -1814,8 +1818,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
                 for (Map.Entry<PartitionType, SequenceType> partitionOffset : endOffsets.entrySet()) {
                   SequenceType newOffsets = partitionOffset.getValue();
                   if (lastPersistedOffsets.containsKey(partitionOffset.getKey()) &&
-                      createSequencenNumber(lastPersistedOffsets.get(partitionOffset.getKey())).compareTo(
-                          createSequencenNumber(newOffsets)) > 0) {
+                      createSequenceNumber(lastPersistedOffsets.get(partitionOffset.getKey())).compareTo(
+                          createSequenceNumber(newOffsets)) > 0) {
                     newOffsets = lastPersistedOffsets.get(partitionOffset.getKey());
                   }
                   lastPersistedOffsets.put(
@@ -1939,9 +1943,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       ObjectMapper mapper,
       Object obeject
   );
-
-  protected abstract OrderedSequenceNumber<SequenceType> createSequencenNumber(SequenceType sequenceNumber);
-
 
   @NotNull
   protected abstract List<OrderedPartitionableRecord<PartitionType, SequenceType>> getRecords(

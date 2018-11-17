@@ -189,12 +189,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected OrderedSequenceNumber<Long> createSequencenNumber(Long sequenceNumber)
-  {
-    return KafkaSequenceNumber.of(sequenceNumber);
-  }
-
-  @Override
   protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetadata(
       SeekableStreamPartitions<Integer, Long> partitions
   )

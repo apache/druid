@@ -110,12 +110,6 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected OrderedSequenceNumber<String> createSequencenNumber(String sequenceNumber)
-  {
-    return KinesisSequenceNumber.of(sequenceNumber);
-  }
-
-  @Override
   protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadata(
       SeekableStreamPartitions<String, String> partitions
   )

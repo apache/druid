@@ -714,12 +714,6 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
     return null;
   }
 
-  @Override
-  protected OrderedSequenceNumber<Long> createSequencenNumber(Long sequenceNumber)
-  {
-    return null;
-  }
-
   private void possiblyResetOffsetsOrWait(
       Map<TopicPartition, Long> outOfRangePartitions,
       KafkaConsumer<byte[], byte[]> consumer,
@@ -886,7 +880,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
     }
 
     try {
-      if (pauseLock.tryLock(KafkaIndexTask.LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+      if (pauseLock.tryLock(SeekableStreamIndexTask.LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
         try {
           if (pauseRequested) {
             pauseRequested = false;
@@ -902,7 +896,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
         return;
       }
 
-      if (pollRetryLock.tryLock(KafkaIndexTask.LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+      if (pollRetryLock.tryLock(SeekableStreamIndexTask.LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
         try {
           isAwaitingRetry.signalAll();
         }
