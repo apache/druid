@@ -287,6 +287,8 @@ public class SystemSchema extends AbstractSchema
               if (segmentsAlreadySeen.contains(val.getKey().getIdentifier())) {
                 return null;
               }
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey().getIdentifier());
+              final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
               return new Object[]{
                   val.getKey().getIdentifier(),
                   val.getKey().getDataSource(),
@@ -295,9 +297,7 @@ public class SystemSchema extends AbstractSchema
                   val.getKey().getSize(),
                   val.getKey().getVersion(),
                   Long.valueOf(val.getKey().getShardSpec().getPartitionNum()),
-                  partialSegmentDataMap.get(val.getKey().getIdentifier()) == null
-                  ? 0L
-                  : partialSegmentDataMap.get(val.getKey().getIdentifier()).getNumReplicas(),
+                  numReplicas,
                   val.getValue().getNumRows(),
                   val.getValue().isPublished(),
                   val.getValue().isAvailable(),
