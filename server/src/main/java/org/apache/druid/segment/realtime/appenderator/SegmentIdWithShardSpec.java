@@ -30,6 +30,10 @@ import org.joda.time.Interval;
 /**
  * {@link SegmentId} with additional {@link ShardSpec} info. {@link #equals}/{@link #hashCode} and {@link
  * #compareTo} don't consider that additinal info.
+ *
+ * This class is separate from {@link SegmentId} because in a lot of places segment ids are transmitted as "segment id
+ * strings" that don't contain enough information to deconstruct the {@link ShardSpec}. Also, even a single extra field
+ * in {@link SegmentId} is important, because it adds to the memory footprint considerably.
  */
 public final class SegmentIdWithShardSpec implements Comparable<SegmentIdWithShardSpec>
 {

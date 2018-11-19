@@ -55,6 +55,11 @@ public final class SegmentId implements Comparable<SegmentId>
    * Implementation note: this class must be optimized for resident memory footprint, because segment data consumes
    * a lot of heap memory on Druid Broker and Coordinator nodes.
    *
+   * This class is separate from org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec
+   * because in a lot of places segment ids are transmitted as "segment id strings" that don't contain enough
+   * information to deconstruct the ShardSpec. Also, even a single extra field is important for SegmentIds, because it
+   * adds to the memory footprint considerably.
+   *
    * API design note: "SegmentId" is chosen as the name for this class instead of more verbose "SegmentIdentifier" or
    * "DataSegmentIdentifier" because it's used very frequently and a long class name adds noticeable clutter. Variables
    * of SegmentId type are recommended to be named "segmentId" rather than "identifier" or "segmentIdentifier".
