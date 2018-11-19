@@ -619,7 +619,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
       GetRecordsResult recordsResult;
       try {
-        recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator).withLimit(10000));
+        recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1000));
       }
       catch (ProvisionedThroughputExceededException e) {
         try {
