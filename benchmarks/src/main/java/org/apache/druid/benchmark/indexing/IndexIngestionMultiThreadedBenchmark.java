@@ -181,8 +181,8 @@ public class IndexIngestionMultiThreadedBenchmark
   {
     Options opt = new OptionsBuilder()
             .include(IndexIngestionMultiThreadedBenchmark.class.getSimpleName())
-            .threads(8)
-            .forks(0)
+            .threads(1)
+            .forks(1)
             .build();
 
     new Runner(opt).run();

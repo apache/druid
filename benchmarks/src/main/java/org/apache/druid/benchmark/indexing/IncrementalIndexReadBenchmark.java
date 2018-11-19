@@ -57,6 +57,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
@@ -77,7 +78,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class IncrementalIndexReadBenchmark
 {
-  @Param({"750000"})
+  @Param({"7500"})
   private int rowsPerSegment;
 
   @Param({"basic"})
@@ -85,6 +86,9 @@ public class IncrementalIndexReadBenchmark
 
   @Param({"true", "false"})
   private boolean rollup;
+
+  @Param({"onheap", "oak"})
+  private String indexType;
 
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -121,18 +125,40 @@ public class IncrementalIndexReadBenchmark
     }
   }
 
+  @TearDown
+  public void tearDown()
+  {
+    incIndex.close();
+  }
+
   private IncrementalIndex makeIncIndex()
   {
-    return new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(schemaInfo.getAggsArray())
-                .withRollup(rollup)
-                .build()
-        )
-        .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+    switch (indexType) {
+      case "onheap":
+        return new IncrementalIndex.Builder()
+                .setIndexSchema(
+                        new IncrementalIndexSchema.Builder()
+                                .withMetrics(schemaInfo.getAggsArray())
+                                .withRollup(rollup)
+                                .build()
+                )
+                .setReportParseExceptions(false)
+                .setMaxRowCount(rowsPerSegment)
+                .buildOnheap();
+      case "oak":
+        return new IncrementalIndex.Builder()
+                .setIndexSchema(
+                        new IncrementalIndexSchema.Builder()
+                                .withMetrics(schemaInfo.getAggsArray())
+                                .withRollup(rollup)
+                                .build()
+                )
+                .setReportParseExceptions(false)
+                .setMaxRowCount(rowsPerSegment)
+                .buildOffheapOak();
+
+    }
+    return null;
   }
 
   @Benchmark
@@ -216,7 +242,6 @@ public class IncrementalIndexReadBenchmark
   {
     Options opt = new OptionsBuilder()
             .include(IncrementalIndexReadBenchmark.class.getSimpleName())
-            .threads(1)
             .forks(1)
             .build();
 

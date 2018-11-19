@@ -40,6 +40,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
@@ -56,7 +57,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class IndexIngestionBenchmark
 {
-  @Param({"1000000"})
+  @Param({"75000"})
   private int rowsPerSegment;
 
   @Param({"basic"})
@@ -64,6 +65,9 @@ public class IndexIngestionBenchmark
 
   @Param({"true", "false"})
   private boolean rollup;
+
+  @Param({"onheap", "oak"})
+  private String indexType;
 
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -102,18 +106,40 @@ public class IndexIngestionBenchmark
     incIndex = makeIncIndex();
   }
 
+  @TearDown(Level.Invocation)
+  public void tearDown()
+  {
+    incIndex.close();
+  }
+
   private IncrementalIndex makeIncIndex()
   {
-    return new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(schemaInfo.getAggsArray())
-                .withRollup(rollup)
-                .build()
-        )
-        .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment * 2)
-        .buildOnheap();
+    switch (indexType) {
+      case "onheap":
+        return new IncrementalIndex.Builder()
+                .setIndexSchema(
+                        new IncrementalIndexSchema.Builder()
+                                .withMetrics(schemaInfo.getAggsArray())
+                                .withRollup(rollup)
+                                .build()
+                )
+                .setReportParseExceptions(false)
+                .setMaxRowCount(rowsPerSegment * 2)
+                .buildOnheap();
+      case "oak":
+        return new IncrementalIndex.Builder()
+                .setIndexSchema(
+                        new IncrementalIndexSchema.Builder()
+                                .withMetrics(schemaInfo.getAggsArray())
+                                .withRollup(rollup)
+                                .build()
+                )
+                .setReportParseExceptions(false)
+                .setMaxRowCount(rowsPerSegment * 2)
+                .buildOffheapOak();
+
+    }
+    return null;
   }
 
   @Benchmark
