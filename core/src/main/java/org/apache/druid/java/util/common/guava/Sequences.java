@@ -89,6 +89,11 @@ public class Sequences
     return new FilteredSequence<>(sequence, pred);
   }
 
+  public static <T, ListType extends List<T>> ListType toList(Sequence<T> seq, ListType list)
+  {
+    return seq.accumulate(list, Accumulators.<ListType, T>list());
+  }
+
   public static <T> Sequence<T> withBaggage(final Sequence<T> seq, final Closeable baggage)
   {
     Preconditions.checkNotNull(baggage, "baggage");
