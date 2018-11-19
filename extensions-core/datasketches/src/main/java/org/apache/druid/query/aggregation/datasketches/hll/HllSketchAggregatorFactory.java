@@ -174,7 +174,7 @@ abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new HllSketchMergeAggregatorFactory(getName(), getName(), getLgK(), getTgtHllType().toString());
+    return new HllSketchMergeAggregatorFactory(getName(), getName(), getLgK(), getTgtHllType());
   }
 
   @Override

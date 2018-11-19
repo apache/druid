@@ -65,7 +65,7 @@ public class ParametrizedUriExtractor implements UriExtractor
             eventMap
         );
       }
-      processedUri = processedUri.replace(StringUtils.format("{%s}", key), paramValue.toString());
+      processedUri = StringUtils.replace(processedUri, StringUtils.format("{%s}", key), paramValue.toString());
     }
     return new URI(processedUri);
   }

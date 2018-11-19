@@ -120,7 +120,7 @@ This field is required.
 |-----|----|-----------|--------|
 |type|String|This should always be 'hadoop'.|yes|
 |inputSpec|Object|A specification of where to pull the data in from. See below.|yes|
-|segmentOutputPath|String|The path to dump segments into.|yes|
+|segmentOutputPath|String|The path to dump segments into.|Only used by the [CLI Hadoop Indexer](../ingestion/command-line-hadoop-indexer.html). This field must be null otherwise.|
 |metadataUpdateSpec|Object|A specification of how to update the metadata for the druid cluster these segments belong to.|Only used by the [CLI Hadoop Indexer](../ingestion/command-line-hadoop-indexer.html). This field must be null otherwise.|
 
 ### InputSpec specification

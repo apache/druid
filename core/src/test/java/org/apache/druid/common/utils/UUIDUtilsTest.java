@@ -24,6 +24,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -102,7 +103,7 @@ public class UUIDUtilsTest
     strings.add(uuidString.substring(16, 20));
     strings.add(uuidString.substring(20, 32));
     UUID uuid = UUID.fromString(Joiner.on('-').join(strings));
-    Assert.assertEquals(uuid.toString().replace("-", ""), uuidString);
+    Assert.assertEquals(StringUtils.removeChar(uuid.toString(), '-'), uuidString);
   }
 
   @Test

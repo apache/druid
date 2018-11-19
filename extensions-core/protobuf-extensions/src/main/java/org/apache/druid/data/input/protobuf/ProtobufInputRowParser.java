@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -53,7 +55,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
   private final String protoMessageType;
   private final Descriptor descriptor;
   private Parser<String, Object> parser;
-
+  private final List<String> dimensions;
 
   @JsonCreator
   public ProtobufInputRowParser(
@@ -66,6 +68,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     this.descriptorFilePath = descriptorFilePath;
     this.protoMessageType = protoMessageType;
     this.descriptor = getDescriptor(descriptorFilePath);
+    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
   }
 
   @Override
@@ -98,9 +101,17 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     }
 
     Map<String, Object> record = parser.parseToMap(json);
+    final List<String> dimensions;
+    if (!this.dimensions.isEmpty()) {
+      dimensions = this.dimensions;
+    } else {
+      dimensions = Lists.newArrayList(
+          Sets.difference(record.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
+      );
+    }
     return ImmutableList.of(new MapBasedInputRow(
         parseSpec.getTimestampSpec().extractTimestamp(record),
-        parseSpec.getDimensionsSpec().getDimensionNames(),
+        dimensions,
         record
     ));
   }
@@ -122,7 +133,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         fin = url.openConnection().getInputStream();
       }
       catch (IOException e) {
-        throw new ParseException(e, "Cannot read descriptor file: " + url.toString());
+        throw new ParseException(e, "Cannot read descriptor file: " + url);
       }
     }
 

@@ -98,7 +98,7 @@ public class IntervalsResource
       @Context final HttpServletRequest req
   )
   {
-    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
         req,
         serverInventoryView,
