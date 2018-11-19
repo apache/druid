@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
@@ -37,11 +38,69 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class FixedBucketsHistogram
 {
-  private static final byte SERIALIZATION_VERSION = 0x01;
+  public static final byte SERIALIZATION_VERSION = 0x01;
 
-  private static final byte FULL_ENCODING_MODE = 0x01;
-  private static final byte SPARSE_ENCODING_MODE = 0x02;
+  /**
+   * Serialization header format:
+   *
+   * byte: serialization version, must be 0x01
+   * byte: encoding mode, 0x01 for full, 0x02 for full
+   */
+  public static final int SERDE_HEADER_SIZE = Byte.BYTES +
+                                              Byte.BYTES;
 
+  /**
+   * Common serialization fields format:
+   *
+   * double: lowerLimit
+   * double: upperLimit
+   * int: numBuckets
+   * byte: outlier handling mode (0x00 for `ignore`, 0x01 for `overflow`, and 0x02 for `clip`)
+   * long: count, total number of values contained in the histogram, excluding outliers
+   * long: lowerOutlierCount
+   * long: upperOutlierCount
+   * long: missingValueCount
+   * double: max
+   * double: min
+   */
+  public static final int COMMON_FIELDS_SIZE = Double.BYTES +
+                                                Double.BYTES +
+                                                Integer.BYTES +
+                                                Byte.BYTES +
+                                                Long.BYTES * 4 +
+                                                Double.BYTES +
+                                                Double.BYTES;
+
+  /**
+   * Full serialization format:
+   *
+   * serialization header
+   * common fields
+   * array of longs: bucket counts for the histogram
+   */
+  public static final byte FULL_ENCODING_MODE = 0x01;
+
+  /**
+   * Sparse serialization format:
+   *
+   * serialization header
+   * common fields
+   * int: number of following (bucketNum, count) pairs
+   * sequence of (int, long) pairs:
+   *  int: bucket number
+   *  count: bucket count
+   */
+  public static final byte SPARSE_ENCODING_MODE = 0x02;
+
+  /**
+   * Determines how the the histogram handles outliers.
+   *
+   * Ignore:   do not track outliers at all
+   * Overflow: track outlier counts in upperOutlierCount and lowerOutlierCount.
+   *           The min and max do not take outlier values into account.
+   * Clip:     Clip outlier values to either the start or end of the histogram's range, adding them to the first or
+   *           last bucket, respectively. The min and max are affected by such clipped outlier values.
+   */
   public enum OutlierHandlingMode
   {
     IGNORE,
@@ -67,6 +126,21 @@ public class FixedBucketsHistogram
     }
   }
 
+  @JsonIgnore
+  private final OutlierHandler outlierHandler;
+
+  /**
+   * Locking is needed when the non-buffer aggregator is used within a realtime ingestion task.
+   *
+   * The following areas are locked:
+   * - Add value
+   * - Merge histograms
+   * - Compute percentiles
+   * - Serialization
+   */
+  @JsonIgnore
+  private final ReadWriteLock readWriteLock;
+
   private double lowerLimit;
   private double upperLimit;
   private int numBuckets;
@@ -81,8 +155,6 @@ public class FixedBucketsHistogram
   private long count = 0;
   private double max = Double.NEGATIVE_INFINITY;
   private double min = Double.POSITIVE_INFINITY;
-
-  private final ReadWriteLock readWriteLock;
 
   public FixedBucketsHistogram(
       double lowerLimit,
@@ -110,6 +182,8 @@ public class FixedBucketsHistogram
     this.histogram = new long[numBuckets];
     this.bucketSize = (upperLimit - lowerLimit) / numBuckets;
     this.readWriteLock = new ReentrantReadWriteLock(true);
+
+    this.outlierHandler = makeOutlierHandler();
   }
 
   @VisibleForTesting
@@ -141,6 +215,7 @@ public class FixedBucketsHistogram
 
     this.bucketSize = (upperLimit - lowerLimit) / numBuckets;
     this.readWriteLock = new ReentrantReadWriteLock(true);
+    this.outlierHandler = makeOutlierHandler();
   }
 
   @VisibleForTesting
@@ -300,6 +375,11 @@ public class FixedBucketsHistogram
     return readWriteLock;
   }
 
+  /**
+   * Add a value to the histogram, using the outlierHandler to account for outliers.
+   *
+   * @param value value to be added.
+   */
   public void add(
       double value
   )
@@ -308,12 +388,10 @@ public class FixedBucketsHistogram
 
     try {
       if (value < lowerLimit) {
-        handleOutlier(false);
+        outlierHandler.handleOutlierAdd(false);
         return;
-      }
-
-      if (value >= upperLimit) {
-        handleOutlier(true);
+      } else if (value >= upperLimit) {
+        outlierHandler.handleOutlierAdd(true);
         return;
       }
 
@@ -339,6 +417,9 @@ public class FixedBucketsHistogram
     }
   }
 
+  /**
+   * Called when the histogram encounters a null value.
+   */
   public void incrementMissing()
   {
     readWriteLock.writeLock().lock();
@@ -351,40 +432,13 @@ public class FixedBucketsHistogram
     }
   }
 
-  private void handleOutlier(boolean exceededMax)
-  {
-    switch (outlierHandlingMode) {
-      case CLIP:
-        double clippedValue;
-        count += 1;
-        if (exceededMax) {
-          clippedValue = upperLimit;
-          histogram[histogram.length - 1] += 1;
-        } else {
-          clippedValue = lowerLimit;
-          histogram[0] += 1;
-        }
-        if (clippedValue > max) {
-          max = clippedValue;
-        }
-        if (clippedValue < min) {
-          min = clippedValue;
-        }
-        break;
-      case OVERFLOW:
-        if (exceededMax) {
-          upperOutlierCount += 1;
-        } else {
-          lowerOutlierCount += 1;
-        }
-        break;
-      case IGNORE:
-        break;
-      default:
-        throw new ISE("Unknown outlier handling mode: " + outlierHandlingMode);
-    }
-  }
-
+  /**
+   * Merge another histogram into this one. Only the state of this histogram is updated.
+   *
+   * If the two histograms have identical buckets, a simpler algorithm is used.
+   *
+   * @param otherHistogram
+   */
   public void combineHistogram(FixedBucketsHistogram otherHistogram)
   {
     if (otherHistogram == null) {
@@ -411,6 +465,11 @@ public class FixedBucketsHistogram
     }
   }
 
+  /**
+   * Merge another histogram that has the same range and same buckets.
+   *
+   * @param otherHistogram
+   */
   private void combineHistogramSameBuckets(FixedBucketsHistogram otherHistogram)
   {
     long[] otherHistogramArray = otherHistogram.getHistogram();
@@ -422,78 +481,50 @@ public class FixedBucketsHistogram
     max = Math.max(max, otherHistogram.getMax());
     min = Math.min(min, otherHistogram.getMin());
 
-    switch (outlierHandlingMode) {
-      case IGNORE:
-        break;
-      case OVERFLOW:
-        lowerOutlierCount += otherHistogram.getLowerOutlierCount();
-        upperOutlierCount += otherHistogram.getUpperOutlierCount();
-        break;
-      case CLIP:
-        if (otherHistogram.getLowerOutlierCount() > 0) {
-          histogram[0] += otherHistogram.getLowerOutlierCount();
-          count += otherHistogram.getLowerOutlierCount();
-          min = Math.min(lowerLimit, min);
-        }
-        if (otherHistogram.getUpperOutlierCount() > 0) {
-          histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount();
-          count += otherHistogram.getUpperOutlierCount();
-          max = Math.max(upperLimit, max);
-        }
-        break;
-      default:
-        throw new ISE("Invalid outlier handling mode: " + outlierHandlingMode);
-    }
+    outlierHandler.handleOutliersForCombineSameBuckets(otherHistogram);
   }
 
+  /**
+   * Merge another histogram that has different buckets from mine.
+   *
+   * First, check if the other histogram falls entirely outside of my defined range. If so, call the appropriate
+   * function for optimized handling.
+   *
+   * Otherwise, this merges the histograms with a more general function.
+   *
+   * @param otherHistogram
+   */
   private void combineHistogramDifferentBuckets(FixedBucketsHistogram otherHistogram)
   {
-    long otherCount;
     if (otherHistogram.getLowerLimit() >= upperLimit) {
-      otherCount = otherHistogram.getCount() + otherHistogram.getUpperOutlierCount();
-      switch (outlierHandlingMode) {
-        case IGNORE:
-          break;
-        case OVERFLOW:
-          // ignore any lower outliers in the other histogram, we're not sure where those outliers would fall
-          // within our range.
-          upperOutlierCount += otherCount;
-          break;
-        case CLIP:
-          histogram[histogram.length - 1] += otherCount;
-          count += otherCount;
-          if (otherCount > 0) {
-            max = Math.max(max, upperLimit);
-          }
-          break;
-        default:
-          throw new ISE("Invalid outlier handling mode: " + outlierHandlingMode);
-      }
+      outlierHandler.handleOutliersCombineDifferentBucketsAllUpper(otherHistogram);
     } else if (otherHistogram.getUpperLimit() <= lowerLimit) {
-      otherCount = otherHistogram.getCount() + otherHistogram.getLowerOutlierCount();
-      switch (outlierHandlingMode) {
-        case IGNORE:
-          break;
-        case OVERFLOW:
-          // ignore any upper outliers in the other histogram, we're not sure where those outliers would fall
-          // within our range.
-          lowerOutlierCount += otherCount;
-          break;
-        case CLIP:
-          histogram[0] += otherCount;
-          count += otherCount;
-          if (otherCount > 0) {
-            min = Math.min(min, lowerLimit);
-          }
-          break;
-        default:
-          throw new ISE("Invalid outlier handling mode: " + outlierHandlingMode);
-      }
+      outlierHandler.handleOutliersCombineDifferentBucketsAllLower(otherHistogram);
     } else {
       simpleInterpolateMerge(otherHistogram);
     }
   }
 
+  /**
+   * Get a sum of bucket counts from either the start of a histogram's range or end, up to a specified cutoff value.
+   *
+   * For example, if I have the following histogram with a range of 0-40, with 4 buckets and
+   * per-bucket counts of 5, 2, 10, and 7:
+   *
+   * |   5   |   2   |   24   |   7   |
+   * 0       10      20       30      40
+   *
+   * Calling this function with a cutoff of 25 and fromStart = true would:
+   * - Sum the first two bucket counts 5 + 2
+   * - Since the cutoff falls in the third bucket, multiply the third bucket's count by the fraction of the bucket range
+   *   covered by the cutoff, in this case the fraction is ((25 - 20) / 10) = 0.5
+   * - The total count returned is 5 + 2 + 12
+   *
+   * @param cutoff Cutoff point within the histogram's range
+   * @param fromStart If true, sum the bucket counts starting from the beginning of the histogram range.
+   *                  If false, sum from the other direction, starting from the end of the histogram range.
+   * @return Sum of bucket counts up to the cutoff point
+   */
   private double getCumulativeCount(double cutoff, boolean fromStart)
   {
     int cutoffBucket = (int) ((cutoff - lowerLimit) / bucketSize);
@@ -523,123 +554,36 @@ public class FixedBucketsHistogram
     return count;
   }
 
-  private void simpleInterpolateMergeHandleOutliers(
-      FixedBucketsHistogram otherHistogram,
-      double rangeStart,
-      double rangeEnd
-  )
-  {
-    // They contain me
-    if (lowerLimit == rangeStart && upperLimit == rangeEnd) {
-      long lowerCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeStart, true));
-      long upperCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeEnd, false));
-
-      switch (outlierHandlingMode) {
-        case IGNORE:
-          break;
-        case OVERFLOW:
-          upperOutlierCount += otherHistogram.getUpperOutlierCount() + upperCountFromOther;
-          lowerOutlierCount += otherHistogram.getLowerOutlierCount() + lowerCountFromOther;
-          break;
-        case CLIP:
-          histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount() + upperCountFromOther;
-          histogram[0] += otherHistogram.getLowerOutlierCount() + lowerCountFromOther;
-          count += otherHistogram.getUpperOutlierCount() + otherHistogram.getLowerOutlierCount();
-          count += upperCountFromOther + lowerCountFromOther;
-          if (otherHistogram.getUpperOutlierCount() + upperCountFromOther > 0) {
-            max = Math.max(max, upperLimit);
-          }
-          if (otherHistogram.getLowerOutlierCount() + lowerCountFromOther > 0) {
-            min = Math.min(min, lowerLimit);
-          }
-          break;
-        default:
-          throw new ISE("Invalid outlier handling mode: " + outlierHandlingMode);
-      }
-    } else if (rangeStart == lowerLimit) {
-      // assume that none of the other histogram's outliers fall within our range
-      // how many values were there in the portion of the other histogram that falls under my lower limit?
-      long lowerCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeStart, true));
-      switch (outlierHandlingMode) {
-        case IGNORE:
-          break;
-        case OVERFLOW:
-          lowerOutlierCount += lowerCountFromOther;
-          lowerOutlierCount += otherHistogram.getLowerOutlierCount();
-          upperOutlierCount += otherHistogram.getUpperOutlierCount();
-          break;
-        case CLIP:
-          histogram[0] += lowerCountFromOther;
-          histogram[0] += otherHistogram.getLowerOutlierCount();
-          histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount();
-          count += lowerCountFromOther + otherHistogram.getLowerOutlierCount() + otherHistogram.getUpperOutlierCount();
-          if (lowerCountFromOther + otherHistogram.getLowerOutlierCount() > 0) {
-            min = lowerLimit;
-          }
-          if (otherHistogram.getUpperOutlierCount() > 0) {
-            max = upperLimit;
-          }
-          break;
-        default:
-          throw new ISE("Invalid outlier handling mode: " + outlierHandlingMode);
-      }
-    } else if (rangeEnd == upperLimit) {
-      // how many values were there in the portion of the other histogram that is greater than my upper limit?
-      long upperCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeEnd, false));
-      switch (outlierHandlingMode) {
-        case IGNORE:
-          break;
-        case OVERFLOW:
-          upperOutlierCount += upperCountFromOther;
-          upperOutlierCount += otherHistogram.getUpperOutlierCount();
-          lowerOutlierCount += otherHistogram.getLowerOutlierCount();
-          break;
-        case CLIP:
-          histogram[histogram.length - 1] += upperCountFromOther;
-          histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount();
-          histogram[0] += otherHistogram.getLowerOutlierCount();
-          count += upperCountFromOther + otherHistogram.getLowerOutlierCount() + otherHistogram.getUpperOutlierCount();
-          if (upperCountFromOther + otherHistogram.getUpperOutlierCount() > 0) {
-            max = upperLimit;
-          }
-          if (otherHistogram.getLowerOutlierCount() > 0) {
-            min = lowerLimit;
-          }
-          break;
-        default:
-          throw new ISE("Invalid outlier handling mode: " + outlierHandlingMode);
-      }
-    } else if (rangeStart > lowerLimit && rangeEnd < upperLimit) {
-      // I contain them
-      switch (outlierHandlingMode) {
-        case IGNORE:
-          break;
-        case OVERFLOW:
-          upperOutlierCount += otherHistogram.getUpperOutlierCount();
-          lowerOutlierCount += otherHistogram.getLowerOutlierCount();
-          break;
-        case CLIP:
-          histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount();
-          histogram[0] += otherHistogram.getLowerOutlierCount();
-          count += otherHistogram.getUpperOutlierCount() + otherHistogram.getLowerOutlierCount();
-          if (otherHistogram.getUpperOutlierCount() > 0) {
-            max = Math.max(max, upperLimit);
-          } else if (otherHistogram.getCount() > 0) {
-            max = Math.max(max, otherHistogram.getMax());
-          }
-          if (otherHistogram.getLowerOutlierCount() > 0) {
-            min = Math.min(min, lowerLimit);
-          } else if (otherHistogram.getCount() > 0) {
-            min = Math.min(min, otherHistogram.getMin());
-          }
-          break;
-        default:
-          throw new ISE("Invalid outlier handling mode: " + outlierHandlingMode);
-      }
-    }
-  }
-
-  // assumes that values are uniformly distributed within each bucket in the other histogram
+  /**
+   * Combines this histogram with another histogram by "rebucketing" the other histogram to match our bucketing scheme,
+   * assuming that the original input values are uniformly distributed within each bucket in the other histogram.
+   *
+   * Suppose we have the following histograms:
+   *
+   * |   0   |   0   |   0   |   0   |   0   |   0   |
+   * 0       1       2       3       4       5       6
+   *
+   * |   4   |   4   |   0   |   0   |
+   * 0       3       6       9       12
+   *
+   * We will preserve the bucketing scheme of our histogram, and determine what cut-off points within the other
+   * histogram align with our bucket boundaries.
+   *
+   * Using this example, we would effectively rebucket the second histogram to the following:
+   *
+   * | 1.333 | 1.333 | 1.333 | 1.333 | 1.333 | 1.333 |   0   |   0   |   0   |   0   |   0   |   0   |
+   * 0       1       2       3       4       5       6       7       8       9       10      11      12
+   *
+   * The 0-3 bucket in the second histogram is rebucketed across new buckets with size 1, with the original frequency 4
+   * multiplied by the fraction (new bucket size / original bucket size), in this case 1/3.
+   *
+   * These new rebucketed counts are then added to the base histogram's buckets, with rounding, resulting in:
+   *
+   * |   1   |   1   |   1   |   1   |   1   |   1   |
+   * 0       1       2       3       4       5       6
+   *
+   * @param otherHistogram other histogram to be merged
+   */
   private void simpleInterpolateMerge(FixedBucketsHistogram otherHistogram)
   {
     double rangeStart = Math.max(lowerLimit, otherHistogram.getLowerLimit());
@@ -658,7 +602,7 @@ public class FixedBucketsHistogram
     myNextCursorBoundary = Math.min(myNextCursorBoundary, rangeEnd);
     theirNextCursorBoundary = Math.min(theirNextCursorBoundary, rangeEnd);
 
-    simpleInterpolateMergeHandleOutliers(otherHistogram, rangeStart, rangeEnd);
+    outlierHandler.simpleInterpolateMergeHandleOutliers(otherHistogram, rangeStart, rangeEnd);
 
     double theirCurrentLowerBucketBoundary = theirCurBucket * otherHistogram.getBucketSize() + otherHistogram.getLowerLimit();
 
@@ -683,6 +627,7 @@ public class FixedBucketsHistogram
           minStride += theirCurrentLowerBucketBoundary;
           if (minStride >= theirCursor) {
             min = Math.min(minStride, min);
+            max = Math.max(minStride, max);
           }
 
           double maxStride = Math.floor(
@@ -693,6 +638,7 @@ public class FixedBucketsHistogram
           maxStride += theirCurrentLowerBucketBoundary;
           if (maxStride < theirCursor + toConsume) {
             max = Math.max(maxStride, max);
+            min = Math.min(maxStride, min);
           }
         }
 
@@ -731,7 +677,34 @@ public class FixedBucketsHistogram
     }
   }
 
-  // Based off PercentileBuckets code from Netflix Spectator: https://github.com/Netflix/spectator
+
+  /**
+   * Estimate percentiles from the histogram bucket counts, using the following process:
+   *
+   * Suppose we have the following histogram with range 0-10, with bucket size = 2, and the following counts:
+   *
+   * |   0  |   1  |   2  |   4  |   0  |
+   * 0      2      4      6      8      10
+   *
+   * If we wanted to estimate the 75th percentile:
+   * 1. Find the frequency cut-off for the 75th percentile: 0.75 * 7 (the total count for the entire histogram) = 5.25
+   * 2. Find the bucket for the cut-off point: in this case, the 6-8 bucket, since the cumulative frequency
+   *    from 0-6 is 3 and cumulative frequency from 0-8 is 7
+   * 3. The percentile estimate is L + F * W, where:
+   *
+   *   L = lower boundary of target bucket
+   *   F = (frequency cut-off - cumulative frequency up to target bucket) / frequency of target bucket
+   *   W = bucket size
+   *
+   *   In this case:
+   *   75th percentile estimate = 6 + ((5.25 - 3) / 4) * 2 = 7.125
+   *
+   * Based off PercentileBuckets code from Netflix Spectator:
+   * - https://github.com/Netflix/spectator/blob/0d083da3a60221de9cc710e314b0749e47a40e67/spectator-api/src/main/java/com/netflix/spectator/api/histogram/PercentileBuckets.java#L105
+   *
+   * @param pcts Array of percentiles to be estimated. Must be sorted in ascending order.
+   * @return Estimates of percentile values, in the same order as the provided input.
+   */
   public float[] percentilesFloat(double[] pcts)
   {
     readWriteLock.readLock().lock();
@@ -769,7 +742,24 @@ public class FixedBucketsHistogram
     }
   }
 
+  /**
+   * Encode the serialized form generated by toBytes() in Base64, used as the JSON serialization format.
+   *
+   * @return Base64 serialization
+   */
   @JsonValue
+  public String toBase64()
+  {
+    byte[] asBytes = toBytes();
+    return StringUtils.fromUtf8(Base64.encodeBase64(asBytes));
+  }
+
+  /**
+   * Serialize the histogram, with two possible encodings chosen based on the number of filled buckets:
+   *
+   * Full: Store the histogram buckets as an array of bucket counts, with size numBuckets
+   * Sparse: Store the histogram buckets as a list of (bucketNum, count) pairs.
+   */
   public byte[] toBytes()
   {
     readWriteLock.readLock().lock();
@@ -787,58 +777,28 @@ public class FixedBucketsHistogram
     }
   }
 
-  public String toBase64()
+  /**
+   * Write a serialization header containing the serde version byte and full/sparse encoding mode byte.
+   *
+   * This header is not needed when serializing the histogram for localized internal use within the
+   * buffer aggregator implementation.
+   *
+   * @param buf Destination buffer
+   * @param mode Full or sparse mode
+   */
+  private void writeByteBufferSerdeHeader(ByteBuffer buf, byte mode)
   {
-    byte[] asBytes = toBytes();
-    return StringUtils.fromUtf8(Base64.encodeBase64(asBytes));
+    buf.put(SERIALIZATION_VERSION);
+    buf.put(mode);
   }
 
-  public static FixedBucketsHistogram fromBase64(String encodedHistogram)
+  /**
+   * Serializes histogram fields that are common to both the full and sparse encoding modes.
+   *
+   * @param buf Destination buffer
+   */
+  private void writeByteBufferCommonFields(ByteBuffer buf)
   {
-    byte[] asBytes = Base64.decodeBase64(encodedHistogram.getBytes(StandardCharsets.UTF_8));
-    return fromBytes(asBytes);
-  }
-
-  public static FixedBucketsHistogram fromBytes(byte[] bytes)
-  {
-    ByteBuffer buf = ByteBuffer.wrap(bytes);
-    return fromBytes(buf);
-  }
-
-  public static FixedBucketsHistogram fromBytes(ByteBuffer buf)
-  {
-    byte serializationVersion = buf.get();
-    Preconditions.checkArgument(
-        serializationVersion == SERIALIZATION_VERSION,
-        StringUtils.format("Only serialization version %s is supported.", SERIALIZATION_VERSION)
-    );
-    byte mode = buf.get();
-    if (mode == FULL_ENCODING_MODE) {
-      return fromBytesFull(buf);
-    } else if (mode == SPARSE_ENCODING_MODE) {
-      return fromBytesSparse(buf);
-    } else {
-      throw new ISE("Invalid histogram serde mode: %s", mode);
-    }
-  }
-
-  public byte[] toBytesFull(boolean withHeader)
-  {
-    int size = getFullStorageSize(numBuckets);
-    if (withHeader) {
-      size += Byte.BYTES + Byte.BYTES;
-    }
-    ByteBuffer buf = ByteBuffer.allocate(size);
-    toBytesFullHelper(buf, withHeader);
-    return buf.array();
-  }
-
-  private void toBytesFullHelper(ByteBuffer buf, boolean withHeader)
-  {
-    if (withHeader) {
-      buf.put(SERIALIZATION_VERSION);
-      buf.put(FULL_ENCODING_MODE);
-    }
     buf.putDouble(lowerLimit);
     buf.putDouble(upperLimit);
     buf.putInt(numBuckets);
@@ -851,18 +811,144 @@ public class FixedBucketsHistogram
 
     buf.putDouble(max);
     buf.putDouble(min);
+  }
+
+  /**
+   * Serialize the histogram in full encoding mode.
+   *
+   * For efficiency, the header is not written when the histogram
+   * is serialized for localized internal use within the buffer aggregator implementation.
+   *
+   * @param withHeader If true, include the serialization header
+   * @return Serialized histogram with full encoding
+   */
+  public byte[] toBytesFull(boolean withHeader)
+  {
+    int size = getFullStorageSize(numBuckets);
+    if (withHeader) {
+      size += SERDE_HEADER_SIZE;
+    }
+    ByteBuffer buf = ByteBuffer.allocate(size);
+    writeByteBufferFull(buf, withHeader);
+    return buf.array();
+  }
+
+  /**
+   * Helper method for toBytesFull
+   *
+   * @param buf Destination buffer
+   * @param withHeader If true, include the serialization header
+   */
+  private void writeByteBufferFull(ByteBuffer buf, boolean withHeader)
+  {
+    if (withHeader) {
+      writeByteBufferSerdeHeader(buf, FULL_ENCODING_MODE);
+    }
+
+    writeByteBufferCommonFields(buf);
 
     buf.asLongBuffer().put(histogram);
     buf.position(buf.position() + Long.BYTES * histogram.length);
   }
 
-  public static FixedBucketsHistogram fromBytesFull(byte[] bytes)
+  /**
+   * Serialize the histogram in sparse encoding mode.
+   *
+   * The serialization header is always written, since the sparse encoding is only used in situations where the
+   * header is required.
+   *
+   * @param nonEmptyBuckets Number of non-empty buckets in the histogram
+   * @return Serialized histogram with sparse encoding
+   */
+  public byte[] toBytesSparse(int nonEmptyBuckets)
   {
-    ByteBuffer buf = ByteBuffer.wrap(bytes);
-    return fromBytesFull(buf);
+    int size = SERDE_HEADER_SIZE + getSparseStorageSize(nonEmptyBuckets);
+    ByteBuffer buf = ByteBuffer.allocate(size);
+    writeByteBufferSparse(buf, nonEmptyBuckets);
+    return buf.array();
   }
 
-  private static FixedBucketsHistogram fromBytesFull(ByteBuffer buf)
+  /**
+   * Helper method for toBytesSparse
+   *
+   * @param buf Destination buffer
+   * @param nonEmptyBuckets Number of non-empty buckets in the histogram
+   */
+  public void writeByteBufferSparse(ByteBuffer buf, int nonEmptyBuckets)
+  {
+    writeByteBufferSerdeHeader(buf, SPARSE_ENCODING_MODE);
+    writeByteBufferCommonFields(buf);
+
+    buf.putInt(nonEmptyBuckets);
+    int bucketsWritten = 0;
+    for (int i = 0; i < numBuckets; i++) {
+      if (histogram[i] > 0) {
+        buf.putInt(i);
+        buf.putLong(histogram[i]);
+        bucketsWritten += 1;
+      }
+      if (bucketsWritten == nonEmptyBuckets) {
+        break;
+      }
+    }
+  }
+
+  /**
+   * Deserialize a Base64-encoded histogram, used when deserializing from JSON (such as when transferring query results)
+   * or when ingesting a pre-computed histogram.
+   *
+   * @param encodedHistogram Base64-encoded histogram
+   * @return Deserialized object
+   */
+  public static FixedBucketsHistogram fromBase64(String encodedHistogram)
+  {
+    byte[] asBytes = Base64.decodeBase64(encodedHistogram.getBytes(StandardCharsets.UTF_8));
+    return fromBytes(asBytes);
+  }
+
+  /**
+   * General deserialization method for FixedBucketsHistogram.
+   *
+   * @param bytes
+   * @return
+   */
+  public static FixedBucketsHistogram fromBytes(byte[] bytes)
+  {
+    ByteBuffer buf = ByteBuffer.wrap(bytes);
+    return fromByteBuffer(buf);
+  }
+
+  /**
+   * Deserialization helper method
+   *
+   * @param buf Source buffer containing serialized histogram
+   * @return Deserialized object
+   */
+  public static FixedBucketsHistogram fromByteBuffer(ByteBuffer buf)
+  {
+    byte serializationVersion = buf.get();
+    Preconditions.checkArgument(
+        serializationVersion == SERIALIZATION_VERSION,
+        StringUtils.format("Only serialization version %s is supported.", SERIALIZATION_VERSION)
+    );
+    byte mode = buf.get();
+    if (mode == FULL_ENCODING_MODE) {
+      return fromByteBufferFullNoSerdeHeader(buf);
+    } else if (mode == SPARSE_ENCODING_MODE) {
+      return fromBytesSparse(buf);
+    } else {
+      throw new ISE("Invalid histogram serde mode: %s", mode);
+    }
+  }
+
+  /**
+   * Helper method for deserializing histograms with full encoding mode. Assumes that the serialization header is not
+   * present or has already been read.
+   *
+   * @param buf Source buffer containing serialized full-encoding histogram.
+   * @return Deserialized object
+   */
+  protected static FixedBucketsHistogram fromByteBufferFullNoSerdeHeader(ByteBuffer buf)
   {
     double lowerLimit = buf.getDouble();
     double upperLimit = buf.getDouble();
@@ -896,63 +982,13 @@ public class FixedBucketsHistogram
     );
   }
 
-  public static int getFullStorageSize(int numBuckets)
-  {
-    return Double.BYTES +
-           Double.BYTES +
-           Integer.BYTES +
-           Byte.BYTES +
-           Long.BYTES * 4 +
-           Double.BYTES * 2 +
-           Long.BYTES * numBuckets;
-  }
-
-  public static int getHeaderSize()
-  {
-    return Byte.BYTES * 2;
-  }
-
-  public byte[] toBytesSparse(int nonEmptyBuckets)
-  {
-    int size = getSparseStorageSize(nonEmptyBuckets) + Byte.BYTES + Byte.BYTES;
-    ByteBuffer buf = ByteBuffer.allocate(size);
-    toSparseBytesHelper(buf, nonEmptyBuckets);
-    return buf.array();
-  }
-
-  public void toSparseBytesHelper(ByteBuffer buf, int nonEmptyBuckets)
-  {
-    buf.put(SERIALIZATION_VERSION);
-    buf.put(SPARSE_ENCODING_MODE);
-
-    buf.putDouble(lowerLimit);
-    buf.putDouble(upperLimit);
-    buf.putInt(numBuckets);
-    buf.put((byte) outlierHandlingMode.ordinal());
-
-    buf.putLong(count);
-    buf.putLong(lowerOutlierCount);
-    buf.putLong(upperOutlierCount);
-    buf.putLong(missingValueCount);
-
-    buf.putDouble(max);
-    buf.putDouble(min);
-
-    buf.putInt(nonEmptyBuckets);
-
-    int bucketsWritten = 0;
-    for (int i = 0; i < numBuckets; i++) {
-      if (histogram[i] > 0) {
-        buf.putInt(i);
-        buf.putLong(histogram[i]);
-        bucketsWritten += 1;
-      }
-      if (bucketsWritten == nonEmptyBuckets) {
-        break;
-      }
-    }
-  }
-
+  /**
+   * Helper method for deserializing histograms with sparse encoding mode. Assumes that the serialization header is not
+   * present or has already been read.
+   *
+   * @param buf Source buffer containing serialized sparse-encoding histogram.
+   * @return Deserialized object
+   */
   private static FixedBucketsHistogram fromBytesSparse(ByteBuffer buf)
   {
     double lowerLimit = buf.getDouble();
@@ -991,14 +1027,27 @@ public class FixedBucketsHistogram
     );
   }
 
+  /**
+   * Compute the size in bytes of a full-encoding serialized histogram, without the serialization header
+   *
+   * @param numBuckets number of buckets
+   * @return full serialized size in bytes
+   */
+  public static int getFullStorageSize(int numBuckets)
+  {
+    return COMMON_FIELDS_SIZE +
+           Long.BYTES * numBuckets;
+  }
+
+  /**
+   * Compute the size in bytes of a sparse-encoding serialized histogram, without the serialization header
+   *
+   * @param nonEmptyBuckets number of non-empty buckets
+   * @return sparse serialized size in bytes
+   */
   public static int getSparseStorageSize(int nonEmptyBuckets)
   {
-    return Double.BYTES +
-           Double.BYTES +
-           Integer.BYTES +
-           Byte.BYTES +
-           Long.BYTES * 4 +
-           Double.BYTES * 2 +
+    return COMMON_FIELDS_SIZE +
            Integer.BYTES +
            (Integer.BYTES + Long.BYTES) * nonEmptyBuckets;
   }
@@ -1013,5 +1062,296 @@ public class FixedBucketsHistogram
       }
     }
     return count;
+  }
+
+  /**
+   * Updates the histogram state when an outlier value is encountered. An implementation is provided for each
+   * supported outlierHandlingMode.
+   */
+  private interface OutlierHandler
+  {
+    /**
+     * Handle an outlier when a single numeric value is added to the histogram.
+     *
+     * @param exceededMax If true, the value was an upper outlier. If false, the value was a lower outlier.
+     */
+    void handleOutlierAdd(boolean exceededMax);
+
+    /**
+     * Merge outlier information from another histogram.
+     *
+     * Called when merging two histograms that have overlapping ranges and potentially different bucket sizes.
+     *
+     * @param otherHistogram
+     * @param rangeStart
+     * @param rangeEnd
+     */
+    void simpleInterpolateMergeHandleOutliers(
+        FixedBucketsHistogram otherHistogram,
+        double rangeStart,
+        double rangeEnd
+    );
+
+    /**
+     * Merge outlier information from another histogram.
+     *
+     * Called when merging two histograms with identical buckets (same range and number of buckets)
+     *
+     * @param otherHistogram other histogram being merged
+     */
+    void handleOutliersForCombineSameBuckets(FixedBucketsHistogram otherHistogram);
+
+    /**
+     * Merge outlier information from another histogram.
+     *
+     * Called when merging two histograms, where the histogram to be merged has lowerLimit greater than my upperLimit
+     * @param otherHistogram other histogram being merged
+     */
+    void handleOutliersCombineDifferentBucketsAllUpper(FixedBucketsHistogram otherHistogram);
+
+    /**
+     * Merge outlier information from another histogram.
+     *
+     * Called when merging two histograms, where the histogram to be merged has upperLimit less than my lowerLimit
+     * @param otherHistogram other histogram being merged
+     */
+
+    void handleOutliersCombineDifferentBucketsAllLower(FixedBucketsHistogram otherHistogram);
+  }
+
+  private OutlierHandler makeOutlierHandler()
+  {
+    switch (outlierHandlingMode) {
+      case IGNORE:
+        return new IgnoreOutlierHandler();
+      case OVERFLOW:
+        return new OverflowOutlierHandler();
+      case CLIP:
+        return new ClipOutlierHandler();
+      default:
+        throw new ISE("Unknown outlier handling mode: %s", outlierHandlingMode);
+    }
+  }
+
+  private class IgnoreOutlierHandler implements OutlierHandler
+  {
+    @Override
+    public void handleOutlierAdd(boolean exceededMax)
+    {
+    }
+
+    @Override
+    public void simpleInterpolateMergeHandleOutliers(
+        FixedBucketsHistogram otherHistogram, double rangeStart, double rangeEnd
+    )
+    {
+    }
+
+    @Override
+    public void handleOutliersForCombineSameBuckets(FixedBucketsHistogram otherHistogram)
+    {
+    }
+
+    @Override
+    public void handleOutliersCombineDifferentBucketsAllUpper(FixedBucketsHistogram otherHistogram)
+    {
+    }
+
+    @Override
+    public void handleOutliersCombineDifferentBucketsAllLower(FixedBucketsHistogram otherHistogram)
+    {
+    }
+  }
+
+  private class OverflowOutlierHandler implements OutlierHandler
+  {
+    @Override
+    public void handleOutlierAdd(boolean exceededMax)
+    {
+      if (exceededMax) {
+        upperOutlierCount += 1;
+      } else {
+        lowerOutlierCount += 1;
+      }
+    }
+
+    @Override
+    public void simpleInterpolateMergeHandleOutliers(
+        FixedBucketsHistogram otherHistogram, double rangeStart, double rangeEnd
+    )
+    {
+      // They contain me
+      if (lowerLimit == rangeStart && upperLimit == rangeEnd) {
+        long lowerCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeStart, true));
+        long upperCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeEnd, false));
+        upperOutlierCount += otherHistogram.getUpperOutlierCount() + upperCountFromOther;
+        lowerOutlierCount += otherHistogram.getLowerOutlierCount() + lowerCountFromOther;
+      } else if (rangeStart == lowerLimit) {
+        // assume that none of the other histogram's outliers fall within our range
+        // how many values were there in the portion of the other histogram that falls under my lower limit?
+        long lowerCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeStart, true));
+        lowerOutlierCount += lowerCountFromOther;
+        lowerOutlierCount += otherHistogram.getLowerOutlierCount();
+        upperOutlierCount += otherHistogram.getUpperOutlierCount();
+      } else if (rangeEnd == upperLimit) {
+        // how many values were there in the portion of the other histogram that is greater than my upper limit?
+        long upperCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeEnd, false));
+        upperOutlierCount += upperCountFromOther;
+        upperOutlierCount += otherHistogram.getUpperOutlierCount();
+        lowerOutlierCount += otherHistogram.getLowerOutlierCount();
+      } else if (rangeStart > lowerLimit && rangeEnd < upperLimit) {
+        upperOutlierCount += otherHistogram.getUpperOutlierCount();
+        lowerOutlierCount += otherHistogram.getLowerOutlierCount();
+      }
+    }
+
+    @Override
+    public void handleOutliersForCombineSameBuckets(FixedBucketsHistogram otherHistogram)
+    {
+      lowerOutlierCount += otherHistogram.getLowerOutlierCount();
+      upperOutlierCount += otherHistogram.getUpperOutlierCount();
+    }
+
+    @Override
+    public void handleOutliersCombineDifferentBucketsAllUpper(FixedBucketsHistogram otherHistogram)
+    {
+      // ignore any lower outliers in the other histogram, we're not sure where those outliers would fall
+      // within our range.
+      upperOutlierCount += otherHistogram.getCount() + otherHistogram.getUpperOutlierCount();
+    }
+
+    @Override
+    public void handleOutliersCombineDifferentBucketsAllLower(FixedBucketsHistogram otherHistogram)
+    {// ignore any upper outliers in the other histogram, we're not sure where those outliers would fall
+      // within our range.
+      lowerOutlierCount += otherHistogram.getCount() + otherHistogram.getLowerOutlierCount();
+    }
+  }
+
+  private class ClipOutlierHandler implements OutlierHandler
+  {
+    @Override
+    public void handleOutlierAdd(boolean exceededMax)
+    {
+      double clippedValue;
+      count += 1;
+      if (exceededMax) {
+        clippedValue = upperLimit;
+        histogram[histogram.length - 1] += 1;
+      } else {
+        clippedValue = lowerLimit;
+        histogram[0] += 1;
+      }
+      if (clippedValue > max) {
+        max = clippedValue;
+      }
+      if (clippedValue < min) {
+        min = clippedValue;
+      }
+    }
+
+    @Override
+    public void simpleInterpolateMergeHandleOutliers(
+        FixedBucketsHistogram otherHistogram, double rangeStart, double rangeEnd
+    )
+    {
+      // They contain me
+      if (lowerLimit == rangeStart && upperLimit == rangeEnd) {
+        long lowerCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeStart, true));
+        long upperCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeEnd, false));
+        histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount() + upperCountFromOther;
+        histogram[0] += otherHistogram.getLowerOutlierCount() + lowerCountFromOther;
+        count += otherHistogram.getUpperOutlierCount() + otherHistogram.getLowerOutlierCount();
+        count += upperCountFromOther + lowerCountFromOther;
+        if (otherHistogram.getUpperOutlierCount() + upperCountFromOther > 0) {
+          max = Math.max(max, upperLimit);
+        }
+        if (otherHistogram.getLowerOutlierCount() + lowerCountFromOther > 0) {
+          min = Math.min(min, lowerLimit);
+        }
+      } else if (rangeStart == lowerLimit) {
+        // assume that none of the other histogram's outliers fall within our range
+        // how many values were there in the portion of the other histogram that falls under my lower limit?
+        long lowerCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeStart, true));
+
+        histogram[0] += lowerCountFromOther;
+        histogram[0] += otherHistogram.getLowerOutlierCount();
+        histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount();
+        count += lowerCountFromOther + otherHistogram.getLowerOutlierCount() + otherHistogram.getUpperOutlierCount();
+        if (lowerCountFromOther + otherHistogram.getLowerOutlierCount() > 0) {
+          min = lowerLimit;
+        }
+        if (otherHistogram.getUpperOutlierCount() > 0) {
+          max = upperLimit;
+        }
+      } else if (rangeEnd == upperLimit) {
+        // how many values were there in the portion of the other histogram that is greater than my upper limit?
+        long upperCountFromOther = Math.round(otherHistogram.getCumulativeCount(rangeEnd, false));
+
+        histogram[histogram.length - 1] += upperCountFromOther;
+        histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount();
+        histogram[0] += otherHistogram.getLowerOutlierCount();
+        count += upperCountFromOther + otherHistogram.getLowerOutlierCount() + otherHistogram.getUpperOutlierCount();
+        if (upperCountFromOther + otherHistogram.getUpperOutlierCount() > 0) {
+          max = upperLimit;
+        }
+        if (otherHistogram.getLowerOutlierCount() > 0) {
+          min = lowerLimit;
+        }
+      } else if (rangeStart > lowerLimit && rangeEnd < upperLimit) {
+        // I contain them
+
+        histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount();
+        histogram[0] += otherHistogram.getLowerOutlierCount();
+        count += otherHistogram.getUpperOutlierCount() + otherHistogram.getLowerOutlierCount();
+        if (otherHistogram.getUpperOutlierCount() > 0) {
+          max = Math.max(max, upperLimit);
+        } else if (otherHistogram.getCount() > 0) {
+          max = Math.max(max, otherHistogram.getMax());
+        }
+        if (otherHistogram.getLowerOutlierCount() > 0) {
+          min = Math.min(min, lowerLimit);
+        } else if (otherHistogram.getCount() > 0) {
+          min = Math.min(min, otherHistogram.getMin());
+        }
+      }
+    }
+
+    @Override
+    public void handleOutliersForCombineSameBuckets(FixedBucketsHistogram otherHistogram)
+    {
+      if (otherHistogram.getLowerOutlierCount() > 0) {
+        histogram[0] += otherHistogram.getLowerOutlierCount();
+        count += otherHistogram.getLowerOutlierCount();
+        min = Math.min(lowerLimit, min);
+      }
+      if (otherHistogram.getUpperOutlierCount() > 0) {
+        histogram[histogram.length - 1] += otherHistogram.getUpperOutlierCount();
+        count += otherHistogram.getUpperOutlierCount();
+        max = Math.max(upperLimit, max);
+      }
+    }
+
+    @Override
+    public void handleOutliersCombineDifferentBucketsAllUpper(FixedBucketsHistogram otherHistogram)
+    {
+      long otherCount = otherHistogram.getCount() + otherHistogram.getUpperOutlierCount();
+      histogram[histogram.length - 1] += otherCount;
+      count += otherCount;
+      if (otherCount > 0) {
+        max = Math.max(max, upperLimit);
+      }
+    }
+
+    @Override
+    public void handleOutliersCombineDifferentBucketsAllLower(FixedBucketsHistogram otherHistogram)
+    {
+      long otherCount = otherHistogram.getCount() + otherHistogram.getLowerOutlierCount();
+      histogram[0] += otherCount;
+      count += otherCount;
+      if (otherCount > 0) {
+        min = Math.min(min, lowerLimit);
+      }
+    }
   }
 }

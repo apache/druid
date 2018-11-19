@@ -80,21 +80,12 @@ public class FixedBucketsHistogramAggregationTest
   @Test
   public void testIngestWithNullsIgnoredAndQuery() throws Exception
   {
+    MapBasedRow row = ingestAndQuery();
     if (!NullHandling.replaceWithDefault()) {
-      MapBasedRow row = ingestAndQuery();
       Assert.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
       Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
       Assert.assertEquals(135.9499969482422, row.getMetric("index_quantile").floatValue(), 0.0001);
-    }
-  }
-
-  @Test
-  public void testIngestWithNullsToZeroAndQuery() throws Exception
-  {
-    // Nulls are ignored and not replaced with default for SQL compatible null handling.
-    // This is already tested in testIngestWithNullsIgnoredAndQuery()
-    if (NullHandling.replaceWithDefault()) {
-      MapBasedRow row = ingestAndQuery();
+    } else {
       Assert.assertEquals(0.0, row.getMetric("index_min"));
       Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
       Assert.assertEquals(135.8699951171875, row.getMetric("index_quantile").floatValue(), 0.0001);

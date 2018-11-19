@@ -19,9 +19,7 @@
 
 package org.apache.druid.benchmark;
 
-import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 import org.apache.commons.math3.distribution.NormalDistribution;
-import org.apache.druid.query.aggregation.histogram.ApproximateHistogram;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -36,8 +34,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-public class HistogramAddBenchmark
+public class FixedHistogramAddBenchmark
 {
   private static final int LOWER_LIMIT = 0;
   private static final int UPPER_LIMIT = 100000;
@@ -62,11 +58,7 @@ public class HistogramAddBenchmark
   int numBuckets;
 
   private FixedBucketsHistogram fixedHistogramForAdds;
-  private ApproximateHistogram approximateHistogramForAdds;
-  private UpdateDoublesSketch sketchForAdds;
   private int[] randomValues;
-
-  private Map<Integer, Integer> numBucketsToK;
 
   private float[] normalDistributionValues;
 
@@ -78,13 +70,6 @@ public class HistogramAddBenchmark
     for (int i = 0; i < numEvents; i++) {
       randomValues[i] = r.nextInt(UPPER_LIMIT);
     }
-
-    numBucketsToK = new HashMap<>();
-    numBucketsToK.put(10, 16);
-    numBucketsToK.put(100, 32);
-    numBucketsToK.put(1000, 64);
-    numBucketsToK.put(10000, 128);
-    numBucketsToK.put(100000, 256);
 
     fixedHistogramForAdds = new FixedBucketsHistogram(
         LOWER_LIMIT,
@@ -98,36 +83,6 @@ public class HistogramAddBenchmark
     for (int i = 0; i < numEvents; i++) {
       normalDistributionValues[i] = (float) normalDistribution.sample();
     }
-  }
-
-  @Benchmark
-  public void addApproxHistoNormal(Blackhole bh)
-  {
-    approximateHistogramForAdds = new ApproximateHistogram(
-        numBuckets,
-        LOWER_LIMIT,
-        UPPER_LIMIT
-    );
-
-    for (int i = 0; i < numEvents; i++) {
-      approximateHistogramForAdds.offer(normalDistributionValues[i]);
-    }
-    bh.consume(approximateHistogramForAdds);
-  }
-
-  @Benchmark
-  public void addApproxHisto(Blackhole bh)
-  {
-    approximateHistogramForAdds = new ApproximateHistogram(
-        numBuckets,
-        LOWER_LIMIT,
-        UPPER_LIMIT
-    );
-
-    for (int i = 0; i < numEvents; i++) {
-      approximateHistogramForAdds.offer(randomValues[i]);
-    }
-    bh.consume(approximateHistogramForAdds);
   }
 
   @Benchmark
@@ -160,27 +115,5 @@ public class HistogramAddBenchmark
       fixedHistogramForAdds.add(normalDistributionValues[i]);
     }
     bh.consume(fixedHistogramForAdds);
-  }
-
-  @Benchmark
-  public void addSketch(Blackhole bh)
-  {
-    sketchForAdds = UpdateDoublesSketch.builder().setK(numBucketsToK.get(numBuckets)).build();
-
-    for (int i = 0; i < numEvents; i++) {
-      sketchForAdds.update(randomValues[i]);
-    }
-    bh.consume(sketchForAdds);
-  }
-
-  @Benchmark
-  public void addSketchNormal(Blackhole bh)
-  {
-    sketchForAdds = UpdateDoublesSketch.builder().setK(numBucketsToK.get(numBuckets)).build();
-
-    for (int i = 0; i < numEvents; i++) {
-      sketchForAdds.update(normalDistributionValues[i]);
-    }
-    bh.consume(sketchForAdds);
   }
 }

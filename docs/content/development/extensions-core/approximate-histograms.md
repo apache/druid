@@ -150,6 +150,10 @@ The histogram aggregator's output object has the following fields:
 `min`: Min value seen by the histogram. This does not include outlier values.
 `histogram`: An array of longs with size `numBuckets`, containing the bucket counts
 
+### Ingesting existing histograms 
+
+It is also possible to ingest existing fixed buckets histograms. The input must be a Base64 string encoding a byte array that contains a serialized histogram object. Both "full" and "sparse" formats can be used. Please see [Serialization formats](#serialization-formats) below for details.
+
 ### Serialization formats
 
 #### Full serialization format
@@ -194,10 +198,6 @@ sequence of (int, long) pairs:
   int: bucket number
   count: bucket count
 ```
-
-### Ingesting existing histograms 
-
-It is also possible to ingest existing fixed buckets histograms. The input must be a Base64 string encoding a byte array that contains a serialized histogram object. Both "full" and "sparse" formats can be used.
 
 ### Combining histograms with different bucketing schemes
 

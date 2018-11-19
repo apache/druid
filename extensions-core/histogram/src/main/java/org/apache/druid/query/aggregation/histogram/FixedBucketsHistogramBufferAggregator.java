@@ -54,7 +54,7 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
   {
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
-    mutationBuffer.put(histogram.toBytesFull(true));
+    mutationBuffer.put(histogram.toBytesFull(false));
   }
 
   @Override
@@ -63,7 +63,7 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
 
-    FixedBucketsHistogram h0 = FixedBucketsHistogram.fromBytes(mutationBuffer);
+    FixedBucketsHistogram h0 = FixedBucketsHistogram.fromByteBufferFullNoSerdeHeader(mutationBuffer);
 
     Object val = selector.getObject();
     if (val == null) {
@@ -82,7 +82,7 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
     }
 
     mutationBuffer.position(position);
-    mutationBuffer.put(h0.toBytesFull(true));
+    mutationBuffer.put(h0.toBytesFull(false));
   }
 
   @Override
@@ -90,7 +90,7 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
   {
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
-    return FixedBucketsHistogram.fromBytes(mutationBuffer);
+    return FixedBucketsHistogram.fromByteBufferFullNoSerdeHeader(mutationBuffer);
   }
 
   @Override
@@ -98,7 +98,6 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
   {
     throw new UnsupportedOperationException("FixedBucketsHistogramBufferAggregator does not support getFloat()");
   }
-
 
   @Override
   public long getLong(ByteBuffer buf, int position)

@@ -943,6 +943,41 @@ public class FixedBucketsHistogramTest
   }
 
   @Test
+  public void testMergeDifferentBuckets2()
+  {
+    FixedBucketsHistogram h = buildHistogram(
+        0,
+        6,
+        6,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{}
+    );
+
+    FixedBucketsHistogram h2 = buildHistogram(
+        0,
+        12,
+        4,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        new float[]{1, 1, 1, 1, 5, 5, 5, 5}
+    );
+
+    h.combineHistogram(h2);
+    Assert.assertEquals(6, h.getNumBuckets());
+    Assert.assertEquals(1.0, h.getBucketSize(), 0.01);
+    Assert.assertEquals(0, h.getLowerLimit(), 0.01);
+    Assert.assertEquals(6, h.getUpperLimit(), 0.01);
+    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assert.assertArrayEquals(new long[]{1, 1, 1, 1, 1, 1}, h.getHistogram());
+    Assert.assertEquals(6, h.getCount());
+    Assert.assertEquals(0, h.getMin(), 0.01);
+    Assert.assertEquals(5.25, h.getMax(), 0.01);
+    Assert.assertEquals(0, h.getMissingValueCount());
+    Assert.assertEquals(0, h.getLowerOutlierCount());
+    Assert.assertEquals(0, h.getUpperOutlierCount());
+  }
+
+
+  @Test
   public void testMergeDifferentBuckets()
   {
     FixedBucketsHistogram h = buildHistogram(

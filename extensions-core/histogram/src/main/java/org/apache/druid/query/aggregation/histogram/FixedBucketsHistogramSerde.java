@@ -87,7 +87,6 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
         FixedBucketsHistogramAggregatorFactory aggregatorFactory = (FixedBucketsHistogramAggregatorFactory) agg;
 
         if (rawValue == null) {
-          //throw new UnsupportedOperationException("Null not supported yet.");
           FixedBucketsHistogram fbh = new FixedBucketsHistogram(
               aggregatorFactory.getLowerLimit(),
               aggregatorFactory.getUpperLimit(),
@@ -157,7 +156,7 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
       public FixedBucketsHistogram fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
         buffer.limit(buffer.position() + numBytes);
-        FixedBucketsHistogram fbh = FixedBucketsHistogram.fromBytes(buffer);
+        FixedBucketsHistogram fbh = FixedBucketsHistogram.fromByteBuffer(buffer);
         return fbh;
       }
 

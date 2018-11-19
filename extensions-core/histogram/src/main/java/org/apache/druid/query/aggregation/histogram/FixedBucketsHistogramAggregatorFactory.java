@@ -59,7 +59,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   public FixedBucketsHistogramAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("numBuckets") Integer numBuckets,
+      @Nullable @JsonProperty("numBuckets") Integer numBuckets,
       @JsonProperty("lowerLimit") double lowerLimit,
       @JsonProperty("upperLimit") double upperLimit,
       @JsonProperty("outlierHandlingMode") FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode
@@ -204,12 +204,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    if (object instanceof byte[]) {
-      return FixedBucketsHistogram.fromBytesFull((byte[]) object);
-    } else if (object instanceof ByteBuffer) {
-      final FixedBucketsHistogram fbh = FixedBucketsHistogram.fromBytes((ByteBuffer) object);
-      return fbh;
-    } else if (object instanceof String) {
+    if (object instanceof String) {
       byte[] bytes = Base64.decodeBase64(StringUtils.toUtf8((String) object));
       final FixedBucketsHistogram fbh = FixedBucketsHistogram.fromBytes(bytes);
       return fbh;
@@ -247,7 +242,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return FixedBucketsHistogram.getFullStorageSize(numBuckets) + FixedBucketsHistogram.getHeaderSize();
+    return FixedBucketsHistogram.SERDE_HEADER_SIZE + FixedBucketsHistogram.getFullStorageSize(numBuckets);
   }
 
   @Override
