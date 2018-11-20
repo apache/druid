@@ -207,7 +207,7 @@ public class KinesisTuningConfigTest
     Assert.assertEquals(2, (int) copy.getFetchThreads());
     Assert.assertFalse(copy.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertTrue(copy.isResetOffsetAutomatically());
-    Assert.assertEquals(5, copy.getMaxRecordsPerPoll());
+    Assert.assertEquals(100, copy.getMaxRecordsPerPoll());
     Assert.assertEquals(new Period().withDays(Integer.MAX_VALUE), copy.getIntermediateHandoffPeriod());
   }
 }

@@ -330,7 +330,7 @@ public class OverlordResource
           @Override
           public Response apply(TaskQueue taskQueue)
           {
-            taskQueue.shutdown(taskid);
+            taskQueue.shutdown(taskid, "Shutdown request from user");
             return Response.ok(ImmutableMap.of("task", taskid)).build();
           }
         }
@@ -351,7 +351,7 @@ public class OverlordResource
           {
             final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
             for (final TaskInfo<Task, TaskStatus> task : tasks) {
-              taskQueue.shutdown(task.getId());
+              taskQueue.shutdown(task.getId(), "Shutdown request from user");
             }
             return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
           }
@@ -694,7 +694,7 @@ public class OverlordResource
     if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
       Duration duration = null;
       if (interval != null) {
-        final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+        final Interval theInterval = Intervals.of(interval.replace('_', '/'));
         duration = theInterval.toDuration();
       }
       final List<TaskInfo<Task, TaskStatus>> taskInfoList =

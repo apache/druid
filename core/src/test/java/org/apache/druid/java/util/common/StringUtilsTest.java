@@ -118,11 +118,34 @@ public class StringUtilsTest
   }
 
   @Test
-  public void testRemoveCharacter()
+  public void testRemoveChar()
   {
     Assert.assertEquals("123", StringUtils.removeChar("123", ','));
     Assert.assertEquals("123", StringUtils.removeChar("123,", ','));
     Assert.assertEquals("123", StringUtils.removeChar(",1,,2,3,", ','));
     Assert.assertEquals("", StringUtils.removeChar(",,", ','));
+  }
+
+  @Test
+  public void testReplaceChar()
+  {
+    Assert.assertEquals("123", StringUtils.replaceChar("123", ',', "x"));
+    Assert.assertEquals("12345", StringUtils.replaceChar("123,", ',', "45"));
+    Assert.assertEquals("", StringUtils.replaceChar("", 'a', "bb"));
+    Assert.assertEquals("bb", StringUtils.replaceChar("a", 'a', "bb"));
+    Assert.assertEquals("bbbb", StringUtils.replaceChar("aa", 'a', "bb"));
+  }
+
+  @Test
+  public void testReplace()
+  {
+    Assert.assertEquals("x1x2x3x", StringUtils.replace("123", "", "x"));
+    Assert.assertEquals("12345", StringUtils.replace("123,", ",", "45"));
+    Assert.assertEquals("", StringUtils.replace("", "a", "bb"));
+    Assert.assertEquals("bb", StringUtils.replace("a", "a", "bb"));
+    Assert.assertEquals("bba", StringUtils.replace("aaa", "aa", "bb"));
+    Assert.assertEquals("bcb", StringUtils.replace("aacaa", "aa", "b"));
+    Assert.assertEquals("bb", StringUtils.replace("aaaa", "aa", "b"));
+    Assert.assertEquals("", StringUtils.replace("aaaa", "aa", ""));
   }
 }

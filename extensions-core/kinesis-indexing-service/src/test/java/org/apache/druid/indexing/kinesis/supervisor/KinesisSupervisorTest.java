@@ -115,6 +115,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
 
 @RunWith(LocalstackDockerTestRunner.class)
 @LocalstackDockerProperties(services = {"kinesis"})
@@ -728,7 +729,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.stopAsync("id1", false)).andReturn(Futures.immediateFuture(true));
     EasyMock.expect(taskClient.stopAsync("id3", false)).andReturn(Futures.immediateFuture(false));
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    taskQueue.shutdown("id3");
+    taskQueue.shutdown("id3", "Task [%s] failed to stop in a timely manner, killing task", "id3");
 
     EasyMock.expect(taskQueue.add(EasyMock.anyObject(Task.class))).andReturn(true);
 
@@ -881,8 +882,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    taskQueue.shutdown("id4");
-    taskQueue.shutdown("id5");
+    taskQueue.shutdown("id4", "Task [%s] failed to stop in a timely manner, killing task", "id4");
+    taskQueue.shutdown("id5", "Task [%s] failed to stop in a timely manner, killing task", "id5");
     replayAll();
 
     supervisor.start();
@@ -1840,7 +1841,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
               .andReturn(Futures.immediateFuture(Status.NOT_STARTED));
       EasyMock.expect(taskClient.getStartTimeAsync(task.getId()))
               .andReturn(Futures.immediateFailedFuture(new RuntimeException()));
-      taskQueue.shutdown(task.getId());
+      taskQueue.shutdown(task.getId(), "Task [%s] failed to return start time, killing task", task.getId());
     }
     EasyMock.replay(taskStorage, taskClient, taskQueue);
 
@@ -1917,7 +1918,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .times(2);
     EasyMock.expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
             .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
-    taskQueue.shutdown(EasyMock.contains("sequenceName-0"));
+    taskQueue.shutdown(
+        EasyMock.contains("sequenceName-0"),
+        EasyMock.eq("Task [%s] failed to respond to [pause] in a timely manner, killing task"),
+        EasyMock.contains("sequenceName-0")
+    );
     EasyMock.expectLastCall().times(2);
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
 
@@ -2024,7 +2029,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
             EasyMock.eq(true)
         )
     ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
-    taskQueue.shutdown(EasyMock.contains("sequenceName-0"));
+    taskQueue.shutdown(
+        EasyMock.contains("sequenceName-0"),
+        EasyMock.eq("All tasks in group [%s] failed to transition to publishing state"),
+        EasyMock.eq(0)
+    );
     EasyMock.expectLastCall().times(2);
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
 
@@ -2207,8 +2216,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         getSequenceNumber(res, shardId0, 1)
     ), true))
             .andReturn(Futures.immediateFuture(true));
-    taskQueue.shutdown("id3");
-    EasyMock.expectLastCall().times(2);
+    taskQueue.shutdown("id3", "Killing task for graceful shutdown");
+    expectLastCall().times(1);
+    taskQueue.shutdown("id3", "Killing task [%s] which hasn't been assigned to a worker", "id3");
+    expectLastCall().times(1);
 
     EasyMock.replay(taskRunner, taskClient, taskQueue);
 
@@ -2483,8 +2494,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     EasyMock.reset(taskQueue, indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id2");
-    taskQueue.shutdown("id3");
+    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
     EasyMock.replay(taskQueue, indexerMetadataStorageCoordinator);
 
     supervisor.resetInternal(null);
@@ -2608,9 +2619,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     EasyMock.reset(taskQueue, indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id1");
-    taskQueue.shutdown("id2");
-    taskQueue.shutdown("id3");
+    taskQueue.shutdown("id1", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
     EasyMock.replay(taskQueue, indexerMetadataStorageCoordinator);
 
     supervisor.resetInternal(null);
@@ -3144,8 +3155,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         getSequenceNumber(res, shardId0, 1)
     ), true))
             .andReturn(Futures.immediateFuture(true));
-    taskQueue.shutdown("id3");
-    EasyMock.expectLastCall().times(2);
+    taskQueue.shutdown("id3", "Killing task for graceful shutdown");
+    expectLastCall().times(1);
+    taskQueue.shutdown("id3", "Killing task [%s] which hasn't been assigned to a worker", "id3");
+    expectLastCall().times(1);
 
     replayAll();
     supervisor.start();

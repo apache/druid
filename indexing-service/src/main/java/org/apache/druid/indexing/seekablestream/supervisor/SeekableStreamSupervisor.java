@@ -357,20 +357,17 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
             .findAny()
             .map(Entry::getKey);
 
-        if (maybeGroupId.isPresent()) {
-          taskGroupId = maybeGroupId.get();
-        } else {
-          taskGroupId = pendingCompletionTaskGroups
-              .entrySet()
-              .stream()
-              .filter(entry -> {
-                final List<TaskGroup> taskGroups = entry.getValue();
-                return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
-              })
-              .findAny()
-              .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
-              .getKey();
-        }
+        taskGroupId = maybeGroupId.orElseGet(() -> pendingCompletionTaskGroups
+            .entrySet()
+            .stream()
+            .filter(entry -> {
+              final List<TaskGroup> taskGroups = entry.getValue();
+              return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
+            })
+            .findAny()
+            .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
+            .getKey());
+
       } else {
         taskGroupId = nullableTaskGroupId;
       }
@@ -1088,7 +1085,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
         if (taskInfoProvider.getTaskLocation(entry.getKey()).equals(TaskLocation.unknown())) {
-          killTask(entry.getKey());
+          killTask(entry.getKey(), "Killing task for graceful shutdown");
         } else {
           entry.getValue().startTime = DateTimes.EPOCH;
         }
@@ -1105,7 +1102,11 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
       log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
-      activelyReadingTaskGroups.values().forEach(this::killTasksInGroup);
+      activelyReadingTaskGroups.values()
+                               .forEach(group -> killTasksInGroup(
+                                   group,
+                                   "DataSourceMetadata is not found while reset"
+                               ));
       activelyReadingTaskGroups.clear();
       partitionGroups.clear();
     } else {
@@ -1177,7 +1178,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         if (metadataUpdateSuccess) {
           resetMetadata.getSeekableStreamPartitions().getPartitionSequenceNumberMap().keySet().forEach(partition -> {
             final int groupId = getTaskGroupIdForPartition(partition);
-            killTaskGroupForPartitions(ImmutableSet.of(partition));
+            killTaskGroupForPartitions(ImmutableSet.of(partition), "DataSourceMetadata is updated while reset");
             activelyReadingTaskGroups.remove(groupId);
             partitionGroups.get(groupId).replaceAll((partitionId, sequence) -> getNotSetMarker());
           });
@@ -1196,31 +1197,30 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   }
 
-  private void killTask(final String id)
+  private void killTask(final String id, String reasonFormat, Object... args)
   {
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      taskQueue.get().shutdown(id);
+      taskQueue.get().shutdown(id, reasonFormat, args);
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
     }
   }
 
-  private void killTasksInGroup(TaskGroup taskGroup)
+  private void killTasksInGroup(TaskGroup taskGroup, String reasonFormat, Object... args)
   {
     if (taskGroup != null) {
       for (String taskId : taskGroup.tasks.keySet()) {
-        log.info("Killing task [%s] in the task group", taskId);
-        killTask(taskId);
+        killTask(taskId, reasonFormat, args);
       }
     }
   }
 
-  private void killTaskGroupForPartitions(Set<PartitionType> partitions)
+  private void killTaskGroupForPartitions(Set<PartitionType> partitions, String reasonFormat, Object... args)
   {
     for (PartitionType partition : partitions) {
       int taskGroupId = getTaskGroupIdForPartition(partition);
-      killTasksInGroup(activelyReadingTaskGroups.get(taskGroupId));
+      killTasksInGroup(activelyReadingTaskGroups.get(taskGroupId), reasonFormat, args);
       partitionGroups.remove(taskGroupId);
       activelyReadingTaskGroups.remove(taskGroupId);
     }
@@ -1403,8 +1403,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     for (int i = 0; i < results.size(); i++) {
       if (results.get(i) == null) {
         String taskId = futureTaskIds.get(i);
-        log.warn("Task [%s] failed to return status, killing task", taskId);
-        killTask(taskId);
+        killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
       }
     }
     log.debug("Found [%d] seekablestream indexing tasks for dataSource [%s]", taskCount, dataSource);
@@ -1465,7 +1464,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
           }
           catch (Exception e) {
             log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
-            killTask(taskId);
+            killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
             taskGroup.tasks.remove(taskId);
           }
         } else if (checkpoints.isEmpty()) {
@@ -1580,7 +1579,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
     taskSequences.stream().filter(taskIdSequences -> tasksToKill.contains(taskIdSequences.lhs)).forEach(
         sequenceCheckpoint -> {
-          log.warn(
+          killTask(
+              sequenceCheckpoint.lhs,
               "Killing task [%s], as its checkpoints [%s] are not consistent with group checkpoints[%s] or latest "
               + "persisted sequences in metadata store [%s]",
               sequenceCheckpoint.lhs,
@@ -1588,7 +1588,6 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
               taskGroup.checkpointSequences,
               latestOffsetsFromDb
           );
-          killTask(sequenceCheckpoint.lhs);
           taskGroup.tasks.remove(sequenceCheckpoint.lhs);
         }
     );
@@ -1642,7 +1641,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
           {
             if (result == null || !result) {
               log.info("Task [%s] failed to stop in a timely manner, killing task", id);
-              killTask(id);
+              killTask(id, "Task [%s] failed to stop in a timely manner, killing task", id);
             }
             return null;
           }
@@ -1833,7 +1832,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       if (results.get(i) == null) {
         String taskId = futureTaskIds.get(i);
         log.warn("Task [%s] failed to return start time, killing task", taskId);
-        killTask(taskId);
+        killTask(taskId, "Task [%s] failed to return start time, killing task", taskId);
       }
     }
   }
@@ -1889,13 +1888,12 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
           partitionGroups.get(groupId).put(entry.getKey(), entry.getValue());
         }
       } else {
-        log.warn(
-            "All tasks in group [%s] failed to transition to publishing state, killing tasks [%s]",
-            groupId,
-            group.taskIds()
-        );
         for (String id : group.taskIds()) {
-          killTask(id);
+          killTask(
+              id,
+              "All tasks in group [%s] failed to transition to publishing state",
+              groupId
+          );
         }
         // clear partitionGroups, so that latest sequences from db is used as start sequences not the stale ones
         // if tasks did some successful incremental handoffs
@@ -1927,7 +1925,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
             // metadata store (which will have advanced if we succeeded in publishing and will remain the same if
             // publishing failed and we need to re-ingest)
             return Futures.transform(
-                stopTasksInGroup(taskGroup),
+                stopTasksInGroup(taskGroup, "task[%s] succeeded in the taskGroup", task.status.getId()),
                 new Function<Object, Map<PartitionType, SequenceType>>()
                 {
                   @Nullable
@@ -1942,8 +1940,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
           if (task.status.isRunnable()) {
             if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
-              log.info("Killing task [%s] which hasn't been assigned to a worker", taskId);
-              killTask(taskId);
+              killTask(taskId, "Killing task [%s] which hasn't been assigned to a worker", taskId);
               i.remove();
             }
           }
@@ -1973,8 +1970,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
               if (result == null || result.isEmpty()) { // kill tasks that didn't return a value
                 String taskId = pauseTaskIds.get(i);
-                log.warn("Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
-                killTask(taskId);
+                killTask(taskId, "Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
                 taskGroup.tasks.remove(taskId);
 
               } else { // otherwise build a map of the highest sequences seen
@@ -2023,11 +2019,11 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
               for (int i = 0; i < results.size(); i++) {
                 if (results.get(i) == null || !results.get(i)) {
                   String taskId = setEndOffsetTaskIds.get(i);
-                  log.warn(
-                      "Task [%s] failed to respond to [set end sequences] in a timely manner, killing task",
+                  killTask(
+                      taskId,
+                      "Task [%s] failed to respond to [set end offsets] in a timely manner, killing task",
                       taskId
                   );
-                  killTask(taskId);
                   taskGroup.tasks.remove(taskId);
                 }
               }
@@ -2049,18 +2045,24 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     );
   }
 
-  private ListenableFuture<?> stopTasksInGroup(@Nullable TaskGroup taskGroup)
+  private ListenableFuture<?> stopTasksInGroup(@Nullable TaskGroup taskGroup, String stopReasonFormat, Object... args)
   {
     if (taskGroup == null) {
       return Futures.immediateFuture(null);
     }
+
+    log.info(
+        "Stopping all tasks in taskGroup[%s] because: [%s]",
+        taskGroup.groupId,
+        StringUtils.format(stopReasonFormat, args)
+    );
 
     final List<ListenableFuture<Void>> futures = new ArrayList<>();
     for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
       final String taskId = entry.getKey();
       final TaskData taskData = entry.getValue();
       if (taskData.status == null) {
-        killTask(taskId);
+        killTask(taskId, "Killing task since task status is not known to supervisor");
       } else if (!taskData.status.isComplete()) {
         futures.add(stopTask(taskId, false));
       }
@@ -2087,7 +2089,12 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         if (stopTasksInTaskGroup) {
           // One of the earlier groups that was handling the same partition set timed out before the segments were
           // published so stop any additional groups handling the same partition set that are pending completion.
-          futures.add(stopTasksInGroup(group));
+          futures.add(
+              stopTasksInGroup(
+                  group,
+                  "one of earlier groups that was handling the same partition set timed out before publishing segments"
+              )
+          );
           toRemove.add(group);
           continue;
         }
@@ -2113,7 +2120,9 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
             // If one of the pending completion tasks was successful, stop the rest of the tasks in the group as
             // we no longer need them to publish their segment.
             log.info("Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds());
-            futures.add(stopTasksInGroup(group));
+            futures.add(
+                stopTasksInGroup(group, "Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds())
+            );
             foundSuccess = true;
             toRemove.add(group); // remove the TaskGroup from the list of pending completion task groups
             break; // skip iterating the rest of the tasks in this group as they've all been stopped now
@@ -2135,12 +2144,20 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
           // reset partitions sequences for this task group so that they will be re-read from metadata storage
           partitionGroups.get(groupId).replaceAll((partition, sequence) -> getNotSetMarker());
           // kill all the tasks in this pending completion group
-          killTasksInGroup(group);
+          killTasksInGroup(
+              group,
+              "No task in pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              groupId
+          );
           // set a flag so the other pending completion groups for this set of partitions will also stop
           stopTasksInTaskGroup = true;
 
           // kill all the tasks in the currently reading task group and remove the bad task group
-          killTasksInGroup(activelyReadingTaskGroups.remove(groupId));
+          killTasksInGroup(
+              activelyReadingTaskGroups.remove(groupId),
+              "No task in the corresponding pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              groupId
+          );
           toRemove.add(group);
         }
       }
@@ -2194,7 +2211,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         // check for successful tasks, and if we find one, stop all tasks in the group and remove the group so it can
         // be recreated with the next set of sequences
         if (taskData.status.isSuccess()) {
-          futures.add(stopTasksInGroup(taskGroup));
+          futures.add(stopTasksInGroup(taskGroup, "task[%s] succeeded in the same taskGroup", taskData.status.getId()));
           iTaskGroups.remove();
           break;
         }

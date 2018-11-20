@@ -141,7 +141,7 @@ public class HadoopConverterJob
 
   public static Path getJobClassPathDir(String jobName, Path workingDirectory)
   {
-    return new Path(workingDirectory, jobName.replace(":", ""));
+    return new Path(workingDirectory, StringUtils.removeChar(jobName, ':'));
   }
 
   public static void cleanup(Job job) throws IOException

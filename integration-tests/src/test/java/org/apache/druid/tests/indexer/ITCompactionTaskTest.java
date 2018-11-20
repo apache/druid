@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.RetryUtil;
@@ -95,7 +96,8 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   private void compactData(boolean keepSegmentGranularity) throws Exception
   {
     final String template = getTaskAsString(COMPACTION_TASK);
-    final String taskSpec = template.replace("${KEEP_SEGMENT_GRANULARITY}", Boolean.toString(keepSegmentGranularity));
+    final String taskSpec =
+        StringUtils.replace(template, "${KEEP_SEGMENT_GRANULARITY}", Boolean.toString(keepSegmentGranularity));
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for compaction task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);

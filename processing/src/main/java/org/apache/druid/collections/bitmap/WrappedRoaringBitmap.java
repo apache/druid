@@ -180,7 +180,7 @@ public class WrappedRoaringBitmap implements MutableBitmap
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + bitmap.toString();
+    return getClass().getSimpleName() + bitmap;
   }
 
   @Override

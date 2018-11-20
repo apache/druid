@@ -25,6 +25,7 @@ import org.apache.calcite.avatica.metrics.Histogram;
 import org.apache.calcite.avatica.metrics.Meter;
 import org.apache.calcite.avatica.metrics.MetricsSystem;
 import org.apache.calcite.avatica.metrics.Timer;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -178,6 +179,6 @@ public class AvaticaMonitor extends AbstractMonitor implements MetricsSystem
 
   private String fullMetricName(final String name)
   {
-    return name.replace("org.apache.calcite.avatica", "avatica").replace(".", "/");
+    return StringUtils.replace(name, "org.apache.calcite.avatica", "avatica").replace('.', '/');
   }
 }

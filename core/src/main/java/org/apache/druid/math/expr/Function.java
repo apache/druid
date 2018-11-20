@@ -1033,14 +1033,12 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      final String pattern = args.get(1).eval(bindings).asString();
-      final String replacement = args.get(2).eval(bindings).asString();
+      final String pattern = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
+      final String replacement = NullHandling.nullToEmptyIfNeeded(args.get(2).eval(bindings).asString());
       if (arg == null) {
         return ExprEval.of(NullHandling.defaultStringValue());
       }
-      return ExprEval.of(
-          arg.replace(NullHandling.nullToEmptyIfNeeded(pattern), NullHandling.nullToEmptyIfNeeded(replacement))
-      );
+      return ExprEval.of(StringUtils.replace(arg, pattern, replacement));
     }
   }
 

@@ -139,8 +139,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   @Override
   public byte[] getCacheKey()
   {
-    return StringUtils.toUtf8(getPeriod().toString() + ":" +
-                              getTimeZone().toString() + ":" + getOrigin());
+    return StringUtils.toUtf8(getPeriod() + ":" + getTimeZone() + ":" + getOrigin());
   }
 
   @Override
@@ -420,8 +419,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       return t - offset;
     } else {
       throw new UnsupportedOperationException(
-          "Period cannot be converted to milliseconds as some fields mays vary in length with chronology "
-          + chronology.toString()
+          "Period cannot be converted to milliseconds as some fields mays vary in length with chronology " + chronology
       );
     }
   }

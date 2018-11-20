@@ -147,7 +147,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       RowIngestionMetersFactory rowIngestionMetersFactory
   ) throws JsonProcessingException
   {
-    final String checkpoints = sortingMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<String, String>>>()
+    final String checkpoints = sortingMapper.writerFor(new TypeReference<TreeMap<Integer, Map<String, String>>>()
     {
     }).writeValueAsString(sequenceOffsets);
     final Map<String, Object> context = spec.getContext() == null
