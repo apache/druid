@@ -21,7 +21,6 @@ package org.apache.druid.testing.guice;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
-
 import com.google.inject.name.Names;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.security.TLSCertificateChecker;

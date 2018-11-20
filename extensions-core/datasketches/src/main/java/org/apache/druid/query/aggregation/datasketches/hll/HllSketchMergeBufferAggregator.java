@@ -19,19 +19,18 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-
 import com.google.common.util.concurrent.Striped;
 import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
-
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 
 /**
  * This aggregator merges existing sketches.

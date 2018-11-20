@@ -17,9 +17,7 @@
  * under the License.
  */
 
-//CHECKSTYLE.OFF: PackageName
-package org.apache.parquet.avro;
-//CHECKSTYLE.ON: PackageName
+package /*CHECKSTYLE.OFF: PackageName*/org.apache.parquet.avro/*CHECKSTYLE.ON: PackageName*/;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -42,7 +40,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * This class must in package org.apache.parquet.avro to access the AvroRecordMaterializer constructor
+ * This class must be in the package org.apache.parquet.avro to access {@link AvroRecordMaterializer}'s constructor
  */
 public class DruidParquetAvroReadSupport extends AvroReadSupport<GenericRecord>
 {

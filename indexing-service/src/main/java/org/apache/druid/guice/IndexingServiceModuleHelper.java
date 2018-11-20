@@ -29,6 +29,7 @@ import org.apache.druid.server.initialization.IndexerZkConfig;
 public class IndexingServiceModuleHelper
 {
   public static final String INDEXER_RUNNER_PROPERTY_PREFIX = "druid.indexer.runner";
+
   public static void configureTaskRunnerConfigs(Binder binder)
   {
     JsonConfigProvider.bind(binder, INDEXER_RUNNER_PROPERTY_PREFIX, ForkingTaskRunnerConfig.class);

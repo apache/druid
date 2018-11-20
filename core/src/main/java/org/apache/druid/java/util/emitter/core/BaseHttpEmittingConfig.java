@@ -32,6 +32,7 @@ public class BaseHttpEmittingConfig
   /** ensure the event buffers don't use more than 10% of memory by default */
   public static final int DEFAULT_MAX_BATCH_SIZE;
   public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
+
   static {
     Pair<Integer, Integer> batchConfigPair = getDefaultBatchSizeAndLimit(Runtime.getRuntime().maxMemory());
     DEFAULT_MAX_BATCH_SIZE = batchConfigPair.lhs;

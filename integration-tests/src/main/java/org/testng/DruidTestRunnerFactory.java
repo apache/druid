@@ -17,10 +17,7 @@
  * under the License.
  */
 
-
-//CHECKSTYLE.OFF: PackageName
-package org.testng;
-//CHECKSTYLE.ON: PackageName
+package /*CHECKSTYLE.OFF: PackageName*/org.testng/*CHECKSTYLE.ON: PackageName*/;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Injector;

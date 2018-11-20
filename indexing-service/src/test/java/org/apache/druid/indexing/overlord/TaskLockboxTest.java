@@ -695,11 +695,11 @@ public class TaskLockboxTest
   }
 
   private static String TASK_NAME = "myModuleIsntLoadedTask";
+
   private static class TheModule extends SimpleModule
   {
     public TheModule()
     {
-
       registerSubtypes(new NamedType(MyModuleIsntLoadedTask.class, TASK_NAME));
     }
   }

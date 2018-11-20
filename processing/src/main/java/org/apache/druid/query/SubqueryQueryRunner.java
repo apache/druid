@@ -19,8 +19,8 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.java.util.common.guava.Sequence;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 
 import java.util.Map;
