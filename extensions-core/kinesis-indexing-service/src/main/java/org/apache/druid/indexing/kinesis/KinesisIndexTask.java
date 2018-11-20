@@ -70,6 +70,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
   @Override
   protected RecordSupplier<String, String> newRecordSupplier()
+      throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException
   {
     int fetchThreads = tuningConfig.getFetchThreads() != null
                        ? tuningConfig.getFetchThreads()

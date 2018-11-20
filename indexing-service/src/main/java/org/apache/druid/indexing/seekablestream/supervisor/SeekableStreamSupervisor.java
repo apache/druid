@@ -2756,7 +2756,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    *
    * @return specific instance of Kafka/Kinesis RecordSupplier
    */
-  protected abstract RecordSupplier<PartitionType, SequenceType> setupRecordSupplier();
+  protected abstract RecordSupplier<PartitionType, SequenceType> setupRecordSupplier()
+      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException;
 
   /**
    * creates a specific instance of Kafka/Kinesis Supervisor Report Payload

@@ -191,7 +191,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test
-  public void testSupplierSetup() throws InterruptedException
+  public void testSupplierSetup()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
 
     getKinesisClientInstance();
@@ -228,7 +229,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test
-  public void testPoll() throws InterruptedException
+  public void testPoll()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
     List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
@@ -262,6 +264,7 @@ public class KinesisRecordSupplierTest
         60000,
         100
     );
+
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
@@ -277,7 +280,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test
-  public void testPollAfterMoreDataAdded() throws InterruptedException
+  public void testPollAfterMoreDataAdded()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
     List<PutRecordsResultEntry> insertDataResults1 = insertData(kinesis, generateRecordsRequests(stream, 0, 5));
@@ -339,7 +343,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test
-  public void testSeek() throws InterruptedException
+  public void testSeek()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
     List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
@@ -407,7 +412,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test
-  public void testSeekToLatest() throws InterruptedException
+  public void testSeekToLatest()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
     List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
@@ -436,6 +442,7 @@ public class KinesisRecordSupplierTest
         5
     );
 
+
     recordSupplier.assign(partitions);
 
     Assert.assertEquals(insertDataResults.get(0).getSequenceNumber(), recordSupplier.getEarliestSequenceNumber(shard1));
@@ -446,7 +453,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test(expected = ISE.class)
-  public void testSeekUnassigned() throws InterruptedException
+  public void testSeekUnassigned()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
     List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
@@ -482,7 +490,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test
-  public void testPollAfterSeek() throws InterruptedException
+  public void testPollAfterSeek()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
     List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
@@ -507,6 +516,7 @@ public class KinesisRecordSupplierTest
         60000,
         1
     );
+
     recordSupplier.assign(partitions);
     recordSupplier.seek(StreamPartition.of(stream, shardId1), getSequenceNumber(insertDataResults, shardId1, 5));
 
@@ -545,7 +555,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test
-  public void testPosition() throws InterruptedException
+  public void testPosition()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
     List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
@@ -571,6 +582,7 @@ public class KinesisRecordSupplierTest
         60000,
         1
     );
+
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
@@ -607,7 +619,8 @@ public class KinesisRecordSupplierTest
   }
 
   @Test
-  public void testPositionAfterPollBatch() throws InterruptedException
+  public void testPositionAfterPollBatch()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     AmazonKinesis kinesis = getKinesisClientInstance();
     List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
@@ -633,6 +646,7 @@ public class KinesisRecordSupplierTest
         60000,
         3
     );
+
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
@@ -646,6 +660,57 @@ public class KinesisRecordSupplierTest
     Assert.assertEquals(3, recordSupplier.poll(poll_timeout_millis).size());
 
     Assert.assertEquals(getSequenceNumber(insertDataResults, shardId1, 3), recordSupplier.getPosition(partition1));
+  }
+
+  @Test
+  public void testDeaggregate()
+      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+  {
+    AmazonKinesis kinesis = getKinesisClientInstance();
+    List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
+    Set<OrderedPartitionableRecord<String, String>> initialRecords = insertDataResults.stream()
+                                                                                      .map(r -> new OrderedPartitionableRecord<>(
+                                                                                          stream,
+                                                                                          r.getShardId(),
+                                                                                          r.getSequenceNumber(),
+                                                                                          null
+                                                                                      ))
+                                                                                      .collect(Collectors.toSet());
+
+    Set<StreamPartition<String>> partitions = ImmutableSet.of(
+        StreamPartition.of(stream, shardId0),
+        StreamPartition.of(stream, shardId1)
+    );
+
+    recordSupplier = new KinesisRecordSupplier(
+        LocalstackTestRunner.getEndpointKinesis(),
+        TestUtils.TEST_ACCESS_KEY,
+        TestUtils.TEST_SECRET_KEY,
+        100,
+        0,
+        2,
+        null,
+        null,
+        true,
+        100,
+        5000,
+        5000,
+        60000,
+        100
+    );
+
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+
+    List<OrderedPartitionableRecord<String, String>> polledRecords = recordSupplier.poll(poll_timeout_millis);
+    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
+      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
+      Thread.sleep(200);
+    }
+
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assert.assertEquals(initialRecords.size(), polledRecords.size());
+    Assert.assertTrue(polledRecords.containsAll(initialRecords));
   }
 
 

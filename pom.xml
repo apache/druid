@@ -1000,6 +1000,8 @@
                                 <ignore>sun.nio.ch.DirectBuffer</ignore>
                                 <ignore>sun.misc.Cleaner</ignore>
                                 <ignore>sun.misc.Unsafe</ignore>
+                                <!-- ignore java reflection polymorphic api signitures -->
+                                <ignore>java.lang.invoke.MethodHandle</ignore>
                             </ignores>
                         </configuration>
                     </execution>

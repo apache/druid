@@ -181,9 +181,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
   @Override
   protected RecordSupplier<String, String> setupRecordSupplier()
+      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
     KinesisTuningConfig taskTuningConfig = spec.getTuningConfig();
+
     return new KinesisRecordSupplier(
         ioConfig.getEndpoint(),
         ioConfig.getAwsAccessKeyId(),
@@ -200,6 +202,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         taskTuningConfig.getFetchSequenceNumberTimeout(),
         taskTuningConfig.getMaxRecordsPerPoll()
     );
+
   }
 
 

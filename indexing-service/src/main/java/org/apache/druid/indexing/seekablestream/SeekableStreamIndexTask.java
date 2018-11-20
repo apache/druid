@@ -245,7 +245,8 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
     );
   }
 
-  protected abstract RecordSupplier<PartitionType, SequenceType> newRecordSupplier();
+  protected abstract RecordSupplier<PartitionType, SequenceType> newRecordSupplier()
+      throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException;
 
   public boolean withinMinMaxRecordTime(final InputRow row)
   {

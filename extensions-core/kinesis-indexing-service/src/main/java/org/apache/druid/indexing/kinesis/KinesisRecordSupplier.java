@@ -50,6 +50,9 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -165,10 +168,26 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
+
             final List<byte[]> data;
 
+            if (deaggregate) {
+              if (deaggregateHandle == null || getDataHandle == null) {
+                throw new ISE("deaggregateHandle or getDataHandle is null!");
+              }
 
-            data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
+              data = new ArrayList<>();
+
+              final List userRecords = (List) deaggregateHandle.invokeExact(
+                  Collections.singletonList(kinesisRecord)
+              );
+
+              for (Object userRecord : userRecords) {
+                data.add(toByteArray((ByteBuffer) getDataHandle.invoke(userRecord)));
+              }
+            } else {
+              data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
+            }
 
             final OrderedPartitionableRecord<String, String> record = new OrderedPartitionableRecord<>(
                 streamPartition.getStream(),
@@ -244,6 +263,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
   }
 
+  // used for deaggregate
+  private final MethodHandle deaggregateHandle;
+  private final MethodHandle getDataHandle;
+
   private final int recordsPerFetch;
   private final int fetchDelayMillis;
   private final boolean deaggregate;
@@ -279,7 +302,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       int recordBufferFullWait,
       int fetchSequenceNumberTimeout,
       int maxRecordsPerPoll
-  )
+  ) throws ClassNotFoundException, IllegalAccessException, NoSuchMethodException
   {
     this.recordsPerFetch = recordsPerFetch;
     this.fetchDelayMillis = fetchDelayMillis;
@@ -290,6 +313,28 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.maxRecordsPerPoll = maxRecordsPerPoll;
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
+
+    if (deaggregate) {
+      try {
+        Class<?> KCLUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
+        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+
+        Method deaggregateMethod = KCLUserRecordclass.getMethod("deaggregate", List.class);
+        Method getDataMethod = KCLUserRecordclass.getMethod("getData");
+
+        deaggregateHandle = lookup.unreflect(deaggregateMethod);
+        getDataHandle = lookup.unreflect(getDataMethod);
+      }
+      catch (ClassNotFoundException e) {
+        log.error(
+            "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
+            + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
+        throw e;
+      }
+    } else {
+      deaggregateHandle = null;
+      getDataHandle = null;
+    }
 
     AWSCredentialsProvider awsCredentialsProvider = AWSCredentialsUtils.defaultAWSCredentialsProviderChain(
         new ConstructibleAWSCredentialsConfig(awsAccessKeyId, awsSecretAccessKey)
