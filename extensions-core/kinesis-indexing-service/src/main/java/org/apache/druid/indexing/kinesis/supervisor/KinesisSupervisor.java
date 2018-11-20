@@ -317,6 +317,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
+  protected String baseTaskName()
+  {
+    return "index_kinesis";
+  }
+
+  @Override
   @VisibleForTesting
   protected void moveTaskGroupToPendingCompletion(int taskGroupId)
   {

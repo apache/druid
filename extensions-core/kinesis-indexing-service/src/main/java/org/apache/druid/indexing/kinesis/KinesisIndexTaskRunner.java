@@ -72,8 +72,6 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
         rowIngestionMetersFactory,
         false
     );
-
-
   }
 
 

@@ -38,12 +38,10 @@ import java.util.Collections;
 public class SelectQuerySpecTest
 {
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
+
   {
     objectMapper.setInjectableValues(
-        new InjectableValues.Std().addValue(
-            SelectQueryConfig.class,
-            new SelectQueryConfig(true)
-        )
+        new InjectableValues.Std().addValue(SelectQueryConfig.class, new SelectQueryConfig(true))
     );
   }
 

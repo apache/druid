@@ -378,6 +378,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
+  protected String baseTaskName()
+  {
+    return "index_kafka";
+  }
+
+  @Override
   @VisibleForTesting
   protected void moveTaskGroupToPendingCompletion(int taskGroupId)
   {

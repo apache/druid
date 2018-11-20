@@ -64,7 +64,7 @@ This page documents all of the configuration properties for each Druid service t
         * [Autoscaler](#autoscaler)
   * [MiddleManager & Peons](#middlemanager-and-peons)
     * [Node Config](#middlemanager-node-config)
-    * [MiddleManger Configuration](#middlemanager-configuration)
+    * [MiddleManager Configuration](#middlemanager-configuration)
     * [Peon Processing](#peon-processing)
     * [Peon Query Configuration](#peon-query-configuration)
     * [Caching](#peon-caching)

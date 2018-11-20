@@ -141,14 +141,14 @@ public interface TaskStorage
    * return nothing.
    *
    * @param maxTaskStatuses maxTaskStatuses
-   * @param duration        duration
+   * @param durationBeforeNow duration
    * @param datasource      datasource
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfo(
+  List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses,
-      @Nullable Duration duration,
+      @Nullable Duration durationBeforeNow,
       @Nullable String datasource
   );
 

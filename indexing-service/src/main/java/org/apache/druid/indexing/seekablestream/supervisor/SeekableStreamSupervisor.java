@@ -565,7 +565,6 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
                                          + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
 
-
     int chatThreads = (this.tuningConfig.getChatThreads() != null
                        ? this.tuningConfig.getChatThreads()
                        : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
@@ -1677,6 +1676,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
   }
 
+  @VisibleForTesting
   protected String generateSequenceName(
       Map<PartitionType, SequenceType> startPartitions,
       Optional<DateTime> minimumMessageTime,
@@ -1709,8 +1709,10 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
                                           + maxMsgTimeStr)
                                  .substring(0, 15);
 
-    return Joiner.on("_").join("index_seekable_streaming", dataSource, hashCode);
+    return Joiner.on("_").join(baseTaskName(), dataSource, hashCode);
   }
+
+  protected abstract String baseTaskName();
 
   private void updatePartitionDataFromStream()
   {

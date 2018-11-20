@@ -55,11 +55,14 @@ public class MainTest
         new Object[]{new CliRouter()}
     );
   }
+
   private final GuiceRunnable runnable;
+
   public MainTest(GuiceRunnable runnable)
   {
     this.runnable = runnable;
   }
+
   @Test
   public void testSimpleInjection()
   {

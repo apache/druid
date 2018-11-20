@@ -19,13 +19,12 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.hll.HllSketch;
-
 import org.apache.druid.segment.data.ObjectStrategy;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class HllSketchObjectStrategy implements ObjectStrategy<HllSketch>
 {
