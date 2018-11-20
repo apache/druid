@@ -1704,7 +1704,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
-  @Test(timeout = 60_0000L)
+  @Test(timeout = 60_000L)
   public void testRunWithPauseAndResume() throws Exception
   {
     final KafkaIndexTask task = createTask(
@@ -1992,10 +1992,10 @@ public class KafkaIndexTaskTest
     }
 
     final QuerySegmentSpec endInterval = objectMapper.readValue(
-        "\"2012/2050\"", QuerySegmentSpec.class
+        "\"2008/2049\"", QuerySegmentSpec.class
     );
-    //Iterable<ScanResultValue> scanResultValues1 = scanData(task, endInterval);
-    //Assert.assertEquals(2, Iterables.size(scanResultValues1));
+    Iterable<ScanResultValue> scanResultValues1 = scanData(task, endInterval);
+    Assert.assertEquals(2, Iterables.size(scanResultValues1));
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
