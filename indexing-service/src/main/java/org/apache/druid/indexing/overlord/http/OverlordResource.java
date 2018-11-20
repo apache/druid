@@ -694,7 +694,7 @@ public class OverlordResource
     if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
       Duration createdTimeDuration = null;
       if (createdTimeInterval != null) {
-        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval,"_", "/"));
+        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
         createdTimeDuration = theInterval.toDuration();
       }
       final List<TaskInfo<Task, TaskStatus>> taskInfoList =
