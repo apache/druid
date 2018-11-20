@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.data.input.InputRow;

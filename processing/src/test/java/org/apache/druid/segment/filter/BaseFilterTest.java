@@ -414,22 +414,22 @@ public abstract class BaseFilterTest
   )
   {
     Assert.assertEquals(
-        "Cursor: " + filter.toString(),
+        "Cursor: " + filter,
         expectedRows,
         selectColumnValuesMatchingFilter(filter, "dim0")
     );
     Assert.assertEquals(
-        "Cursor with postFiltering: " + filter.toString(),
+        "Cursor with postFiltering: " + filter,
         expectedRows,
         selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
     );
     Assert.assertEquals(
-        "Filtered aggregator: " + filter.toString(),
+        "Filtered aggregator: " + filter,
         expectedRows.size(),
         selectCountUsingFilteredAggregator(filter)
     );
     Assert.assertEquals(
-        "RowBasedColumnSelectorFactory: " + filter.toString(),
+        "RowBasedColumnSelectorFactory: " + filter,
         expectedRows,
         selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
     );

@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.tests.indexer;
 
 import com.google.common.base.Throwables;
@@ -107,17 +108,17 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       }
       query_response_template = IOUtils.toString(is, "UTF-8");
 
-      String queryStr = query_response_template
-          .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-          .replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
-          .replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
-          .replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
-          .replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)))
-          .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-          .replace("%%POST_AG_REQUEST_START%%", INTERVAL_FMT.print(dtFirst))
-          .replace("%%POST_AG_REQUEST_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)))
-          .replace("%%POST_AG_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtGroupBy.withSecondOfMinute(0))
-          );
+      String queryStr = query_response_template;
+      queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast));
+      queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)));
+      queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%POST_AG_REQUEST_START%%", INTERVAL_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%POST_AG_REQUEST_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)));
+      String postAgResponseTimestamp = TIMESTAMP_FMT.print(dtGroupBy.withSecondOfMinute(0));
+      queryStr = StringUtils.replace(queryStr, "%%POST_AG_RESPONSE_TIMESTAMP%%", postAgResponseTimestamp);
 
       // should hit the queries all on realtime task or some on realtime task
       // and some on historical.  Which it is depends on where in the minute we were
@@ -158,7 +159,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
 
   String setShutOffTime(String taskAsString, DateTime time)
   {
-    return taskAsString.replace("#SHUTOFFTIME", time.toString());
+    return StringUtils.replace(taskAsString, "#SHUTOFFTIME", time.toString());
   }
 
   String getRouterURL()

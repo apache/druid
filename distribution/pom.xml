@@ -186,6 +186,31 @@
                                     </descriptors>
                                 </configuration>
                             </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-licenses</id>
+                                <goals>
+                                    <goal>download-licenses</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>apache-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
                             <execution>
                                 <id>source-release-assembly-druid</id>
                                 <phase>package</phase>
@@ -200,18 +225,6 @@
                                     </descriptors>
                                     <appendAssemblyId>false</appendAssemblyId>
                                 </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>license-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>download-licenses</id>
-                                <goals>
-                                    <goal>download-licenses</goal>
-                                </goals>
                             </execution>
                         </executions>
                     </plugin>

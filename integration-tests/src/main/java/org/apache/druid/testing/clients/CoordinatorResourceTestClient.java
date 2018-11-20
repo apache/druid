@@ -165,7 +165,8 @@ public class CoordinatorResourceTestClient
           StringUtils.format(
               "%sdatasources/%s/intervals/%s",
               getCoordinatorURL(),
-              dataSource, interval.toString().replace("/", "_")
+              dataSource,
+              interval.toString().replace('/', '_')
           )
       );
     }

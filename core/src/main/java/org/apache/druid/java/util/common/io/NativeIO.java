@@ -82,6 +82,7 @@ public class NativeIO
   }
 
   private static native int posix_fadvise(int fd, long offset, long len, int flag) throws LastErrorException;
+
   private static native int sync_file_range(int fd, long offset, long len, int flags);
 
   private NativeIO() {}
@@ -100,6 +101,7 @@ public class NativeIO
 
     return field;
   }
+
   /**
    * Get system file descriptor (int) from FileDescriptor object.
    * @param descriptor - FileDescriptor object to get fd from

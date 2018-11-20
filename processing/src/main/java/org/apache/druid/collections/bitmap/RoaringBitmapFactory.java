@@ -55,6 +55,7 @@ public class RoaringBitmapFactory implements BitmapFactory
       throw Throwables.propagate(e);
     }
   }
+
   private static final WrappedImmutableRoaringBitmap WRAPPED_IMMUTABLE_ROARING_BITMAP =
       new WrappedImmutableRoaringBitmap(EMPTY_IMMUTABLE_BITMAP);
 

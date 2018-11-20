@@ -27,8 +27,8 @@ import java.util.regex.Pattern;
  * date version of data given a base descriptor and a matching pattern. "Version" is completely dependent on the
  * implementation but is commonly equal to the "last modified" timestamp.
  *
- * This is implemented explicitly for URIExtractionNamespaceFunctionFactory
- * If you have a use case for this interface beyond URIExtractionNamespaceFunctionFactory please bring it up in the dev list.
+ * This is implemented explicitly for org.apache.druid.query.lookup.namespace.CacheGenerator
+ * If you have a use case for this interface beyond CacheGenerator please bring it up in the dev list.
  *
  * @param <DataDescriptor> The containing type for the data. A simple example would be URI
  */

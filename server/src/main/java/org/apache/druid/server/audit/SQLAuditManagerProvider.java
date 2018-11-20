@@ -38,6 +38,7 @@ public class SQLAuditManagerProvider implements AuditManagerProvider
   private final ServiceEmitter emitter;
   private final ObjectMapper mapper;
   private final SQLAuditManagerConfig config;
+
   @Inject
   public SQLAuditManagerProvider(
       Supplier<MetadataStorageTablesConfig> dbTables,

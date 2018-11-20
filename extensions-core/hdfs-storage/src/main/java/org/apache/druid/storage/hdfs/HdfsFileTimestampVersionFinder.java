@@ -34,10 +34,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.regex.Pattern;
 
-/**
- * This is implemented explicitly for URIExtractionNamespaceFunctionFactory
- * If you have a use case for this interface beyond URIExtractionNamespaceFunctionFactory please bring it up in the dev list.
- */
 public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
   @Inject

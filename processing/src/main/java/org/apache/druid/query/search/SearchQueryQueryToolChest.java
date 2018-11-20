@@ -69,6 +69,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   };
 
   private final SearchQueryConfig config;
+  @Deprecated
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final SearchQueryMetricsFactory queryMetricsFactory;
 
