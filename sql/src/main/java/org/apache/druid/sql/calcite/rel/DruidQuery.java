@@ -801,12 +801,6 @@ public class DruidQuery
     if (sortProject != null) {
       postAggregators.addAll(sortProject.getPostAggregators());
     }
-
-    final Map<String, Object> theContext = new HashMap<>();
-    theContext.put("skipEmptyBuckets", true);
-    theContext.putAll(plannerContext.getQueryContext());
-    theContext.remove(ContextLiteralLookupOperatorConversion.CONTEXT_LITERAL_LOOKUP_PROPERTY);
-
     return new TimeseriesQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
@@ -817,7 +811,7 @@ public class DruidQuery
         grouping.getAggregatorFactories(),
         postAggregators,
         timeseriesLimit,
-        ImmutableSortedMap.copyOf(theContext)
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 

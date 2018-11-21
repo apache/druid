@@ -50,7 +50,6 @@ import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.ContextLiteralLookupOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
@@ -143,20 +142,12 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, "<="))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
-          .add(new CastOperatorConversion())
+          // time operators
           .add(new CeilOperatorConversion())
           .add(new DateTruncOperatorConversion())
           .add(new ExtractOperatorConversion())
           .add(new FloorOperatorConversion())
           .add(new MillisToTimestampOperatorConversion())
-          .add(new ReinterpretOperatorConversion())
-          .add(new RegexpExtractOperatorConversion())
-          .add(new PositionOperatorConversion())
-          .add(new StrposOperatorConversion())
-          .add(new SubstringOperatorConversion())
-          .add(new ConcatOperatorConversion())
-          .add(new TextcatOperatorConversion())
-          .add(new AliasedOperatorConversion(new SubstringOperatorConversion(), "SUBSTR"))
           .add(new TimeArithmeticOperatorConversion.TimeMinusIntervalOperatorConversion())
           .add(new TimeArithmeticOperatorConversion.TimePlusIntervalOperatorConversion())
           .add(new TimeExtractOperatorConversion())
@@ -165,14 +156,24 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new TimeParseOperatorConversion())
           .add(new TimeShiftOperatorConversion())
           .add(new TimestampToMillisOperatorConversion())
-          .add(new TruncateOperatorConversion())
-          .add(new TrimOperatorConversion())
+          // string operators
           .add(new BTrimOperatorConversion())
-          .add(new LTrimOperatorConversion())
-          .add(new RTrimOperatorConversion())
-          .add(new AliasedOperatorConversion(new TruncateOperatorConversion(), "TRUNC"))
           .add(new LikeOperatorConversion())
-          .add(new ContextLiteralLookupOperatorConversion())
+          .add(new LTrimOperatorConversion())
+          .add(new PositionOperatorConversion())
+          .add(new RegexpExtractOperatorConversion())
+          .add(new RTrimOperatorConversion())
+          .add(new StrposOperatorConversion())
+          .add(new SubstringOperatorConversion())
+          .add(new AliasedOperatorConversion(new SubstringOperatorConversion(), "SUBSTR"))
+          .add(new ConcatOperatorConversion())
+          .add(new TextcatOperatorConversion())
+          .add(new TrimOperatorConversion())
+          .add(new TruncateOperatorConversion())
+          .add(new AliasedOperatorConversion(new TruncateOperatorConversion(), "TRUNC"))
+          // value coercion operators
+          .add(new CastOperatorConversion())
+          .add(new ReinterpretOperatorConversion())
           .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

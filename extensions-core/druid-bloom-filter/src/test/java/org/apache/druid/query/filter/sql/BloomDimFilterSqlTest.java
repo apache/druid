@@ -43,7 +43,6 @@ import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.expression.builtin.ContextLiteralLookupOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -53,7 +52,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -96,38 +94,6 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
     testQuery(
         StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, '%s')", base64),
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(
-                      new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
-                  )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{1L}
-        )
-    );
-  }
-
-  @Test
-  public void testBloomFilterSubst() throws Exception
-  {
-    BloomKFilter filter = new BloomKFilter(1_000_000);
-    filter.addString("def");
-    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
-    String base64 = Base64.encodeBase64String(bytes);
-
-    Map<String, Object> context = new HashMap<>(TIMESERIES_CONTEXT_DEFAULT);
-    context.put(ContextLiteralLookupOperatorConversion.CONTEXT_LITERAL_LOOKUP_PROPERTY, ImmutableMap.of("smol", StringUtils.format("'%s'", base64)));
-
-    testQuery(
-        "SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, context_literal_lookup('smol'))",
-        context,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)

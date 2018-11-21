@@ -69,7 +69,6 @@ import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.builtin.ContextLiteralLookupOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -2141,35 +2140,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{2L}
-        )
-    );
-  }
-
-  @Test
-  public void testCountStarWithContextLiteralLookupFilter() throws Exception
-  {
-    Map<String, Object> context = new HashMap<>(TIMESERIES_CONTEXT_DEFAULT);
-    context.put(
-        ContextLiteralLookupOperatorConversion.CONTEXT_LITERAL_LOOKUP_PROPERTY,
-        ImmutableMap.of("x", "'abc'")
-    );
-    testQuery(
-        "SELECT COUNT(*) FROM druid.foo WHERE dim2 = context_literal_lookup('x')",
-        context,
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(
-                      new SelectorDimFilter("dim2", "abc", null)
-                  )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{1L}
         )
     );
   }

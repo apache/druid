@@ -40,9 +40,6 @@ public class BloomFilterExtensionModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    if (binder != null) {
-      // Binder is null in some tests (apparently, idk i copied this from ApproximateHistogramModule).
-      SqlBindings.addOperatorConversion(binder, BloomFilterOperatorConversion.class);
-    }
+    SqlBindings.addOperatorConversion(binder, BloomFilterOperatorConversion.class);
   }
 }
