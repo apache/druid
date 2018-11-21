@@ -406,6 +406,19 @@ public abstract class IndexTaskClient implements AutoCloseable
     }
   }
 
+  /**
+   * Throws if it's possible to throw the given Throwable.
+   *
+   * - If Throwable is null, this returns null.
+   * - If Throwable is an {@link ExecutionException}, this calls itself recursively with the cause of ExecutionException.
+   * - If Throwable is an {@link IOException} or a {@link ChannelException}, this simply throws it.
+   * - If Throwable is an {@link InterruptedException}, this interrupts the current thread and throws a RuntimeException
+   *   wrapping the InterruptedException
+   * - Otherwise, this simply returns the given Throwable.
+   *
+   * Note that if the given Throable is an ExecutionException, this can return the cause of ExecutionException if it's
+   * not throwable.
+   */
   @Nullable
   private Throwable throwIfPossible(@Nullable Throwable t) throws IOException, ChannelException
   {
