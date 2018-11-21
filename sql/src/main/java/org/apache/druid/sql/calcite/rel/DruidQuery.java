@@ -86,7 +86,9 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -798,6 +800,10 @@ public class DruidQuery
     if (sortProject != null) {
       postAggregators.addAll(sortProject.getPostAggregators());
     }
+    final Map<String, Object> theContext = new HashMap<>();
+    theContext.put("skipEmptyBuckets", true);
+    theContext.putAll(plannerContext.getQueryContext());
+
     return new TimeseriesQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
@@ -808,7 +814,7 @@ public class DruidQuery
         grouping.getAggregatorFactories(),
         postAggregators,
         timeseriesLimit,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+        ImmutableSortedMap.copyOf(theContext)
     );
   }
 
