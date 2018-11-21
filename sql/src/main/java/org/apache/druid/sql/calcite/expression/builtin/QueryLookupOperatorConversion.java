@@ -35,7 +35,7 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
-public class LookupOperatorConversion implements SqlOperatorConversion
+public class QueryLookupOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("LOOKUP")
@@ -47,7 +47,7 @@ public class LookupOperatorConversion implements SqlOperatorConversion
   private final LookupReferencesManager lookupReferencesManager;
 
   @Inject
-  public LookupOperatorConversion(final LookupReferencesManager lookupReferencesManager)
+  public QueryLookupOperatorConversion(final LookupReferencesManager lookupReferencesManager)
   {
     this.lookupReferencesManager = lookupReferencesManager;
   }

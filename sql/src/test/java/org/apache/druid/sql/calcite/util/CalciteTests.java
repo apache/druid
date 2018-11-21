@@ -113,7 +113,7 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
@@ -534,7 +534,7 @@ public class CalciteTests
   {
     try {
       final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
-      extractionOperators.add(INJECTOR.getInstance(LookupOperatorConversion.class));
+      extractionOperators.add(INJECTOR.getInstance(QueryLookupOperatorConversion.class));
       return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
     }
     catch (Exception e) {
