@@ -65,12 +65,7 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactConfig()
   {
-    return Response.ok(
-        manager.watch(
-            CoordinatorCompactionConfig.CONFIG_KEY,
-            CoordinatorCompactionConfig.class
-        ).get()
-    ).build();
+    return Response.ok(CoordinatorCompactionConfig.current(manager)).build();
   }
 
   @POST
@@ -84,17 +79,13 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    CoordinatorCompactionConfig current = manager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class
-    ).get();
+    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
 
-    final CoordinatorCompactionConfig newCompactionConfig;
-    if (current != null) {
-      newCompactionConfig = CoordinatorCompactionConfig.from(current, compactionTaskSlotRatio, maxCompactionTaskSlots);
-    } else {
-      newCompactionConfig = new CoordinatorCompactionConfig(null, compactionTaskSlotRatio, maxCompactionTaskSlots);
-    }
+    final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
+        current,
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots
+    );
 
     final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
@@ -120,22 +111,14 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    CoordinatorCompactionConfig current = manager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class
-    ).get();
-
+    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final CoordinatorCompactionConfig newCompactionConfig;
-    if (current != null) {
-      final Map<String, DataSourceCompactionConfig> newConfigs = current
-          .getCompactionConfigs()
-          .stream()
-          .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-      newConfigs.put(newConfig.getDataSource(), newConfig);
-      newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
-    } else {
-      newCompactionConfig = CoordinatorCompactionConfig.from(ImmutableList.of(newConfig));
-    }
+    final Map<String, DataSourceCompactionConfig> newConfigs = current
+        .getCompactionConfigs()
+        .stream()
+        .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+    newConfigs.put(newConfig.getDataSource(), newConfig);
+    newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 
     final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
@@ -155,15 +138,7 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactionConfig(@PathParam("dataSource") String dataSource)
   {
-    CoordinatorCompactionConfig current = manager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class
-    ).get();
-
-    if (current == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
-    }
-
+    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final Map<String, DataSourceCompactionConfig> configs = current
         .getCompactionConfigs()
         .stream()
@@ -187,15 +162,7 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    CoordinatorCompactionConfig current = manager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class
-    ).get();
-
-    if (current == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
-    }
-
+    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final Map<String, DataSourceCompactionConfig> configs = current
         .getCompactionConfigs()
         .stream()
