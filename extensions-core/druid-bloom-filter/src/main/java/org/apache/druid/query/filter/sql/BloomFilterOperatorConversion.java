@@ -84,7 +84,7 @@ public class BloomFilterOperatorConversion implements SqlOperatorConversion
       holder = BloomKFilterHolder.fromBloomKFilter(filter);
     }
     catch (IOException ioe) {
-      throw new RuntimeException("Failed to deserialize bloom filter");
+      throw new RuntimeException("Failed to deserialize bloom filter", ioe);
     }
 
     if (druidExpression.isSimpleExtraction()) {
