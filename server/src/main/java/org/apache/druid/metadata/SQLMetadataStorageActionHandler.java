@@ -453,7 +453,6 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public void removeTasksOlderThan(final long timestamp)
   {
     DateTime dateTime = DateTimes.utc(timestamp);
-    log.info("Deleting tasks older than [%s] and inactive at metastore.", dateTime.toString());
     connector.retryWithHandle(
         (HandleCallback<Void>) handle -> {
           handle.createStatement(getSqlRemoveLogsOlderThan())

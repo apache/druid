@@ -530,8 +530,8 @@ Caution: Automatic log file deletion typically works based on log file modificat
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, overlord will submit tasks periodically based on `delay` specified. These kill tasks will delete task logs from log directory and tasks and tasklogs table in metadata storage except for the last `durationToRetain` period. |false|
-|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs to be retained created in last x milliseconds. |None|
+|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, overlord will submit kill tasks periodically based on `delay` specified, which will delete task logs from the log directory as well as tasks and tasklogs table in metadata storage except for tasks created in the last `durationToRetain` period. |false|
+|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs and task-related metadata storage tables to be retained created in last x milliseconds. |None|
 |`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
 |`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
