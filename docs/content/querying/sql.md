@@ -233,7 +233,6 @@ over the connection time zone.
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`CONTEXT_LITERAL_LOOKUP(value)`|Returns a literal value that is specified in query `context` property `sqlLiteralLookup` in the property specified by `value`, allowing large literal values to bypass tokenization of the SQL expression, potentially dramtically decreasing planning speed.|
 
 ### Unsupported features
 
