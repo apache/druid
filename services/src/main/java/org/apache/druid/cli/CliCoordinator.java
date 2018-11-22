@@ -237,8 +237,13 @@ public class CliCoordinator extends ServerRunnable
           )
           {
             return new LoadQueueTaskMaster(
-                curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"),
-                Executors.newSingleThreadExecutor(), config, httpClient, zkPaths
+                curator,
+                jsonMapper,
+                factory.create(1, "Master-PeonExec--%d"),
+                Executors.newSingleThreadExecutor(),
+                config,
+                httpClient,
+                zkPaths
             );
           }
         }

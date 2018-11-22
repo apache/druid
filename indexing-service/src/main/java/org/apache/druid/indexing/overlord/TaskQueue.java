@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -47,7 +46,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,8 +73,8 @@ public class TaskQueue
 {
   private final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
 
-  private final List<Task> tasks = Lists.newArrayList();
-  private final Map<String, ListenableFuture<TaskStatus>> taskFutures = Maps.newHashMap();
+  private final List<Task> tasks = new ArrayList<>();
+  private final Map<String, ListenableFuture<TaskStatus>> taskFutures = new HashMap<>();
 
   private final TaskQueueConfig config;
   private final TaskStorage taskStorage;
@@ -232,7 +233,7 @@ public class TaskQueue
 
       try {
         // Task futures available from the taskRunner
-        final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = Maps.newHashMap();
+        final Map<String, ListenableFuture<TaskStatus>> runnerTaskFutures = new HashMap<>();
         for (final TaskRunnerWorkItem workItem : taskRunner.getKnownTasks()) {
           runnerTaskFutures.put(workItem.getTaskId(), workItem.getResult());
         }
@@ -251,7 +252,7 @@ public class TaskQueue
               }
               catch (Exception e) {
                 log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-                notifyStatus(task, TaskStatus.failure(task.getId()));
+                notifyStatus(task, TaskStatus.failure(task.getId()), "failed because of exception[%s]", e.getClass());
                 continue;
               }
               if (taskIsReady) {
@@ -285,7 +286,11 @@ public class TaskQueue
           log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
           for (final String taskId : tasksToKill) {
             try {
-              taskRunner.shutdown(taskId);
+              taskRunner.shutdown(
+                  taskId,
+                  "task is not in runnerTaskFutures[%s]",
+                  runnerTaskFutures.keySet()
+              );
             }
             catch (Exception e) {
               log.warn(e, "TaskRunner failed to clean up task: %s", taskId);
@@ -355,7 +360,7 @@ public class TaskQueue
    *
    * @param taskId task to kill
    */
-  public void shutdown(final String taskId)
+  public void shutdown(final String taskId, String reasonFormat, Object... args)
   {
     giant.lock();
 
@@ -363,7 +368,7 @@ public class TaskQueue
       Preconditions.checkNotNull(taskId, "taskId");
       for (final Task task : tasks) {
         if (task.getId().equals(taskId)) {
-          notifyStatus(task, TaskStatus.failure(taskId));
+          notifyStatus(task, TaskStatus.failure(taskId), reasonFormat, args);
           break;
         }
       }
@@ -385,7 +390,7 @@ public class TaskQueue
    * @throws IllegalArgumentException if the task ID does not match the status ID
    * @throws IllegalStateException    if this queue is currently shut down
    */
-  private void notifyStatus(final Task task, final TaskStatus taskStatus)
+  private void notifyStatus(final Task task, final TaskStatus taskStatus, String reasonFormat, Object... args)
   {
     giant.lock();
 
@@ -401,7 +406,7 @@ public class TaskQueue
       );
       // Inform taskRunner that this task can be shut down
       try {
-        taskRunner.shutdown(task.getId());
+        taskRunner.shutdown(task.getId(), reasonFormat, args);
       }
       catch (Exception e) {
         log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
@@ -492,7 +497,7 @@ public class TaskQueue
                 return;
               }
 
-              notifyStatus(task, status);
+              notifyStatus(task, status, "notified status change from task");
 
               // Emit event and log, if the task is done
               if (status.isComplete()) {
@@ -574,7 +579,7 @@ public class TaskQueue
 
   private static Map<String, Task> toTaskIDMap(List<Task> taskList)
   {
-    Map<String, Task> rv = Maps.newHashMap();
+    Map<String, Task> rv = new HashMap<>();
     for (Task task : taskList) {
       rv.put(task.getId(), task);
     }

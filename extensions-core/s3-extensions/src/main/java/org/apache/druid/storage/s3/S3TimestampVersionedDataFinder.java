@@ -31,10 +31,6 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
-/**
- * This is implemented explicitly for URIExtractionNamespaceFunctionFactory
- * If you have a use case for this interface beyond URIExtractionNamespaceFunctionFactory please bring it up in the dev list.
- */
 public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
   private static final int MAX_LISTING_KEYS = 1000;

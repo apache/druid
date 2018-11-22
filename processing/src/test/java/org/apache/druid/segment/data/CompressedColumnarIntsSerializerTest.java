@@ -83,14 +83,8 @@ public class CompressedColumnarIntsSerializerTest
     );
 
     return Iterables.transform(
-        combinations, new Function<List, Object[]>()
-        {
-          @Override
-          public Object[] apply(List input)
-          {
-            return new Object[]{input.get(0), input.get(1)};
-          }
-        }
+        combinations,
+        (Function<List, Object[]>) input -> new Object[]{input.get(0), input.get(1)}
     );
   }
 
@@ -119,7 +113,11 @@ public class CompressedColumnarIntsSerializerTest
     FileSmoosher smoosher = new FileSmoosher(temporaryFolder.newFolder());
 
     CompressedColumnarIntsSerializer writer = new CompressedColumnarIntsSerializer(
-        segmentWriteOutMedium, "test", chunkFactor, byteOrder, compressionStrategy
+        segmentWriteOutMedium,
+        "test",
+        chunkFactor,
+        byteOrder,
+        compressionStrategy
     );
     CompressedColumnarIntsSupplier supplierFromList = CompressedColumnarIntsSupplier.fromList(
         IntArrayList.wrap(vals),

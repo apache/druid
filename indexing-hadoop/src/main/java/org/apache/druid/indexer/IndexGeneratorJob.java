@@ -25,7 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.Futures;
@@ -80,11 +79,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -420,16 +421,14 @@ public class IndexGeneratorJob implements Jobby
     }
 
     @Override
-    protected void reduce(
-        final BytesWritable key, Iterable<BytesWritable> values, final Context context
-    ) throws IOException, InterruptedException
+    protected void reduce(final BytesWritable key, Iterable<BytesWritable> values, final Context context)
+        throws IOException, InterruptedException
     {
-
       Iterator<BytesWritable> iter = values.iterator();
       BytesWritable first = iter.next();
 
       if (iter.hasNext()) {
-        LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
+        LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
         IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null, null);
@@ -562,7 +561,7 @@ public class IndexGeneratorJob implements Jobby
   public static class IndexGeneratorReducer extends Reducer<BytesWritable, BytesWritable, BytesWritable, Text>
   {
     protected HadoopDruidIndexerConfig config;
-    private List<String> metricNames = Lists.newArrayList();
+    private List<String> metricNames = new ArrayList<>();
     private AggregatorFactory[] aggregators;
     private AggregatorFactory[] combiningAggs;
     private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
@@ -587,9 +586,8 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
-          index, interval, file, config.getIndexSpec(), progressIndicator, null
-      );
+      return HadoopDruidIndexerConfig.INDEX_MERGER_V9
+          .persist(index, interval, file, config.getIndexSpec(), progressIndicator, null);
     }
 
     protected File mergeQueryableIndex(
@@ -600,9 +598,8 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
-      return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
-          indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator, null
-      );
+      return HadoopDruidIndexerConfig.INDEX_MERGER_V9
+          .mergeQueryableIndex(indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator, null);
     }
 
     @Override
@@ -624,9 +621,8 @@ public class IndexGeneratorJob implements Jobby
     }
 
     @Override
-    protected void reduce(
-        BytesWritable key, Iterable<BytesWritable> values, final Context context
-    ) throws IOException, InterruptedException
+    protected void reduce(BytesWritable key, Iterable<BytesWritable> values, final Context context)
+        throws IOException, InterruptedException
     {
       SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
@@ -634,7 +630,7 @@ public class IndexGeneratorJob implements Jobby
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
 
       ListeningExecutorService persistExecutor = null;
-      List<ListenableFuture<?>> persistFutures = Lists.newArrayList();
+      List<ListenableFuture<?>> persistFutures = new ArrayList<>();
       IncrementalIndex index = makeIncrementalIndex(
           bucket,
           combiningAggs,
@@ -647,13 +643,13 @@ public class IndexGeneratorJob implements Jobby
         baseFlushFile.delete();
         baseFlushFile.mkdirs();
 
-        Set<File> toMerge = Sets.newTreeSet();
+        Set<File> toMerge = new TreeSet<>();
         int indexCount = 0;
         int lineCount = 0;
         int runningTotalLineCount = 0;
         long startTime = System.currentTimeMillis();
 
-        Set<String> allDimensionNames = Sets.newLinkedHashSet();
+        Set<String> allDimensionNames = new LinkedHashSet<>();
         final ProgressIndicator progressIndicator = makeProgressIndicator(context);
         int numBackgroundPersistThreads = config.getSchema().getTuningConfig().getNumBackgroundPersistThreads();
         if (numBackgroundPersistThreads > 0) {
@@ -775,9 +771,7 @@ public class IndexGeneratorJob implements Jobby
 
           log.info("starting merge of intermediate persisted segments.");
           long mergeStartTime = System.currentTimeMillis();
-          mergedBase = mergeQueryableIndex(
-              indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
-          );
+          mergedBase = mergeQueryableIndex(indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator);
           log.info(
               "finished merge of intermediate persisted segments. time taken [%d] ms.",
               (System.currentTimeMillis() - mergeStartTime)

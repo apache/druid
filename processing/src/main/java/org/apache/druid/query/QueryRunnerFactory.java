@@ -49,9 +49,7 @@ public interface QueryRunnerFactory<T, QueryType extends Query<T>>
    *
    * The vast majority of the time, this should be implemented with
    *
-   *     return new ChainedExecutionQueryRunner<>(
-   *         queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
-   *     );
+   *     return new ChainedExecutionQueryRunner<>(queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners);
    *
    * Which will allow for parallel execution up to the maximum number of processing threads allowed.
    *

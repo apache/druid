@@ -519,7 +519,7 @@ public class JdbcExtractionNamespaceTest
   private void waitForUpdates(long timeout, long numUpdates) throws InterruptedException
   {
     long startTime = System.currentTimeMillis();
-    long pre = 0L;
+    long pre;
     updateLock.lockInterruptibly();
     try {
       pre = updates.get();
@@ -527,7 +527,7 @@ public class JdbcExtractionNamespaceTest
     finally {
       updateLock.unlock();
     }
-    long post = 0L;
+    long post;
     do {
       // Sleep to spare a few cpu cycles
       Thread.sleep(5);

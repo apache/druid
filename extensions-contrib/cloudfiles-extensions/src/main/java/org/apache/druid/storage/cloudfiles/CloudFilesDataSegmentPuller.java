@@ -64,8 +64,10 @@ public class CloudFilesDataSegmentPuller
       }
       catch (IOException ioe) {
         log.warn(
-            ioe, "Failed to remove output directory [%s] for segment pulled from [%s]",
-            outDir.getAbsolutePath(), path
+            ioe,
+            "Failed to remove output directory [%s] for segment pulled from [%s]",
+            outDir.getAbsolutePath(),
+            path
         );
       }
       throw new SegmentLoadingException(e, e.getMessage());

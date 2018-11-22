@@ -117,7 +117,12 @@ public class HttpRemoteTaskRunnerTest
       )
       {
         return HttpRemoteTaskRunnerTest.createWorkerHolder(
-            smileMapper, httpClient, config, workersSyncExec, listener, worker,
+            smileMapper,
+            httpClient,
+            config,
+            workersSyncExec,
+            listener,
+            worker,
             ImmutableList.of(),
             ImmutableMap.of(),
             new AtomicInteger(),
@@ -144,11 +149,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
-        ImmutableList.of(
-            druidNode1, druidNode2
-        )
-    );
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1, druidNode2));
 
     int numTasks = 8;
     List<Future<TaskStatus>> futures = new ArrayList<>();
@@ -209,7 +210,12 @@ public class HttpRemoteTaskRunnerTest
       )
       {
         return HttpRemoteTaskRunnerTest.createWorkerHolder(
-            smileMapper, httpClient, config, workersSyncExec, listener, worker,
+            smileMapper,
+            httpClient,
+            config,
+            workersSyncExec,
+            listener,
+            worker,
             ImmutableList.of(),
             ImmutableMap.of(task1, ImmutableList.of()), //no announcements would be received for task1
             new AtomicInteger(),
@@ -236,11 +242,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
-        ImmutableList.of(
-            druidNode1, druidNode2
-        )
-    );
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1, druidNode2));
 
     taskRunner.run(task1);
     Future<TaskStatus> future2 = taskRunner.run(task2);
@@ -337,7 +339,12 @@ public class HttpRemoteTaskRunnerTest
     workerHolders.put(
         "host:1234",
         (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
-            mapper, httpClient, config, exec, listener, worker,
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
             ImmutableList.of(
                 TaskAnnouncement.create(
                     task1,
@@ -468,7 +475,12 @@ public class HttpRemoteTaskRunnerTest
     workerHolders.put(
         "host:1234",
         (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
-            mapper, httpClient, config, exec, listener, worker,
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -528,7 +540,12 @@ public class HttpRemoteTaskRunnerTest
     workerHolders.put(
         "host:1234",
         (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
-            mapper, httpClient, config, exec, listener, worker,
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
             ImmutableList.of(
                 TaskAnnouncement.create(
                     task1,
@@ -623,15 +640,18 @@ public class HttpRemoteTaskRunnerTest
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
         new DruidNode("service", "host", false, 1234, null, true, false),
         NodeType.MIDDLE_MANAGER,
-        ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0")
-        )
+        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0"))
     );
 
     workerHolders.put(
         "host:1234",
         (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
-            mapper, httpClient, config, exec, listener, worker,
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -692,7 +712,12 @@ public class HttpRemoteTaskRunnerTest
     workerHolders.put(
         "host:1234",
         (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
-            mapper, httpClient, config, exec, listener, worker,
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
             ImmutableList.of(
                 TaskAnnouncement.create(
                     task1,
@@ -798,7 +823,12 @@ public class HttpRemoteTaskRunnerTest
     workerHolders.put(
         "host1:8080",
         (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
-            mapper, httpClient, config, exec, listener, worker,
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
             ImmutableList.of(),
             ImmutableMap.of(
                 task1, ImmutableList.of(
@@ -819,11 +849,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
-        ImmutableList.of(
-            druidNode1
-        )
-    );
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1));
 
     taskRunner.run(task1);
 
@@ -834,29 +860,26 @@ public class HttpRemoteTaskRunnerTest
     DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
         new DruidNode("service", "host2", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
-        ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0")
-        )
+        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0"))
     );
 
     workerHolders.put(
         "host2:8080",
         (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
-            mapper, httpClient, config, exec, listener, worker,
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
             ImmutableList.of(),
-            ImmutableMap.of(
-                task2, ImmutableList.of()
-            ),
+            ImmutableMap.of(task2, ImmutableList.of()),
             ticks,
             ImmutableSet.of()
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
-        ImmutableList.of(
-            druidNode2
-        )
-    );
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode2));
 
     taskRunner.run(task2);
 
@@ -867,15 +890,18 @@ public class HttpRemoteTaskRunnerTest
     DiscoveryDruidNode druidNode3 = new DiscoveryDruidNode(
         new DruidNode("service", "host3", false, 8080, null, true, false),
         NodeType.MIDDLE_MANAGER,
-        ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0")
-        )
+        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 1, "0"))
     );
 
     workerHolders.put(
         "host3:8080",
         (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
-            mapper, httpClient, config, exec, listener, worker,
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
             ImmutableList.of(),
             ImmutableMap.of(),
             new AtomicInteger(),
@@ -883,11 +909,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
-        ImmutableList.of(
-            druidNode3
-        )
-    );
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode3));
 
     Assert.assertEquals(task1.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
     Assert.assertEquals(task2.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
@@ -1088,9 +1110,8 @@ public class HttpRemoteTaskRunnerTest
     EasyMock.replay(taskStorage);
 
     List<Object> listenerNotificationsAccumulator = new ArrayList<>();
-    HttpRemoteTaskRunner taskRunner = createTaskRunnerForTestTaskAddedOrUpdated(
-        taskStorage, listenerNotificationsAccumulator
-    );
+    HttpRemoteTaskRunner taskRunner =
+        createTaskRunnerForTestTaskAddedOrUpdated(taskStorage, listenerNotificationsAccumulator);
 
     Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1");
 

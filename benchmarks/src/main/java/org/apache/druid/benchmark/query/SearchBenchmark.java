@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
@@ -96,6 +95,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -199,21 +199,21 @@ public class SearchBenchmark
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
-    final List<String> dimUniformFilterVals = Lists.newArrayList();
+    final List<String> dimUniformFilterVals = new ArrayList<>();
     int resultNum = (int) (100000 * 0.1);
     int step = 100000 / resultNum;
     for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
       dimUniformFilterVals.add(String.valueOf(i));
     }
 
-    List<String> dimHyperUniqueFilterVals = Lists.newArrayList();
+    List<String> dimHyperUniqueFilterVals = new ArrayList<>();
     resultNum = (int) (100000 * 0.1);
     step = 100000 / resultNum;
     for (int i = 0; i < 100001 && dimHyperUniqueFilterVals.size() < resultNum; i += step) {
       dimHyperUniqueFilterVals.add(String.valueOf(i));
     }
 
-    final List<DimFilter> dimFilters = Lists.newArrayList();
+    final List<DimFilter> dimFilters = new ArrayList<>();
     dimFilters.add(new InDimFilter("dimUniform", dimUniformFilterVals, null));
     dimFilters.add(new InDimFilter("dimHyperUnique", dimHyperUniqueFilterVals, null));
 
@@ -230,7 +230,7 @@ public class SearchBenchmark
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
-    final List<String> dimUniformFilterVals = Lists.newArrayList();
+    final List<String> dimUniformFilterVals = new ArrayList<>();
     final int resultNum = (int) (100000 * 0.1);
     final int step = 100000 / resultNum;
     for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
@@ -238,7 +238,7 @@ public class SearchBenchmark
     }
 
     final String dimName = "dimUniform";
-    final List<DimFilter> dimFilters = Lists.newArrayList();
+    final List<DimFilter> dimFilters = new ArrayList<>();
     dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, IdentityExtractionFn.getInstance()));
     dimFilters.add(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()));
     dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, new DimExtractionFn()
@@ -284,7 +284,7 @@ public class SearchBenchmark
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
-    final List<String> dimUniformFilterVals = Lists.newArrayList();
+    final List<String> dimUniformFilterVals = new ArrayList<>();
     final int resultNum = (int) (100000 * 0.1);
     final int step = 100000 / resultNum;
     for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
@@ -292,7 +292,7 @@ public class SearchBenchmark
     }
 
     final String dimName = "dimUniform";
-    final List<DimFilter> dimFilters = Lists.newArrayList();
+    final List<DimFilter> dimFilters = new ArrayList<>();
     dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
     dimFilters.add(new SelectorDimFilter(dimName, "3", null));
     dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null));
@@ -402,7 +402,7 @@ public class SearchBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     return queryResult.toList();
   }
 
@@ -448,7 +448,7 @@ public class SearchBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndex(Blackhole blackhole)
   {
-    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
+    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
       String segmentName = "qIndex" + i;
@@ -469,7 +469,7 @@ public class SearchBenchmark
 
     Sequence<Result<SearchResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        Maps.newHashMap()
+        new HashMap<>()
     );
     List<Result<SearchResultValue>> results = queryResult.toList();
 

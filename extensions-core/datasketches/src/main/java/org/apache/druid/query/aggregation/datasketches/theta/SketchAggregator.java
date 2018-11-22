@@ -42,7 +42,7 @@ public class SketchAggregator implements Aggregator
 
   private void initUnion()
   {
-    union = new SynchronizedUnion((Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION));
+    union = (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION);
   }
 
   @Override
@@ -52,10 +52,12 @@ public class SketchAggregator implements Aggregator
     if (update == null) {
       return;
     }
-    if (union == null) {
-      initUnion();
+    synchronized (this) {
+      if (union == null) {
+        initUnion();
+      }
+      updateUnion(union, update);
     }
-    updateUnion(union, update);
   }
 
   @Override
@@ -69,7 +71,9 @@ public class SketchAggregator implements Aggregator
     //however, advantage of ordered sketch is that they are faster to "union" later
     //given that results from the aggregator will be combined further, it is better
     //to return the ordered sketch here
-    return SketchHolder.of(union.getResult(true, null));
+    synchronized (this) {
+      return SketchHolder.of(union.getResult(true, null));
+    }
   }
 
   @Override

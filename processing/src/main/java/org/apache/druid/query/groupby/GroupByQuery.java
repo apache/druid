@@ -29,7 +29,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
@@ -96,11 +95,14 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private final VirtualColumns virtualColumns;
   private final LimitSpec limitSpec;
+  @Nullable
   private final HavingSpec havingSpec;
+  @Nullable
   private final DimFilter dimFilter;
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  @Nullable
   private final List<List<String>> subtotalsSpec;
 
   private final boolean applyLimitPushDown;
@@ -116,9 +118,9 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
-      @JsonProperty("having") HavingSpec havingSpec,
+      @JsonProperty("having") @Nullable HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
-      @JsonProperty("subtotalsSpec") List<List<String>> subtotalsSpec,
+      @JsonProperty("subtotalsSpec") @Nullable List<List<String>> subtotalsSpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -169,12 +171,12 @@ public class GroupByQuery extends BaseQuery<Row>
       final DataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       final VirtualColumns virtualColumns,
-      final DimFilter dimFilter,
+      final @Nullable DimFilter dimFilter,
       final Granularity granularity,
-      final List<DimensionSpec> dimensions,
-      final List<AggregatorFactory> aggregatorSpecs,
-      final List<PostAggregator> postAggregatorSpecs,
-      final HavingSpec havingSpec,
+      final @Nullable List<DimensionSpec> dimensions,
+      final @Nullable List<AggregatorFactory> aggregatorSpecs,
+      final @Nullable List<PostAggregator> postAggregatorSpecs,
+      final @Nullable HavingSpec havingSpec,
       final LimitSpec limitSpec,
       final @Nullable List<List<String>> subtotalsSpec,
       final @Nullable Function<Sequence<Row>, Sequence<Row>> postProcessingFn,
@@ -199,7 +201,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
 
-    this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, dimensions);
+    this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, this.dimensions);
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
@@ -212,7 +214,11 @@ public class GroupByQuery extends BaseQuery<Row>
     this.applyLimitPushDown = determineApplyLimitPushDown();
   }
 
-  private List<List<String>> verifySubtotalsSpec(List<List<String>> subtotalsSpec, List<DimensionSpec> dimensions)
+  @Nullable
+  private List<List<String>> verifySubtotalsSpec(
+      @Nullable List<List<String>> subtotalsSpec,
+      List<DimensionSpec> dimensions
+  )
   {
     // if subtotalsSpec exists then validate that all are subsets of dimensions spec and are in same order.
     // For example if we had {D1, D2, D3} in dimensions spec then
@@ -701,7 +707,7 @@ public class GroupByQuery extends BaseQuery<Row>
       List<PostAggregator> postAggregators
   )
   {
-    final Set<String> outputNames = Sets.newHashSet();
+    final Set<String> outputNames = new HashSet<>();
     for (DimensionSpec dimension : dimensions) {
       if (!outputNames.add(dimension.getOutputName())) {
         throw new IAE("Duplicate output name[%s]", dimension.getOutputName());
@@ -737,22 +743,39 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public static class Builder
   {
+    @Nullable
+    private static List<List<String>> copySubtotalSpec(@Nullable List<List<String>> subtotalsSpec)
+    {
+      if (subtotalsSpec == null) {
+        return null;
+      }
+      return subtotalsSpec.stream().map(ArrayList::new).collect(Collectors.toList());
+    }
+
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private VirtualColumns virtualColumns;
+    @Nullable
     private DimFilter dimFilter;
     private Granularity granularity;
+    @Nullable
     private List<DimensionSpec> dimensions;
+    @Nullable
     private List<AggregatorFactory> aggregatorSpecs;
+    @Nullable
     private List<PostAggregator> postAggregatorSpecs;
+    @Nullable
     private HavingSpec havingSpec;
 
     private Map<String, Object> context;
 
+    @Nullable
     private List<List<String>> subtotalsSpec = null;
+    @Nullable
     private LimitSpec limitSpec = null;
+    @Nullable
     private Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
-    private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
+    private List<OrderByColumnSpec> orderByColumnSpecs = new ArrayList<>();
     private int limit = Integer.MAX_VALUE;
 
     public Builder()
@@ -788,6 +811,7 @@ public class GroupByQuery extends BaseQuery<Row>
       postAggregatorSpecs = builder.postAggregatorSpecs;
       havingSpec = builder.havingSpec;
       limitSpec = builder.limitSpec;
+      subtotalsSpec = copySubtotalSpec(builder.subtotalsSpec);
       postProcessingFn = builder.postProcessingFn;
       limit = builder.limit;
       orderByColumnSpecs = new ArrayList<>(builder.orderByColumnSpecs);
@@ -930,7 +954,7 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder addDimension(DimensionSpec dimension)
     {
       if (dimensions == null) {
-        dimensions = Lists.newArrayList();
+        dimensions = new ArrayList<>();
       }
 
       dimensions.add(dimension);
@@ -955,7 +979,7 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder addAggregator(AggregatorFactory aggregator)
     {
       if (aggregatorSpecs == null) {
-        aggregatorSpecs = Lists.newArrayList();
+        aggregatorSpecs = new ArrayList<>();
       }
 
       aggregatorSpecs.add(aggregator);

@@ -34,8 +34,7 @@ public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFac
 
   /**
    * Should be used only in tests, directly or indirectly (e. g. in {@link
-   * org.apache.druid.query.search.SearchQueryQueryToolChest#SearchQueryQueryToolChest(
-   * org.apache.druid.query.search.SearchQueryConfig, IntervalChunkingQueryRunnerDecorator)}).
+   * org.apache.druid.query.search.SearchQueryQueryToolChest#SearchQueryQueryToolChest}).
    */
   @VisibleForTesting
   public static GenericQueryMetricsFactory instance()

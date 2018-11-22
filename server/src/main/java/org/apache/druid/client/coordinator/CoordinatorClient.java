@@ -58,7 +58,7 @@ public class CoordinatorClient
                                         StringUtils.format(
                                            "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
                                            dataSource,
-                                           interval.toString().replace("/", "_"),
+                                           interval.toString().replace('/', '_'),
                                            incompleteOk
                                        ))
       );

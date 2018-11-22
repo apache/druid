@@ -19,8 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.collect.Lists;
-
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -44,7 +43,7 @@ public class MergeIterable<T> implements Iterable<T>
   @Override
   public Iterator<T> iterator()
   {
-    List<Iterator<T>> iterators = Lists.newArrayList();
+    List<Iterator<T>> iterators = new ArrayList<>();
     for (Iterable<T> baseIterable : baseIterables) {
       iterators.add(baseIterable.iterator());
     }

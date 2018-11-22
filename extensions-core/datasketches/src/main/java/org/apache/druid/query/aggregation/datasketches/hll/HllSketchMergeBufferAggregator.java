@@ -19,18 +19,18 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.nio.ByteBuffer;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-
 import com.google.common.util.concurrent.Striped;
 import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
-
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 
 /**
  * This aggregator merges existing sketches.
@@ -66,7 +66,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf).writableRegion(position, size);
+    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
     // Not necessary to keep the constructed object since it is cheap to reconstruct by wrapping the memory.
     // The objects are not cached as in BuildBufferAggregator since they never exceed the max size and never move.
     // So it is easier to reconstruct them by wrapping memory then to keep position-to-object mappings. 
@@ -85,7 +85,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     if (sketch == null) {
       return;
     }
-    final WritableMemory mem = WritableMemory.wrap(buf).writableRegion(position, size);
+    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
     final Lock lock = stripedLock.getAt(HllSketchBuildBufferAggregator.lockIndex(position)).writeLock();
     lock.lock();
     try {
@@ -105,7 +105,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf).writableRegion(position, size);
+    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
     final Lock lock = stripedLock.getAt(HllSketchBuildBufferAggregator.lockIndex(position)).readLock();
     lock.lock();
     try {

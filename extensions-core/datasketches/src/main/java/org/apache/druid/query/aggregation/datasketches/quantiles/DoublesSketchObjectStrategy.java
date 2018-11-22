@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class DoublesSketchObjectStrategy implements ObjectStrategy<DoublesSketch>
 {
@@ -41,7 +42,7 @@ public class DoublesSketchObjectStrategy implements ObjectStrategy<DoublesSketch
     if (numBytes == 0) {
       return DoublesSketchOperations.EMPTY_SKETCH;
     }
-    return DoublesSketch.wrap(Memory.wrap(buffer).region(buffer.position(), numBytes));
+    return DoublesSketch.wrap(Memory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes));
   }
 
   @Override

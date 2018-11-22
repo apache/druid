@@ -21,7 +21,6 @@ package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.collect.Maps;
 import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
@@ -36,6 +35,7 @@ import org.apache.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -136,7 +136,7 @@ public enum CompressionStrategy
     return valueOf(StringUtils.toUpperCase(name));
   }
 
-  static final Map<Byte, CompressionStrategy> idMap = Maps.newHashMap();
+  static final Map<Byte, CompressionStrategy> idMap = new HashMap<>();
 
   static {
     for (CompressionStrategy strategy : CompressionStrategy.values()) {

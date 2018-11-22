@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -27,8 +28,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.apache.druid.query.filter.BloomDimFilter;
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
-import org.apache.hive.common.util.BloomKFilter;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,9 +41,7 @@ public class BloomFilterSerializersModule extends SimpleModule
 
   public BloomFilterSerializersModule()
   {
-    registerSubtypes(
-        new NamedType(BloomDimFilter.class, BLOOM_FILTER_TYPE_NAME)
-    );
+    registerSubtypes(new NamedType(BloomDimFilter.class, BLOOM_FILTER_TYPE_NAME));
     addSerializer(BloomKFilter.class, new BloomKFilterSerializer());
     addDeserializer(BloomKFilter.class, new BloomKFilterDeserializer());
     addDeserializer(BloomKFilterHolder.class, new BloomKFilterHolderDeserializer());
@@ -50,16 +49,14 @@ public class BloomFilterSerializersModule extends SimpleModule
 
   private static class BloomKFilterSerializer extends StdSerializer<BloomKFilter>
   {
-
     BloomKFilterSerializer()
     {
       super(BloomKFilter.class);
     }
 
     @Override
-    public void serialize(
-        BloomKFilter bloomKFilter, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
-    ) throws IOException
+    public void serialize(BloomKFilter bloomKFilter, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+        throws IOException
     {
       jsonGenerator.writeBinary(bloomKFilterToBytes(bloomKFilter));
     }
@@ -67,16 +64,14 @@ public class BloomFilterSerializersModule extends SimpleModule
 
   private static class BloomKFilterDeserializer extends StdDeserializer<BloomKFilter>
   {
-
     BloomKFilterDeserializer()
     {
       super(BloomKFilter.class);
     }
 
     @Override
-    public BloomKFilter deserialize(
-        JsonParser jsonParser, DeserializationContext deserializationContext
-    ) throws IOException
+    public BloomKFilter deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException
     {
       return bloomKFilterFromBytes(jsonParser.getBinaryValue());
     }
@@ -90,9 +85,8 @@ public class BloomFilterSerializersModule extends SimpleModule
     }
 
     @Override
-    public BloomKFilterHolder deserialize(
-        JsonParser jsonParser, DeserializationContext deserializationContext
-    ) throws IOException
+    public BloomKFilterHolder deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException
     {
       return BloomKFilterHolder.fromBytes(jsonParser.getBinaryValue());
     }

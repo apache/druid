@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -36,7 +35,9 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,7 +54,7 @@ public class GroupByQueryRunnerTestHelper
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     return queryResult.toList();
   }
 
@@ -66,7 +67,7 @@ public class GroupByQueryRunnerTestHelper
   {
     Preconditions.checkArgument(vals.length % 2 == 0);
 
-    Map<String, Object> theVals = Maps.newHashMap();
+    Map<String, Object> theVals = new HashMap<>();
     for (int i = 0; i < vals.length; i += 2) {
       theVals.put(vals[i].toString(), vals[i + 1]);
     }
@@ -79,7 +80,7 @@ public class GroupByQueryRunnerTestHelper
     int timeIndex = Arrays.asList(columnNames).indexOf(ColumnHolder.TIME_COLUMN_NAME);
     Preconditions.checkArgument(timeIndex >= 0);
 
-    List<Row> expected = Lists.newArrayList();
+    List<Row> expected = new ArrayList<>();
     for (Object[] value : values) {
       Preconditions.checkArgument(value.length == columnNames.length);
       Map<String, Object> theVals = Maps.newHashMapWithExpectedSize(value.length);

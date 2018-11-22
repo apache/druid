@@ -233,7 +233,7 @@ public class BufferArrayGrouper implements IntGrouper
 
     return new CloseableIterator<Entry<Integer>>()
     {
-      int cur = -1;
+      int cur;
       boolean findNext = false;
 
       {

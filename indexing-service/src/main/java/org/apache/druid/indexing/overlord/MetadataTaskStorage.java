@@ -190,9 +190,11 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<Task> getActiveTasks()
   {
+    // filter out taskInfo with a null 'task' which should only happen in practice if we are missing a jackson module
+    // and don't know what to do with the payload, so we won't be able to make use of it anyway
     return handler.getActiveTaskInfo(null)
            .stream()
-           .filter(taskInfo -> taskInfo.getStatus().isRunnable())
+           .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
            .map(TaskInfo::getTask)
            .collect(Collectors.toList());
   }
@@ -206,15 +208,15 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfo(
+  public List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses,
-      @Nullable Duration duration,
+      @Nullable Duration durationBeforeNow,
       @Nullable String datasource
   )
   {
     return ImmutableList.copyOf(
         handler.getCompletedTaskInfo(
-            DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
+            DateTimes.nowUtc().minus(durationBeforeNow == null ? config.getRecentlyFinishedThreshold() : durationBeforeNow),
             maxTaskStatuses,
             datasource
         )
@@ -272,6 +274,12 @@ public class MetadataTaskStorage implements TaskStorage
       log.info("Deleting TaskLock with id[%d]: %s", lockId, taskLockToRemove);
       handler.removeLock(lockId);
     }
+  }
+
+  @Override
+  public void removeTasksOlderThan(long timestamp)
+  {
+    handler.removeTasksOlderThan(timestamp);
   }
 
   @Override

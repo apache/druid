@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -42,6 +41,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  */
@@ -195,7 +195,7 @@ public class DataSegmentTest
     List<DataSegment> shuffled = new ArrayList<>(Arrays.asList(sortedOrder));
     Collections.shuffle(shuffled);
 
-    Set<DataSegment> theSet = Sets.newTreeSet(DataSegment.bucketMonthComparator());
+    Set<DataSegment> theSet = new TreeSet<>(DataSegment.bucketMonthComparator());
     theSet.addAll(shuffled);
 
     int index = 0;

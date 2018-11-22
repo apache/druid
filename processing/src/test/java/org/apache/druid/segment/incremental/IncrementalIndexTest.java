@@ -48,6 +48,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -107,7 +108,7 @@ public class IncrementalIndexTest
         .withMetrics(metrics)
         .build();
 
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
     for (final Boolean sortFacts : ImmutableList.of(false, true)) {
       constructors.add(
           new Object[]{

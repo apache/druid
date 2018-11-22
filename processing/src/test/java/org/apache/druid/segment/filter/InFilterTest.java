@@ -48,6 +48,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -349,7 +350,7 @@ public class InFilterTest extends BaseFilterTest
 
   private DimFilter toInFilter(String dim)
   {
-    List<String> emptyList = Lists.newArrayList();
+    List<String> emptyList = new ArrayList<>();
     return new InDimFilter(dim, emptyList, null);
   }
 

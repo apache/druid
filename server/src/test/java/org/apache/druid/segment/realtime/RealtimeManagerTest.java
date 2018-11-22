@@ -27,7 +27,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
@@ -74,7 +73,6 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.plumber.Plumber;
-import org.apache.druid.segment.realtime.plumber.PlumberSchool;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -93,6 +91,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -178,30 +177,12 @@ public class RealtimeManagerTest
             return new TestFirehose(rows.iterator());
           }
         },
-        new PlumberSchool()
-        {
-          @Override
-          public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-          )
-          {
-            return plumber;
-          }
-        },
+        (schema, config, metrics) -> plumber,
         null
     );
     RealtimeIOConfig ioConfig2 = new RealtimeIOConfig(
         null,
-        new PlumberSchool()
-        {
-          @Override
-          public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-          )
-          {
-            return plumber2;
-          }
-        },
+        (schema, config, metrics) -> plumber2,
         new FirehoseFactoryV2()
         {
           @Override
@@ -812,7 +793,7 @@ public class RealtimeManagerTest
         @Override
         public List<String> getDimension(String dimension)
         {
-          return Lists.newArrayList();
+          return new ArrayList<>();
         }
 
         @Override

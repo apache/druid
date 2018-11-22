@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.twitter.elephantbird.mapreduce.io.ThriftWritable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -55,6 +57,7 @@ public class ThriftInputRowParser implements InputRowParser<Object>
 
   private Parser<String, Object> parser;
   private volatile Class<TBase> thriftClass = null;
+  private final List<String> dimensions;
 
   @JsonCreator
   public ThriftInputRowParser(
@@ -68,6 +71,7 @@ public class ThriftInputRowParser implements InputRowParser<Object>
     Preconditions.checkNotNull(thriftClassName, "thrift class name");
 
     this.parseSpec = parseSpec;
+    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
   }
 
   public Class<TBase> getThriftClass()
@@ -139,10 +143,17 @@ public class ThriftInputRowParser implements InputRowParser<Object>
     }
 
     Map<String, Object> record = parser.parseToMap(json);
-
+    final List<String> dimensions;
+    if (!this.dimensions.isEmpty()) {
+      dimensions = this.dimensions;
+    } else {
+      dimensions = Lists.newArrayList(
+          Sets.difference(record.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
+      );
+    }
     return ImmutableList.of(new MapBasedInputRow(
         parseSpec.getTimestampSpec().extractTimestamp(record),
-        parseSpec.getDimensionsSpec().getDimensionNames(),
+        dimensions,
         record
     ));
   }

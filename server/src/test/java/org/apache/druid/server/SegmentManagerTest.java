@@ -21,7 +21,6 @@ package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
@@ -43,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -144,8 +144,8 @@ public class SegmentManagerTest
           Intervals.of("0/1000"),
           "0",
           ImmutableMap.of("interval", Intervals.of("0/1000"), "version", 0),
-          Lists.newArrayList(),
-          Lists.newArrayList(),
+          new ArrayList<>(),
+          new ArrayList<>(),
           NoneShardSpec.instance(),
           0,
           10
@@ -155,8 +155,8 @@ public class SegmentManagerTest
           Intervals.of("1000/2000"),
           "0",
           ImmutableMap.of("interval", Intervals.of("1000/2000"), "version", 0),
-          Lists.newArrayList(),
-          Lists.newArrayList(),
+          new ArrayList<>(),
+          new ArrayList<>(),
           NoneShardSpec.instance(),
           0,
           10
@@ -166,8 +166,8 @@ public class SegmentManagerTest
           Intervals.of("0/1000"),
           "0",
           ImmutableMap.of("interval", Intervals.of("0/1000"), "version", 0),
-          Lists.newArrayList(),
-          Lists.newArrayList(),
+          new ArrayList<>(),
+          new ArrayList<>(),
           NoneShardSpec.instance(),
           0,
           100
@@ -177,8 +177,8 @@ public class SegmentManagerTest
           Intervals.of("1000/2000"),
           "0",
           ImmutableMap.of("interval", Intervals.of("1000/2000"), "version", 0),
-          Lists.newArrayList(),
-          Lists.newArrayList(),
+          new ArrayList<>(),
+          new ArrayList<>(),
           NoneShardSpec.instance(),
           0,
           100
@@ -189,8 +189,8 @@ public class SegmentManagerTest
           Intervals.of("1000/2000"),
           "1",
           ImmutableMap.of("interval", Intervals.of("1000/2000"), "version", 1),
-          Lists.newArrayList(),
-          Lists.newArrayList(),
+          new ArrayList<>(),
+          new ArrayList<>(),
           NoneShardSpec.instance(),
           1,
           100

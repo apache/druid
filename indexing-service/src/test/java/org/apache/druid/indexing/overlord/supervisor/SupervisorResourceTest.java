@@ -24,7 +24,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.common.DateTimes;
@@ -46,6 +45,7 @@ import org.junit.runner.RunWith;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -491,7 +491,7 @@ public class SupervisorResourceTest extends EasyMockSupport
             "v3"
         )
     );
-    Map<String, List<VersionedSupervisorSpec>> history = Maps.newHashMap();
+    Map<String, List<VersionedSupervisorSpec>> history = new HashMap<>();
     history.put("id1", versions1);
     history.put("id2", versions2);
     history.put("id3", versions3);
@@ -603,7 +603,7 @@ public class SupervisorResourceTest extends EasyMockSupport
         )
     );
 
-    Map<String, List<VersionedSupervisorSpec>> history = Maps.newHashMap();
+    Map<String, List<VersionedSupervisorSpec>> history = new HashMap<>();
     history.put("id1", versions1);
     history.put("id2", versions2);
     history.put("id3", versions3);
@@ -626,7 +626,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.specGetAllHistory(request);
 
-    Map<String, List<VersionedSupervisorSpec>> filteredHistory = Maps.newHashMap();
+    Map<String, List<VersionedSupervisorSpec>> filteredHistory = new HashMap<>();
     filteredHistory.put("id1", versions1);
     filteredHistory.put(
         "id3",
@@ -700,7 +700,7 @@ public class SupervisorResourceTest extends EasyMockSupport
             "v2"
         )
     );
-    Map<String, List<VersionedSupervisorSpec>> history = Maps.newHashMap();
+    Map<String, List<VersionedSupervisorSpec>> history = new HashMap<>();
     history.put("id1", versions1);
     history.put("id2", versions2);
 
@@ -797,7 +797,7 @@ public class SupervisorResourceTest extends EasyMockSupport
             "tombstone"
         )
     );
-    Map<String, List<VersionedSupervisorSpec>> history = Maps.newHashMap();
+    Map<String, List<VersionedSupervisorSpec>> history = new HashMap<>();
     history.put("id1", versions1);
     history.put("id2", versions2);
     history.put("id3", versions3);

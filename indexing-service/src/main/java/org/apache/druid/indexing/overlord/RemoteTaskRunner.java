@@ -541,8 +541,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * @param taskId - task id to shutdown
    */
   @Override
-  public void shutdown(final String taskId)
+  public void shutdown(final String taskId, String reason)
   {
+    log.info("Shutdown [%s] because: [%s]", taskId, reason);
     if (!lifecycleLock.awaitStarted(1, TimeUnit.SECONDS)) {
       log.info("This TaskRunner is stopped or not yet started. Ignoring shutdown command for task: %s", taskId);
     } else if (pendingTasks.remove(taskId) != null) {
@@ -780,7 +781,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               ImmutableMap.copyOf(
                   Maps.transformEntries(
                       Maps.filterEntries(
-                          zkWorkers, new Predicate<Map.Entry<String, ZkWorker>>()
+                          zkWorkers,
+                          new Predicate<Map.Entry<String, ZkWorker>>()
                           {
                             @Override
                             public boolean apply(Map.Entry<String, ZkWorker> input)
@@ -791,16 +793,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                             }
                           }
                       ),
-                      new Maps.EntryTransformer<String, ZkWorker, ImmutableWorkerInfo>()
-                      {
-                        @Override
-                        public ImmutableWorkerInfo transformEntry(
-                            String key, ZkWorker value
-                        )
-                        {
-                          return value.toImmutable();
-                        }
-                      }
+                      (String key, ZkWorker value) -> value.toImmutable()
                   )
               ),
               task

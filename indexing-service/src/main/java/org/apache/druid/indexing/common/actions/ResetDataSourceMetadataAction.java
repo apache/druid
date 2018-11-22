@@ -59,9 +59,7 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   }
 
   @Override
-  public Boolean perform(
-      Task task, TaskActionToolbox toolbox
-  )
+  public Boolean perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getSupervisorManager().resetSupervisor(dataSource, resetMetadata);
   }

@@ -42,12 +42,13 @@ public class MetricsModuleTest
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(new Module()
         {
-
           @Override
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, false, null, null, true, false)
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                new DruidNode("test-inject", null, false, null, null, true, false)
             );
           }
         })
@@ -67,17 +68,16 @@ public class MetricsModuleTest
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(new Module()
         {
-
           @Override
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, false, null, null, true, false)
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                new DruidNode("test-inject", null, false, null, null, true, false)
             );
-            binder.bind(Key.get(
-                String.class,
-                Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)
-            )).toInstance(dataSource);
+            binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
+                  .toInstance(dataSource);
             binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.TASK_ID_BINDING)))
                   .toInstance(taskId);
           }

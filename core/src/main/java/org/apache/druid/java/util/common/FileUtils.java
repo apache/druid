@@ -16,12 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 
@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
@@ -91,7 +92,7 @@ public class FileUtils
    */
   public static class FileCopyResult
   {
-    private final Collection<File> files = Lists.newArrayList();
+    private final Collection<File> files = new ArrayList<>();
     private long size = 0L;
 
     public Collection<File> getFiles()

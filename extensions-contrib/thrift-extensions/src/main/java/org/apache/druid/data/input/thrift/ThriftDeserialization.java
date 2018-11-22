@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input.thrift;
 
 import com.google.common.base.Preconditions;

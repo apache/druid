@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -36,7 +37,7 @@ public class OrderedMergeIteratorTest
   @Test
   public void testSanity()
   {
-    final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
+    final ArrayList<Iterator<Integer>> iterators = new ArrayList<>();
     iterators.add(Arrays.asList(1, 3, 5, 7, 9).iterator());
     iterators.add(Arrays.asList(2, 8).iterator());
     iterators.add(Arrays.asList(4, 6, 8).iterator());
@@ -52,7 +53,7 @@ public class OrderedMergeIteratorTest
   @Test
   public void testScrewsUpOnOutOfOrderBeginningOfList()
   {
-    final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
+    final ArrayList<Iterator<Integer>> iterators = new ArrayList<>();
     iterators.add(Arrays.asList(1, 3, 5, 7, 9).iterator());
     iterators.add(Arrays.asList(4, 6).iterator());
     iterators.add(Arrays.asList(2, 8).iterator());
@@ -68,7 +69,7 @@ public class OrderedMergeIteratorTest
   @Test
   public void testScrewsUpOnOutOfOrderInList()
   {
-    final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
+    final ArrayList<Iterator<Integer>> iterators = new ArrayList<>();
     iterators.add(Arrays.asList(1, 3, 5, 4, 7, 9).iterator());
     iterators.add(Arrays.asList(2, 8).iterator());
     iterators.add(Arrays.asList(4, 6).iterator());
@@ -86,7 +87,7 @@ public class OrderedMergeIteratorTest
   {
     final boolean[] done = new boolean[]{false, false};
 
-    final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
+    final ArrayList<Iterator<Integer>> iterators = new ArrayList<>();
     iterators.add(
         new IteratorShell<Integer>(Arrays.asList(1, 2, 3).iterator())
         {
@@ -170,10 +171,9 @@ public class OrderedMergeIteratorTest
   @Test(expected = NoSuchElementException.class)
   public void testNoElementInNext()
   {
-    final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
-    OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
+    OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<>(
         Ordering.natural(),
-        iterators.iterator()
+        Collections.emptyIterator()
     );
     iter.next();
   }
@@ -181,10 +181,9 @@ public class OrderedMergeIteratorTest
   @Test(expected = UnsupportedOperationException.class)
   public void testRemove()
   {
-    final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
-    OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
+    OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<>(
         Ordering.natural(),
-        iterators.iterator()
+        Collections.emptyIterator()
     );
     iter.remove();
   }

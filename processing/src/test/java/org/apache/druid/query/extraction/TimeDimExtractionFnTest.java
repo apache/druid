@@ -20,13 +20,13 @@
 package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -61,7 +61,7 @@ public class TimeDimExtractionFnTest
   @Test
   public void testMonthExtraction()
   {
-    Set<String> months = Sets.newHashSet();
+    Set<String> months = new HashSet<>();
     ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "MM/yyyy", false);
 
     for (String dim : dims) {
@@ -78,7 +78,7 @@ public class TimeDimExtractionFnTest
   @Test
   public void testMonthExtractionJoda()
   {
-    Set<String> months = Sets.newHashSet();
+    Set<String> months = new HashSet<>();
     ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "MM/yyyy", true);
 
     for (String dim : dims) {
@@ -95,7 +95,7 @@ public class TimeDimExtractionFnTest
   @Test
   public void testQuarterExtraction()
   {
-    Set<String> quarters = Sets.newHashSet();
+    Set<String> quarters = new HashSet<>();
     ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "QQQ/yyyy", false);
 
     for (String dim : dims) {

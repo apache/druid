@@ -71,7 +71,8 @@ public class TimeBoundaryQueryRunnerFactory
 
   @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> mergeRunners(
-      ExecutorService queryExecutor, Iterable<QueryRunner<Result<TimeBoundaryResultValue>>> queryRunners
+      ExecutorService queryExecutor,
+      Iterable<QueryRunner<Result<TimeBoundaryResultValue>>> queryRunners
   )
   {
     return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);

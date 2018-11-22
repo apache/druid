@@ -36,14 +36,18 @@ public class DruidBinders
   public static MapBinder<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>(){}, TypeLiteral.get(QueryRunnerFactory.class)
+        binder,
+        new TypeLiteral<Class<? extends Query>>(){},
+        TypeLiteral.get(QueryRunnerFactory.class)
     );
   }
 
   public static MapBinder<Class<? extends Query>, QueryToolChest> queryToolChestBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
-        binder, new TypeLiteral<Class<? extends Query>>(){}, new TypeLiteral<QueryToolChest>(){}
+        binder,
+        new TypeLiteral<Class<? extends Query>>(){},
+        new TypeLiteral<QueryToolChest>(){}
     );
   }
 

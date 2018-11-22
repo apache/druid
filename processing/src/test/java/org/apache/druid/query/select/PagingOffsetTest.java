@@ -19,11 +19,11 @@
 
 package org.apache.druid.query.select;
 
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class PagingOffsetTest
@@ -62,7 +62,7 @@ public class PagingOffsetTest
 
   private int[] toArray(PagingOffset offset)
   {
-    List<Integer> ints = Lists.newArrayList();
+    List<Integer> ints = new ArrayList<>();
     for (; offset.hasNext(); offset.next()) {
       ints.add(offset.current());
     }

@@ -180,7 +180,10 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   @Override
   public void fillBitmapsFromUnsortedEncodedKeyComponent(
-      Float key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
+      Float key,
+      int rowNum,
+      MutableBitmap[] bitmapIndexes,
+      BitmapFactory factory
   )
   {
     throw new UnsupportedOperationException("Numeric columns do not support bitmaps.");

@@ -46,7 +46,10 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
 
   @Override
   protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
-      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String dataSource
+      Handle handle,
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String dataSource
   )
   {
     String sql = StringUtils.format(
@@ -86,4 +89,14 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
     }
     return sql;
   }
+
+  @Deprecated
+  @Override
+  public String getSqlRemoveLogsOlderThan()
+  {
+    return StringUtils.format("DELETE FROM %s USING %s "
+                              + "WHERE %s_id = %s.id AND created_date < :date_time and active = false",
+                              getLogTable(), getEntryTable(), getEntryTypeName(), getEntryTable());
+  }
+
 }

@@ -606,9 +606,7 @@ public class IncrementalIndexTest
                         new Accumulator<Double[], Result<TimeseriesResultValue>>()
                         {
                           @Override
-                          public Double[] accumulate(
-                              Double[] accumulated, Result<TimeseriesResultValue> in
-                          )
+                          public Double[] accumulate(Double[] accumulated, Result<TimeseriesResultValue> in)
                           {
                             if (currentlyRunning.get() > 0) {
                               concurrentlyRan.incrementAndGet();

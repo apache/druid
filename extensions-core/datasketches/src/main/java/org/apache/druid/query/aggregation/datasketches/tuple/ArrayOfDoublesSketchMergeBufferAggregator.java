@@ -30,6 +30,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -65,7 +66,7 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf);
+    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
         .setNumberOfValues(numberOfValues).buildUnion(region);
@@ -86,7 +87,7 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
     // Wrapping memory and ArrayOfDoublesUnion is inexpensive compared to union operations.
     // Maintaining a cache of wrapped objects per buffer position like in Theta sketch aggregator
     // might might be considered, but it would increase complexity including relocate() support.
-    final WritableMemory mem = WritableMemory.wrap(buf);
+    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final Lock lock = stripedLock.getAt(ArrayOfDoublesSketchBuildBufferAggregator.lockIndex(position)).writeLock();
     lock.lock();
@@ -110,7 +111,7 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf);
+    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final Lock lock = stripedLock.getAt(ArrayOfDoublesSketchBuildBufferAggregator.lockIndex(position)).readLock();
     lock.lock();

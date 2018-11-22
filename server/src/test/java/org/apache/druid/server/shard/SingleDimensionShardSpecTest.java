@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -50,7 +49,7 @@ public class SingleDimensionShardSpecTest
     Map<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>> tests = ImmutableMap.<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>>builder()
         .put(
             makeSpec(null, null),
-            makeList(
+            makeListOfPairs(
                 true, null,
                 true, "a",
                 true, "h",
@@ -60,7 +59,7 @@ public class SingleDimensionShardSpecTest
         )
         .put(
             makeSpec(null, "m"),
-            makeList(
+            makeListOfPairs(
                 true, null,
                 true, "a",
                 true, "h",
@@ -70,7 +69,7 @@ public class SingleDimensionShardSpecTest
         )
         .put(
             makeSpec("a", "h"),
-            makeList(
+            makeListOfPairs(
                 false, null,
                 true, "a",
                 false, "h",
@@ -80,7 +79,7 @@ public class SingleDimensionShardSpecTest
         )
         .put(
             makeSpec("d", "u"),
-            makeList(
+            makeListOfPairs(
                 false, null,
                 false, "a",
                 true, "h",
@@ -90,7 +89,7 @@ public class SingleDimensionShardSpecTest
         )
         .put(
             makeSpec("h", null),
-            makeList(
+            makeListOfPairs(
                 false, null,
                 false, "a",
                 true, "h",
@@ -167,11 +166,11 @@ public class SingleDimensionShardSpecTest
     return value == null ? ImmutableMap.of() : ImmutableMap.of("billy", value);
   }
 
-  private List<Pair<Boolean, Map<String, String>>> makeList(Object... arguments)
+  private List<Pair<Boolean, Map<String, String>>> makeListOfPairs(Object... arguments)
   {
     Preconditions.checkState(arguments.length % 2 == 0);
 
-    final ArrayList<Pair<Boolean, Map<String, String>>> retVal = Lists.newArrayList();
+    final ArrayList<Pair<Boolean, Map<String, String>>> retVal = new ArrayList<>();
 
     for (int i = 0; i < arguments.length; i += 2) {
       retVal.add(Pair.of((Boolean) arguments[i], makeMap((String) arguments[i + 1])));

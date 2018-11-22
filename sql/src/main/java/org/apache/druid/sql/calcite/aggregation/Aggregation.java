@@ -22,8 +22,6 @@ package org.apache.druid.sql.calcite.aggregation;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -36,7 +34,9 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -166,7 +166,7 @@ public class Aggregation
       // Verify that this Aggregation contains all input to its postAggregator.
       // If not, this "filter" call won't work right.
       final Set<String> dependentFields = postAggregator.getDependentFields();
-      final Set<String> aggregatorNames = Sets.newHashSet();
+      final Set<String> aggregatorNames = new HashSet<>();
       for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
         aggregatorNames.add(aggregatorFactory.getName());
       }
@@ -181,7 +181,7 @@ public class Aggregation
                                                     .optimizeFilterOnly(sourceRowSignature)
                                                     .getDimFilter();
 
-    final List<AggregatorFactory> newAggregators = Lists.newArrayList();
+    final List<AggregatorFactory> newAggregators = new ArrayList<>();
     for (AggregatorFactory agg : aggregatorFactories) {
       if (agg instanceof FilteredAggregatorFactory) {
         final FilteredAggregatorFactory filteredAgg = (FilteredAggregatorFactory) agg;

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.materializedview;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.query.Query;
@@ -31,6 +30,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -106,7 +106,7 @@ public class MaterializedViewUtils
     }
     Iterator<Interval> it1 = JodaUtils.condenseIntervals(interval1).iterator();
     Iterator<Interval> it2 = JodaUtils.condenseIntervals(interval2).iterator();
-    List<Interval> remaining = Lists.newArrayList();
+    List<Interval> remaining = new ArrayList<>();
     Interval currInterval1 = it1.next();
     Interval currInterval2 = it2.next();
     long start1 = currInterval1.getStartMillis();

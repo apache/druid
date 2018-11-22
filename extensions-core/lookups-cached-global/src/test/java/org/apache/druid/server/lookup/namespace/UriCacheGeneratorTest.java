@@ -512,8 +512,7 @@ public class UriCacheGeneratorTest
   {
     Assert.assertNull(scheduler.scheduleAndWait(
         new UriExtractionNamespace(
-            new URI("file://tmp/I_DONT_REALLY_EXIST" +
-                    UUID.randomUUID().toString()),
+            new URI("file://tmp/I_DONT_REALLY_EXIST" + UUID.randomUUID()),
             null,
             null,
             new UriExtractionNamespace.JSONFlatDataParser(

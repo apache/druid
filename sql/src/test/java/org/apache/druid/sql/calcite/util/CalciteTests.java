@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -133,6 +132,7 @@ import org.joda.time.chrono.ISOChronology;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -156,9 +156,7 @@ public class CalciteTests
       return new Authorizer()
       {
         @Override
-        public Access authorize(
-            AuthenticationResult authenticationResult, Resource resource, Action action
-        )
+        public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
         {
           if (authenticationResult.getIdentity().equals(TEST_SUPERUSER_NAME)) {
             return Access.OK;
@@ -176,7 +174,7 @@ public class CalciteTests
   public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
 
   static {
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    final Map<String, Authenticator> defaultMap = new HashMap<>();
     defaultMap.put(
         AuthConfig.ALLOW_ALL_NAME,
         new AllowAllAuthenticator()
