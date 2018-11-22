@@ -47,7 +47,7 @@ public class FastJacksonJsonNodeJsonProvider extends JacksonJsonNodeJsonProvider
   public Object getMapValue(Object obj, String key)
   {
     if (obj == null) {
-      return UNDEFINED;
+      return null;
     } else {
       ObjectNode jsonObject = (ObjectNode) obj;
       Object o = jsonObject.get(key);

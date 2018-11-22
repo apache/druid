@@ -119,7 +119,9 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     if (val.isArray()) {
       List<Object> newList = new ArrayList<>();
       for (JsonNode entry : val) {
-        newList.add(valueConversionFunction(entry));
+        if (!entry.isNull()) {
+          newList.add(valueConversionFunction(entry));
+        }
       }
       return newList;
     }
