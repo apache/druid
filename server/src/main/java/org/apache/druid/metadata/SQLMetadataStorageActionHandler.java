@@ -113,6 +113,16 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return entryTable;
   }
 
+  protected String getLogTable()
+  {
+    return logTable;
+  }
+
+  protected String getEntryTypeName()
+  {
+    return entryTypeName;
+  }
+
   public TypeReference getEntryType()
   {
     return entryType;
@@ -439,6 +449,29 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
+  @Override
+  public void removeTasksOlderThan(final long timestamp)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    connector.retryWithHandle(
+        (HandleCallback<Void>) handle -> {
+          handle.createStatement(getSqlRemoveLogsOlderThan())
+                .bind("date_time", dateTime.toString())
+                .execute();
+          handle.createStatement(
+              StringUtils.format(
+                  "DELETE FROM %s WHERE created_date < :date_time AND active = false",
+                  entryTable
+              )
+          )
+                .bind("date_time", dateTime.toString())
+                .execute();
+
+          return null;
+        }
+    );
+  }
+
   private int removeLock(Handle handle, long lockId)
   {
     return handle.createStatement(StringUtils.format("DELETE FROM %s WHERE id = :id", lockTable))
@@ -505,6 +538,15 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 );
           }
         }
+    );
+  }
+
+  @Deprecated
+  public String getSqlRemoveLogsOlderThan()
+  {
+    return StringUtils.format("DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
+                              + "WHERE b.created_date < :date_time and b.active = false",
+                              logTable, entryTable, entryTypeName
     );
   }
 
