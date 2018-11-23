@@ -36,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,12 +57,12 @@ public class RandomBalancerStrategyTest
    */
   public static List<ServerHolder> setupDummyCluster(int serverCount, int maxSegments)
   {
-    List<ServerHolder> serverHolderList = Lists.newArrayList();
+    List<ServerHolder> serverHolderList = new ArrayList<>();
     // Create 10 servers with current size being 3K & max size being 10K
     // Each having having 20 segments
     for (int i = 0; i < serverCount; i++) {
       LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
-      Map<String, DataSegment> segments = Maps.newHashMap();
+      Map<String, DataSegment> segments = new HashMap<>();
       for (int j = 0; j < maxSegments; j++) {
         DataSegment segment = getSegment(j);
         segments.put(segment.getIdentifier(), segment);
@@ -95,7 +96,7 @@ public class RandomBalancerStrategyTest
     EasyMock.expect(druidServer.getMaxSize()).andReturn(MAX_SIZE_PER_HISTORICAL).anyTimes();
 
     EasyMock.expect(druidServer.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
-    Map<String, DataSegment> segments = Maps.newHashMap();
+    Map<String, DataSegment> segments = new HashMap<>();
     for (int j = 0; j < (maxSegments - 2); j++) {
       DataSegment segment = getSegment(j);
       segments.put(segment.getIdentifier(), segment);
