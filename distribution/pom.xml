@@ -224,6 +224,8 @@
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>
+                                        <argument>io.druid.extensions.contrib:ganglia-emitter</argument>
+                                        <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-opentsdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-orc-extensions</argument>

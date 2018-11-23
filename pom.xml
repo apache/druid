@@ -149,6 +149,7 @@
         <module>extensions-contrib/opentsdb-emitter</module>
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
+        <module>extensions-contrib/ganglia-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
