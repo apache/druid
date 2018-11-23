@@ -43,9 +43,7 @@ public class OverlordActionBasedUsedSegmentLister implements UsedSegmentLister
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(
-      String dataSource, List<Interval> intervals
-  ) throws IOException
+  public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals) throws IOException
   {
     return toolbox
         .getTaskActionClient()

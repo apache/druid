@@ -21,9 +21,9 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.collect.Sets;
 
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  */
@@ -36,7 +36,7 @@ public class DatasourceWhitelist
   @JsonCreator
   public DatasourceWhitelist(Set<String> dataSources)
   {
-    this.dataSources = Sets.newTreeSet(String.CASE_INSENSITIVE_ORDER);
+    this.dataSources = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
     this.dataSources.addAll(dataSources);
   }
 

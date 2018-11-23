@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Sets;
 import com.yahoo.sketches.Util;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -30,6 +29,7 @@ import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +63,7 @@ public class SketchSetPostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    Set<String> dependentFields = Sets.newLinkedHashSet();
+    Set<String> dependentFields = new LinkedHashSet<>();
     for (PostAggregator field : fields) {
       dependentFields.addAll(field.getDependentFields());
     }

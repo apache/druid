@@ -22,7 +22,6 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.client.selector.QueryableDruidServer;
@@ -45,6 +44,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -98,8 +98,8 @@ public class BrokerServerView implements TimelineServerView
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
     this.clients = new ConcurrentHashMap<>();
-    this.selectors = Maps.newHashMap();
-    this.timelines = Maps.newHashMap();
+    this.selectors = new HashMap<>();
+    this.timelines = new HashMap<>();
 
     this.segmentFilter = new Predicate<Pair<DruidServerMetadata, DataSegment>>()
     {

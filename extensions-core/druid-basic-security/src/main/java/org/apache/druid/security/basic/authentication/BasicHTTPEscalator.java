@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 
@@ -32,14 +33,14 @@ import org.apache.druid.server.security.Escalator;
 public class BasicHTTPEscalator implements Escalator
 {
   private final String internalClientUsername;
-  private final String internalClientPassword;
+  private final PasswordProvider internalClientPassword;
   private final String authorizerName;
 
   @JsonCreator
   public BasicHTTPEscalator(
       @JsonProperty("authorizerName") String authorizerName,
       @JsonProperty("internalClientUsername") String internalClientUsername,
-      @JsonProperty("internalClientPassword") String internalClientPassword
+      @JsonProperty("internalClientPassword") PasswordProvider internalClientPassword
   )
   {
     this.authorizerName = authorizerName;
@@ -51,7 +52,7 @@ public class BasicHTTPEscalator implements Escalator
   public HttpClient createEscalatedClient(HttpClient baseClient)
   {
     return new CredentialedHttpClient(
-        new BasicCredentials(internalClientUsername, internalClientPassword),
+        new BasicCredentials(internalClientUsername, internalClientPassword.getPassword()),
         baseClient
     );
   }

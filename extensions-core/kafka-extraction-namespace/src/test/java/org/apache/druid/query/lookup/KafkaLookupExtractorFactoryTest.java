@@ -95,7 +95,10 @@ public class KafkaLookupExtractorFactoryTest
     {
       @Override
       public Object findInjectableValue(
-          Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
+          Object valueId,
+          DeserializationContext ctxt,
+          BeanProperty forProperty,
+          Object beanInstance
       )
       {
         if ("org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager".equals(valueId)) {

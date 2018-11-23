@@ -27,8 +27,6 @@ import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -45,6 +43,9 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.regex.Pattern;
 
 /**
  */
@@ -133,9 +134,9 @@ public class S3DataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         size
@@ -148,7 +149,7 @@ public class S3DataSegmentPusherTest
     Assert.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
     Assert.assertTrue(
         segment.getLoadSpec().get("key").toString(),
-        segment.getLoadSpec().get("key").toString().matches(matcher)
+        Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches()
     );
     Assert.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
 

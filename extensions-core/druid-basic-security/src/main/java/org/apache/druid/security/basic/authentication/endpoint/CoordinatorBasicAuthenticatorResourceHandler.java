@@ -21,7 +21,6 @@ package org.apache.druid.security.basic.authentication.endpoint;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
@@ -54,7 +53,7 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
     this.storageUpdater = storageUpdater;
     this.objectMapper = objectMapper;
 
-    this.authenticatorMap = Maps.newHashMap();
+    this.authenticatorMap = new HashMap<>();
     for (Map.Entry<String, Authenticator> authenticatorEntry : authenticatorMapper.getAuthenticatorMap().entrySet()) {
       final String authenticatorName = authenticatorEntry.getKey();
       final Authenticator authenticator = authenticatorEntry.getValue();

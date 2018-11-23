@@ -91,8 +91,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
       // specifically configured
       final String[] spnegoPrincipals;
       if ("*".equals(principal)) {
-        spnegoPrincipals = KerberosUtil.getPrincipalNames(
-            keytab, Pattern.compile("HTTP/.*"));
+        spnegoPrincipals = KerberosUtil.getPrincipalNames(keytab, Pattern.compile("HTTP/.*"));
         if (spnegoPrincipals.length == 0) {
           throw new ServletException("Principals do not exist in the keytab");
         }
@@ -144,15 +143,17 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
   public AuthenticationToken authenticate(HttpServletRequest request, final HttpServletResponse response)
       throws IOException, AuthenticationException
   {
-    AuthenticationToken token = null;
-    String authorization = request.getHeader(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.AUTHORIZATION);
+    AuthenticationToken token;
+    String authorization = request
+        .getHeader(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.AUTHORIZATION);
 
-    if (authorization == null
-        || !authorization.startsWith(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE)) {
+    if (authorization == null ||
+        !authorization.startsWith(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE)) {
       return null;
     } else {
-      authorization = authorization.substring(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE
-                                                  .length()).trim();
+      authorization = authorization
+          .substring(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE.length())
+          .trim();
       final Base64 base64 = new Base64(0);
       final byte[] clientToken = base64.decode(authorization);
       final String serverName = request.getServerName();

@@ -329,7 +329,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         ImmutableMap.copyOf(
             Maps.transformEntries(
                 Maps.filterEntries(
-                    workers, new Predicate<Map.Entry<String, WorkerHolder>>()
+                    workers,
+                    new Predicate<Map.Entry<String, WorkerHolder>>()
                     {
                       @Override
                       public boolean apply(Map.Entry<String, WorkerHolder> input)
@@ -340,16 +341,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       }
                     }
                 ),
-                new Maps.EntryTransformer<String, WorkerHolder, ImmutableWorkerInfo>()
-                {
-                  @Override
-                  public ImmutableWorkerInfo transformEntry(
-                      String key, WorkerHolder value
-                  )
-                  {
-                    return value.toImmutable();
-                  }
-                }
+                (String key, WorkerHolder value) -> value.toImmutable()
             )
         ),
         task
@@ -778,9 +770,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> markWorkersLazy(
-      Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers
-  )
+  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
   {
     synchronized (statusLock) {
       Iterator<String> iterator = workers.keySet().iterator();
@@ -973,7 +963,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     pendingTasksExec.execute(
         () -> {
           while (!Thread.interrupted() && lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-            ImmutableWorkerInfo immutableWorker = null;
+            ImmutableWorkerInfo immutableWorker;
             HttpRemoteTaskRunnerWorkItem taskItem = null;
             try {
               synchronized (statusLock) {
@@ -1051,7 +1041,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public void shutdown(String taskId)
+  public void shutdown(String taskId, String reason)
   {
     if (!lifecycleLock.awaitStarted(1, TimeUnit.SECONDS)) {
       log.info("This TaskRunner is stopped or not yet started. Ignoring shutdown command for task: %s", taskId);
@@ -1060,6 +1050,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
     WorkerHolder workerHolderRunningTask = null;
     synchronized (statusLock) {
+      log.info("Shutdown [%s] because: [%s]", taskId, reason);
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.remove(taskId);
       if (taskRunnerWorkItem != null) {
         if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {

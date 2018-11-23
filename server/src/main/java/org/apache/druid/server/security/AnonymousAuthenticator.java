@@ -94,9 +94,8 @@ public class AnonymousAuthenticator implements Authenticator
       }
 
       @Override
-      public void doFilter(
-          ServletRequest request, ServletResponse response, FilterChain chain
-      ) throws IOException, ServletException
+      public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+          throws IOException, ServletException
       {
         request.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, anonymousResult);
         chain.doFilter(request, response);

@@ -22,18 +22,18 @@ package org.apache.druid.guice;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.segment.realtime.FireDepartment;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  */
 public class FireDepartmentsProvider implements Provider<List<FireDepartment>>
 {
-  private final List<FireDepartment> fireDepartments = Lists.newArrayList();
+  private final List<FireDepartment> fireDepartments = new ArrayList<>();
 
   @Inject
   public FireDepartmentsProvider(

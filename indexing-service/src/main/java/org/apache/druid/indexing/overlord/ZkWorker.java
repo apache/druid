@@ -25,8 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
@@ -39,6 +37,8 @@ import org.joda.time.DateTime;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -100,7 +100,7 @@ public class ZkWorker implements Closeable
 
   public Map<String, TaskAnnouncement> getRunningTasks()
   {
-    Map<String, TaskAnnouncement> retVal = Maps.newHashMap();
+    Map<String, TaskAnnouncement> retVal = new HashMap<>();
     for (TaskAnnouncement taskAnnouncement : Lists.transform(
         statusCache.getCurrentData(),
         cacheConverter
@@ -124,7 +124,7 @@ public class ZkWorker implements Closeable
   @JsonProperty("availabilityGroups")
   public Set<String> getAvailabilityGroups()
   {
-    Set<String> retVal = Sets.newHashSet();
+    Set<String> retVal = new HashSet<>();
     for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
       retVal.add(taskAnnouncement.getTaskResource().getAvailabilityGroup());
     }

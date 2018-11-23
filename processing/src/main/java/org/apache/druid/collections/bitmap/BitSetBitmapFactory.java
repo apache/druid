@@ -81,9 +81,7 @@ public class BitSetBitmapFactory implements BitmapFactory
   }
 
   @Override
-  public ImmutableBitmap complement(
-      ImmutableBitmap b, int length
-  )
+  public ImmutableBitmap complement(ImmutableBitmap b, int length)
   {
     return null;
   }

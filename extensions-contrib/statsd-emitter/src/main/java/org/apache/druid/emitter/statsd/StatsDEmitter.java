@@ -22,15 +22,19 @@ package org.apache.druid.emitter.statsd;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  */
@@ -38,16 +42,18 @@ public class StatsDEmitter implements Emitter
 {
 
   private static final Logger log = new Logger(StatsDEmitter.class);
-  private static final String DRUID_METRIC_SEPARATOR = "\\/";
-  private static final String STATSD_SEPARATOR = ":|\\|";
-  private static final String BLANK = "\\s+";
+  private static final char DRUID_METRIC_SEPARATOR = '/';
+  private static final Pattern STATSD_SEPARATOR = Pattern.compile("[:|]");
+  private static final Pattern BLANK = Pattern.compile("\\s+");
+  private static final String[] EMPTY_ARRAY = new String[0];
 
-  static final StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
+  static StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
     NonBlockingStatsDClient client = new NonBlockingStatsDClient(
         config.getPrefix(),
         config.getHostname(),
         config.getPort(),
+        EMPTY_ARRAY,
         new StatsDClientErrorHandler()
         {
           private int exceptionCount = 0;
@@ -91,36 +97,73 @@ public class StatsDEmitter implements Emitter
       Number value = metricEvent.getValue();
 
       ImmutableList.Builder<String> nameBuilder = new ImmutableList.Builder<>();
-      if (config.getIncludeHost()) {
-        nameBuilder.add(host);
-      }
       nameBuilder.add(service);
       nameBuilder.add(metric);
 
-      StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, nameBuilder);
+      ImmutableMap.Builder<String, String> dimsBuilder = new ImmutableMap.Builder<>();
+      StatsDMetric statsDMetric = converter.addFilteredUserDims(service, metric, userDims, dimsBuilder);
 
       if (statsDMetric != null) {
+        List<String> fullNameList;
+        String[] tags;
+        if (config.getDogstatsd()) {
+          if (config.getIncludeHost()) {
+            dimsBuilder.put("hostname", host);
+          }
 
-        String fullName = Joiner.on(config.getSeparator())
-                                .join(nameBuilder.build())
-                                .replaceAll(DRUID_METRIC_SEPARATOR, config.getSeparator())
-                                .replaceAll(STATSD_SEPARATOR, config.getSeparator())
-                                .replaceAll(BLANK, config.getBlankHolder());
+          fullNameList = nameBuilder.build();
+          tags = dimsBuilder.build().entrySet()
+            .stream()
+            .map(e -> e.getKey() + ":" + e.getValue())
+            .toArray(String[]::new);
+        } else {
+          ImmutableList.Builder<String> fullNameBuilder = new ImmutableList.Builder<>();
+          if (config.getIncludeHost()) {
+            fullNameBuilder.add(host);
+          }
+          fullNameBuilder.addAll(nameBuilder.build());
+          fullNameBuilder.addAll(dimsBuilder.build().values());
 
-        long val = statsDMetric.convertRange ? Math.round(value.doubleValue() * 100) : value.longValue();
-        switch (statsDMetric.type) {
-          case count:
-            statsd.count(fullName, val);
-            break;
-          case timer:
-            statsd.time(fullName, val);
-            break;
-          case gauge:
-            statsd.gauge(fullName, val);
-            break;
+          fullNameList = fullNameBuilder.build();
+          tags = EMPTY_ARRAY;
+        }
+
+        String fullName = Joiner.on(config.getSeparator()).join(fullNameList);
+        fullName = StringUtils.replaceChar(fullName, DRUID_METRIC_SEPARATOR, config.getSeparator());
+        fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
+        fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
+
+        if (config.getDogstatsd() && (value instanceof Float || value instanceof Double)) {
+          switch (statsDMetric.type) {
+            case count:
+              statsd.count(fullName, value.doubleValue(), tags);
+              break;
+            case timer:
+              statsd.time(fullName, value.longValue(), tags);
+              break;
+            case gauge:
+              statsd.gauge(fullName, value.doubleValue(), tags);
+              break;
+          }
+        } else {
+          long val = statsDMetric.convertRange && !config.getDogstatsd() ?
+              Math.round(value.doubleValue() * 100) :
+              value.longValue();
+
+          switch (statsDMetric.type) {
+            case count:
+              statsd.count(fullName, val, tags);
+              break;
+            case timer:
+              statsd.time(fullName, val, tags);
+              break;
+            case gauge:
+              statsd.gauge(fullName, val, tags);
+              break;
+          }
         }
       } else {
-        log.debug("Metric=[%s] has no StatsD type mapping", statsDMetric);
+        log.debug("Service=[%s], Metric=[%s] has no StatsD type mapping", service, metric);
       }
     }
   }

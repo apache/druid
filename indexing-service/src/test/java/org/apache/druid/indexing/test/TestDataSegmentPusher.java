@@ -19,19 +19,15 @@
 
 package org.apache.druid.indexing.test;
 
-import com.google.common.collect.Sets;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.net.URI;
 import java.util.Map;
-import java.util.Set;
 
 public class TestDataSegmentPusher implements DataSegmentPusher
 {
-  private final Set<DataSegment> pushedSegments = Sets.newConcurrentHashSet();
-
   @Deprecated
   @Override
   public String getPathForHadoop(String dataSource)
@@ -48,7 +44,6 @@ public class TestDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
   {
-    pushedSegments.add(segment);
     return segment;
   }
 

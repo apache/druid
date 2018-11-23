@@ -67,16 +67,9 @@ public interface GroupByStrategy
       GroupByQueryQueryToolChest toolChest
   );
 
-  Sequence<Row> mergeResults(
-      QueryRunner<Row> baseRunner,
-      GroupByQuery query,
-      Map<String, Object> responseContext
-  );
+  Sequence<Row> mergeResults(QueryRunner<Row> baseRunner, GroupByQuery query, Map<String, Object> responseContext);
 
-  Sequence<Row> applyPostProcessing(
-      Sequence<Row> results,
-      GroupByQuery query
-  );
+  Sequence<Row> applyPostProcessing(Sequence<Row> results, GroupByQuery query);
 
   Sequence<Row> processSubqueryResult(
       GroupByQuery subquery,
@@ -86,21 +79,11 @@ public interface GroupByStrategy
       boolean wasQueryPushedDown
   );
 
-  Sequence<Row> processSubtotalsSpec(
-      GroupByQuery query,
-      GroupByQueryResource resource,
-      Sequence<Row> queryResult
-  );
+  Sequence<Row> processSubtotalsSpec(GroupByQuery query, GroupByQueryResource resource, Sequence<Row> queryResult);
 
-  QueryRunner<Row> mergeRunners(
-      ListeningExecutorService exec,
-      Iterable<QueryRunner<Row>> queryRunners
-  );
+  QueryRunner<Row> mergeRunners(ListeningExecutorService exec, Iterable<QueryRunner<Row>> queryRunners);
 
-  Sequence<Row> process(
-      GroupByQuery query,
-      StorageAdapter storageAdapter
-  );
+  Sequence<Row> process(GroupByQuery query, StorageAdapter storageAdapter);
 
   boolean supportsNestedQueryPushDown();
 }

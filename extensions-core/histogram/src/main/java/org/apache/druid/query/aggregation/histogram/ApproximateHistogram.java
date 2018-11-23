@@ -21,14 +21,13 @@ package org.apache.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Floats;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -364,7 +363,6 @@ public class ApproximateHistogram
       mergeValue = true;
     }
     if (deltaLeft < minDelta) {
-      minDelta = deltaLeft;
       minPos = insertAt - 1;
       mergeValue = true;
     }
@@ -575,8 +573,15 @@ public class ApproximateHistogram
     }
 
     int mergedBinCount = combineBins(
-        this.binCount, this.positions, this.bins, h.binCount, h.positions, h.bins,
-        mergedPositions, mergedBins, deltas
+        this.binCount,
+        this.positions,
+        this.bins,
+        h.binCount,
+        h.positions,
+        h.bins,
+        mergedPositions,
+        mergedBins,
+        deltas
     );
     if (mergedBinCount == 0) {
       return this;
@@ -631,14 +636,26 @@ public class ApproximateHistogram
     if (this.binCount + h.binCount <= this.size) {
       // no need to merge bins
       mergedBinCount = combineBins(
-          this.binCount, this.positions, this.bins,
-          h.binCount, h.positions, h.bins,
-          mergedPositions, mergedBins, null
+          this.binCount,
+          this.positions,
+          this.bins,
+          h.binCount,
+          h.positions,
+          h.bins,
+          mergedPositions,
+          mergedBins,
+          null
       );
     } else {
       mergedBinCount = ruleCombineBins(
-          this.binCount, this.positions, this.bins, h.binCount, h.positions, h.bins,
-          mergedPositions, mergedBins
+          this.binCount,
+          this.positions,
+          this.bins,
+          h.binCount,
+          h.positions,
+          h.bins,
+          mergedPositions,
+          mergedBins
       );
     }
     for (int i = 0; i < mergedBinCount; ++i) {
@@ -653,9 +670,14 @@ public class ApproximateHistogram
   }
 
   protected int ruleCombineBins(
-      int leftBinCount, float[] leftPositions, long[] leftBins,
-      int rightBinCount, float[] rightPositions, long[] rightBins,
-      float[] mergedPositions, long[] mergedBins
+      int leftBinCount,
+      float[] leftPositions,
+      long[] leftBins,
+      int rightBinCount,
+      float[] rightPositions,
+      long[] rightBins,
+      float[] mergedPositions,
+      long[] mergedBins
   )
   {
     final float cutoff;
@@ -855,7 +877,8 @@ public class ApproximateHistogram
    * @return the last valid index into the mergedPositions and mergedBins arrays
    */
   private static void mergeBins(
-      int mergedBinCount, float[] mergedPositions,
+      int mergedBinCount,
+      float[] mergedPositions,
       long[] mergedBins,
       float[] deltas,
       int numMerge,
@@ -1049,9 +1072,15 @@ public class ApproximateHistogram
    * @return the number of combined bins
    */
   private static int combineBins(
-      int leftBinCount, float[] leftPositions, long[] leftBins,
-      int rightBinCount, float[] rightPositions, long[] rightBins,
-      float[] mergedPositions, long[] mergedBins, float[] deltas
+      int leftBinCount,
+      float[] leftPositions,
+      long[] leftBins,
+      int rightBinCount,
+      float[] rightPositions,
+      long[] rightBins,
+      float[] mergedPositions,
+      long[] mergedBins,
+      float[] deltas
   )
   {
     int i = 0;
@@ -1347,7 +1376,7 @@ public class ApproximateHistogram
     } else {
       byte approxCount = (byte) (-1 * count);
 
-      Map<Float, Long> approx = Maps.newHashMap();
+      Map<Float, Long> approx = new HashMap<>();
 
       for (int i = 0; i < approxCount; ++i) {
         final float value = buf.getFloat();
@@ -1363,7 +1392,7 @@ public class ApproximateHistogram
 
       byte exactCount = buf.get();
 
-      Map<Float, Long> exact = Maps.newHashMap();
+      Map<Float, Long> exact = new HashMap<>();
 
       for (int i = 0; i < exactCount; ++i) {
         final float value = buf.getFloat();
@@ -1376,7 +1405,7 @@ public class ApproximateHistogram
 
       int binCount = exact.size() + approx.size();
 
-      List<Float> pos = Lists.newArrayList();
+      List<Float> pos = new ArrayList<>();
       pos.addAll(exact.keySet());
       pos.addAll(approx.keySet());
       Collections.sort(pos);
@@ -1533,7 +1562,7 @@ public class ApproximateHistogram
       int i = 0;
       int sum = 0;
       int k = 1;
-      long count = 0;
+      long count;
       while (k <= this.binCount()) {
         count = bins[k - 1];
         if (sum + count > s) {
@@ -1553,7 +1582,7 @@ public class ApproximateHistogram
         final double c = -2 * d;
         final long a = bins[i] - bins[i - 1];
         final long b = 2 * bins[i - 1];
-        double z = 0;
+        double z;
         if (a == 0) {
           z = -c / b;
         } else {

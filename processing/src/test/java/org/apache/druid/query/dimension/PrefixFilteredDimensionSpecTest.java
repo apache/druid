@@ -23,9 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.IndexedInts;
-import java.util.Arrays;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 /**
  */

@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.common.index;
 
 import com.fasterxml.jackson.annotation.JsonCreator;

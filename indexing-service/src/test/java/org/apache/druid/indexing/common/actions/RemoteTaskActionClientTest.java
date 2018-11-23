@@ -96,9 +96,10 @@ public class RemoteTaskActionClientTest
 
     Task task = new NoopTask("id", null, 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
-        task, druidLeaderClient, new RetryPolicyFactory(
-        new RetryPolicyConfig()
-    ), objectMapper
+        task,
+        druidLeaderClient,
+        new RetryPolicyFactory(new RetryPolicyConfig()),
+        objectMapper
     );
     try {
       result = client.submit(new LockListAction());
@@ -136,9 +137,10 @@ public class RemoteTaskActionClientTest
 
     Task task = new NoopTask("id", null, 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
-        task, druidLeaderClient, new RetryPolicyFactory(
-        objectMapper.readValue("{\"maxRetryCount\":0}", RetryPolicyConfig.class)
-    ), objectMapper
+        task,
+        druidLeaderClient,
+        new RetryPolicyFactory(objectMapper.readValue("{\"maxRetryCount\":0}", RetryPolicyConfig.class)),
+        objectMapper
     );
     result = client.submit(new LockListAction());
   }

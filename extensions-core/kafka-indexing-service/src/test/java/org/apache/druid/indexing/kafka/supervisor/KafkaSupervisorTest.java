@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import kafka.admin.AdminUtils;
@@ -653,7 +654,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     expect(taskClient.stopAsync("id1", false)).andReturn(Futures.immediateFuture(true));
     expect(taskClient.stopAsync("id3", false)).andReturn(Futures.immediateFuture(false));
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-    taskQueue.shutdown("id3");
+    taskQueue.shutdown("id3", "Task [%s] failed to stop in a timely manner, killing task", "id3");
 
     expect(taskQueue.add(anyObject(Task.class))).andReturn(true);
 
@@ -762,8 +763,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         .times(1);
 
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
-    taskQueue.shutdown("id4");
-    taskQueue.shutdown("id5");
+    taskQueue.shutdown("id4", "Task [%s] failed to stop in a timely manner, killing task", "id4");
+    taskQueue.shutdown("id5", "Task [%s] failed to stop in a timely manner, killing task", "id5");
     replayAll();
 
     supervisor.start();
@@ -1463,7 +1464,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
           .andReturn(Futures.immediateFuture(KafkaIndexTask.Status.NOT_STARTED));
       expect(taskClient.getStartTimeAsync(task.getId()))
           .andReturn(Futures.immediateFailedFuture(new RuntimeException()));
-      taskQueue.shutdown(task.getId());
+      taskQueue.shutdown(task.getId(), "Task [%s] failed to return start time, killing task", task.getId());
     }
     replay(taskStorage, taskClient, taskQueue);
 
@@ -1534,7 +1535,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
         .times(2);
     expect(taskClient.pauseAsync(EasyMock.contains("sequenceName-0")))
         .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
-    taskQueue.shutdown(EasyMock.contains("sequenceName-0"));
+    taskQueue.shutdown(
+        EasyMock.contains("sequenceName-0"),
+        EasyMock.eq("Task [%s] failed to respond to [pause] in a timely manner, killing task"),
+        EasyMock.contains("sequenceName-0")
+    );
     expectLastCall().times(2);
     expect(taskQueue.add(capture(captured))).andReturn(true).times(2);
 
@@ -1621,7 +1626,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
             EasyMock.eq(true)
         )
     ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
-    taskQueue.shutdown(EasyMock.contains("sequenceName-0"));
+    taskQueue.shutdown(
+        EasyMock.contains("sequenceName-0"),
+        EasyMock.eq("All tasks in group [%s] failed to transition to publishing state"),
+        EasyMock.eq(0)
+    );
     expectLastCall().times(2);
     expect(taskQueue.add(capture(captured))).andReturn(true).times(2);
 
@@ -1748,8 +1757,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture((Map<Integer, Long>) ImmutableMap.of(0, 15L, 1, 25L, 2, 30L)));
     expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(0, 15L, 1, 25L, 2, 30L), true))
         .andReturn(Futures.immediateFuture(true));
-    taskQueue.shutdown("id3");
-    expectLastCall().times(2);
+    taskQueue.shutdown("id3", "Killing task for graceful shutdown");
+    expectLastCall().times(1);
+    taskQueue.shutdown("id3", "Killing task [%s] which hasn't been assigned to a worker", "id3");
+    expectLastCall().times(1);
 
     replay(taskRunner, taskClient, taskQueue);
 
@@ -1949,8 +1960,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     reset(taskQueue, indexerMetadataStorageCoordinator);
     expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id2");
-    taskQueue.shutdown("id3");
+    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
     replay(taskQueue, indexerMetadataStorageCoordinator);
 
     supervisor.resetInternal(null);
@@ -2035,9 +2046,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     reset(taskQueue, indexerMetadataStorageCoordinator);
     expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id1");
-    taskQueue.shutdown("id2");
-    taskQueue.shutdown("id3");
+    taskQueue.shutdown("id1", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
     replay(taskQueue, indexerMetadataStorageCoordinator);
 
     supervisor.resetInternal(null);
@@ -2423,8 +2434,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
         .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 15L, 1, 25L, 2, 30L)));
     expect(taskClient.setEndOffsetsAsync("id2", ImmutableMap.of(0, 15L, 1, 25L, 2, 30L), true))
         .andReturn(Futures.immediateFuture(true));
-    taskQueue.shutdown("id3");
-    expectLastCall().times(2);
+    taskQueue.shutdown("id3", "Killing task for graceful shutdown");
+    expectLastCall().times(1);
+    taskQueue.shutdown("id3", "Killing task [%s] which hasn't been assigned to a worker", "id3");
+    expectLastCall().times(1);
 
     replayAll();
     supervisor.start();
@@ -2544,6 +2557,48 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(0));
     Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(1));
     Assert.assertEquals(Long.MAX_VALUE, (long) taskConfig.getEndPartitions().getPartitionOffsetMap().get(2));
+  }
+
+  @Test
+  public void testGetCurrentTotalStats() throws Exception
+  {
+    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition(0),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1")
+    );
+
+    supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        supervisor.getTaskGroupIdForPartition(1),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2")
+    );
+
+    expect(taskClient.getMovingAveragesAsync("task1")).andReturn(Futures.immediateFuture(ImmutableMap.of(
+        "prop1",
+        "val1"
+    ))).times(1);
+
+    expect(taskClient.getMovingAveragesAsync("task2")).andReturn(Futures.immediateFuture(ImmutableMap.of(
+        "prop2",
+        "val2"
+    ))).times(1);
+
+    replayAll();
+
+    Map<String, Map<String, Object>> stats = supervisor.getStats();
+
+    verifyAll();
+
+    Assert.assertEquals(2, stats.size());
+    Assert.assertEquals(ImmutableSet.of("0", "1"), stats.keySet());
+    Assert.assertEquals(ImmutableMap.of("task1", ImmutableMap.of("prop1", "val1")), stats.get("0"));
+    Assert.assertEquals(ImmutableMap.of("task2", ImmutableMap.of("prop2", "val2")), stats.get("1"));
   }
 
 

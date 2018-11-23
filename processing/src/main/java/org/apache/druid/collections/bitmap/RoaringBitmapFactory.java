@@ -55,6 +55,7 @@ public class RoaringBitmapFactory implements BitmapFactory
       throw Throwables.propagate(e);
     }
   }
+
   private static final WrappedImmutableRoaringBitmap WRAPPED_IMMUTABLE_ROARING_BITMAP =
       new WrappedImmutableRoaringBitmap(EMPTY_IMMUTABLE_BITMAP);
 
@@ -165,16 +166,10 @@ public class RoaringBitmapFactory implements BitmapFactory
   }
 
   @Override
-  public ImmutableBitmap complement(
-      ImmutableBitmap b, int length
-  )
+  public ImmutableBitmap complement(ImmutableBitmap b, int length)
   {
     return new WrappedImmutableRoaringBitmap(
-        ImmutableRoaringBitmap.flip(
-            ((WrappedImmutableRoaringBitmap) b).getBitmap(),
-            0,
-            length
-        )
+        ImmutableRoaringBitmap.flip(((WrappedImmutableRoaringBitmap) b).getBitmap(), 0, length)
     );
   }
 }

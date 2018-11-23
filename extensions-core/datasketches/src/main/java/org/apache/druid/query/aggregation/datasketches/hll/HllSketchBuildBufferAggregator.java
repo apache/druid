@@ -19,20 +19,20 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.nio.ByteBuffer;
-import java.util.IdentityHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-
 import com.google.common.util.concurrent.Striped;
 import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
-
-import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.segment.ColumnValueSelector;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.segment.ColumnValueSelector;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.IdentityHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 
 /**
  * This aggregator builds sketches from raw data.
@@ -135,7 +135,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
 
   private WritableMemory getMemory(final ByteBuffer buf)
   {
-    return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b));
+    return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b, ByteOrder.LITTLE_ENDIAN));
   }
 
   /**

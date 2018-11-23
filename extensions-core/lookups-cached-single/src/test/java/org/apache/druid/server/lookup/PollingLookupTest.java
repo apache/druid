@@ -65,6 +65,7 @@ public class PollingLookupTest
   private static class MockDataFetcher implements DataFetcher
   {
     private int callNumber = 0;
+
     @Override
     public Iterable fetchAll()
     {

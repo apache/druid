@@ -148,7 +148,8 @@ public class SysMonitor extends FeedDefiningMonitor
    */
   private class SwapStats implements Stats
   {
-    private long prevPageIn = 0, prevPageOut = 0;
+    private long prevPageIn = 0;
+    private long prevPageOut = 0;
 
     private SwapStats()
     {
@@ -313,7 +314,8 @@ public class SysMonitor extends FeedDefiningMonitor
             }
             if (du != null) {
               final Map<String, Long> stats = diff.to(
-                  name, ImmutableMap.<String, Long>builder()
+                  name,
+                  ImmutableMap.<String, Long>builder()
                       .put("sys/disk/read/size", du.getReadBytes())
                       .put("sys/disk/read/count", du.getReads())
                       .put("sys/disk/write/size", du.getWriteBytes())
@@ -379,7 +381,8 @@ public class SysMonitor extends FeedDefiningMonitor
               }
               if (netstat != null) {
                 final Map<String, Long> stats = diff.to(
-                    name, ImmutableMap.<String, Long>builder()
+                    name,
+                    ImmutableMap.<String, Long>builder()
                         .put("sys/net/read/size", netstat.getRxBytes())
                         .put("sys/net/read/packets", netstat.getRxPackets())
                         .put("sys/net/read/errors", netstat.getRxErrors())
@@ -434,7 +437,8 @@ public class SysMonitor extends FeedDefiningMonitor
           final Cpu cpu = cpus[i];
           final String name = Integer.toString(i);
           final Map<String, Long> stats = diff.to(
-              name, ImmutableMap.<String, Long>builder()
+              name,
+              ImmutableMap.<String, Long>builder()
                   .put("user", cpu.getUser()) // user = Δuser / Δtotal
                   .put("sys", cpu.getSys()) // sys = Δsys / Δtotal
                   .put("nice", cpu.getNice()) // nice = Δnice / Δtotal

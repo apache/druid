@@ -39,6 +39,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 public class LocalDataSegmentPusherTest
 {
@@ -124,8 +125,10 @@ public class LocalDataSegmentPusherTest
     DataSegment segment = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, true);
 
     String path = segment.getLoadSpec().get("path").toString();
-    String matcher = ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index\\.zip";
-    Assert.assertTrue(path, path.matches(matcher));
+    Pattern pattern = Pattern.compile(
+        ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index\\.zip"
+    );
+    Assert.assertTrue(path, pattern.matcher(path).matches());
     Assert.assertTrue(new File(path).exists());
   }
 

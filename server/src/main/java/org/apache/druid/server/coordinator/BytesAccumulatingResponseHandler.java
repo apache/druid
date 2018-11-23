@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;

@@ -144,8 +144,10 @@ public class SQLMetadataRuleManagerTest
     AuditEntry entry = auditEntries.get(0);
 
     Assert.assertEquals(
-        rules, mapper.readValue(
-            entry.getPayload(), new TypeReference<List<Rule>>()
+        rules,
+        mapper.readValue(
+            entry.getPayload(),
+            new TypeReference<List<Rule>>()
             {
             }
         )
@@ -187,8 +189,10 @@ public class SQLMetadataRuleManagerTest
     Assert.assertEquals(2, auditEntries.size());
     for (AuditEntry entry : auditEntries) {
       Assert.assertEquals(
-          rules, mapper.readValue(
-              entry.getPayload(), new TypeReference<List<Rule>>()
+          rules,
+          mapper.readValue(
+              entry.getPayload(),
+              new TypeReference<List<Rule>>()
               {
               }
           )

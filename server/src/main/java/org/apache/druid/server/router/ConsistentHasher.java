@@ -43,16 +43,16 @@ public class ConsistentHasher
   private static final HashFunction DEFAULT_HASH_FN = Hashing.murmur3_128();
 
   private final Long2ObjectRBTreeMap<String> nodeKeySlots = new Long2ObjectRBTreeMap<>();
+
   {
     nodeKeySlots.defaultReturnValue(null);
   }
+
   private final HashFunction hashFn;
   private final Map<String, long[]> nodeKeyHashes = new HashMap<>();
   private Set<String> previousKeys = new HashSet<>();
 
-  public ConsistentHasher(
-      final HashFunction hashFunction
-  )
+  public ConsistentHasher(final HashFunction hashFunction)
   {
     this.hashFn = hashFunction == null ? DEFAULT_HASH_FN : hashFunction;
   }

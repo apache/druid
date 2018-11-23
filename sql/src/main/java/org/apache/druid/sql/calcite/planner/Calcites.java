@@ -56,6 +56,7 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import java.nio.charset.Charset;
 import java.util.NavigableSet;
+import java.util.regex.Pattern;
 
 /**
  * Utility functions for Calcite.
@@ -76,6 +77,8 @@ public class Calcites
   private static final DateTimeFormatter CALCITE_TIMESTAMP_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.S");
 
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
+
+  private static final Pattern TRAILING_ZEROS = Pattern.compile("\\.?0+$");
 
   private Calcites()
   {
@@ -129,7 +132,7 @@ public class Calcites
       }
     }
     builder.append("'");
-    return isPlainAscii ? builder.toString() : "U&" + builder.toString();
+    return isPlainAscii ? builder.toString() : "U&" + builder;
 
   }
 
@@ -248,7 +251,10 @@ public class Calcites
   public static TimestampString jodaToCalciteTimestampString(final DateTime dateTime, final DateTimeZone timeZone)
   {
     // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
-    return new TimestampString(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(timeZone)).replaceAll("\\.?0+$", ""));
+    String timestampString = TRAILING_ZEROS
+        .matcher(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(timeZone)))
+        .replaceAll("");
+    return new TimestampString(timestampString);
   }
 
   /**
@@ -262,7 +268,10 @@ public class Calcites
   public static TimeString jodaToCalciteTimeString(final DateTime dateTime, final DateTimeZone timeZone)
   {
     // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
-    return new TimeString(CALCITE_TIME_PRINTER.print(dateTime.withZone(timeZone)).replaceAll("\\.?0+$", ""));
+    String timeString = TRAILING_ZEROS
+        .matcher(CALCITE_TIME_PRINTER.print(dateTime.withZone(timeZone)))
+        .replaceAll("");
+    return new TimeString(timeString);
   }
 
   /**

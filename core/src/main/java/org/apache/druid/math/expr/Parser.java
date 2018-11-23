@@ -24,8 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -37,6 +35,8 @@ import org.apache.druid.math.expr.antlr.ExprParser;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,7 +47,7 @@ public class Parser
   private static final Map<String, Function> FUNCTIONS;
 
   static {
-    Map<String, Function> functionMap = Maps.newHashMap();
+    Map<String, Function> functionMap = new HashMap<>();
     for (Class clazz : Function.class.getClasses()) {
       if (!Modifier.isAbstract(clazz.getModifiers()) && Function.class.isAssignableFrom(clazz)) {
         try {
@@ -132,7 +132,7 @@ public class Parser
 
   public static List<String> findRequiredBindings(Expr expr)
   {
-    final Set<String> found = Sets.newLinkedHashSet();
+    final Set<String> found = new LinkedHashSet<>();
     expr.visit(
         new Expr.Visitor()
         {

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -52,9 +51,11 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -144,7 +145,7 @@ public class DerivativeDataSourceManager
 
   public static ImmutableSet<DerivativeDataSource> getDerivatives(String datasource)
   {
-    return ImmutableSet.copyOf(derivativesRef.get().getOrDefault(datasource, Sets.newTreeSet()));
+    return ImmutableSet.copyOf(derivativesRef.get().getOrDefault(datasource, new TreeSet<>()));
   }
 
   public static ImmutableMap<String, Set<DerivativeDataSource>> getAllDerivatives()
@@ -199,7 +200,7 @@ public class DerivativeDataSourceManager
     
     ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> newDerivatives = new ConcurrentHashMap<>();
     for (DerivativeDataSource derivative : derivativeDataSources) {
-      newDerivatives.putIfAbsent(derivative.getBaseDataSource(), Sets.newTreeSet());
+      newDerivatives.putIfAbsent(derivative.getBaseDataSource(), new TreeSet<>());
       newDerivatives.get(derivative.getBaseDataSource()).add(derivative);
     }
     ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> current;
@@ -227,7 +228,7 @@ public class DerivativeDataSourceManager
   {
     return connector.retryWithHandle(
         new HandleCallback<Long>() {
-          Set<Interval> intervals = Sets.newHashSet();
+          Set<Interval> intervals = new HashSet<>();
           long totalSize = 0;
           @Override
           public Long withHandle(Handle handle)

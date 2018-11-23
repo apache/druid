@@ -20,11 +20,11 @@
 package org.apache.druid.query.topn;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Result;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -34,7 +34,7 @@ public class TopNQueryRunnerTestHelper
 {
   public static Result<TopNResultValue> createExpectedRows(String date, String[] columnNames, Iterable<Object[]> values)
   {
-    List<Map> expected = Lists.newArrayList();
+    List<Map> expected = new ArrayList<>();
     for (Object[] value : values) {
       Preconditions.checkArgument(value.length == columnNames.length);
       Map<String, Object> theVals = Maps.newHashMapWithExpectedSize(value.length);

@@ -49,6 +49,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -59,6 +60,7 @@ import static org.junit.Assert.assertEquals;
 public class GroupByQueryMergeBufferTest
 {
   private static final long TIMEOUT = 5000;
+
   private static class TestBlockingPool extends CloseableDefaultBlockingPool<ByteBuffer>
   {
     private int minRemainBufferNum;
@@ -211,7 +213,7 @@ public class GroupByQueryMergeBufferTest
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
-    final List<Object[]> args = Lists.newArrayList();
+    final List<Object[]> args = new ArrayList<>();
     for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
       args.add(new Object[]{runner});
     }

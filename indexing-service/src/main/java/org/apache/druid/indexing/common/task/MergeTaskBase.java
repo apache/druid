@@ -57,6 +57,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  */
@@ -335,8 +336,8 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   )
   {
     final Interval mergedInterval = computeMergedInterval(segments);
-    final Set<String> mergedDimensions = Sets.newTreeSet(String.CASE_INSENSITIVE_ORDER);
-    final Set<String> mergedMetrics = Sets.newTreeSet(String.CASE_INSENSITIVE_ORDER);
+    final Set<String> mergedDimensions = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    final Set<String> mergedMetrics = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
     for (DataSegment segment : segments) {
       mergedDimensions.addAll(segment.getDimensions());

@@ -238,7 +238,7 @@ public class FriendlyServersTest
         }
 
         Assert.assertTrue("ChannelException thrown by 'get'", ea instanceof ChannelException);
-        Assert.assertTrue("Expected error message", ea.getCause().getMessage().matches(".*Failed to handshake.*"));
+        Assert.assertTrue("Expected error message", ea.getCause().getMessage().contains("Failed to handshake"));
       }
 
       {
@@ -246,7 +246,8 @@ public class FriendlyServersTest
         final ListenableFuture<StatusResponseHolder> response2 = skepticalClient
             .go(
                 new Request(
-                    HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
+                    HttpMethod.GET,
+                    new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
                 new StatusResponseHandler(StandardCharsets.UTF_8)
             );

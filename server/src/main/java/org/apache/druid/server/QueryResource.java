@@ -24,12 +24,10 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.druid.client.DirectDruidClient;
@@ -71,6 +69,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -135,7 +134,7 @@ public class QueryResource implements QueryCountStatsProvider
     Set<String> datasources = queryManager.getQueryDatasources(queryId);
     if (datasources == null) {
       log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
-      datasources = Sets.newTreeSet();
+      datasources = new TreeSet<>();
     }
 
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(

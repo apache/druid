@@ -22,7 +22,6 @@ package org.apache.druid.segment.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
@@ -32,6 +31,7 @@ import org.apache.druid.segment.writeout.WriteOutBytes;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -199,7 +199,7 @@ public class CompressionFactory
       return id;
     }
 
-    static final Map<Byte, LongEncodingFormat> idMap = Maps.newHashMap();
+    static final Map<Byte, LongEncodingFormat> idMap = new HashMap<>();
 
     static {
       for (LongEncodingFormat format : LongEncodingFormat.values()) {

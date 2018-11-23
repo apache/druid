@@ -168,7 +168,7 @@ public class WorkerResource
   public Response doShutdown(@PathParam("taskid") String taskid)
   {
     try {
-      taskRunner.shutdown(taskid);
+      taskRunner.shutdown(taskid, "shut down request via HTTP endpoint");
     }
     catch (Exception e) {
       log.error(e, "Failed to issue shutdown for task: %s", taskid);

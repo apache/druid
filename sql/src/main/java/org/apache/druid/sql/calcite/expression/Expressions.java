@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexCall;
@@ -233,7 +232,7 @@ public class Expressions
     } else if (kind == SqlKind.AND
                || kind == SqlKind.OR
                || kind == SqlKind.NOT) {
-      final List<DimFilter> filters = Lists.newArrayList();
+      final List<DimFilter> filters = new ArrayList<>();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
         final DimFilter nextFilter = toFilter(
             plannerContext,

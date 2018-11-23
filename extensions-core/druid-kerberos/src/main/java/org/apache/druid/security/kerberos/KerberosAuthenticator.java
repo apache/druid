@@ -229,9 +229,8 @@ public class KerberosAuthenticator implements Authenticator
       }
 
       @Override
-      public void doFilter(
-          ServletRequest request, ServletResponse response, FilterChain filterChain
-      ) throws IOException, ServletException
+      public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
+          throws IOException, ServletException
       {
         HttpServletRequest httpReq = (HttpServletRequest) request;
 
@@ -249,7 +248,7 @@ public class KerberosAuthenticator implements Authenticator
         if (isExcluded(path)) {
           filterChain.doFilter(request, response);
         } else {
-          String clientPrincipal = null;
+          String clientPrincipal;
           try {
             Cookie[] cookies = httpReq.getCookies();
             if (cookies == null) {
@@ -474,7 +473,9 @@ public class KerberosAuthenticator implements Authenticator
 
   @Override
   public void decorateProxyRequest(
-      HttpServletRequest clientRequest, HttpServletResponse proxyResponse, Request proxyRequest
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Request proxyRequest
   )
   {
     Object cookieToken = clientRequest.getAttribute(SIGNED_TOKEN_ATTRIBUTE);
@@ -674,8 +675,11 @@ public class KerberosAuthenticator implements Authenticator
    *                           long, boolean, boolean)
    */
   private static void tokenToAuthCookie(
-      HttpServletResponse resp, String token,
-      String domain, String path, long expires,
+      HttpServletResponse resp,
+      String token,
+      String domain,
+      String path,
+      long expires,
       boolean isCookiePersistent,
       boolean isSecure
   )

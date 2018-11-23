@@ -45,10 +45,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import org.apache.druid.segment.realtime.plumber.Plumber;
-import org.apache.druid.segment.realtime.plumber.PlumberSchool;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -468,16 +465,8 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new RealtimeIOConfig(
-                new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
-                {
-                  @Override
-                  public Plumber findPlumber(
-                      DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-                  )
-                  {
-                    return null;
-                  }
-                },
+                new LocalFirehoseFactory(new File("lol"), "rofl", null),
+                (schema, config, metrics) -> null,
                 null
             ),
 

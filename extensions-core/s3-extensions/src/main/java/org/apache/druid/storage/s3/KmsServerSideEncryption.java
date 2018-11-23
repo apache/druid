@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.services.s3.model.CopyObjectRequest;

@@ -202,11 +202,12 @@ public class CliOverlord extends ServerRunnable
                 Key.get(RowIngestionMetersFactory.class),
                 Key.get(DropwizardRowIngestionMetersFactory.class)
             );
-            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
-                binder, Key.get(RowIngestionMetersFactory.class)
-            );
-            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
-                                                   .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder =
+                PolyBind.optionBinder(binder, Key.get(RowIngestionMetersFactory.class));
+            rowIngestionMetersHandlerProviderBinder
+                .addBinding("dropwizard")
+                .to(DropwizardRowIngestionMetersFactory.class)
+                .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             configureTaskStorage(binder);
@@ -247,12 +248,13 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
 
             PolyBind.createChoice(
-                binder, "druid.indexer.storage.type", Key.get(TaskStorage.class), Key.get(HeapMemoryTaskStorage.class)
-            );
-            final MapBinder<String, TaskStorage> storageBinder = PolyBind.optionBinder(
                 binder,
-                Key.get(TaskStorage.class)
+                "druid.indexer.storage.type",
+                Key.get(TaskStorage.class),
+                Key.get(HeapMemoryTaskStorage.class)
             );
+            final MapBinder<String, TaskStorage> storageBinder =
+                PolyBind.optionBinder(binder, Key.get(TaskStorage.class));
 
             storageBinder.addBinding("local").to(HeapMemoryTaskStorage.class);
             binder.bind(HeapMemoryTaskStorage.class).in(LazySingleton.class);

@@ -22,14 +22,13 @@ package org.apache.druid.query.select;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Queues;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.Result;
 import org.joda.time.DateTime;
 
+import java.util.ArrayDeque;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -72,8 +71,8 @@ public class SelectResultValueBuilder
     this.timestamp = timestamp;
     this.pagingSpec = pagingSpec;
     this.descending = descending;
-    this.dimensions = Sets.newHashSet();
-    this.metrics = Sets.newHashSet();
+    this.dimensions = new HashSet<>();
+    this.metrics = new HashSet<>();
     this.pagingIdentifiers = Maps.newLinkedHashMap();
     this.pQueue = instantiatePQueue();
   }
@@ -123,7 +122,7 @@ public class SelectResultValueBuilder
 
   protected Queue<EventHolder> instantiatePQueue()
   {
-    return Queues.newArrayDeque();
+    return new ArrayDeque<>();
   }
 
   public static class MergeBuilder extends SelectResultValueBuilder
@@ -137,7 +136,7 @@ public class SelectResultValueBuilder
     protected Queue<EventHolder> instantiatePQueue()
     {
       int threshold = pagingSpec.getThreshold();
-      return MinMaxPriorityQueue.orderedBy(descending ? Comparators.inverse(comparator) : comparator)
+      return MinMaxPriorityQueue.orderedBy(descending ? comparator.reversed() : comparator)
                                 .maximumSize(threshold > 0 ? threshold : Integer.MAX_VALUE)
                                 .create();
     }

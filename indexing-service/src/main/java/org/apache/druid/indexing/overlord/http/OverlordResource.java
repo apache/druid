@@ -24,7 +24,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -331,7 +330,7 @@ public class OverlordResource
           @Override
           public Response apply(TaskQueue taskQueue)
           {
-            taskQueue.shutdown(taskid);
+            taskQueue.shutdown(taskid, "Shutdown request from user");
             return Response.ok(ImmutableMap.of("task", taskid)).build();
           }
         }
@@ -352,7 +351,7 @@ public class OverlordResource
           {
             final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
             for (final TaskInfo<Task, TaskStatus> task : tasks) {
-              taskQueue.shutdown(task.getId());
+              taskQueue.shutdown(task.getId(), "Shutdown request from user");
             }
             return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
           }
@@ -476,7 +475,7 @@ public class OverlordResource
 
             try {
               final Object ret = taskActionClient.submit(holder.getAction());
-              retMap = Maps.newHashMap();
+              retMap = new HashMap<>();
               retMap.put("result", ret);
             }
             catch (IOException e) {
@@ -628,7 +627,7 @@ public class OverlordResource
   public Response getTasks(
       @QueryParam("state") final String state,
       @QueryParam("datasource") final String dataSource,
-      @PathParam("interval") final String interval,
+      @PathParam("createdTimeInterval") final String createdTimeInterval,
       @QueryParam("max") final Integer maxCompletedTasks,
       @QueryParam("type") final String type,
       @Context final HttpServletRequest req
@@ -693,14 +692,13 @@ public class OverlordResource
 
     //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
     if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
-      Duration duration = null;
-      if (interval != null) {
-        final Interval theInterval = Intervals.of(interval.replace("_", "/"));
-        duration = theInterval.toDuration();
+      Duration createdTimeDuration = null;
+      if (createdTimeInterval != null) {
+        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
+        createdTimeDuration = theInterval.toDuration();
       }
-      final List<TaskInfo<Task, TaskStatus>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
-          maxCompletedTasks, duration, dataSource
-      );
+      final List<TaskInfo<Task, TaskStatus>> taskInfoList =
+          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
       final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
                                                               .map(completeTaskTransformFunc::apply)
                                                               .collect(Collectors.toList());
@@ -708,7 +706,7 @@ public class OverlordResource
     }
 
     final List<TaskInfo<Task, TaskStatus>> allActiveTaskInfo;
-    final List<AnyTask> allActiveTasks = Lists.newArrayList();
+    final List<AnyTask> allActiveTasks = new ArrayList<>();
     if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
       allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
       for (final TaskInfo<Task, TaskStatus> task : allActiveTaskInfo) {
@@ -797,7 +795,7 @@ public class OverlordResource
           .stream()
           .map(TaskRunnerWorkItem::getTaskId)
           .collect(Collectors.toSet());
-      final List<AnyTask> waitingTasks = Lists.newArrayList();
+      final List<AnyTask> waitingTasks = new ArrayList<>();
       for (TaskRunnerWorkItem task : allTasks) {
         if (!runnerKnownTaskIds.contains(task.getTaskId())) {
           waitingTasks.add(((AnyTask) task).withTaskState(
@@ -825,7 +823,7 @@ public class OverlordResource
               java.util.function.Function.identity(),
               (previousWorkItem, newWorkItem) -> newWorkItem
           ));
-      final List<AnyTask> pendingTasks = Lists.newArrayList();
+      final List<AnyTask> pendingTasks = new ArrayList<>();
       for (TaskRunnerWorkItem task : allTasks) {
         if (pendingTaskIds.contains(task.getTaskId())) {
           pendingTasks.add(((AnyTask) task).withTaskState(
@@ -853,7 +851,7 @@ public class OverlordResource
               java.util.function.Function.identity(),
               (previousWorkItem, newWorkItem) -> newWorkItem
           ));
-      final List<AnyTask> runningTasks = Lists.newArrayList();
+      final List<AnyTask> runningTasks = new ArrayList<>();
       for (TaskRunnerWorkItem task : allTasks) {
         if (runningTaskIds.contains(task.getTaskId())) {
           runningTasks.add(((AnyTask) task).withTaskState(

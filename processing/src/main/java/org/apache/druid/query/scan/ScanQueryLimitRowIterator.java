@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.scan;
 
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -33,7 +34,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
 {
   private Yielder<ScanResultValue> yielder;
   private String resultFormat;
-  private long limit = 0;
+  private long limit;
   private long count = 0;
 
   public ScanQueryLimitRowIterator(

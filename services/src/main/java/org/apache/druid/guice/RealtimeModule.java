@@ -74,11 +74,12 @@ public class RealtimeModule implements Module
         Key.get(RowIngestionMetersFactory.class),
         Key.get(DropwizardRowIngestionMetersFactory.class)
     );
-    final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
-        binder, Key.get(RowIngestionMetersFactory.class)
-    );
-    rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
-                                           .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+    final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder =
+        PolyBind.optionBinder(binder, Key.get(RowIngestionMetersFactory.class));
+    rowIngestionMetersHandlerProviderBinder
+        .addBinding("dropwizard")
+        .to(DropwizardRowIngestionMetersFactory.class)
+        .in(LazySingleton.class);
     binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
     PolyBind.createChoice(
@@ -87,13 +88,16 @@ public class RealtimeModule implements Module
         Key.get(ChatHandlerProvider.class),
         Key.get(ServiceAnnouncingChatHandlerProvider.class)
     );
-    final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
-        binder, Key.get(ChatHandlerProvider.class)
-    );
-    handlerProviderBinder.addBinding("announce")
-                         .to(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
-    handlerProviderBinder.addBinding("noop")
-                         .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
+    final MapBinder<String, ChatHandlerProvider> handlerProviderBinder =
+        PolyBind.optionBinder(binder, Key.get(ChatHandlerProvider.class));
+    handlerProviderBinder
+        .addBinding("announce")
+        .to(ServiceAnnouncingChatHandlerProvider.class)
+        .in(LazySingleton.class);
+    handlerProviderBinder
+        .addBinding("noop")
+        .to(NoopChatHandlerProvider.class)
+        .in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
     binder.bind(

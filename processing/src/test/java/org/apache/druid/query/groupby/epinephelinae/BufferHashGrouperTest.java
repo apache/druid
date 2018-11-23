@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -127,7 +128,7 @@ public class BufferHashGrouperTest
     }
     Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
-    final List<Grouper.Entry<Integer>> expected = Lists.newArrayList();
+    final List<Grouper.Entry<Integer>> expected = new ArrayList<>();
     for (int i = 0; i < expectedMaxSize; i++) {
       expected.add(new Grouper.Entry<>(i, new Object[]{21L, 2L}));
     }
@@ -183,7 +184,7 @@ public class BufferHashGrouperTest
     }
     Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
 
-    final List<Grouper.Entry<Integer>> expected = Lists.newArrayList();
+    final List<Grouper.Entry<Integer>> expected = new ArrayList<>();
     for (int i = 0; i < expectedMaxSize; i++) {
       expected.add(new Grouper.Entry<>(i, new Object[]{21L, 2L}));
     }

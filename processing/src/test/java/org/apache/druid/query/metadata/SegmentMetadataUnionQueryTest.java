@@ -21,7 +21,6 @@ package org.apache.druid.query.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -42,6 +41,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -127,7 +127,7 @@ public class SegmentMetadataUnionQueryTest
             SegmentMetadataQuery.AnalysisType.MINMAX
         )
         .build();
-    List result = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    List result = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");
   }
 

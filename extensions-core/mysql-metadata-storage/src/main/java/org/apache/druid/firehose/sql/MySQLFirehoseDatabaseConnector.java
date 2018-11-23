@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.firehose.sql;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
