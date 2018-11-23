@@ -1,0 +1,98 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.java.util.common;
+
+public final class Numbers
+{
+  /**
+   * Parse the given object as a {@code long}. The input object can be a {@link String} or one of the implementations of
+   * {@link Number}. You may want to use {@code GuavaUtils.tryParseLong()} instead if the input is a nullable string and
+   * you want to avoid any exceptions.
+   *
+   * @throws NumberFormatException if the input is an unparseable string.
+   * @throws NullPointerException if the input is null.
+   * @throws ISE if the input is not a string or a number.
+   */
+  public static long parseLong(Object val)
+  {
+    if (val instanceof String) {
+      return Long.parseLong((String) val);
+    } else if (val instanceof Number) {
+      return ((Number) val).longValue();
+    } else {
+      if (val == null) {
+        throw new NullPointerException("Input is null");
+      } else {
+        throw new ISE("Unknown type [%s]", val.getClass());
+      }
+    }
+  }
+
+  /**
+   * Parse the given object as a {@code int}. The input object can be a {@link String} or one of the implementations of
+   * {@link Number}.
+   *
+   * @throws NumberFormatException if the input is an unparseable string.
+   * @throws NullPointerException if the input is null.
+   * @throws ISE if the input is not a string or a number.
+   */
+  public static int parseInt(Object val)
+  {
+    if (val instanceof String) {
+      return Integer.parseInt((String) val);
+    } else if (val instanceof Number) {
+      return ((Number) val).intValue();
+    } else {
+      if (val == null) {
+        throw new NullPointerException("Input is null");
+      } else {
+        throw new ISE("Unknown type [%s]", val.getClass());
+      }
+    }
+  }
+
+  /**
+   * Parse the given object as a {@code boolean}. The input object can be a {@link String} or {@link Boolean}.
+   *
+   * @return {@code true} only if the input is a {@link Boolean} representing {@code true} or a {@link String} of
+   * {@code "true"}.
+   *
+   * @throws NullPointerException if the input is null.
+   * @throws ISE if the input is not a string or a number.
+   */
+  public static boolean parseBoolean(Object val)
+  {
+    if (val instanceof String) {
+      return Boolean.parseBoolean((String) val);
+    } else if (val instanceof Boolean) {
+      return (boolean) val;
+    } else {
+      if (val == null) {
+        throw new NullPointerException("Input is null");
+      } else {
+        throw new ISE("Unknown type [%s]", val.getClass());
+      }
+    }
+  }
+
+  private Numbers()
+  {
+  }
+}

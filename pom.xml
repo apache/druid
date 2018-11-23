@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Druid - a distributed column store.
-  ~ Copyright 2012 - 2015 Metamarkets Group Inc.
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
   ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
+  ~   http://www.apache.org/licenses/LICENSE-2.0
   ~
-  ~     http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -21,18 +23,19 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.druid</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>2</version>
+        <groupId>org.apache</groupId>
+        <artifactId>apache</artifactId>
+        <version>21</version>
     </parent>
 
+    <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-SNAPSHOT</version>
+    <version>0.13.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>${project.groupId}:${project.artifactId}</name>
+    <name>Druid</name>
     <description>Druid - A Distributed Column Store</description>
-    <url>http://druid.io/</url>
+    <url>https://druid.apache.org/</url>
 
     <licenses>
         <license>
@@ -48,21 +51,33 @@
         </developer>
     </developers>
 
+    <mailingLists>
+        <mailingList>
+            <name>Apache Druid (incubating) developers list</name>
+            <subscribe>dev-subscribe@druid.apache.org</subscribe>
+            <unsubscribe>dev-unsubscribe@druid.apache.org</unsubscribe>
+            <post>dev@druid.apache.org</post>
+            <archive>https://mail-archives.apache.org/mod_mbox/druid-dev</archive>
+        </mailingList>
+    </mailingLists>
+
     <inceptionYear>2011</inceptionYear>
 
     <scm>
-        <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
-        <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.13.0-SNAPSHOT</tag>
+        <connection>scm:git:ssh://git@github.com/apache/incubator-druid.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/apache/incubator-druid.git</developerConnection>
+        <url>https://github.com/apache/incubator-druid.git</url>
+        <tag>0.13.0-incubating-SNAPSHOT</tag>
     </scm>
 
     <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <apache.curator.version>4.0.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.10.0</avatica.version>
-        <calcite.version>1.15.0</calcite.version>
+        <calcite.version>1.17.0</calcite.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <fastutil.version>8.1.0</fastutil.version>
         <guava.version>16.0.1</guava.version>
@@ -74,26 +89,27 @@
         <log4j.version>2.5</log4j.version>
         <!-- HttpClient has not yet been ported to Netty 4.x -->
         <netty3.version>3.10.6.Final</netty3.version>
-        <!-- Update to Netty 4.1 is not possible yet, see https://github.com/druid-io/druid/issues/4390 and comments
-             in https://github.com/druid-io/druid/pull/4973 -->
-        <netty4.version>4.0.52.Final</netty4.version>
+        <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
+        <netty4.version>4.1.30.Final</netty4.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.3</hadoop.compile.version>
         <hive.version>2.0.0</hive.version>
         <powermock.version>1.6.6</powermock.version>
-        <aws.sdk.bundle.version>1.11.199</aws.sdk.bundle.version>
+        <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
-        <repoOrgId>org-apache-id</repoOrgId>
-        <repoOrgName>org-apache-name</repoOrgName>
-        <repoOrgUrl>https://repository.apache.org/content/repositories/public/</repoOrgUrl>
+        <repoOrgId>apache.snapshots</repoOrgId>
+        <repoOrgName>Apache Snapshot Repository</repoOrgName>
+        <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
+
+        <!-- Allow the handful of flaky tests with transient failures to pass. -->
+        <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
     </properties>
 
     <modules>
-        <module>api</module>
-        <module>common</module>
+        <module>core</module>
         <module>examples</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
@@ -104,12 +120,12 @@
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>aws-common</module>
-        <module>java-util</module>
         <module>extendedset</module>
         <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
+        <module>extensions-core/druid-bloom-filter</module>
         <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
@@ -118,6 +134,7 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
+        <module>extensions-core/parquet-extensions</module>
         <module>extensions-core/postgresql-metadata-storage</module>
         <module>extensions-core/protobuf-extensions</module>
         <module>extensions-core/lookups-cached-global</module>
@@ -135,7 +152,6 @@
         <module>extensions-contrib/kafka-eight-simpleConsumer</module>
         <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
-        <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/orc-extensions</module>
         <module>extensions-contrib/time-min-max</module>
@@ -154,13 +170,13 @@
         <module>distribution</module>
     </modules>
 
-  <repositories>
-    <repository>
-        <id>${repoOrgId}</id>
-        <name>${repoOrgName}</name>
-        <url>${repoOrgUrl}</url>
-    </repository>
-  </repositories>
+    <repositories>
+        <repository>
+            <id>${repoOrgId}</id>
+            <name>${repoOrgName}</name>
+            <url>${repoOrgUrl}</url>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -192,8 +208,13 @@
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bundle</artifactId>
-                <version>${aws.sdk.bundle.version}</version>
+                <artifactId>aws-java-sdk-ec2</artifactId>
+                <version>${aws.sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-s3</artifactId>
+                <version>${aws.sdk.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
@@ -317,7 +338,7 @@
             <dependency>
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_annotations</artifactId>
-                <version>2.2.0</version>
+                <version>2.3.2</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>
@@ -338,6 +359,11 @@
                 <groupId>org.tukaani</groupId>
                 <artifactId>xz</artifactId>
                 <version>1.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.luben</groupId>
+                <artifactId>zstd-jni</artifactId>
+                <version>1.3.3-1</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
@@ -561,7 +587,7 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.4.0</version>
+                <version>1.5.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -632,14 +658,14 @@
                 <version>8.1.0</version>
             </dependency>
             <dependency>
-                <groupId>net.sf.opencsv</groupId>
+                <groupId>com.opencsv</groupId>
                 <artifactId>opencsv</artifactId>
-                <version>2.3</version>
+                <version>4.2</version>
             </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
-                <version>2.1.0</version>
+                <version>2.3.0</version>
             </dependency>
             <dependency>
                 <groupId>net.thisptr</groupId>
@@ -669,7 +695,8 @@
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <version>2.0.37</version>
+                <!-- Uses Netty 4.1.x -->
+                <version>2.5.3</version>
             </dependency>
             <dependency>
                 <groupId>org.gridkit.lab</groupId>
@@ -686,8 +713,6 @@
                 <artifactId>metrics-core</artifactId>
                 <version>${dropwizard.metrics.version}</version>
             </dependency>
-
-            <!-- Test Scope -->
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-core-asl</artifactId>
@@ -719,15 +744,17 @@
                 <version>3.0.15</version>
             </dependency>
             <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
                 <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>com.github.ben-manes.caffeine</groupId>
-                <artifactId>caffeine</artifactId>
-                <version>${caffeine.version}</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.easymock</groupId>
@@ -738,7 +765,7 @@
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.11</version>
+                <version>4.12</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -852,9 +879,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>2.17</version>
+                <version>3.0.0</version>
                 <configuration>
-                    <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+                    <sourceDirectories>${project.build.sourceDirectory}</sourceDirectories>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <configLocation>codestyle/checkstyle.xml</configLocation>
                     <suppressionsLocation>codestyle/checkstyle-suppressions.xml</suppressionsLocation>
@@ -868,7 +895,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.0</version>
+                        <version>8.14</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -907,8 +934,9 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>2.3</version>
+                <version>2.6</version>
                 <configuration>
+                    <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
@@ -917,18 +945,15 @@
                         <bundledSignature>jdk-unsafe</bundledSignature>
                     </bundledSignatures>
                     <signaturesFiles>
-                        <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
-                        <signaturesFile>${session.executionRootDirectory}/codestyle/druid-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
-                    <excludes>
-                        <exclude>io/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
-                        <exclude>io/druid/java/util/common/DateTimes.class</exclude>
-                    </excludes>
+                    <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>validate</id>
-                        <phase>validate</phase>
+                        <id>compile</id>
+                        <phase>compile</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
@@ -941,8 +966,8 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>testValidate</id>
-                        <phase>validate</phase>
+                        <id>testCompile</id>
+                        <phase>test-compile</phase>
                         <goals>
                             <goal>testCheck</goal>
                         </goals>
@@ -1005,6 +1030,81 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
+                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
+                            <Build-Timestamp>${git.build.time}</Build-Timestamp>
+                            <Build-Version>${git.build.version}</Build-Version>
+                            <Build-Revision>${git.commit.id}</Build-Revision>
+                            <Build-Revision-Describe>${git.commit.id.describe}</Build-Revision-Describe>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>2.2.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+                    <dateFormatTimeZone>Etc/UTC</dateFormatTimeZone>
+                    <skipPoms>false</skipPoms>
+                    <format>json</format>
+                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                    <generateGitPropertiesFilename>${project.build.directory}/git.version</generateGitPropertiesFilename>
+                    <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <excludeProperties>
+                        <excludeProperty>git.build.user.email</excludeProperty>
+                        <excludeProperty>git.build.host</excludeProperty>
+                        <excludeProperty>git.commit.id.describe-short</excludeProperty>
+                        <excludeProperty>git.commit.user.*</excludeProperty>
+                        <excludeProperty>git.commit.message.*</excludeProperty>
+                        <excludeProperty>git.closest.tag.*</excludeProperty>
+                        <excludeProperty>git.commit.id.abbrev</excludeProperty>
+                        <excludeProperty>git.dirty</excludeProperty>
+                    </excludeProperties>
+                    <gitDescribe>
+                        <skip>false</skip>
+                        <always>true</always>
+                        <abbrev>7</abbrev>
+                        <dirty>-dirty</dirty>
+                        <forceLongFormat>true</forceLongFormat>
+                    </gitDescribe>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-remote-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>process-resource-bundles</id>
+                        <goals>
+                            <goal>process</goal>
+                        </goals>
+                        <configuration>
+                            <properties>
+                                <projectName>Apache Druid (incubating)</projectName>
+                            </properties>
+                            <resourceBundles>
+                                <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5-SNAPSHOT</resourceBundle>
+                                <resourceBundle>org.apache.apache.resources:apache-incubator-disclaimer-resource-bundle:1.2-SNAPSHOT</resourceBundle>
+                            </resourceBundles>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -1014,12 +1114,19 @@
                     <version>2.19.1</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
-                        <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                        <argLine>-Xmx3000m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
-                            -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                            <!--@TODO After fixing https://github.com/druid-io/druid/issues/4964 remove this parameter-->
+                        <!-- set default options -->
+                        <argLine>
+                            -Xmx1500m
+                            -XX:MaxDirectMemorySize=512m
+                            -Duser.language=en
+                            -Duser.GroupByQueryRunnerTest.javacountry=US
+                            -Dfile.encoding=UTF-8
+                            -Duser.timezone=UTC
+                            -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                            <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
+                        <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     </configuration>
@@ -1092,7 +1199,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>2.5.5</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -1107,6 +1214,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.10.1</version>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
                         <additionalparam>-Xdoclint:none</additionalparam>
@@ -1122,10 +1230,10 @@
                     <configuration>
                         <instrumentation>
                             <ignores>
-                                <ignore>io.druid.sql.antlr4.*</ignore>
+                                <ignore>org.apache.druid.sql.antlr4.*</ignore>
                             </ignores>
                             <excludes>
-                                <exclude>io/druid/sql/antlr4/**/*.class</exclude>
+                                <exclude>org/apache/druid/sql/antlr4/**/*.class</exclude>
                             </excludes>
                         </instrumentation>
                         <format>xml</format>
@@ -1137,7 +1245,7 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <source>${maven.compiler.target}</source>
+                        <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
@@ -1159,7 +1267,7 @@
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
-                            <source>${maven.compiler.target}</source>
+                            <source>${maven.compiler.source}</source>
                             <target>${maven.compiler.target}</target>
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
@@ -1169,8 +1277,8 @@
                                 <arg>-Xep:PreconditionsInvalidPlaceholder:ERROR</arg>
                                 <arg>-Xep:MissingOverride:ERROR</arg>
                                 <arg>-Xep:DefaultCharset:ERROR</arg>
+                                <arg>-Xep:QualifierOrScopeOnInjectMethod:ERROR</arg>
 
-                                <arg>-Xep:ArgumentParameterSwap</arg>
                                 <arg>-Xep:AssistedInjectAndInjectOnSameConstructor</arg>
                                 <arg>-Xep:AutoFactoryAtInject</arg>
                                 <arg>-Xep:ClassName</arg>
@@ -1193,7 +1301,6 @@
                                 <arg>-Xep:NumericEquality</arg>
                                 <arg>-Xep:ParameterPackage</arg>
                                 <arg>-Xep:ProtoStringFieldReferenceEquality</arg>
-                                <arg>-Xep:QualifierOnMethodWithoutProvides</arg>
                                 <arg>-Xep:UnlockMethod</arg>
                             </compilerArgs>
                         </configuration>
@@ -1201,14 +1308,14 @@
                             <dependency>
                                 <groupId>org.codehaus.plexus</groupId>
                                 <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                                <version>2.8.1</version>
+                                <version>2.8.5</version>
                             </dependency>
                             <!-- override plexus-compiler-javac-errorprone's dependency on
                                  Error Prone with the latest version -->
                             <dependency>
                                 <groupId>com.google.errorprone</groupId>
                                 <artifactId>error_prone_core</artifactId>
-                                <version>2.0.19</version>
+                                <version>2.3.2</version>
                             </dependency>
                         </dependencies>
                     </plugin>
@@ -1241,12 +1348,118 @@
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                             <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                               -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                              <!--@TODO After fixing https://github.com/druid-io/druid/issues/4964 remove this parameter-->
+                              <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
                               -Ddruid.indexing.doubleStorage=double
                             </argLine>
                             <!-- our tests are very verbose, let's keep the volume down -->
                             <redirectTestOutputToFile>true</redirectTestOutputToFile>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- Run Apache Rat license checks in a separate profile, because during local builds it doesn't skip files
+        that are not checked into Git -->
+        <profile>
+            <id>rat</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.rat</groupId>
+                        <artifactId>apache-rat-plugin</artifactId>
+                        <version>0.12</version>
+                        <executions>
+                            <execution>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <outputDirectory>${project.basedir}/rat</outputDirectory>
+                            <licenses>
+                                <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                                    <licenseFamilyCategory>MIT</licenseFamilyCategory>
+                                    <licenseFamilyName>MIT JQuery</licenseFamilyName>
+                                    <notes></notes>
+                                    <patterns>
+                                        <pattern>Copyright 2012 jQuery Foundation and other contributors; Licensed MIT</pattern>
+                                        <pattern>jQuery Foundation, Inc. | jquery.org/license</pattern>
+                                    </patterns>
+                                </license>
+                                <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                                    <licenseFamilyCategory>Underscore</licenseFamilyCategory>
+                                    <licenseFamilyName>Underscore</licenseFamilyName>
+                                    <notes></notes>
+                                    <patterns>
+                                        <pattern>Underscore is freely distributable under the MIT license</pattern>
+                                    </patterns>
+                                </license>
+                                <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                                    <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
+                                    <licenseFamilyName>Allan Jardine</licenseFamilyName>
+                                    <notes></notes>
+                                    <patterns>
+                                        <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
+                                    </patterns>
+                                </license>
+                                <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                                    <licenseFamilyCategory>Allan Jardine</licenseFamilyCategory>
+                                    <licenseFamilyName>Allan Jardine</licenseFamilyName>
+                                    <notes></notes>
+                                    <patterns>
+                                        <pattern>Copyright 2009 Allan Jardine. All Rights Reserved</pattern>
+                                        <pattern>Copyright 2008-2011 Allan Jardine</pattern>
+                                        <pattern>GPL v2 or BSD 3 point style</pattern>
+                                    </patterns>
+                                </license>
+                            </licenses>
+
+                            <licenseFamilies>
+                                <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                                    <familyName>MIT JQuery</familyName>
+                                </licenseFamily>
+                                <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                                    <familyName>Underscore</familyName>
+                                </licenseFamily>
+                                <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                                    <familyName>Allan Jardine</familyName>
+                                </licenseFamily>
+                            </licenseFamilies>
+                            <excludes>
+                                <exclude>publications/**</exclude>
+                                <exclude>codestyle/*-forbidden-apis.txt</exclude>
+                                <exclude>quickstart/tutorial/conf/**</exclude>
+                                <exclude>docker/*.conf</exclude>
+                                <exclude>target/**</exclude>
+                                <exclude>**/test/resources/**</exclude>
+                                <exclude>**/derby.log</exclude>
+                                <exclude>**/jvm.config</exclude>
+                                <exclude>**/*.avsc</exclude>
+                                <exclude>**/*.iml</exclude>
+                                <exclude>**/*.json</exclude>
+                                <exclude>**/*.parq</exclude>
+                                <exclude>**/*.parquet</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- Prevent the source-release-assembly execution defined in the Apache parent POM from running so we can control it ourselves -->
+        <profile>
+            <id>apache-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>source-release-assembly</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>

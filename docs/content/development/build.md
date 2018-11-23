@@ -1,30 +1,65 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
 
 ### Build from Source
 
-You can build Druid directly from source. Please note that these instructions are for building the latest stable of Druid. 
-For building the latest code in master, follow the instructions [here](https://github.com/druid-io/druid/blob/master/docs/content/development/build.md).
+You can build Druid directly from source. Please note that these instructions are for building the latest stable version of Druid.
+For building the latest code in master, follow the instructions [here](https://github.com/apache/incubator-druid/blob/master/docs/content/development/build.md).
 
-Building Druid requires the following:
-- [JDK 7](http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html)
-  or [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+
+#### Prerequisites
+
+##### Installing Java and Maven:
+- [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
-To do so, run these commands:
+##### Downloading the source:
 
-```
-git clone git@github.com:druid-io/druid.git
+```bash
+git clone git@github.com:apache/incubator-druid.git
 cd druid
-mvn clean package
 ```
 
-This will compile the project and create the Druid binary distribution tar under
-`distribution/target/druid-VERSION-bin.tar.gz`.
 
-This will also create a tarball that contains `mysql-metadata-storage` extension under 
-`distribution/target/mysql-metadata-storage-bin.tar.gz`. If you want Druid to load `mysql-metadata-storage`, you can 
-first untar `druid-VERSION-bin.tar.gz`, then go to ```druid-<version>/extensions```, untar `mysql-metadata-storage-bin.tar.gz` 
-there. Now just specifiy `mysql-metadata-storage` in `druid.extensions.loadList` so that Druid will pick it up. 
-See [Including Extensions](../operations/including-extensions.html) for more information.
+#### Building the source
+
+The basic command to build Druid from source is:
+
+```bash
+mvn clean install
+```
+
+This will run static analysis, unit tests, compile classes, and package the projects into JARs. It will _not_ generate the source or binary distribution tarball.
+
+In addition to the basic stages, you may also want to add the following profiles and properties:
+
+- **-Pdist** - Distribution profile: Generates the binary distribution tarball by pulling in core extensions and dependencies and packaging the files as `distribution/target/apache-druid-x.x.x-bin.tar.gz`
+- **-Papache-release** - Apache release profile: Generates GPG signature and checksums, and builds the source distribution tarball as `distribution/target/apache-druid-x.x.x-src.tar.gz`
+- **-Prat** - Apache Rat profile: Runs the Apache Rat license audit tool
+- **-DskipTests** - Skips unit tests (which reduces build time)
+
+Putting these together, if you wish to build the source and binary distributions with signatures and checksums, audit licenses, and skip the unit tests, you would run:
+
+```bash
+mvn clean install -Papache-release,dist,rat -DskipTests
+```

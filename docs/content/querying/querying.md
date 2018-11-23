@@ -1,29 +1,54 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
 
-Querying
-========
+# Querying
 
 Queries are made using an HTTP REST style request to queryable nodes ([Broker](../design/broker.html),
-[Historical](../design/historical.html), or [Realtime](../design/realtime.html)). The
+[Historical](../design/historical.html). [Peons](../design/peons.html)) that are running stream ingestion tasks can also accept queries. The
 query is expressed in JSON and each of these node types expose the same
 REST query interface. For normal Druid operations, queries should be issued to the broker nodes. Queries can be posted
 to the queryable nodes like this -
 
  ```bash
- curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -d @<query_json_file>
+ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
  ```
  
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different 
 [client libraries](../development/libraries.html) in other languages to query Druid. 
 
+The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
+
+ ```bash
+ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/x-jackson-smile' -d @<query_json_file>
+ ```
+
+Note: If Accept header is not provided, it defaults to value of 'Content-Type' header.
+
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries 
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build 
 more complex visualizations, multiple Druid queries may be required.
 
-Available Queries
------------------
+## Available Queries
 
 Druid has numerous query types for various use cases. Queries are composed of various JSON properties and Druid has different types of queries for different use cases. The documentation for the various query types describe all the JSON properties that can be set.
 
@@ -43,15 +68,13 @@ Druid has numerous query types for various use cases. Queries are composed of va
 
 * [Search](../querying/searchquery.html)
 
-Which Query Should I Use?
--------------------------
+## Which Query Should I Use?
 
 Where possible, we recommend using [Timeseries]() and [TopN]() queries instead of [GroupBy](). GroupBy is the most flexible Druid query, but also has the poorest performance.
  Timeseries are significantly faster than groupBy queries for aggregations that don't require grouping over dimensions. For grouping and sorting over a single dimension,
  topN queries are much more optimized than groupBys.
 
-Query Cancellation
-------------------
+## Query Cancellation
 
 Queries can be cancelled explicitly using their unique identifier.  If the
 query identifier is set at the time of query, or is otherwise known, the following
@@ -67,8 +90,7 @@ For example, if the query ID is `abc123`, the query can be cancelled as follows:
 curl -X DELETE "http://host:port/druid/v2/abc123"
 ```
 
-Query Errors
-------------
+## Query Errors
 
 If a query fails, you will get an HTTP 500 response containing a JSON object with the following structure:
 

@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -27,7 +46,7 @@ Druid uses the Mozilla Rhino engine at optimization level 9 to compile and execu
 Druid does not execute JavaScript functions in a sandbox, so they have full access to the machine. So Javascript
 functions allow users to execute arbitrary code inside druid process. So, by default, Javascript is disabled.
 However, on dev/staging environments or secured production environments you can enable those by setting
-the [configuration property](../configuration/index.html)
+the [configuration property](../configuration/index.html#javascript)
 `druid.javascript.enabled = true`.
 
 ## Global variables

@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -47,3 +66,19 @@ Make sure to [include](../../operations/including-extensions.html) `postgresql-m
   druid.metadata.storage.connector.user=druid
   druid.metadata.storage.connector.password=diurd
   ```
+
+## Configuration
+In most cases, the configuration options map directly to the [postgres jdbc connection options](https://jdbc.postgresql.org/documentation/head/connect.html).
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+| `druid.metadata.postgres.useSSL` | Enables SSL | `false` | no |
+| `druid.metadata.postgres.sslPassword` | The [Password Provider](../../operations/password-provider.html) or String password for the client's key. | none | no |
+| `druid.metadata.postgres.sslFactory` | The class name to use as the `SSLSocketFactory` | none | no |
+| `druid.metadata.postgres.sslFactoryArg` | An optional argument passed to the sslFactory's constructor | none | no |
+| `druid.metadata.postgres.sslMode` | The sslMode. Possible values are "disable", "require", "verify-ca", "verify-full", "allow" and "prefer"| none | no |
+| `druid.metadata.postgres.sslCert` | The full path to the certificate file. | none | no |
+| `druid.metadata.postgres.sslKey` | The full path to the key file. | none | no |
+| `druid.metadata.postgres.sslRootCert` | The full path to the root certificate. | none | no |
+| `druid.metadata.postgres.sslHostNameVerifier` | The classname of the hostname verifier. | none | no |
+| `druid.metadata.postgres.sslPasswordCallback` | The classname of the SSL password provider. | none | no |

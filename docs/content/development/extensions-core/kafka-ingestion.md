@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -104,7 +123,7 @@ A sample supervisor spec is shown below:
 |Field|Description|Required|
 |--------|-----------|---------|
 |`type`|The supervisor type, this should always be `kafka`.|yes|
-|`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [Ingestion Spec](../../ingestion/index.html).|yes|
+|`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [Ingestion Spec DataSchema](../../ingestion/ingestion-spec.html#dataschema).|yes|
 |`tuningConfig`|A KafkaSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
 |`ioConfig`|A KafkaSupervisorIOConfig to configure the supervisor and indexing tasks, see below.|yes|
 
@@ -117,11 +136,12 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`type`|String|The indexing task type, this should always be `kafka`.|yes|
 |`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists). Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|no (default == 1000000)|
 |`maxBytesInMemory`|Long|The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally this is computed internally and user does not need to set it. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists).  |no (default == One-sixth of max JVM memory)|
-|`maxRowsPerSegment`|Integer|The number of rows to aggregate into a segment; this number is post-aggregation rows. Handoff will happen either if `maxRowsPerSegment` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == 5000000)|
+|`maxRowsPerSegment`|Integer|The number of rows to aggregate into a segment; this number is post-aggregation rows. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == 5000000)|
+|`maxTotalRows`|Long|The number of rows to aggregate across all segments; this number is post-aggregation rows. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == unlimited)|
 |`intermediatePersistPeriod`|ISO8601 Period|The period that determines the rate at which intermediate persists occur.|no (default == PT10M)|
 |`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|no (default == 0, meaning one persist can be running concurrently with ingestion, and none can be queued up)|
 |`indexSpec`|Object|Tune how data is indexed, see 'IndexSpec' below for more details.|no|
-|`reportParseExceptions`|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|no (default == false)|
+|`reportParseExceptions`|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
 |`handoffConditionTimeout`|Long|Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.|no (default == 0)|
 |`resetOffsetAutomatically`|Boolean|Whether to reset the consumer offset if the next offset that it is trying to fetch is less than the earliest available offset for that particular partition. The consumer offset will be reset to either the earliest or latest offset depending on `useEarliestOffset` property of `KafkaSupervisorIOConfig` (see below). This situation typically occurs when messages in Kafka are no longer available for consumption and therefore won't be ingested into Druid. If set to false then ingestion for that particular partition will halt and manual intervention is required to correct the situation, please see `Reset Supervisor` API below.|no (default == false)|
 |`workerThreads`|Integer|The number of threads that will be used by the supervisor for asynchronous operations.|no (default == min(10, taskCount))|
@@ -130,8 +150,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`httpTimeout`|ISO8601 Period|How long to wait for a HTTP response from an indexing task.|no (default == PT10S)|
 |`shutdownTimeout`|ISO8601 Period|How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|no (default == PT80S)|
 |`offsetFetchPeriod`|ISO8601 Period|How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and calculate lag.|no (default == PT30S, min == PT5S)|
-|`segmentWriteOutMediumFactory`|String|Segment write-out medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "SegmentWriteOutMediumFactory" section for explanation and available options.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used)|
-|`intermediateHandoffPeriod`|ISO8601 Period|How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == P2147483647D)|
+|`segmentWriteOutMediumFactory`|String|Segment write-out medium to use when creating segments. See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../../configuration/index.html#segmentwriteoutmediumfactory) for explanation and available options.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used)|
+|`intermediateHandoffPeriod`|ISO8601 Period|How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == P2147483647D)|
+|`logParseExceptions`|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|no, default == false|
+|`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|no, unlimited default|
+|`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../../ingestion/reports.html). Overridden if `reportParseExceptions` is set.|no, default == 0|
 
 #### IndexSpec
 
@@ -162,7 +185,7 @@ For Roaring bitmaps:
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`topic`|String|The Kafka topic to read from. This must be a specific topic as topic patterns are not supported.|yes|
-|`consumerProperties`|Map<String, String>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.|yes|
+|`consumerProperties`|Map<String, Object>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`. For SSL connections, the `keystore`, `truststore` and `key` passwords can be provided as a [Password Provider](../../operations/password-provider.html) or String password.|yes|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKafkaPartitions}`.|no (default == 1)|
 |`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
@@ -171,19 +194,30 @@ For Roaring bitmaps:
 |`useEarliestOffset`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting offsets from Kafka. This flag determines whether it retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
 |`completionTimeout`|ISO8601 Period|The length of time to wait before declaring a publishing task as failed and terminating it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|no (default == PT30M)|
 |`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
-|`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped.|no (default == none)|
+|`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
 |`skipOffsetGaps`|Boolean|Whether or not to allow gaps of missing offsets in the Kafka stream. This is required for compatibility with implementations such as MapR Streams which does not guarantee consecutive offsets. If this is false, an exception will be thrown if offsets are not consecutive.|no (default == false)|
 
-## Supervisor API
+## Operations
 
-The following endpoints are available on the Overlord:
+This section gives descriptions of how some supervisor APIs work specifically in Kafka Indexing Service.
+For all supervisor APIs, please check [Supervisor APIs](../../operations/api-reference.html#supervisors).
 
-#### Create Supervisor
-```
-POST /druid/indexer/v1/supervisor
-```
-Use `Content-Type: application/json` and provide a supervisor spec in the request body.
+### Getting Supervisor Status Report
 
+`GET /druid/indexer/v1/supervisor/<supervisorId>/status` returns a snapshot report of the current state of the tasks managed by the given supervisor. This includes the latest
+offsets as reported by Kafka, the consumer lag per partition, as well as the aggregate lag of all partitions. The
+consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
+response from Kafka. The aggregate lag value will always be >= 0.
+
+### Getting Supervisor Ingestion Stats Report
+
+`GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
+
+See [Task Reports: Row Stats](../../ingestion/reports.html#row-stats) for more information.
+
+### Updating Existing Supervisors
+
+`POST /druid/indexer/v1/supervisor` can be used to update existing supervisor spec.
 Calling this endpoint when there is already an existing supervisor for the same dataSource will cause:
 
 - The running supervisor to signal its managed tasks to stop reading and begin publishing.
@@ -193,49 +227,17 @@ existing publishing tasks and will create new tasks starting at the offsets the 
 
 Seamless schema migrations can thus be achieved by simply submitting the new schema using this endpoint.
 
-#### Shutdown Supervisor
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown
-```
-Note that this will cause all indexing tasks managed by this supervisor to immediately stop and begin publishing their segments.
+### Suspending and Resuming Supervisors
 
-#### Get Supervisor IDs
-```
-GET /druid/indexer/v1/supervisor
-```
-Returns a list of the currently active supervisors.
+You can suspend and resume a supervisor using `POST /druid/indexer/v1/supervisor/<supervisorId>/suspend` and `POST /druid/indexer/v1/supervisor/<supervisorId>/resume`, respectively.
 
-#### Get Supervisor Spec
-```
-GET /druid/indexer/v1/supervisor/<supervisorId>
-```
-Returns the current spec for the supervisor with the provided ID.
+Note that the supervisor itself will still be operating and emitting logs and metrics,
+it will just ensure that no indexing tasks are running until the supervisor is resumed.
 
-#### Get Supervisor Status Report
-```
-GET /druid/indexer/v1/supervisor/<supervisorId>/status
-```
-Returns a snapshot report of the current state of the tasks managed by the given supervisor. This includes the latest
-offsets as reported by Kafka, the consumer lag per partition, as well as the aggregate lag of all partitions. The
-consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
-response from Kafka. The aggregate lag value will always be >= 0.
+### Resetting Supervisors
 
-#### Get All Supervisor History
-```
-GET /druid/indexer/v1/supervisor/history
-```
-Returns an audit history of specs for all supervisors (current and past).
+To reset a running supervisor, you can use `POST /druid/indexer/v1/supervisor/<supervisorId>/reset`.
 
-#### Get Supervisor History
-```
-GET /druid/indexer/v1/supervisor/<supervisorId>/history
-```
-Returns an audit history of specs for the supervisor with the provided ID.
-
-#### Reset Supervisor
-```
-POST /druid/indexer/v1/supervisor/<supervisorId>/reset
-```
 The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
 guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
 generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
@@ -250,7 +252,16 @@ and re-create any active tasks so that tasks begin reading from valid offsets.
 Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
 may cause some Kafka messages to be skipped or to be read twice.
 
-## Capacity Planning
+### Terminating Supervisors
+
+`POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` terminates a supervisor and causes all associated indexing
+tasks managed by this supervisor to immediately stop and begin
+publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved
+with the supervisor history api, but will not be listed in the 'get supervisors' api response nor can it's configuration
+or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
+spec to the create api.
+
+### Capacity Planning
 
 Kafka indexing tasks run on middle managers and are thus limited by the resources available in the middle manager
 cluster. In particular, you should make sure that you have sufficient worker capacity (configured using the
@@ -281,7 +292,7 @@ time-to-publish (generate segment, push to deep storage, loaded on historical) >
 scenario (correctness-wise) but requires additional worker capacity to support. In general, it is a good idea to have
 `taskDuration` be large enough that the previous set of tasks finishes publishing before the current set begins.
 
-## Supervisor Persistence
+### Supervisor Persistence
 
 When a supervisor spec is submitted via the `POST /druid/indexer/v1/supervisor` endpoint, it is persisted in the
 configured metadata database. There can only be a single supervisor per dataSource, and submitting a second spec for
@@ -300,7 +311,7 @@ shuts down the currently running supervisor. When a supervisor is shut down in t
 managed tasks to stop reading and begin publishing their segments immediately. The call to the shutdown endpoint will
 return after all tasks have been signalled to stop but before the tasks finish publishing their segments.
 
-## Schema/Configuration Changes
+### Schema/Configuration Changes
 
 Schema and configuration changes are handled by submitting the new supervisor spec via the same
 `POST /druid/indexer/v1/supervisor` endpoint used to initially create the supervisor. The overlord will initiate a
@@ -309,15 +320,15 @@ and begin publishing their segments. A new supervisor will then be started which
 will start reading from the offsets where the previous now-publishing tasks left off, but using the updated schema.
 In this way, configuration changes can be applied without requiring any pause in ingestion.
 
-## Deployment Notes
+### Deployment Notes
 
-### On the Subject of Segments
+#### On the Subject of Segments
 
 Each Kafka Indexing Task puts events consumed from Kafka partitions assigned to it in a single segment for each segment
-granular interval until maxRowsPerSegment or intermediateHandoffPeriod limit is reached, at this point a new partition
+granular interval until maxRowsPerSegment, maxTotalRows or intermediateHandoffPeriod limit is reached, at this point a new partition
 for this segment granularity is created for further events. Kafka Indexing Task also does incremental hand-offs which
-means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment
-or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
+means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment,
+maxTotalRows or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
 and new set of segments will be created for further events. This means that the task can run for longer durations of time
 without accumulating old segments locally on Middle Manager nodes and it is encouraged to do so.
 
@@ -327,4 +338,4 @@ events for the interval 13:00 - 14:00 may be split across previous and new set o
 one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
 Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.html).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
-Hadoop (see [here](https://github.com/druid-io/druid/pull/5102)).
+Hadoop (see [here](https://github.com/apache/incubator-druid/pull/5102)).

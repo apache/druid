@@ -1,18 +1,37 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 # How to Contribute
 
 When submitting a pull request (PR), please use the following guidelines:
 
 - Make sure your code respects existing formatting conventions. In general, follow
   the same coding style as the code that you are modifying.
-- For Intellij you can import our code style settings xml: [druid_intellij_formatting.xml](https://github.com/druid-io/druid/raw/master/druid_intellij_formatting.xml).
-- For Eclipse you can import our code style settings xml: [eclipse_formatting.xml](https://github.com/druid-io/druid/raw/master/eclipse_formatting.xml).
+- For Intellij you can import our code style settings xml: [druid_intellij_formatting.xml](https://github.com/apache/incubator-druid/raw/master/druid_intellij_formatting.xml).
+- For Eclipse you can import our code style settings xml: [eclipse_formatting.xml](https://github.com/apache/incubator-druid/raw/master/eclipse_formatting.xml).
 - Do add/update documentation appropriately for the change you are making.
 - If you are introducing a new feature you may want to first write about your idea
   for feedback to [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org).
   Non-trivial features should include unit tests covering the new functionality.
 - Bugfixes should include a unit test or integration test reproducing the issue.
 - Do not use author tags/information in the code.
-- Always include license header on each java file your create. See [this example](https://github.com/druid-io/druid/blob/master/common/src/main/java/io/druid/metadata/PasswordProvider.java)
+- Always include license header on each java file your create. See [this example](https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/metadata/PasswordProvider.java)
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
 - Keep the number of commits small and combine commits for related changes.
@@ -22,9 +41,9 @@ When submitting a pull request (PR), please use the following guidelines:
 
 ## GitHub Workflow
 
-1. Fork the druid-io/druid repository into your GitHub account
+1. Fork the apache/incubator-druid repository into your GitHub account
 
-    https://github.com/druid-io/druid/fork
+    https://github.com/apache/incubator-druid/fork
 
 1. Clone your fork of the GitHub repository
 
@@ -37,7 +56,7 @@ When submitting a pull request (PR), please use the following guidelines:
 1. Add a remote to keep up with upstream changes
 
     ```
-    git remote add upstream https://github.com/druid-io/druid.git
+    git remote add upstream https://github.com/apache/incubator-druid.git
     ```
 
     If you already have a copy, fetch upstream changes
@@ -84,7 +103,7 @@ When submitting a pull request (PR), please use the following guidelines:
     If you recently pushed your changes GitHub will automatically pop up a
     `Compare & pull request` button for any branches you recently pushed to. If you
     click that button it will automatically offer you to submit your pull-request
-    to the druid-io/druid repository.
+    to the apache/incubator-druid repository.
 
     - Give your pull-request a meaningful title.
     - In the description, explain your changes and the problem they are solving.

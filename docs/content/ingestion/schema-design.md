@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -33,7 +52,7 @@ See [Dimension Schema](../ingestion/index.html#dimension-schema) for more inform
 ## High cardinality dimensions (e.g. unique IDs)
 
 In practice, we see that exact counts for unique IDs are often not required. Storing unique IDs as a column will kill 
-[roll-up](../design/index.html), and impact compression. Instead, storing a sketch of the number of the unique IDs seen, and using that 
+[roll-up](../ingestion/index.html#rollup), and impact compression. Instead, storing a sketch of the number of the unique IDs seen, and using that 
 sketch as part of aggregations, will greatly improve performance (up to orders of magnitude performance improvement), and significantly reduce storage. 
 Druid's `hyperUnique` aggregator is based off of Hyperloglog and can be used for unique counts on a high cardinality dimension. 
 For more information, see [here](https://www.youtube.com/watch?v=Hpd3f_MLdXo).
@@ -52,6 +71,8 @@ then before indexing it, you should transform it to:
 ```
 {"foo_bar": 3}
 ```
+
+Druid is capable of flattening JSON input data, please see [Flatten JSON](../ingestion/flatten-json.html) for more details.
 
 ## Counting the number of ingested events
 
@@ -83,7 +104,7 @@ You should query for the number of ingested rows with:
 ## Schema-less dimensions
 
 If the `dimensions` field is left empty in your ingestion spec, Druid will treat every column that is not the timestamp column, 
-a dimension that has been excluded, or a metric column as a dimension. It should be noted that because of [#658](https://github.com/druid-io/druid/issues/658) 
+a dimension that has been excluded, or a metric column as a dimension. It should be noted that because of [#658](https://github.com/apache/incubator-druid/issues/658) 
 these segments will be slightly larger than if the list of dimensions was explicitly specified in lexicographic order. This limitation 
 does not impact query correctness- just storage requirements.
 

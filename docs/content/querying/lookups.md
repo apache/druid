@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -332,7 +351,7 @@ The return value will be the json representation of the factory.
 ```
 
 # Configuration
-See the [coordinator configuration guide](../configuration/coordinator.html) for coordinator configuration.
+See [Lookups Dynamic Configuration](../configuration/index.html#lookups-dynamic-configuration) for coordinator configuration.
 
 To configure a Broker / Router / Historical / Peon to announce itself as part of a lookup tier, use the `druid.zk.paths.lookupTier` property.
 
@@ -361,6 +380,7 @@ It is possible to save the configuration across restarts such that a node will n
 |`druid.lookup.numLookupLoadingThreads`|Number of threads for loading the lookups in parallel on startup. This thread pool is destroyed once startup is done. It is not kept during the lifetime of the JVM|Available Processors / 2|
 |`druid.lookup.coordinatorFetchRetries`|How many times to retry to fetch the lookup bean list from coordinator, during the sync on startup.|3|
 |`druid.lookup.lookupStartRetries`|How many times to retry to start each lookup, either during the sync on startup, or during the runtime.|3|
+|`druid.lookup.coordinatorRetryDelay`|How long to delay (in millis) between retries to fetch lookup list from the coordinator during the sync on startup.|60_000|
 
 ## Introspect a Lookup
 

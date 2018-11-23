@@ -180,7 +180,7 @@
   "jvm/mem/used": [],
   "jvm/mem/committed": [],
   "jvm/gc/count": [],
-  "jvm/gc/time": [],
+  "jvm/gc/cpu": [],
   "ingest/events/buffered": [
     "dataSource"
   ],

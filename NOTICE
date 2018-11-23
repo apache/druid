@@ -1,7 +1,8 @@
-Druid - a distributed column store.
-Copyright 2012-2016 Metamarkets Group Inc.
-Copyright 2015-2016 Yahoo! Inc.
-Copyright 2015-2016 Imply Data, Inc.
+Apache Druid (incubating)
+Copyright 2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
 
 -------------------------------------------------------------------------------
 
@@ -11,7 +12,7 @@ This product contains a modified version of Andrew Duffy's java-alphanum library
   * HOMEPAGE:
     * https://github.com/amjjd/java-alphanum
 
-This product contains conjunctive normal form conversion code and a variance aggregator algorithm adapted from Apache Hive
+This product contains conjunctive normal form conversion code, a variance aggregator algorithm, and bloom filter adapted from Apache Hive
   * LICENSE:
     * https://github.com/apache/hive/blob/branch-2.0/LICENSE (Apache License, Version 2.0)
   * HOMEPAGE:
@@ -83,3 +84,11 @@ This product contains code adapted from Apache Hadoop
     * https://github.com/apache/hadoop/blob/trunk/LICENSE.txt (Apache License, Version 2.0)
   * HOMEPAGE:
     * http://hadoop.apache.org/
+
+This product contains modified versions of the Dockerfile and related configuration files from SequenceIQ's Hadoop Docker image:
+  * LICENSE:
+    * https://github.com/sequenceiq/hadoop-docker/blob/master/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/sequenceiq/hadoop-docker/
+  * COMMIT TAG:
+    * update this when this patch is committed

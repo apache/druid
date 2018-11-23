@@ -1,5 +1,5 @@
 [{
-  "namespace": "io.druid.data.input",
+  "namespace": "org.apache.druid.data.input",
 	"name": "SomeAvroDatum",
 	"type": "record",
 	"fields" : [

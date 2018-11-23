@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  ~ Licensed to Metamarkets Group Inc. (Metamarkets) under one
+  ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
-  ~ regarding copyright ownership.  Metamarkets licenses this file
+  ~ regarding copyright ownership.  The ASF licenses this file
   ~ to you under the Apache License, Version 2.0 (the
   ~ "License"); you may not use this file except in compliance
   ~ with the License.  You may obtain a copy of the License at
@@ -23,26 +23,26 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.druid.extensions.contrib</groupId>
+    <groupId>org.apache.druid.extensions.contrib</groupId>
     <artifactId>druid-redis-cache</artifactId>
     <name>druid-redis-cache</name>
 
     <parent>
-        <groupId>io.druid</groupId>
+        <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.13.0-SNAPSHOT</version>
+        <version>0.13.0-incubating-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <dependencies>
         <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>druid-api</artifactId>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-server</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>

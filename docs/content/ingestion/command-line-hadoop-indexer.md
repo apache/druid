@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -7,7 +26,7 @@ layout: doc_page
 To run:
 
 ```
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_dir> io.druid.cli.Main index hadoop <spec_file>
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_dir> org.apache.druid.cli.Main index hadoop <spec_file>
 ```
 
 ## Options
@@ -17,8 +36,9 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop
 
 ## Spec file
 
-The spec file needs to contain a JSON object where the contents are the same as the "spec" field in the Hadoop index task. 
-In addition, the following fields need to be added to the ioConfig:
+The spec file needs to contain a JSON object where the contents are the same as the "spec" field in the Hadoop index task. See [Hadoop Batch Ingestion](../ingestion/hadoop.html) for details on the spec format. 
+
+In addition, a `metadataUpdateSpec` and `segmentOutputPath` field needs to be added to the ioConfig:
 
 ```
       "ioConfig" : {
@@ -34,7 +54,7 @@ In addition, the following fields need to be added to the ioConfig:
       },
 ```    
 
-and the following field need to be added to the tuningConfig:
+and a `workingPath` field needs to be added to the tuningConfig:
 
 ```
   "tuningConfig" : {

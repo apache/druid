@@ -31,6 +31,7 @@
       "parser": {
         "type": "map",
         "parseSpec": {
+          "format": "tsv",
           "columns": [
             "timestamp",
             "page",

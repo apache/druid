@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -8,9 +27,14 @@ Druid Redis Cache
 A cache implementation for Druid based on [Redis](https://github.com/antirez/redis).
 
 # Configuration
-Below are the configuration options known to this module:
+Below are the configuration options known to this module.
 
-|`runtime.properties`|Description|Default|Required|
+Note that just adding these properties does not enable the cache. You still need to add the `druid.<nodetype>.cache.useCache` and `druid.<nodetype>.cache.populateCache` properties for the nodes you want to enable the cache on as described in the [cache configuration docs](../../configuration/index.html#cache-configuration).
+
+A possible configuration would be to keep the properties below in your `common.runtime.properties` file (present on all nodes) and then add `druid.<nodetype>.cache.useCache` and `druid.<nodetype>.cache.populateCache` in the `runtime.properties` file of the node types you want to enable caching on.
+
+
+|`common.runtime.properties`|Description|Default|Required|
 |--------------------|-----------|-------|--------|
 |`druid.cache.host`|Redis server host|None|yes|
 |`druid.cache.port`|Redis server port|None|yes|

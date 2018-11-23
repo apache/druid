@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -10,7 +29,7 @@ This extension adds:
 
 Make sure to [include](../../operations/including-extensions.html) `druid-basic-security` as an extension.
 
-Please see [Authentication and Authorization](../../configuration/auth.html) for more information on the extension interfaces being implemented.
+Please see [Authentication and Authorization](../../design/auth.html) for more information on the extension interfaces being implemented.
 
 ## Configuration
 
@@ -53,8 +72,8 @@ The configuration examples in the rest of this document will use "MyBasicAuthent
 #### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.authenticator.MyBasicAuthenticator.initialAdminPassword`|Initial password for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will affect its password.|null|No|
-|`druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword`|Initial password for the default internal system user, used for internal node communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.html) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.html) for the default internal system user, used for internal node communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.enableCacheNotifications`|If true, the coordinator will notify Druid nodes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
 |`druid.auth.authenticator.MyBasicAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
@@ -74,7 +93,7 @@ druid.escalator.authorizerName=MyBasicAuthorizer
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
 |`druid.escalator.internalClientUsername`|The escalator will use this username for requests made as the internal systerm user.|n/a|Yes|
-|`druid.escalator.internalClientPassword`|The escalator will use this password for requests made as the internal system user.|n/a|Yes|
+|`druid.escalator.internalClientPassword`|The escalator will use this [Password Provider](../../operations/password-provider.html) for requests made as the internal system user.|n/a|Yes|
 |`druid.escalator.authorizerName`|Authorizer that requests should be directed to.|n/a|Yes|
 
 
@@ -252,7 +271,8 @@ There are two possible resource names for the "CONFIG" resource type, "CONFIG" a
 
 |Endpoint|Node Type|
 |--------|---------|
-|`/druid/coordinator/v1/security`|coordinator|
+|`/druid-ext/basic-security/authentication`|coordinator|
+|`/druid-ext/basic-security/authorization`|coordinator|
 
 ### STATE
 There is only one possible resource name for the "STATE" config resource type, "STATE". Granting a user access to STATE resources allows them to access the following endpoints.
@@ -283,6 +303,12 @@ There is only one possible resource name for the "STATE" config resource type, "
 |`/druid-internal/v1/segments/`|realtime|
 |`/status`|all nodes|
 
+### HTTP methods
+
+For information on what HTTP methods are supported on a particular request endpoint, please refer to the [API documentation](../../operations/api-reference.html).
+
+GET requires READ permission, while POST and DELETE require WRITE permission.
+
 ## Configuration Propagation
 
 To prevent excessive load on the coordinator, the Authenticator and Authorizer user/role database state is cached on each Druid node.
@@ -292,4 +318,3 @@ Each node will periodically poll the coordinator for the latest database state, 
 When a configuration update occurs, the coordinator can optionally notify each node with the updated database state. This behavior is controlled by the `enableCacheNotifications` and `cacheNotificationTimeout` properties on Authenticators and Authorizers.
 
 Note that because of the caching, changes made to the user/role database may not be immediately reflected at each Druid node.
-

@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 Integration Testing 
 ===================
 
@@ -43,7 +62,10 @@ Set the docker environment:
 ```
 eval "$(docker-machine env integration)"
 export DOCKER_IP=$(docker-machine ip integration)
+export DOCKER_MACHINE_IP=$(docker-machine inspect integration | jq -r .Driver[\"HostOnlyCIDR\"])
 ```
+
+The final command uses the `jq` tool to read the Driver->HostOnlyCIDR field from the `docker-machine inspect` output. If you don't wish to install `jq`, you will need to set DOCKER_MACHINE_IP manually.
 
 ## Running tests
 
@@ -150,7 +172,7 @@ export CLASSPATH=$TDIR/dependency/*:$TDIR/druid-integration-tests-$VER.jar:$TDIR
 ### Run the test
 
 ```
-java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.test.config.type=configFile -Ddruid.test.config.configFile=<pathname of configuration file> org.testng.TestNG -testrunfactory org.testng.DruidTestRunnerFactory -testclass io.druid.tests.hadoop.ITHadoopIndexTest
+java -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.test.config.type=configFile -Ddruid.test.config.configFile=<pathname of configuration file> org.testng.TestNG -testrunfactory org.testng.DruidTestRunnerFactory -testclass org.apache.druid.tests.hadoop.ITHadoopIndexTest
 ```
 
 Writing a New Test

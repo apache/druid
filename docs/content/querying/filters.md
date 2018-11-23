@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -212,6 +231,8 @@ The grammar for a IN filter is as follows:
 ```
 
 The IN filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+
+If an empty `values` array is passed to the IN filter, it will simply return an empty result.
 
 ### Like filter
 
@@ -434,9 +455,9 @@ Filtering on a range of values, `10 <= myFloatColumn < 20`:
   "type": "bound",
   "dimension": "myFloatColumn",
   "ordering": "numeric",
-  "lowerBound": "10",
+  "lower": "10",
   "lowerStrict": false,
-  "upperBound": "20",
+  "upper": "20",
   "upperStrict": true
 }
 ```
@@ -488,10 +509,10 @@ Filtering on a set of ISO 8601 intervals:
 }
 ```
 
-
-### Noop Filter
-The noop filter is a filter which applies no conditions to your query.  Useful if you need to disable other filters when queries are generated programatically. 
+### True Filter
+The true filter is a filter which matches all values.  It can be used to temporarily disable other filters without removing the filter. 
 
 ```json
-{ "type" : "noop" }
+
+{ "type" : "true" }
 ```
