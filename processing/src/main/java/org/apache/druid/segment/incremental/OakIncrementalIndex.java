@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.oath.oak.OakIterator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -34,7 +35,6 @@ import com.oath.oak.OakMapBuilder;
 import com.oath.oak.OakTransformView;
 import com.oath.oak.OakBufferView;
 import com.oath.oak.OakRBuffer;
-import com.oath.oak.OakCloseableIterator;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -169,10 +169,11 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
       }
     };
 
-    OakMap tmpOakMap = descending ? oak.descendingMap() : oak;
 
-    try (OakTransformView transformView = tmpOakMap.createTransformView(transformer)) {
-      OakCloseableIterator<Row> valuesIterator = transformView.entriesIterator();
+
+    try (OakMap<IncrementalIndexRow, Row> tmpOakMap = descending ? oak.descendingMap() : oak;
+         OakTransformView<IncrementalIndexRow, Row> transformView = tmpOakMap.createTransformView(transformer)) {
+      OakIterator<Row> valuesIterator = transformView.entriesIterator();
       return () -> Iterators.transform(
           valuesIterator,
           row -> row
@@ -326,7 +327,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
     try (OakMap subMap = oak.subMap(from, true, to, false, descending);
          OakBufferView bufferView = subMap.createBufferView()) {
 
-      OakCloseableIterator<OakRBuffer> keysIterator = bufferView.keysIterator();
+      OakIterator<OakRBuffer> keysIterator = bufferView.keysIterator();
       return () -> Iterators.transform(
           keysIterator,
           oakRBuffer -> new OakIncrementalIndexRow(oakRBuffer, dimensionDescsList)
@@ -340,7 +341,7 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
   @Override
   public Iterable<IncrementalIndexRow> keySet()
   {
-    OakCloseableIterator<IncrementalIndexRow> keysIterator = oak.keysIterator();
+    OakIterator<IncrementalIndexRow> keysIterator = oak.keysIterator();
 
     return new Iterable<IncrementalIndexRow>() {
       @Override
