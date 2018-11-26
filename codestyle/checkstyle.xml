@@ -221,6 +221,7 @@
     </module>
 
     <module name="Regexp">
+      <property name="id" value="argumentLineBreaking"/>
       <property
           name="format"
           value='(?&lt;!ImmutableMap.of|Types.mapOf|orderedMap|makeSelectResults|makeListOfPairs)\(\s*\n +([^,\n\(\{"&lt;/]+|[^,\n\(\{" /]+&gt; [a-zA-Z0-9_]+)\, ++[^,\n/]+'
@@ -276,6 +277,13 @@ that the code is formatted correctly. Fix it anyway.&#10;
 If you encouter a map-like or a pair-accepting method that is reported by this&#10;
 checkstyle rule, you should add it as an exception in the corresponding rule in&#10;
 codestyle/checkstyle.xml.&#10;"/>
+    </module>
+
+    <module name="Regexp">
+      <property name="id" value="duplicateLine"/>
+      <property name="format" value="^(.*;)(\r?\n\1)+$"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Duplicate line"/>
     </module>
   </module>
 </module>

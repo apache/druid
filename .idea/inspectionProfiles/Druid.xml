@@ -29,6 +29,11 @@
     <inspection_tool class="Contract" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CopyConstructorMissesField" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CovariantEquals" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="DuplicateBooleanBranch" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="DuplicateCondition" enabled="true" level="ERROR" enabled_by_default="true">
+      <option name="ignoreSideEffectConditions" value="true" />
+    </inspection_tool>
+    <inspection_tool class="DuplicateThrows" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EmptyInitializer" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EmptyStatementBody" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="m_reportEmptyBlocks" value="true" />
@@ -71,6 +76,7 @@
     <inspection_tool class="InvalidComparatorMethodReference" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="JsonDuplicatePropertyKeys" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="LengthOneStringInIndexOf" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ListIndexOfReplaceableByContains" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -80,6 +86,8 @@
     </inspection_tool>
     <inspection_tool class="MalformedRegex" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MathRandomCastToInt" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="MavenDuplicateDependenciesInspection" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="MavenDuplicatePluginInspection" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MavenModelInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MismatchedArrayReadWrite" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MismatchedCollectionQueryUpdate" enabled="true" level="ERROR" enabled_by_default="true">
