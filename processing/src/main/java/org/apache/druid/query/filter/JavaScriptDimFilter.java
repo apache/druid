@@ -30,10 +30,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.JavaScriptFilter;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 
@@ -44,8 +47,14 @@ public class JavaScriptDimFilter implements DimFilter
   private final ExtractionFn extractionFn;
   private final JavaScriptConfig config;
 
-  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
-  private JavaScriptPredicateFactory predicateFactory;
+  /**
+   * The field is declared volatile in order to ensure safe publication of the object
+   * in {@link JavaScriptPredicateFactory(String, ExtractionFn)} without worrying about final modifiers
+   * on the fields of the created object
+   */
+  @MonotonicNonNull
+  @Nullable
+  private volatile JavaScriptPredicateFactory predicateFactory;
 
   @JsonCreator
   public JavaScriptDimFilter(
@@ -115,16 +124,20 @@ public class JavaScriptDimFilter implements DimFilter
    * This class can be used by multiple threads, so this function should be thread-safe to avoid extra
    * script compilation.
    */
+  @EnsuresNonNull("predicateFactory")
   private void checkAndCreatePredicateFactory()
   {
-    if (predicateFactory == null) {
-      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+    // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+    // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
+    JavaScriptPredicateFactory syncedFnPredicateFactory = predicateFactory;
+    if (syncedFnPredicateFactory == null) {
       synchronized (config) {
-        if (predicateFactory == null) {
-          predicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
+        syncedFnPredicateFactory = predicateFactory;
+        if (syncedFnPredicateFactory == null) {
+          syncedFnPredicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
+          predicateFactory = syncedFnPredicateFactory;
         }
       }
     }

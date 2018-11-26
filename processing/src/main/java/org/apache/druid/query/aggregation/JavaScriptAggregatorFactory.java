@@ -33,12 +33,15 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -49,6 +52,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.query.aggregation.JavaScriptAggregator.ScriptAggregator;
+
 public class JavaScriptAggregatorFactory extends AggregatorFactory
 {
   private final String name;
@@ -58,8 +63,14 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   private final String fnCombine;
   private final JavaScriptConfig config;
 
-  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
-  private JavaScriptAggregator.ScriptAggregator compiledScript;
+  /**
+   * The field is declared volatile in order to ensure safe publication of the object
+   * in {@link #compileScript(String, String, String)} without worrying about final modifiers
+   * on the fields of the created object
+   */
+  @MonotonicNonNull
+  @Nullable
+  private volatile ScriptAggregator compiledScript;
 
   @JsonCreator
   public JavaScriptAggregatorFactory(
@@ -89,7 +100,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    checkAndCompileScript();
+    getCompiledScript();
     return new JavaScriptAggregator(
         fieldNames.stream().map(columnFactory::makeColumnValueSelector).collect(Collectors.toList()),
         compiledScript
@@ -99,7 +110,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    checkAndCompileScript();
+    getCompiledScript();
     return new JavaScriptBufferAggregator(
         fieldNames.stream().map(columnSelectorFactory::makeColumnValueSelector).collect(Collectors.toList()),
         compiledScript
@@ -115,7 +126,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    checkAndCompileScript();
+    getCompiledScript();
     return compiledScript.combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
@@ -135,7 +146,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        checkAndCompileScript();
+        getCompiledScript();
         combined = compiledScript.combine(combined, selector.getDouble());
       }
 
@@ -283,23 +294,28 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
    * This class can be used by multiple threads, so this function should be thread-safe to avoid extra
    * script compilation.
    */
-  private void checkAndCompileScript()
+  @EnsuresNonNull("compiledScript")
+  private ScriptAggregator getCompiledScript()
   {
-    if (compiledScript == null) {
-      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+    // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+    // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
+    ScriptAggregator syncedCompiledScript = compiledScript;
+    if (syncedCompiledScript == null) {
       synchronized (config) {
-        if (compiledScript == null) {
-          compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
+        syncedCompiledScript = compiledScript;
+        if (syncedCompiledScript == null) {
+          syncedCompiledScript = compileScript(fnAggregate, fnReset, fnCombine);
+          compiledScript = syncedCompiledScript;
         }
       }
     }
+    return syncedCompiledScript;
   }
 
   @VisibleForTesting
-  static JavaScriptAggregator.ScriptAggregator compileScript(
+  static ScriptAggregator compileScript(
       final String aggregate,
       final String reset,
       final String combine
@@ -316,7 +332,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     final Function fnCombine = context.compileFunction(scope, combine, "combine", 1, null);
     Context.exit();
 
-    return new JavaScriptAggregator.ScriptAggregator()
+    return new ScriptAggregator()
     {
       @Override
       public double aggregate(final double current, final BaseObjectColumnValueSelector[] selectorList)

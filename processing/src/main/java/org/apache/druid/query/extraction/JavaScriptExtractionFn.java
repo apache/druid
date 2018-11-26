@@ -27,6 +27,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
@@ -69,8 +71,14 @@ public class JavaScriptExtractionFn implements ExtractionFn
   private final boolean injective;
   private final JavaScriptConfig config;
 
-  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
-  private Function<Object, String> fn;
+  /**
+   * The field is declared volatile in order to ensure safe publication of the object
+   * in {@link #compile(String)} without worrying about final modifiers
+   * on the fields of the created object
+   */
+  @MonotonicNonNull
+  @Nullable
+  private volatile Function<Object, String> fn;
 
   @JsonCreator
   public JavaScriptExtractionFn(
@@ -120,16 +128,20 @@ public class JavaScriptExtractionFn implements ExtractionFn
    * {@link #apply(Object)} can be called by multiple threads, so this function should be thread-safe to avoid extra
    * script compilation.
    */
+  @EnsuresNonNull("fn")
   private void checkAndCompileScript()
   {
-    if (fn == null) {
-      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+    // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+    // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
+    Function<Object, String> syncedFn = fn;
+    if (syncedFn == null) {
       synchronized (config) {
-        if (fn == null) {
-          fn = compile(function);
+        syncedFn = fn;
+        if (syncedFn == null) {
+          syncedFn = compile(function);
+          fn = syncedFn;
         }
       }
     }
