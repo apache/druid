@@ -55,7 +55,6 @@ public class ChangeRequestsSnapshot<T>
       Preconditions.checkNotNull(resetCause, "NULL resetCause when resetCounter is true.");
     }
 
-
     this.counter = counter;
     this.requests = requests;
   }

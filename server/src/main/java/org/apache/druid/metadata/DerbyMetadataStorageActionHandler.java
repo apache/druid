@@ -91,4 +91,13 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
     }
     return sql;
   }
+
+  @Deprecated
+  @Override
+  public String getSqlRemoveLogsOlderThan()
+  {
+    return StringUtils.format("DELETE FROM %s WHERE %s_id in ("
+                              + " SELECT id FROM %s WHERE created_date < :date_time and active = false)",
+                              getLogTable(), getEntryTypeName(), getEntryTable());
+  }
 }

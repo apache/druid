@@ -116,6 +116,7 @@ public class TimeCompareBenchmark
   private int threshold;
 
   protected static final Map<String, String> scriptDoubleSum = new HashMap<>();
+
   static {
     scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
     scriptDoubleSum.put("fnReset", "function reset() { return 0 }");

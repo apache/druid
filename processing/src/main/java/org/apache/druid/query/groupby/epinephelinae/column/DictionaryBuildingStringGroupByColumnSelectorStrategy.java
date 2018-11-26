@@ -43,6 +43,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   private int nextId = 0;
   private final List<String> dictionary = new ArrayList<>();
   private final Object2IntOpenHashMap<String> reverseDictionary = new Object2IntOpenHashMap<>();
+
   {
     reverseDictionary.defaultReturnValue(-1);
   }

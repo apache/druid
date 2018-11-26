@@ -25,7 +25,6 @@ import org.junit.Assert;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.regex.Pattern;
 
 public class TestUtils
 {
@@ -41,10 +40,7 @@ public class TestUtils
     final String procMountsString = StringUtils.fromUtf8(Files.readAllBytes(procMountsTemplate.toPath()));
     Files.write(
         procMounts.toPath(),
-        StringUtils.toUtf8(procMountsString.replaceAll(
-            Pattern.quote("/sys/fs/cgroup"),
-            cgroupDir.getAbsolutePath()
-        ))
+        StringUtils.toUtf8(StringUtils.replace(procMountsString, "/sys/fs/cgroup", cgroupDir.getAbsolutePath()))
     );
 
     Assert.assertTrue(new File(

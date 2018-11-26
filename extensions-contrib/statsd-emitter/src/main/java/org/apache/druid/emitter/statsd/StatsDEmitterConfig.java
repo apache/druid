@@ -42,6 +42,8 @@ public class StatsDEmitterConfig
   private final String dimensionMapPath;
   @JsonProperty
   private final String blankHolder;
+  @JsonProperty
+  private final Boolean dogstatsd;
 
   @JsonCreator
   public StatsDEmitterConfig(
@@ -51,7 +53,8 @@ public class StatsDEmitterConfig
       @JsonProperty("separator") String separator,
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
-      @JsonProperty("blankHolder") String blankHolder
+      @JsonProperty("blankHolder") String blankHolder,
+      @JsonProperty("dogstatsd") Boolean dogstatsd
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
@@ -61,6 +64,7 @@ public class StatsDEmitterConfig
     this.includeHost = includeHost != null ? includeHost : false;
     this.dimensionMapPath = dimensionMapPath;
     this.blankHolder = blankHolder != null ? blankHolder : "-";
+    this.dogstatsd = dogstatsd != null ? dogstatsd : false;
   }
 
   @Override
@@ -90,7 +94,10 @@ public class StatsDEmitterConfig
     if (includeHost != null ? !includeHost.equals(that.includeHost) : that.includeHost != null) {
       return false;
     }
-    return dimensionMapPath != null ? dimensionMapPath.equals(that.dimensionMapPath) : that.dimensionMapPath == null;
+    if (dimensionMapPath != null ? !dimensionMapPath.equals(that.dimensionMapPath) : that.dimensionMapPath != null) {
+      return false;
+    }
+    return dogstatsd != null ? dogstatsd.equals(that.dogstatsd) : that.dogstatsd == null;
 
   }
 
@@ -104,6 +111,7 @@ public class StatsDEmitterConfig
     result = 31 * result + (includeHost != null ? includeHost.hashCode() : 0);
     result = 31 * result + (dimensionMapPath != null ? dimensionMapPath.hashCode() : 0);
     result = 31 * result + (blankHolder != null ? blankHolder.hashCode() : 0);
+    result = 31 * result + (dogstatsd != null ? dogstatsd.hashCode() : 0);
     return result;
   }
 
@@ -147,5 +155,11 @@ public class StatsDEmitterConfig
   public String getBlankHolder()
   {
     return blankHolder;
+  }
+
+  @JsonProperty
+  public Boolean getDogstatsd()
+  {
+    return dogstatsd;
   }
 }

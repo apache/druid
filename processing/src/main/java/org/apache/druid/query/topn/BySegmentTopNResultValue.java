@@ -85,7 +85,7 @@ public class BySegmentTopNResultValue extends TopNResultValue implements BySegme
     return "BySegmentTopNResultValue{" +
            "results=" + results +
            ", segmentId='" + segmentId + '\'' +
-           ", interval='" + interval.toString() + '\'' +
+           ", interval='" + interval + '\'' +
            '}';
   }
 }

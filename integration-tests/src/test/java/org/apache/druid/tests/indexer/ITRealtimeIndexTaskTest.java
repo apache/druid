@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.clients.EventReceiverFirehoseTestClient;
@@ -111,7 +112,7 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
         } else if (i == 18) { // use a time 6 seconds ago so it will be out of order
           dt = dt.minusSeconds(6);
         }
-        String event = line.replace(TIME_PLACEHOLDER, EVENT_FMT.print(dt));
+        String event = StringUtils.replace(line, TIME_PLACEHOLDER, EVENT_FMT.print(dt));
         LOG.info("sending event: [%s]\n", event);
         Collection<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
         events.add(this.jsonMapper.readValue(event, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT));

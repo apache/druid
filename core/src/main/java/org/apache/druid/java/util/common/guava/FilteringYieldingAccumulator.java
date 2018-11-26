@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common.guava;
 
 import com.google.common.base.Predicate;
+
 /**
 */
 public class FilteringYieldingAccumulator<OutType, T> extends YieldingAccumulator<OutType, T>

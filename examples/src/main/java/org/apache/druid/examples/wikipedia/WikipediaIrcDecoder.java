@@ -46,17 +46,16 @@ import java.util.zip.GZIPInputStream;
 
 class WikipediaIrcDecoder implements IrcDecoder
 {
-  static final Logger log = new Logger(WikipediaIrcDecoder.class);
+  static final Logger LOG = new Logger(WikipediaIrcDecoder.class);
 
-  final DatabaseReader geoLookup;
-
-  static final Pattern pattern = Pattern.compile(
+  private static final Pattern PATTERN = Pattern.compile(
       ".*\\x0314\\[\\[\\x0307(.+?)\\x0314\\]\\]\\x034 (.*?)\\x0310.*\\x0302(http.+?)" +
       "\\x03.+\\x0303(.+?)\\x03.+\\x03 (\\(([+-]\\d+)\\).*|.+) \\x0310(.+)\\x03.*"
   );
 
-  static final Pattern ipPattern = Pattern.compile("\\d+.\\d+.\\d+.\\d+");
-  static final Pattern shortnamePattern = Pattern.compile("#(\\w\\w)\\..*");
+  private static final Pattern IP_PATTERN = Pattern.compile("\\d+.\\d+.\\d+.\\d+");
+  private static final Pattern SHORTNAME_PATTERN = Pattern.compile("#(\\w\\w)\\..*");
+  private static final Pattern SINGLE_SPACE_PATTERN = Pattern.compile("\\s");
 
   static final List<String> dimensionList = Lists.newArrayList(
       "page",
@@ -73,6 +72,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       "city"
   );
 
+  final DatabaseReader geoLookup;
   final Map<String, Map<String, String>> namespaces;
   final String geoIpDatabase;
 
@@ -108,7 +108,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       return openDefaultGeoIpDb(geoDb);
     }
     catch (RuntimeException e) {
-      log.warn(e.getMessage() + " Attempting to re-download.", e);
+      LOG.warn(e.getMessage() + " Attempting to re-download.", e);
       if (geoDb.exists() && !geoDb.delete()) {
         throw new RuntimeException("Could not delete geo db file [" + geoDb.getAbsolutePath() + "].");
       }
@@ -127,7 +127,7 @@ class WikipediaIrcDecoder implements IrcDecoder
   {
     try {
       DatabaseReader reader = new DatabaseReader(geoDb);
-      log.info("Using geo ip database at [%s].", geoDb);
+      LOG.info("Using geo ip database at [%s].", geoDb);
       return reader;
     }
     catch (IOException e) {
@@ -142,7 +142,7 @@ class WikipediaIrcDecoder implements IrcDecoder
     }
 
     try {
-      log.info("Downloading geo ip database to [%s]. This may take a few minutes.", geoDb.getAbsolutePath());
+      LOG.info("Downloading geo ip database to [%s]. This may take a few minutes.", geoDb.getAbsolutePath());
 
       File tmpFile = File.createTempFile("druid", "geo");
 
@@ -180,23 +180,23 @@ class WikipediaIrcDecoder implements IrcDecoder
     final Map<String, String> dimensions = new HashMap<>();
     final Map<String, Float> metrics = new HashMap<>();
 
-    Matcher m = pattern.matcher(msg);
+    Matcher m = PATTERN.matcher(msg);
     if (!m.matches()) {
       throw new IllegalArgumentException("Invalid input format");
     }
 
-    Matcher shortname = shortnamePattern.matcher(channel);
+    Matcher shortname = SHORTNAME_PATTERN.matcher(channel);
     if (shortname.matches()) {
       dimensions.put("language", shortname.group(1));
     }
 
     String page = m.group(1);
-    String pageUrl = page.replaceAll("\\s", "_");
+    String pageUrl = SINGLE_SPACE_PATTERN.matcher(page).replaceAll("_");
 
     dimensions.put("page", pageUrl);
 
     String user = m.group(4);
-    Matcher ipMatch = ipPattern.matcher(user);
+    Matcher ipMatch = IP_PATTERN.matcher(user);
     boolean anonymous = ipMatch.matches();
     if (anonymous) {
       try {
@@ -209,13 +209,13 @@ class WikipediaIrcDecoder implements IrcDecoder
         dimensions.put("city", lookup.getCity().getName());
       }
       catch (UnknownHostException e) {
-        log.error(e, "invalid ip [%s]", ipMatch.group());
+        LOG.error(e, "invalid ip [%s]", ipMatch.group());
       }
       catch (IOException e) {
-        log.error(e, "error looking up geo ip");
+        LOG.error(e, "error looking up geo ip");
       }
       catch (GeoIp2Exception e) {
-        log.error(e, "error looking up geo ip");
+        LOG.error(e, "error looking up geo ip");
       }
     }
     dimensions.put("user", user);

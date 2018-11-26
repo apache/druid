@@ -68,6 +68,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.regex.Pattern;
 
 /**
  */
@@ -161,10 +162,11 @@ public class HdfsDataSegmentPusherTest
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush, true);
 
-    String matcher = ".*/foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0_[A-Za-z0-9-]{36}_index\\.zip";
+    Pattern pattern =
+        Pattern.compile(".*/foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0_[A-Za-z0-9-]{36}_index\\.zip");
     Assert.assertTrue(
         segment.getLoadSpec().get("path").toString(),
-        segment.getLoadSpec().get("path").toString().matches(matcher)
+        pattern.matcher(segment.getLoadSpec().get("path").toString()).matches()
     );
   }
 

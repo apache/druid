@@ -252,7 +252,7 @@ public class GraphiteEmitter implements Emitter
     Pattern DOT_OR_WHITESPACE = Pattern.compile("[\\s]+|[.]+");
     String sanitizedNamespace = DOT_OR_WHITESPACE.matcher(namespace).replaceAll("_");
     if (replaceSlashToDot) {
-      sanitizedNamespace = sanitizedNamespace.replace("/", ".");
+      sanitizedNamespace = sanitizedNamespace.replace('/', '.');
     }
     return sanitizedNamespace;
   }

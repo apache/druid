@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -74,11 +75,11 @@ public class SketchEstimateWithErrorBounds
   public String toString()
   {
     return "SketchEstimateWithErrorBounds{" +
-        "estimate=" + Double.toString(estimate) +
-        ", highBound=" + Double.toString(highBound) +
-        ", lowBound=" + Double.toString(lowBound) +
-        ", numStdDev=" + Integer.toString(numStdDev) +
-        "}";
+           "estimate=" + estimate +
+           ", highBound=" + highBound +
+           ", lowBound=" + lowBound +
+           ", numStdDev=" + numStdDev +
+           "}";
   }
 
   @Override

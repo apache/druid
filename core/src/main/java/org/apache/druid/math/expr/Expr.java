@@ -294,7 +294,7 @@ class UnaryMinusExpr extends UnaryExpr
   @Override
   public String toString()
   {
-    return "-" + expr.toString();
+    return "-" + expr;
   }
 }
 
@@ -321,7 +321,7 @@ class UnaryNotExpr extends UnaryExpr
   @Override
   public String toString()
   {
-    return "!" + expr.toString();
+    return "!" + expr;
   }
 }
 

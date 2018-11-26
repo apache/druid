@@ -541,8 +541,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * @param taskId - task id to shutdown
    */
   @Override
-  public void shutdown(final String taskId)
+  public void shutdown(final String taskId, String reason)
   {
+    log.info("Shutdown [%s] because: [%s]", taskId, reason);
     if (!lifecycleLock.awaitStarted(1, TimeUnit.SECONDS)) {
       log.info("This TaskRunner is stopped or not yet started. Ignoring shutdown command for task: %s", taskId);
     } else if (pendingTasks.remove(taskId) != null) {

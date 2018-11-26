@@ -70,7 +70,7 @@ public class ExpressionVirtualColumnTest
       ImmutableMap.of("x", 2L, "y", 3L, "z", "foobar")
   );
 
-  private static final ExpressionVirtualColumn XPLUSY = new ExpressionVirtualColumn(
+  private static final ExpressionVirtualColumn X_PLUS_Y = new ExpressionVirtualColumn(
       "expr",
       "x + y",
       ValueType.FLOAT,
@@ -88,19 +88,25 @@ public class ExpressionVirtualColumnTest
       ValueType.FLOAT,
       TestExprMacroTable.INSTANCE
   );
-  private static final ExpressionVirtualColumn ZLIKE = new ExpressionVirtualColumn(
+  private static final ExpressionVirtualColumn Z_LIKE = new ExpressionVirtualColumn(
       "expr",
       "like(z, 'f%')",
       ValueType.FLOAT,
       TestExprMacroTable.INSTANCE
   );
-  private static final ExpressionVirtualColumn ZCONCATX = new ExpressionVirtualColumn(
+  private static final ExpressionVirtualColumn Z_CONCAT_X = new ExpressionVirtualColumn(
       "expr",
       "z + cast(x, 'string')",
       ValueType.STRING,
       TestExprMacroTable.INSTANCE
   );
-  private static final ExpressionVirtualColumn TIMEFLOOR = new ExpressionVirtualColumn(
+  private static final ExpressionVirtualColumn Z_CONCAT_NONEXISTENT = new ExpressionVirtualColumn(
+      "expr",
+      "concat(z, nonexistent)",
+      ValueType.STRING,
+      TestExprMacroTable.INSTANCE
+  );
+  private static final ExpressionVirtualColumn TIME_FLOOR = new ExpressionVirtualColumn(
       "expr",
       "timestamp_floor(__time, 'P1D')",
       ValueType.LONG,
@@ -116,7 +122,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testObjectSelector()
   {
-    final BaseObjectColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseObjectColumnValueSelector selector = X_PLUS_Y.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(null, selector.getObject());
@@ -139,7 +145,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testLongSelector()
   {
-    final BaseLongColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseLongColumnValueSelector selector = X_PLUS_Y.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
     if (NullHandling.replaceWithDefault()) {
@@ -166,7 +172,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testLongSelectorUsingStringFunction()
   {
-    final BaseLongColumnValueSelector selector = ZCONCATX.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseLongColumnValueSelector selector = Z_CONCAT_X.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
     if (NullHandling.replaceWithDefault()) {
@@ -201,7 +207,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testFloatSelector()
   {
-    final BaseFloatColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final BaseFloatColumnValueSelector selector = X_PLUS_Y.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
     if (NullHandling.replaceWithDefault()) {
@@ -228,7 +234,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testDimensionSelector()
   {
-    final DimensionSelector selector = XPLUSY.makeDimensionSelector(
+    final DimensionSelector selector = X_PLUS_Y.makeDimensionSelector(
         new DefaultDimensionSpec("expr", "expr"),
         COLUMN_SELECTOR_FACTORY
     );
@@ -273,7 +279,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testDimensionSelectorUsingStringFunction()
   {
-    final DimensionSelector selector = ZCONCATX.makeDimensionSelector(
+    final DimensionSelector selector = Z_CONCAT_X.makeDimensionSelector(
         new DefaultDimensionSpec("expr", "expr"),
         COLUMN_SELECTOR_FACTORY
     );
@@ -301,9 +307,42 @@ public class ExpressionVirtualColumnTest
   }
 
   @Test
+  public void testDimensionSelectorUsingNonexistentColumn()
+  {
+    final DimensionSelector selector = Z_CONCAT_NONEXISTENT.makeDimensionSelector(
+        new DefaultDimensionSpec("expr", "expr"),
+        COLUMN_SELECTOR_FACTORY
+    );
+
+    Assert.assertNotNull(selector);
+
+    CURRENT_ROW.set(ROW0);
+    Assert.assertEquals(1, selector.getRow().size());
+    Assert.assertNull(selector.lookupName(selector.getRow().get(0)));
+
+    CURRENT_ROW.set(ROW1);
+    Assert.assertEquals(1, selector.getRow().size());
+    Assert.assertNull(selector.lookupName(selector.getRow().get(0)));
+
+    CURRENT_ROW.set(ROW2);
+    Assert.assertEquals(1, selector.getRow().size());
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? "foobar" : null,
+        selector.lookupName(selector.getRow().get(0))
+    );
+
+    CURRENT_ROW.set(ROW3);
+    Assert.assertEquals(1, selector.getRow().size());
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? "foobar" : null,
+        selector.lookupName(selector.getRow().get(0))
+    );
+  }
+
+  @Test
   public void testDimensionSelectorWithExtraction()
   {
-    final DimensionSelector selector = XPLUSY.makeDimensionSelector(
+    final DimensionSelector selector = X_PLUS_Y.makeDimensionSelector(
         new ExtractionDimensionSpec("expr", "x", new BucketExtractionFn(1.0, 0.0)),
         COLUMN_SELECTOR_FACTORY
     );
@@ -407,7 +446,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testLongSelectorWithZLikeExprMacro()
   {
-    final ColumnValueSelector selector = ZLIKE.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final ColumnValueSelector selector = Z_LIKE.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(0L, selector.getLong());
@@ -425,7 +464,7 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testLongSelectorOfTimeColumn()
   {
-    final ColumnValueSelector selector = TIMEFLOOR.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
+    final ColumnValueSelector selector = TIME_FLOOR.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getLong());
@@ -447,9 +486,9 @@ public class ExpressionVirtualColumnTest
   @Test
   public void testRequiredColumns()
   {
-    Assert.assertEquals(ImmutableList.of("x", "y"), XPLUSY.requiredColumns());
+    Assert.assertEquals(ImmutableList.of("x", "y"), X_PLUS_Y.requiredColumns());
     Assert.assertEquals(ImmutableList.of(), CONSTANT_LIKE.requiredColumns());
-    Assert.assertEquals(ImmutableList.of("z"), ZLIKE.requiredColumns());
-    Assert.assertEquals(ImmutableList.of("z", "x"), ZCONCATX.requiredColumns());
+    Assert.assertEquals(ImmutableList.of("z"), Z_LIKE.requiredColumns());
+    Assert.assertEquals(ImmutableList.of("z", "x"), Z_CONCAT_X.requiredColumns());
   }
 }

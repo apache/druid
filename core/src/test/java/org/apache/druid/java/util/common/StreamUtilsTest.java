@@ -39,6 +39,7 @@ public class StreamUtilsTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
   public void testRetryExceptionOnFlush()
   {

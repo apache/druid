@@ -233,7 +233,7 @@ public class OverlordResourceTest
             new MockTaskRunnerWorkItem(tasksIds.get(1), null),
             new MockTaskRunnerWorkItem(tasksIds.get(2), null)));
 
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -259,7 +259,7 @@ public class OverlordResourceTest
         )
     );
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
-    Assert.assertTrue(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null, null).size() == 3);
+    Assert.assertTrue(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null).size() == 3);
     Assert.assertTrue(taskRunner.getRunningTasks().size() == 3);
     List<TaskStatusPlus> responseObjects = (List) overlordResource
           .getCompleteTasks(null, req).getEntity();
@@ -313,7 +313,7 @@ public class OverlordResourceTest
   {
     expectAuthorizationTokenCheck();
     //completed tasks
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_5",
@@ -403,7 +403,7 @@ public class OverlordResourceTest
   {
     expectAuthorizationTokenCheck();
     //completed tasks
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null, "allow")).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, "allow")).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_5",
@@ -667,7 +667,7 @@ public class OverlordResourceTest
   public void testGetTasksFilterCompleteState()
   {
     expectAuthorizationTokenCheck();
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -707,7 +707,7 @@ public class OverlordResourceTest
     expectAuthorizationTokenCheck();
     List<String> tasksIds = ImmutableList.of("id_1", "id_2", "id_3");
     Duration duration = new Period("PT86400S").toStandardDuration();
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, duration, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, duration, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",
@@ -747,7 +747,7 @@ public class OverlordResourceTest
   public void testGetNullCompleteTask()
   {
     expectAuthorizationTokenCheck();
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
                 "id_1",

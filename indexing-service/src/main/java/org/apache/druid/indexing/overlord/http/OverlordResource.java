@@ -330,7 +330,7 @@ public class OverlordResource
           @Override
           public Response apply(TaskQueue taskQueue)
           {
-            taskQueue.shutdown(taskid);
+            taskQueue.shutdown(taskid, "Shutdown request from user");
             return Response.ok(ImmutableMap.of("task", taskid)).build();
           }
         }
@@ -351,7 +351,7 @@ public class OverlordResource
           {
             final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
             for (final TaskInfo<Task, TaskStatus> task : tasks) {
-              taskQueue.shutdown(task.getId());
+              taskQueue.shutdown(task.getId(), "Shutdown request from user");
             }
             return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
           }
@@ -627,7 +627,7 @@ public class OverlordResource
   public Response getTasks(
       @QueryParam("state") final String state,
       @QueryParam("datasource") final String dataSource,
-      @PathParam("interval") final String interval,
+      @PathParam("createdTimeInterval") final String createdTimeInterval,
       @QueryParam("max") final Integer maxCompletedTasks,
       @QueryParam("type") final String type,
       @Context final HttpServletRequest req
@@ -692,13 +692,13 @@ public class OverlordResource
 
     //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
     if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
-      Duration duration = null;
-      if (interval != null) {
-        final Interval theInterval = Intervals.of(interval.replace("_", "/"));
-        duration = theInterval.toDuration();
+      Duration createdTimeDuration = null;
+      if (createdTimeInterval != null) {
+        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
+        createdTimeDuration = theInterval.toDuration();
       }
       final List<TaskInfo<Task, TaskStatus>> taskInfoList =
-          taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(maxCompletedTasks, duration, dataSource);
+          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
       final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
                                                               .map(completeTaskTransformFunc::apply)
                                                               .collect(Collectors.toList());

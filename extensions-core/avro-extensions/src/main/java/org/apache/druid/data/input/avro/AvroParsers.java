@@ -54,10 +54,10 @@ public class AvroParsers
 
   public static List<InputRow> parseGenericRecord(
       GenericRecord record,
-      ParseSpec parseSpec,
+      MapInputRowParser mapParser,
       ObjectFlattener<GenericRecord> avroFlattener
   )
   {
-    return new MapInputRowParser(parseSpec).parseBatch(avroFlattener.flatten(record));
+    return mapParser.parseBatch(avroFlattener.flatten(record));
   }
 }

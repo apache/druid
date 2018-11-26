@@ -97,7 +97,6 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
         "partitionIdList is null/empty"
     );
 
-
     this.clientId = clientId;
     Preconditions.checkArgument(
         clientId != null && !clientId.isEmpty(),

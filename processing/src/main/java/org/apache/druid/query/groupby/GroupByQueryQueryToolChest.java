@@ -86,6 +86,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
   private final GroupByStrategySelector strategySelector;
+  @Deprecated
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
 

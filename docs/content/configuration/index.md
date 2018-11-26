@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -45,7 +64,7 @@ This page documents all of the configuration properties for each Druid service t
         * [Autoscaler](#autoscaler)
   * [MiddleManager & Peons](#middlemanager-and-peons)
     * [Node Config](#middlemanager-node-config)
-    * [MiddleManger Configuration](#middlemanager-configuration)
+    * [MiddleManager Configuration](#middlemanager-configuration)
     * [Peon Processing](#peon-processing)
     * [Peon Query Configuration](#peon-query-configuration)
     * [Caching](#peon-caching)
@@ -525,13 +544,13 @@ If you are running the indexing service in remote mode, the task logs must be st
 |--------|-----------|-------|
 |`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
 
-You can also configure the Overlord to automatically retain the task logs only for last x milliseconds by configuring following additional properties.
+You can also configure the Overlord to automatically retain the task logs in log directory and entries in task-related metadata storage tables only for last x milliseconds by configuring following additional properties.
 Caution: Automatic log file deletion typically works based on log file modification timestamp on the backing store, so large clock skews between druid nodes and backing store nodes might result in un-intended behavior.  
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. |false|
-|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs to be retained created in last x milliseconds. |None|
+|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, overlord will submit kill tasks periodically based on `druid.indexer.logs.kill.delay` specified, which will delete task logs from the log directory as well as tasks and tasklogs table entries in metadata storage except for tasks created in the last `druid.indexer.logs.kill.durationToRetain` period. |false|
+|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs and entries in task-related metadata storage tables to be retained created in last x milliseconds. |None|
 |`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
 |`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
@@ -796,13 +815,11 @@ An example of compaction config is:
 
 ```json
 {
-  "dataSource": "wikiticker",
-  "targetCompactionSizeBytes": 800000000,
-  "skipOffsetFromLatest": "P1D"
+  "dataSource": "wikiticker"
 }
 ```
 
-For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large values to avoid frequent compact task failures.
+For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large value to avoid frequent compact task failures.
 
 ## Overlord
 
@@ -1205,7 +1222,7 @@ Druid broker can optionally retry queries internally for transient errors.
 
 #### Processing
 
-The broker uses processing configs for nested groupBy queries. And, optionally, Long-interval queries (of any type) can be broken into shorter interval queries and processed in parallel inside this thread pool. For more details, see "chunkPeriod" in [Query Context](../querying/query-context.html) doc.
+The broker uses processing configs for nested groupBy queries. And, if you use groupBy v1, long-interval queries (of any type) can be broken into shorter interval queries and processed in parallel inside this thread pool. For more details, see "chunkPeriod" in [Query Context](../querying/query-context.html) doc.
 
 |Property|Description|Default|
 |--------|-----------|-------|

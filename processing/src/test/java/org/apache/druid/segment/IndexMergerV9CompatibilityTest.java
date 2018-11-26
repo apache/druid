@@ -108,7 +108,6 @@ public class IndexMergerV9CompatibilityTest
         DIMS.get(1), "dim10"
     );
 
-
     final Map<String, Object> map3 = ImmutableMap.of(
         DIMS.get(0),
         ImmutableList.of("dim00", "dim01")

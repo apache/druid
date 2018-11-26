@@ -20,7 +20,6 @@
 package org.apache.druid.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdScalarDeserializer;
 
@@ -39,7 +38,7 @@ public class CommaListJoinDeserializer extends StdScalarDeserializer<List<String
 
   @Override
   public List<String> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-      throws IOException, JsonProcessingException
+      throws IOException
   {
     return Arrays.asList(jsonParser.getText().split(","));
   }

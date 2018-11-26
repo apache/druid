@@ -50,6 +50,7 @@ public class ITNestedQueryPushDownTest extends AbstractIndexerTest
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
+
   @Test
   public void testIndexData()
   {

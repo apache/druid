@@ -208,8 +208,8 @@ public class MaterializedViewQuery<T> implements Query<T>
   public String toString()
   {
     return "MaterializedViewQuery{" +
-        "query=" + query.toString() +
-        "}";
+           "query=" + query +
+           "}";
   }
 
   @Override

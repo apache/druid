@@ -739,7 +739,6 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
         payloadLength = length;
       }
 
-
       request.setHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json");
       request.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(payloadLength));
       request.setBody(ByteBuffer.wrap(payload, 0, payloadLength));
