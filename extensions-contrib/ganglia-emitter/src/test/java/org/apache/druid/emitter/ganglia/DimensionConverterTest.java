@@ -43,11 +43,9 @@ public class DimensionConverterTest
     ImmutableList.Builder<String> nameBuilder = new ImmutableList.Builder<>();
     nameBuilder.add(service);
     nameBuilder.add(metric);
-    Map<String, GangliaMetric> metricMap = new HashMap<>();
     SortedSet<String> dimensions = new TreeSet<>();
     dimensions.add("gcName");
     GangliaMetric ganglia = new GangliaMetric(dimensions);
-    metricMap.put("jvm/gc/count", ganglia);
     Map<String, GangliaMetric> map = new HashMap<>();
     GangliaMetric gangliaMetric = dimensionConverter.addFilteredUserDims(service, metric, userDims, nameBuilder, map);
 
