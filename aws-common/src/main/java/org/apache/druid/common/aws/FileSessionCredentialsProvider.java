@@ -34,11 +34,15 @@ import java.util.concurrent.TimeUnit;
 
 public class FileSessionCredentialsProvider implements AWSCredentialsProvider
 {
-  private final String sessionCredentialsFile;
-  private AWSSessionCredentials awsSessionCredentials;
-
   private final ScheduledExecutorService scheduler =
       Execs.scheduledSingleThreaded("FileSessionCredentialsProviderRefresh-%d");
+  private final String sessionCredentialsFile;
+
+  /**
+   * This field doesn't need to be volatile. From the Java Memory Model point of view, volatile on this field changes
+   * anything and doesn't provide any extra guarantees.
+   */
+  private AWSSessionCredentials awsSessionCredentials;
 
   public FileSessionCredentialsProvider(String sessionCredentialsFile)
   {
