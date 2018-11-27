@@ -40,7 +40,7 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider
 
   /**
    * This field doesn't need to be volatile. From the Java Memory Model point of view, volatile on this field changes
-   * anything and doesn't provide any extra guarantees.
+   * nothing and doesn't provide any extra guarantees.
    */
   private AWSSessionCredentials awsSessionCredentials;
 
