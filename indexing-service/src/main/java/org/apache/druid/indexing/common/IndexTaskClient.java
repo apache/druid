@@ -394,40 +394,32 @@ public abstract class IndexTaskClient implements AutoCloseable
       return httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
     }
     catch (Exception e) {
-      // Check it's IOException, ChannelException or InterruptedException
-      final Throwable t = throwIfPossible(e);
-      // Check it's Error or RuntimeException
-      Throwables.propagateIfPossible(t);
-      if (t == null) {
-        throw new RuntimeException(e);
-      } else {
-        throw new RuntimeException(t);
-      }
+      throw throwIfPossible(e);
     }
   }
 
   /**
    * Throws if it's possible to throw the given Throwable.
    *
-   * - If Throwable is null, this returns null.
+   * - The input throwable shouldn't be null.
    * - If Throwable is an {@link ExecutionException}, this calls itself recursively with the cause of ExecutionException.
    * - If Throwable is an {@link IOException} or a {@link ChannelException}, this simply throws it.
    * - If Throwable is an {@link InterruptedException}, this interrupts the current thread and throws a RuntimeException
    *   wrapping the InterruptedException
    * - Otherwise, this simply returns the given Throwable.
    *
-   * Note that if the given Throable is an ExecutionException, this can return the cause of ExecutionException if it's
-   * not throwable.
+   * Note that if the given Throable is an ExecutionException, this can return the cause of ExecutionException.
    */
-  @Nullable
-  private Throwable throwIfPossible(@Nullable Throwable t) throws IOException, ChannelException
+  private RuntimeException throwIfPossible(Throwable t) throws IOException, ChannelException
   {
-    if (t == null) {
-      return null;
-    }
+    Preconditions.checkNotNull(t, "Throwable shoulnd't null");
 
     if (t instanceof ExecutionException) {
-      return throwIfPossible(t.getCause());
+      if (t.getCause() != null) {
+        return throwIfPossible(t.getCause());
+      } else {
+        return new RuntimeException(t);
+      }
     }
 
     if (t instanceof IOException) {
@@ -443,7 +435,8 @@ public abstract class IndexTaskClient implements AutoCloseable
       throw new RuntimeException(t);
     }
 
-    return t;
+    Throwables.propagateIfPossible(t);
+    return new RuntimeException(t);
   }
 
   @Override
