@@ -45,7 +45,6 @@ import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
-import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -417,30 +416,7 @@ public class Expressions
           // Create a BoundRefKey that strips the extractionFn and compares __time as a number.
           final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
 
-          switch (flippedKind) {
-            case EQUALS:
-              return rhsAligned
-                     ? Bounds.interval(boundRefKey, rhsInterval)
-                     : Filtration.matchNothing();
-            case NOT_EQUALS:
-              return rhsAligned
-                     ? new NotDimFilter(Bounds.interval(boundRefKey, rhsInterval))
-                     : Filtration.matchEverything();
-            case GREATER_THAN:
-              return Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
-            case GREATER_THAN_OR_EQUAL:
-              return rhsAligned
-                     ? Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
-                     : Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
-            case LESS_THAN:
-              return rhsAligned
-                     ? Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
-                     : Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
-            case LESS_THAN_OR_EQUAL:
-              return Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
-            default:
-              throw new IllegalStateException("WTF?! Shouldn't have got here...");
-          }
+          return getBoundTimeDimFilter(flippedKind, boundRefKey, rhsInterval, rhsAligned);
         }
       }
 
@@ -492,26 +468,28 @@ public class Expressions
       }
 
       return filter;
-    } else if (kind == SqlKind.LIKE) {
-      final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-      final DruidExpression druidExpression = toDruidExpression(
-          plannerContext,
-          rowSignature,
-          operands.get(0)
-      );
-      if (druidExpression == null || !druidExpression.isSimpleExtraction()) {
+    } else if (rexNode instanceof RexCall) {
+      final SqlOperator operator = ((RexCall) rexNode).getOperator();
+
+      final SqlOperatorConversion conversion =
+          plannerContext.getOperatorTable().lookupOperatorConversion(operator);
+
+      if (conversion == null) {
         return null;
+      } else {
+        DimFilter filter = conversion.toDruidFilter(plannerContext, rowSignature, rexNode);
+        if (filter != null) {
+          return filter;
+        }
+        DruidExpression expression = conversion.toDruidExpression(plannerContext, rowSignature, rexNode);
+        if (expression != null) {
+          return new ExpressionDimFilter(expression.getExpression(), plannerContext.getExprMacroTable());
+        }
       }
-      return new LikeDimFilter(
-          druidExpression.getSimpleExtraction().getColumn(),
-          RexLiteral.stringValue(operands.get(1)),
-          operands.size() > 2 ? RexLiteral.stringValue(operands.get(2)) : null,
-          druidExpression.getSimpleExtraction().getExtractionFn()
-      );
-    } else {
-      return null;
     }
+    return null;
   }
+
 
   public static ExprType exprTypeForValueType(final ValueType valueType)
   {
@@ -600,27 +578,38 @@ public class Expressions
     // Is rhs aligned on granularity boundaries?
     final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;
 
+    return getBoundTimeDimFilter(operatorKind, boundRefKey, rhsInterval, rhsAligned);
+  }
+
+
+  private static DimFilter getBoundTimeDimFilter(
+      SqlKind operatorKind,
+      BoundRefKey boundRefKey,
+      Interval interval,
+      boolean isAligned
+  )
+  {
     switch (operatorKind) {
       case EQUALS:
-        return rhsAligned
-               ? Bounds.interval(boundRefKey, rhsInterval)
+        return isAligned
+               ? Bounds.interval(boundRefKey, interval)
                : Filtration.matchNothing();
       case NOT_EQUALS:
-        return rhsAligned
-               ? new NotDimFilter(Bounds.interval(boundRefKey, rhsInterval))
+        return isAligned
+               ? new NotDimFilter(Bounds.interval(boundRefKey, interval))
                : Filtration.matchEverything();
       case GREATER_THAN:
-        return Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+        return Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(interval.getEndMillis()));
       case GREATER_THAN_OR_EQUAL:
-        return rhsAligned
-               ? Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
-               : Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+        return isAligned
+               ? Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(interval.getStartMillis()))
+               : Bounds.greaterThanOrEqualTo(boundRefKey, String.valueOf(interval.getEndMillis()));
       case LESS_THAN:
-        return rhsAligned
-               ? Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getStartMillis()))
-               : Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+        return isAligned
+               ? Bounds.lessThan(boundRefKey, String.valueOf(interval.getStartMillis()))
+               : Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
       case LESS_THAN_OR_EQUAL:
-        return Bounds.lessThan(boundRefKey, String.valueOf(rhsInterval.getEndMillis()));
+        return Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
       default:
         throw new IllegalStateException("WTF?! Shouldn't have got here...");
     }
