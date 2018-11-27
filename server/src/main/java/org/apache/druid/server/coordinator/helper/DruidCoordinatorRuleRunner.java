@@ -143,7 +143,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
         }
       }
 
-      if (!foundMatchingRule) {
+      if (rules.size() > 0 && !foundMatchingRule) {
         if (segmentsWithMissingRules.size() < MAX_MISSING_RULES) {
           segmentsWithMissingRules.add(segment.getIdentifier());
         }
