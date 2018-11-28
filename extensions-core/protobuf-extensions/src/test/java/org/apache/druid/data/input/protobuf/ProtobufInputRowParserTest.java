@@ -83,7 +83,7 @@ public class ProtobufInputRowParserTest
     //configure parser with desc file, and specify which file name to use
     @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
-
+    parser.initDescriptor();
   }
 
 
@@ -93,7 +93,7 @@ public class ProtobufInputRowParserTest
     //configure parser with desc file, and specify which file name to use
     @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "prototest.ProtoTestEvent");
-
+    parser.initDescriptor();
   }
 
 
@@ -103,7 +103,7 @@ public class ProtobufInputRowParserTest
     //configure parser with desc file
     @SuppressWarnings("unused") // expected exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "BadName");
-
+    parser.initDescriptor();
   }
 
   @Test(expected = ParseException.class)
@@ -112,6 +112,7 @@ public class ProtobufInputRowParserTest
     //configure parser with non existent desc file
     @SuppressWarnings("unused") // expected exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "file:/nonexist.desc", "BadName");
+    parser.initDescriptor();
   }
 
   @Test
@@ -120,6 +121,7 @@ public class ProtobufInputRowParserTest
     // For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
     @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", null);
+    parser.initDescriptor();
   }
 
   @Test
