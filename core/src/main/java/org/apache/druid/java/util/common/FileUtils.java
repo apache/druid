@@ -26,13 +26,14 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.MappedByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
@@ -195,17 +196,25 @@ public class FileUtils
   {
     final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
-    try {
+    //noinspection unused
+    try (final Closeable deleter = () -> java.nio.file.Files.deleteIfExists(tmpFile.toPath())) {
       final T retVal;
 
-      try (final FileOutputStream out = new FileOutputStream(tmpFile)) {
+      try (
+          final FileChannel fileChannel = FileChannel.open(
+              tmpFile.toPath(),
+              StandardOpenOption.WRITE,
+              StandardOpenOption.CREATE_NEW
+          );
+          final OutputStream out = Channels.newOutputStream(fileChannel)
+      ) {
         // Pass f an uncloseable stream so we can fsync before closing.
         retVal = f.apply(uncloseable(out));
         out.flush();
 
         // fsync to avoid write-then-rename-then-crash causing empty files on some filesystems.
         // See also https://github.com/apache/incubator-druid/pull/5187#pullrequestreview-85188984
-        out.getChannel().force(true);
+        fileChannel.force(true);
       }
 
       // No exception thrown; do the move.
@@ -222,13 +231,6 @@ public class FileUtils
       }
 
       return retVal;
-    }
-    finally {
-      if (tmpFile.exists()) {
-        if (!tmpFile.delete()) {
-          log.warn("Could not delete tmpFile[%s]", tmpFile);
-        }
-      }
     }
   }
 
