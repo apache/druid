@@ -150,15 +150,18 @@ public abstract class DruidNodeDiscoveryProvider
             }
           }
 
-          if (!nodesAdded.isEmpty()) {
-            Collection<DiscoveryDruidNode> unmodifiableNodesAdded = Collections.unmodifiableCollection(nodesAdded);
-            for (Listener listener : listeners) {
-              try {
-                listener.nodesAdded(unmodifiableNodesAdded);
-              }
-              catch (Exception ex) {
-                log.error(ex, "Listener[%s].nodesAdded(%s) threw exception. Ignored.", listener, nodesAdded);
-              }
+          if (nodesAdded.isEmpty()) {
+            // Don't bother listeners with an empty update, it doesn't make sense.
+            return;
+          }
+
+          Collection<DiscoveryDruidNode> unmodifiableNodesAdded = Collections.unmodifiableCollection(nodesAdded);
+          for (Listener listener : listeners) {
+            try {
+              listener.nodesAdded(unmodifiableNodesAdded);
+            }
+            catch (Exception ex) {
+              log.error(ex, "Listener[%s].nodesAdded(%s) threw exception. Ignored.", listener, nodesAdded);
             }
           }
         }
@@ -178,15 +181,18 @@ public abstract class DruidNodeDiscoveryProvider
             }
           }
 
-          if (!nodesRemoved.isEmpty()) {
-            Collection<DiscoveryDruidNode> unmodifiableNodesRemoved = Collections.unmodifiableCollection(nodesRemoved);
-            for (Listener listener : listeners) {
-              try {
-                listener.nodesRemoved(unmodifiableNodesRemoved);
-              }
-              catch (Exception ex) {
-                log.error(ex, "Listener[%s].nodesRemoved(%s) threw exception. Ignored.", listener, nodesRemoved);
-              }
+          if (nodesRemoved.isEmpty()) {
+            // Don't bother listeners with an empty update, it doesn't make sense.
+            return;
+          }
+
+          Collection<DiscoveryDruidNode> unmodifiableNodesRemoved = Collections.unmodifiableCollection(nodesRemoved);
+          for (Listener listener : listeners) {
+            try {
+              listener.nodesRemoved(unmodifiableNodesRemoved);
+            }
+            catch (Exception ex) {
+              log.error(ex, "Listener[%s].nodesRemoved(%s) threw exception. Ignored.", listener, nodesRemoved);
             }
           }
         }
