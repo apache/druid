@@ -22,8 +22,8 @@ package org.apache.druid.indexing.appenderator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import java.io.IOException;
 

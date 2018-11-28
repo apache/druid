@@ -248,8 +248,10 @@ The rollup granularity is the minimum granularity you will be able to explore da
 Hence, Druid ingestion specs define this granularity as the `queryGranularity` of the data. The lowest supported `queryGranularity` is millisecond.
 
 The following links may be helpful in further understanding dimensions and metrics:
-* https://en.wikipedia.org/wiki/Dimension_(data_warehouse)
-* https://en.wikipedia.org/wiki/Measure_(data_warehouse))
+
+* [https://en.wikipedia.org/wiki/Dimension_(data_warehouse)](https://en.wikipedia.org/wiki/Dimension_(data_warehouse))
+
+* [https://en.wikipedia.org/wiki/Measure_(data_warehouse)](https://en.wikipedia.org/wiki/Measure_(data_warehouse))
 
 ### Roll-up modes
 

@@ -21,7 +21,6 @@ package org.apache.druid.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -70,8 +69,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
               DateTimeZone dateTimeZone,
               JsonGenerator jsonGenerator,
               SerializerProvider serializerProvider
-          )
-              throws IOException, JsonProcessingException
+          ) throws IOException
           {
             jsonGenerator.writeString(dateTimeZone.getID());
           }
@@ -83,7 +81,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         {
           @Override
           public void serialize(Sequence value, final JsonGenerator jgen, SerializerProvider provider)
-              throws IOException, JsonProcessingException
+              throws IOException
           {
             jgen.writeStartArray();
             value.accumulate(
@@ -113,7 +111,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         {
           @Override
           public void serialize(Yielder yielder, final JsonGenerator jgen, SerializerProvider provider)
-              throws IOException, JsonProcessingException
+              throws IOException
           {
             try {
               jgen.writeStartArray();

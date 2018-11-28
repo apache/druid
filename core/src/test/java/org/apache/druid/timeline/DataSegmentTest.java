@@ -23,13 +23,16 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import com.google.common.collect.RangeSet;
+import org.apache.druid.TestObjectMapper;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.ShardSpecLookup;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,7 +50,50 @@ import java.util.TreeSet;
  */
 public class DataSegmentTest
 {
-  private final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final int TEST_VERSION = 0x9;
+
+  private static ShardSpec getShardSpec(final int partitionNum)
+  {
+    return new ShardSpec()
+    {
+      @Override
+      public <T> PartitionChunk<T> createChunk(T obj)
+      {
+        return null;
+      }
+
+      @Override
+      public boolean isInChunk(long timestamp, InputRow inputRow)
+      {
+        return false;
+      }
+
+      @Override
+      public int getPartitionNum()
+      {
+        return partitionNum;
+      }
+
+      @Override
+      public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+      {
+        return null;
+      }
+
+      @Override
+      public List<String> getDomainDimensions()
+      {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
+      {
+        return true;
+      }
+    };
+  }
 
   @Before
   public void setUp()
@@ -72,7 +118,7 @@ public class DataSegmentTest
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
         NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
+        TEST_VERSION,
         1
     );
 
@@ -89,7 +135,7 @@ public class DataSegmentTest
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
     Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
-    Assert.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
+    Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
 
     DataSegment deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
@@ -115,7 +161,7 @@ public class DataSegmentTest
   }
 
   @Test
-  public void testId()
+  public void testIdentifier()
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
@@ -131,13 +177,13 @@ public class DataSegmentTest
   }
 
   @Test
-  public void testIdWithZeroPartition()
+  public void testIdentifierWithZeroPartition()
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
-                                           .shardSpec(new SingleDimensionShardSpec("bar", null, "abc", 0))
+                                           .shardSpec(getShardSpec(0))
                                            .build();
 
     Assert.assertEquals(
@@ -147,17 +193,17 @@ public class DataSegmentTest
   }
 
   @Test
-  public void testIdWithNonzeroPartition()
+  public void testIdentifierWithNonzeroPartition()
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
-                                           .shardSpec(new SingleDimensionShardSpec("bar", "abc", "def", 1))
+                                           .shardSpec(getShardSpec(7))
                                            .build();
 
     Assert.assertEquals(
-        "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z_1",
+        "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z_7",
         segment.getId().toString()
     );
   }

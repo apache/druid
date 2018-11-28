@@ -76,6 +76,13 @@ public interface TaskStorage
   void removeLock(String taskid, TaskLock taskLock);
 
   /**
+   * Remove the tasks created older than the given timestamp.
+   *
+   * @param timestamp timestamp in milliseconds
+   */
+  void removeTasksOlderThan(long timestamp);
+
+  /**
    * Returns task as stored in the storage facility. If the task ID does not exist, this will return an
    * absentee Optional.
    *
@@ -141,14 +148,14 @@ public interface TaskStorage
    * return nothing.
    *
    * @param maxTaskStatuses maxTaskStatuses
-   * @param duration        duration
+   * @param durationBeforeNow duration
    * @param datasource      datasource
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<Task, TaskStatus>> getRecentlyFinishedTaskInfo(
+  List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses,
-      @Nullable Duration duration,
+      @Nullable Duration durationBeforeNow,
       @Nullable String datasource
   );
 
