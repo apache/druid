@@ -2349,14 +2349,24 @@ public class KafkaSupervisor implements Supervisor
           );
         }
 
-        long lag = getLagPerPartition(highestCurrentOffsets)
-            .values()
-            .stream()
-            .mapToLong(x -> Math.max(x, 0))
-            .sum();
+        Map<Integer, Long> partitionLags = getLagPerPartition(highestCurrentOffsets);
+        long maxLag = 0, totalLag = 0, avgLag;
+        for (long lag : partitionLags.values()) {
+          if (lag > maxLag) {
+            maxLag = lag;
+          }
+          totalLag += lag;
+        }
+        avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
 
         emitter.emit(
-            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", lag)
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", totalLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/maxLag", maxLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/avgLag", avgLag)
         );
       }
       catch (Exception e) {
