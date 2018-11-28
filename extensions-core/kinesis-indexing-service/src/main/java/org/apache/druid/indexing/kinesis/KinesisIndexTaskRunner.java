@@ -32,7 +32,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -44,6 +43,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -77,11 +77,10 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   @Override
   protected String getNextSequenceNumber(
-      RecordSupplier<String, String> recordSupplier, StreamPartition<String> partition, String sequenceNumber
+      String sequenceNumber
   )
   {
-    String sequence = recordSupplier.getPosition(partition);
-    return sequence == null ? sequenceNumber : sequence;
+    return sequenceNumber;
   }
 
   @Nonnull
@@ -121,6 +120,32 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
     return KinesisSequenceNumber.of(sequenceNumber);
   }
 
+  @Override
+  protected Type getRunnerType()
+  {
+    return Type.KINESIS;
+  }
+
+  @Override
+  protected SequenceMetadata createSequenceMetaData(
+      int sequenceId,
+      String sequenceName,
+      Map<String, String> startOffsets,
+      Map<String, String> endOffsets,
+      boolean checkpointed,
+      Set<String> exclusiveStartPartitions
+  )
+  {
+    return new KinesisSequenceMetaData(
+        sequenceId,
+        sequenceName,
+        startOffsets,
+        endOffsets,
+        checkpointed,
+        exclusiveStartPartitions
+    );
+  }
+
   @Nullable
   @Override
   protected TreeMap<Integer, Map<String, String>> getCheckPointsFromContext(
@@ -140,6 +165,44 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
     } else {
       return null;
     }
+  }
+
+  private class KinesisSequenceMetaData extends SequenceMetadata
+  {
+
+    public KinesisSequenceMetaData(
+        int sequenceId,
+        String sequenceName,
+        Map<String, String> startOffsets,
+        Map<String, String> endOffsets,
+        boolean checkpointed,
+        Set<String> exclusiveStartPartitions
+    )
+    {
+      super(sequenceId, sequenceName, startOffsets, endOffsets, checkpointed, exclusiveStartPartitions);
+    }
+
+    @Override
+    protected boolean canHandle(OrderedPartitionableRecord<String, String> record)
+    {
+      lock.lock();
+      try {
+        final OrderedSequenceNumber<String> partitionEndOffset = createSequenceNumber(endOffsets.get(record.getPartitionId()));
+        final OrderedSequenceNumber<String> partitionStartOffset = createSequenceNumber(startOffsets.get(record.getPartitionId()));
+        final OrderedSequenceNumber<String> recordOffset = createSequenceNumber(record.getSequenceNumber());
+        return isOpen()
+               && recordOffset != null
+               && partitionEndOffset != null
+               && partitionStartOffset != null
+               && recordOffset.compareTo(partitionStartOffset)
+                  >= (getExclusiveStartPartitions().contains(record.getPartitionId()) ? 1 : 0)
+               && recordOffset.compareTo(partitionEndOffset) <= 0;
+      }
+      finally {
+        lock.unlock();
+      }
+    }
+
   }
 
 

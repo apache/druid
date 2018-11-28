@@ -47,6 +47,7 @@ import java.util.Objects;
 public class SeekableStreamPartitions<PartitionType, SequenceType>
 {
   public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
+  public static final String BEGINNING_SEQUENCE_NUMBER = "BEGINNING_SEQUENCE_NUMBER";
 
   // stream/topic
   private final String stream;

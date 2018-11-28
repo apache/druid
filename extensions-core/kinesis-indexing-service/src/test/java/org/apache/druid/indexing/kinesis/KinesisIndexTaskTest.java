@@ -281,6 +281,7 @@ public class KinesisIndexTaskTest
   private Long maxTotalRows = null;
   private Period intermediateHandoffPeriod = null;
   private int maxRecordsPerPoll;
+  private boolean skipAvailabilityCheck = false;
 
   private TaskToolboxFactory toolboxFactory;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
@@ -385,6 +386,7 @@ public class KinesisIndexTaskTest
     logParseExceptions = true;
     maxParseExceptions = null;
     maxSavedParseExceptions = null;
+    skipAvailabilityCheck = false;
     doHandoff = true;
     stream = getStreamName();
     reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
@@ -435,7 +437,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -473,7 +475,7 @@ public class KinesisIndexTaskTest
             stream,
             ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )
         )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -610,7 +612,7 @@ public class KinesisIndexTaskTest
         stream,
         ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 5),
+            getSequenceNumber(res, shardId1, 4),
             shardId0,
             getSequenceNumber(res, shardId0, 0)
         )
@@ -619,18 +621,18 @@ public class KinesisIndexTaskTest
         stream,
         ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 4),
+            getSequenceNumber(res, shardId1, 3),
             shardId0,
-            getSequenceNumber(res, shardId0, 2)
+            getSequenceNumber(res, shardId0, 1)
         )
     );
     final SeekableStreamPartitions<String, String> endPartitions = new SeekableStreamPartitions<>(
         stream,
         ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 10),
+            getSequenceNumber(res, shardId1, 9),
             shardId0,
-            getSequenceNumber(res, shardId0, 2)
+            getSequenceNumber(res, shardId0, 1)
         )
     );
     final KinesisIndexTask task = createTask(
@@ -696,9 +698,9 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 10),
+            getSequenceNumber(res, shardId1, 9),
             shardId0,
-            getSequenceNumber(res, shardId0, 2)
+            getSequenceNumber(res, shardId0, 1)
         ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
@@ -739,21 +741,21 @@ public class KinesisIndexTaskTest
         stream,
         ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 3)
+            getSequenceNumber(res, shardId1, 2)
         )
     );
     final SeekableStreamPartitions<String, String> checkpoint2 = new SeekableStreamPartitions<>(
         stream,
         ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 10)
+            getSequenceNumber(res, shardId1, 9)
         )
     );
     final SeekableStreamPartitions<String, String> endPartitions = new SeekableStreamPartitions<>(
         stream,
         ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 11)
+            getSequenceNumber(res, shardId1, 10)
         )
     );
 
@@ -839,7 +841,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 11)
+            getSequenceNumber(res, shardId1, 10)
         ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
@@ -852,115 +854,6 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc5));
     Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc7));
   }
-
-  @Test(timeout = 120_000L)
-  public void testTimeBasedIncrementalHandOff() throws Exception
-  {
-
-    final String baseSequenceName = "sequence0";
-    // as soon as any segment hits maxRowsPerSegment or intermediateHandoffPeriod, incremental publishing should happen
-    maxRowsPerSegment = Integer.MAX_VALUE;
-    intermediateHandoffPeriod = new Period().withSeconds(0);
-    AmazonKinesis kinesis = getKinesisClientInstance();
-    List<PutRecordsResultEntry> res = insertData(kinesis, generateRecordsRequests(stream, 0, 13));
-
-    final SeekableStreamPartitions<String, String> startPartitions = new SeekableStreamPartitions<>(
-        stream,
-        ImmutableMap.of(
-            shardId1,
-            getSequenceNumber(res, shardId1, 0)
-        )
-    );
-    // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
-    // of events fetched across two partitions from Kafka
-    final SeekableStreamPartitions<String, String> checkpoint = new SeekableStreamPartitions<>(
-        stream,
-        ImmutableMap.of(
-            shardId1,
-            getSequenceNumber(res, shardId1, 1)
-        )
-    );
-
-    final SeekableStreamPartitions<String, String> endPartitions = new SeekableStreamPartitions<>(
-        stream,
-        ImmutableMap.of(
-            shardId1,
-            getSequenceNumber(res, shardId1, 2)
-        )
-    );
-
-
-    final KinesisIndexTask task = createTask(
-        null,
-        new KinesisIOConfig(
-            null,
-            baseSequenceName,
-            startPartitions,
-            endPartitions,
-            true,
-            null,
-            null,
-            null,
-            LocalstackTestRunner.getEndpointKinesis(),
-            null,
-            null,
-            TestUtils.TEST_ACCESS_KEY,
-            TestUtils.TEST_SECRET_KEY,
-            null,
-            null,
-            null,
-            false
-        )
-    );
-
-    final ListenableFuture<TaskStatus> future = runTask(task);
-
-    // task will pause for checkpointing
-    while (task.getRunner().getStatus() != Status.PAUSED) {
-      Thread.sleep(10);
-    }
-    final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertEquals(checkpoint.getPartitionSequenceNumberMap(), currentOffsets);
-    task.getRunner().setEndOffsets(currentOffsets, false);
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    Assert.assertEquals(1, checkpointRequestsHash.size());
-    Assert.assertTrue(
-        checkpointRequestsHash.contains(
-            Objects.hash(
-                DATA_SCHEMA.getDataSource(),
-                0,
-                new KinesisDataSourceMetadata(startPartitions),
-                new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(
-                    stream,
-                    checkpoint.getPartitionSequenceNumberMap()
-                ))
-            )
-        )
-    );
-
-    // Check metrics
-    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
-
-    // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
-    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
-    Assert.assertEquals(
-        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
-            shardId1,
-            getSequenceNumber(res, shardId1, 2)
-        ))),
-        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
-    );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", desc1));
-    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", desc2));
-  }
-
 
   @Test(timeout = 120_000L)
   public void testRunWithMinimumMessageTime() throws Exception
@@ -979,7 +872,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -1022,7 +915,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 5)
+                    getSequenceNumber(res, shardId1, 4)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1050,7 +943,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -1094,7 +987,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 5)
+                    getSequenceNumber(res, shardId1, 4)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1131,7 +1024,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -1173,7 +1066,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 5)
+                    getSequenceNumber(res, shardId1, 4)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1253,7 +1146,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -1288,7 +1181,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 5)
+            getSequenceNumber(res, shardId1, 4)
         ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
@@ -1320,7 +1213,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -1355,7 +1248,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 5)
+            getSequenceNumber(res, shardId1, 4)
         ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
@@ -1389,7 +1282,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 6)
+                getSequenceNumber(res, shardId1, 5)
             )),
             true,
             null,
@@ -1444,7 +1337,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 13)
+                getSequenceNumber(res, shardId1, 12)
             )),
             true,
             null,
@@ -1489,7 +1382,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 13)
+                    getSequenceNumber(res, shardId1, 12)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1546,7 +1439,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 10)
+                getSequenceNumber(res, shardId1, 9)
             )),
             true,
             null,
@@ -1624,7 +1517,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -1652,7 +1545,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -1695,7 +1588,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 5)
+                    getSequenceNumber(res, shardId1, 4)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1724,7 +1617,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -1752,7 +1645,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 10)
+                getSequenceNumber(res, shardId1, 9)
             )),
             true,
             null,
@@ -1796,7 +1689,7 @@ public class KinesisIndexTaskTest
                 stream,
                 ImmutableMap.of(
                     shardId1,
-                    getSequenceNumber(res, shardId1, 5)
+                    getSequenceNumber(res, shardId1, 4)
                 )
             )),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
@@ -1825,7 +1718,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             false,
             null,
@@ -1853,7 +1746,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 10)
+                getSequenceNumber(res, shardId1, 9)
             )),
             false,
             null,
@@ -1926,9 +1819,9 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5),
+                getSequenceNumber(res, shardId1, 4),
                 shardId0,
-                getSequenceNumber(res, shardId0, 2)
+                getSequenceNumber(res, shardId0, 1)
             )),
             true,
             null,
@@ -1970,9 +1863,9 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 5),
+            getSequenceNumber(res, shardId1, 4),
             shardId0,
-            getSequenceNumber(res, shardId0, 2)
+            getSequenceNumber(res, shardId0, 1)
         ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
@@ -2006,7 +1899,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -2084,7 +1977,7 @@ public class KinesisIndexTaskTest
         new KinesisDataSourceMetadata(
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5),
+                getSequenceNumber(res, shardId1, 4),
                 shardId0,
                 OrderedPartitionableRecord.END_OF_SHARD_MARKER
             ))),
@@ -2349,7 +2242,7 @@ public class KinesisIndexTaskTest
             )),
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                getSequenceNumber(res, shardId1, 5)
+                getSequenceNumber(res, shardId1, 4)
             )),
             true,
             null,
@@ -2384,7 +2277,7 @@ public class KinesisIndexTaskTest
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
             shardId1,
-            getSequenceNumber(res, shardId1, 5)
+            getSequenceNumber(res, shardId1, 4)
         ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
@@ -2476,7 +2369,7 @@ public class KinesisIndexTaskTest
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        true,
+        skipAvailabilityCheck,
         null,
         null,
         null,
@@ -2907,13 +2800,13 @@ public class KinesisIndexTaskTest
     return kinesis;
   }
 
-  private static String getSequenceNumber(List<PutRecordsResultEntry> entries, String shardId, int stream)
+  private static String getSequenceNumber(List<PutRecordsResultEntry> entries, String shardId, int offset)
   {
     List<PutRecordsResultEntry> sortedEntries = entries.stream()
                                                        .filter(e -> e.getShardId().equals(shardId))
                                                        .sorted(Comparator.comparing(e -> KinesisSequenceNumber.of(e.getSequenceNumber())))
                                                        .collect(Collectors.toList());
-    return sortedEntries.get(stream).getSequenceNumber();
+    return sortedEntries.get(offset).getSequenceNumber();
   }
 
 

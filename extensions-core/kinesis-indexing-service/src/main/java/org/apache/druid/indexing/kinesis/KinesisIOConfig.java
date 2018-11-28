@@ -42,7 +42,7 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
   private final Integer fetchDelayMillis;
   private final String awsAccessKeyId;
   private final String awsSecretAccessKey;
-  private final Set<String> exclusiveStartSequenceNumberPartitions;
+
   private final String awsAssumedRoleArn;
   private final String awsExternalId;
   private final boolean deaggregate;
@@ -76,7 +76,8 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
         useTransaction,
         minimumMessageTime,
         maximumMessageTime,
-        true
+        true,
+        exclusiveStartSequenceNumberPartitions
     );
     Preconditions.checkArgument(endPartitions.getPartitionSequenceNumberMap()
                                              .values()
@@ -89,7 +90,6 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
     this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAccessKeyId = awsAccessKeyId;
     this.awsSecretAccessKey = awsSecretAccessKey;
-    this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
@@ -131,13 +131,6 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
     return awsSecretAccessKey;
   }
 
-  @Override
-  @JsonProperty
-  public Set<String> getExclusiveStartSequenceNumberPartitions()
-  {
-    return exclusiveStartSequenceNumberPartitions;
-  }
-
   @JsonProperty
   public String getAwsAssumedRoleArn()
   {
@@ -172,7 +165,7 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
            ", fetchDelayMillis=" + fetchDelayMillis +
            ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
            ", awsSecretAccessKey=" + "************************" +
-           ", exclusiveStartSequenceNumberPartitions=" + exclusiveStartSequenceNumberPartitions +
+           ", exclusiveStartSequenceNumberPartitions=" + getExclusiveStartSequenceNumberPartitions() +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +

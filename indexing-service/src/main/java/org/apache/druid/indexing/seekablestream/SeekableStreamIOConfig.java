@@ -27,6 +27,7 @@ import org.apache.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Set;
 
 public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implements IOConfig
@@ -43,7 +44,7 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
   private final boolean skipOffsetGaps;
-
+  private final Set<PartitionType> exclusiveStartSequenceNumberPartitions;
 
   @JsonCreator
   public SeekableStreamIOConfig(
@@ -54,7 +55,8 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
-      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
+      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps,
+      @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<PartitionType> exclusiveStartSequenceNumberPartitions
   )
   {
     this.taskGroupId = taskGroupId;
@@ -65,6 +67,9 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
+    this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions == null
+                                                  ? Collections.emptySet()
+                                                  : exclusiveStartSequenceNumberPartitions;
 
     Preconditions.checkArgument(
         startPartitions.getStream().equals(endPartitions.getStream()),
@@ -77,6 +82,15 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
                        .equals(endPartitions.getPartitionSequenceNumberMap().keySet()),
         "start partition set and end partition set must match"
     );
+  }
+
+  // exclusive starting sequence partitions are used only for kinesis where the starting
+  // sequence number for certain partitions are discarded because they've already been
+  // read by a previous task
+  @JsonProperty
+  public Set<PartitionType> getExclusiveStartSequenceNumberPartitions()
+  {
+    return exclusiveStartSequenceNumberPartitions;
   }
 
   @Nullable
@@ -127,12 +141,6 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
   {
     return skipOffsetGaps;
   }
-
-  // exclusive starting sequence partitions are used only for kinesis where the starting
-  // sequence number for certain partitions are discarded because they've already been
-  // read by a previous task
-  @JsonProperty
-  public abstract Set<PartitionType> getExclusiveStartSequenceNumberPartitions();
 
   @Override
   public abstract String toString();

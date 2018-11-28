@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -88,7 +89,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
   @Override
   protected Long getNextSequenceNumber(
-      RecordSupplier<Integer, Long> recordSupplier, StreamPartition<Integer> partition, @NotNull Long sequenceNumber
+      @NotNull Long sequenceNumber
   )
   {
     return sequenceNumber + 1;
@@ -203,6 +204,32 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     return KafkaSequenceNumber.of(sequenceNumber);
   }
 
+  @Override
+  protected Type getRunnerType()
+  {
+    return Type.KAFKA;
+  }
+
+  @Override
+  protected SequenceMetadata createSequenceMetaData(
+      int sequenceId,
+      String sequenceName,
+      Map<Integer, Long> startOffsets,
+      Map<Integer, Long> endOffsets,
+      boolean checkpointed,
+      Set<Integer> exclusiveStartPartition
+  )
+  {
+    return new KafkaSequenceMetaData(
+        sequenceId,
+        sequenceName,
+        startOffsets,
+        endOffsets,
+        checkpointed,
+        null
+    );
+  }
+
   @Nullable
   @Override
   protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(
@@ -221,6 +248,42 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       );
     } else {
       return null;
+    }
+  }
+
+  private class KafkaSequenceMetaData extends SequenceMetadata
+  {
+
+    public KafkaSequenceMetaData(
+        int sequenceId,
+        String sequenceName,
+        Map<Integer, Long> startOffsets,
+        Map<Integer, Long> endOffsets,
+        boolean checkpointed,
+        Set<Integer> exclusiveStartPartitions
+    )
+    {
+      super(sequenceId, sequenceName, startOffsets, endOffsets, checkpointed, null);
+    }
+
+    @Override
+    protected boolean canHandle(OrderedPartitionableRecord<Integer, Long> record)
+    {
+      lock.lock();
+      try {
+        final OrderedSequenceNumber<Long> partitionEndOffset = createSequenceNumber(endOffsets.get(record.getPartitionId()));
+        final OrderedSequenceNumber<Long> partitionStartOffset = createSequenceNumber(startOffsets.get(record.getPartitionId()));
+        final OrderedSequenceNumber<Long> recordOffset = createSequenceNumber(record.getSequenceNumber());
+        return isOpen()
+               && recordOffset != null
+               && partitionEndOffset != null
+               && partitionStartOffset != null
+               && recordOffset.compareTo(partitionStartOffset) >= 0
+               && recordOffset.compareTo(partitionEndOffset) < 0;
+      }
+      finally {
+        lock.unlock();
+      }
     }
   }
 }

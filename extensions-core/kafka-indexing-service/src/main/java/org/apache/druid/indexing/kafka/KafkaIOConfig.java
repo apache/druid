@@ -28,7 +28,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Set;
 
 public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
 {
@@ -55,7 +54,8 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
         useTransaction,
         minimumMessageTime,
         maximumMessageTime,
-        skipOffsetGaps
+        skipOffsetGaps,
+        null
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -69,15 +69,6 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
           partition
       );
     }
-  }
-
-  // exclusive starting sequence partitions are used only for kinesis where the starting
-  // sequence number for certain partitions are discarded because they've already been
-  // read by a previous task
-  @Override
-  public Set<Integer> getExclusiveStartSequenceNumberPartitions()
-  {
-    return null;
   }
 
   @JsonProperty

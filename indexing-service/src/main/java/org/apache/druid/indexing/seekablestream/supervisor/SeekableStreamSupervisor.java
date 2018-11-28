@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -134,7 +133,6 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
-  private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
 
   private final EmittingLogger log = new EmittingLogger(this.getClass());
 
@@ -1531,7 +1529,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
                   return sequence.equals(latestOffset);
                 }
             ) && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
-                pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() > 0
+                pendingCompletionTaskGroups.getOrDefault(groupId, new CopyOnWriteArrayList<>()).size() > 0
                 && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))) {
           final SortedMap<Integer, Map<PartitionType, SequenceType>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
@@ -1568,7 +1566,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
 
     if ((tasksToKill.size() > 0 && tasksToKill.size() == taskGroup.tasks.size()) ||
-        (taskGroup.tasks.size() == 0 && pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() == 0)) {
+        (taskGroup.tasks.size() == 0
+         && pendingCompletionTaskGroups.getOrDefault(groupId, new CopyOnWriteArrayList<>()).size() == 0)) {
       // killing all tasks or no task left in the group ?
       // clear state about the taskgroup so that get latest sequence information is fetched from metadata store
       log.warn("Clearing task group [%d] information as no valid tasks left the group", groupId);
