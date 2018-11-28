@@ -587,6 +587,7 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(schema.getTuningConfig().getWorkingPath(), "workingPath");
     Preconditions.checkNotNull(schema.getIOConfig().getSegmentOutputPath(), "segmentOutputPath");
     Preconditions.checkNotNull(schema.getTuningConfig().getVersion(), "version");
+    Preconditions.checkNotNull(schema.getIOConfig().getMetadataUpdateSpec(), "metadataUpdateSpec");
   }
 
   public List<String> getAllowedHadoopPrefix()
