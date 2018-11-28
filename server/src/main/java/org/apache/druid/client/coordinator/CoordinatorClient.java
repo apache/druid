@@ -90,7 +90,7 @@ public class CoordinatorClient
               StringUtils.format(
                   "/druid/coordinator/v1/rules/%s/intervals/%s/dropped",
                   dataSource,
-                  interval.toString().replace("/", "_")
+                  interval.toString().replace('/', '_')
               )
           )
       );

@@ -165,7 +165,7 @@ public class RulesResource
   )
   {
     final List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSourceName);
-    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     final DateTime now = DateTimes.nowUtc();
     boolean dropped = false;
     for (Rule rule : rules) {
