@@ -141,6 +141,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     }
   }
 
+  @Deprecated
   static void assignPartitions(
       final KafkaConsumer consumer,
       final String topic,

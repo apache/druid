@@ -629,7 +629,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       RecordSupplier<Integer, Long> recordSupplier, TaskToolbox toolbox
   )
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   private Set<Integer> assignPartitionsAndSeekToNext(KafkaConsumer consumer, String topic)
@@ -703,7 +703,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       Object obeject
   )
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   private void possiblyResetOffsetsOrWait(
@@ -734,7 +734,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
     }
 
     if (doReset) {
-      sendResetRequestAndAndWait(resetPartitions, taskToolbox);
+      sendResetRequestAndWaitLegacy(resetPartitions, taskToolbox);
     } else {
       log.warn("Retrying in %dms", task.getPollRetryMs());
       pollRetryLock.lockInterruptibly();
@@ -750,7 +750,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
     }
   }
 
-  private void sendResetRequestAndAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
+  private void sendResetRequestAndWaitLegacy(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
       throws IOException
   {
     Map<Integer, Long> partitionOffsetMap = new HashMap<>();
@@ -790,13 +790,13 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       SeekableStreamIndexTask<Integer, Long> task
   )
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   protected Long getNextSequenceNumber(Long sequenceNumber)
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   private void handleParseException(ParseException pe, ConsumerRecord<byte[], byte[]> record)
@@ -1199,13 +1199,13 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       SeekableStreamPartitions<Integer, Long> partitions
   )
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   protected OrderedSequenceNumber<Long> createSequenceNumber(Long sequenceNumber)
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -1234,6 +1234,6 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       Set<Integer> exclusiveStartPartitions
   )
   {
-    return null;
+    throw new UnsupportedOperationException();
   }
 }
