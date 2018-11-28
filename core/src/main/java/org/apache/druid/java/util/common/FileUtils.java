@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -34,6 +35,7 @@ import java.io.OutputStream;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,6 +43,8 @@ import java.util.UUID;
 
 public class FileUtils
 {
+  private static final Logger log = new Logger(FileUtils.class);
+
   /**
    * Useful for retry functionality that doesn't want to stop Throwables, but does want to retry on Exceptions
    */
@@ -182,21 +186,25 @@ public class FileUtils
    *
    * This method is not just thread-safe, but is also safe to use from multiple processes on the same machine.
    */
-  public static void writeAtomically(final File file, OutputStreamConsumer f) throws IOException
+  public static <T> T writeAtomically(final File file, OutputStreamConsumer<T> f) throws IOException
   {
-    writeAtomically(file, file.getParentFile(), f);
+    return writeAtomically(file, file.getParentFile(), f);
   }
 
-  private static void writeAtomically(final File file, final File tmpDir, OutputStreamConsumer f) throws IOException
+  private static <T> T writeAtomically(final File file, final File tmpDir, OutputStreamConsumer<T> f) throws IOException
   {
     final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
     try {
+      final T retVal;
+
       try (final FileOutputStream out = new FileOutputStream(tmpFile)) {
         // Pass f an uncloseable stream so we can fsync before closing.
-        f.accept(uncloseable(out));
+        retVal = f.apply(uncloseable(out));
+        out.flush();
 
         // fsync to avoid write-then-rename-then-crash causing empty files on some filesystems.
+        // See also https://github.com/apache/incubator-druid/pull/5187#pullrequestreview-85188984
         out.getChannel().force(true);
       }
 
@@ -207,9 +215,20 @@ public class FileUtils
           StandardCopyOption.ATOMIC_MOVE,
           StandardCopyOption.REPLACE_EXISTING
       );
+
+      // fsync the directory entry to ensure the new file will be visible after a crash.
+      try (final FileChannel directory = FileChannel.open(file.getParentFile().toPath(), StandardOpenOption.READ)) {
+        directory.force(true);
+      }
+
+      return retVal;
     }
     finally {
-      tmpFile.delete();
+      if (tmpFile.exists()) {
+        if (!tmpFile.delete()) {
+          log.warn("Could not delete tmpFile[%s]", tmpFile);
+        }
+      }
     }
   }
 
@@ -225,8 +244,8 @@ public class FileUtils
     };
   }
 
-  public interface OutputStreamConsumer
+  public interface OutputStreamConsumer<T>
   {
-    void accept(OutputStream outputStream) throws IOException;
+    T apply(OutputStream outputStream) throws IOException;
   }
 }

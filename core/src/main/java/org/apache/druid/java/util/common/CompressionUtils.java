@@ -78,16 +78,12 @@ public class CompressionUtils
       log.warn("No .zip suffix[%s], putting files from [%s] into it anyway.", outputZipFile, directory);
     }
 
-    try (final FileOutputStream out = new FileOutputStream(outputZipFile)) {
-      long bytes = zip(directory, out);
-
-      // For explanation of why fsyncing here is a good practice:
-      // https://github.com/apache/incubator-druid/pull/5187#pullrequestreview-85188984
-      if (fsync) {
-        out.getChannel().force(true);
+    if (fsync) {
+      return FileUtils.writeAtomically(outputZipFile, out -> zip(directory, out));
+    } else {
+      try (final FileOutputStream out = new FileOutputStream(outputZipFile)) {
+        return zip(directory, out);
       }
-
-      return bytes;
     }
   }
 
