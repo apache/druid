@@ -147,6 +147,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-parquet-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:postgresql-metadata-storage</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kerberos</argument>
@@ -184,6 +186,31 @@
                                     </descriptors>
                                 </configuration>
                             </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-licenses</id>
+                                <goals>
+                                    <goal>download-licenses</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>apache-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
                             <execution>
                                 <id>source-release-assembly-druid</id>
                                 <phase>package</phase>
@@ -198,18 +225,6 @@
                                     </descriptors>
                                     <appendAssemblyId>false</appendAssemblyId>
                                 </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>license-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>download-licenses</id>
-                                <goals>
-                                    <goal>download-licenses</goal>
-                                </goals>
                             </execution>
                         </executions>
                     </plugin>
@@ -271,8 +286,6 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-opentsdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-orc-extensions</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-parquet-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-rabbitmq</argument>
                                         <argument>-c</argument>

@@ -19,17 +19,16 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.util.Collections;
-import java.util.List;
-
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.yahoo.sketches.hll.HllSketch;
-
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.serde.ComplexMetrics;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * This module is to support count-distinct operations using {@link HllSketch}.

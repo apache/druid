@@ -24,7 +24,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -40,7 +39,6 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
@@ -80,7 +78,6 @@ public class TimeBoundaryQueryRunnerTest
   );
   private static Segment segment0;
   private static Segment segment1;
-  private static List<String> segmentIdentifiers;
 
   public TimeBoundaryQueryRunnerTest(
       QueryRunner runner
@@ -156,11 +153,6 @@ public class TimeBoundaryQueryRunnerTest
     VersionedIntervalTimeline<String, Segment> timeline = new VersionedIntervalTimeline(StringComparators.LEXICOGRAPHIC);
     timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk(segment0));
     timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk(segment1));
-
-    segmentIdentifiers = new ArrayList<>();
-    for (TimelineObjectHolder<String, ?> holder : timeline.lookup(Intervals.of("2011-01-12/2011-01-17"))) {
-      segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()));
-    }
 
     return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, factory);
   }

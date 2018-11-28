@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -57,7 +76,7 @@ Let's launch a console producer for our topic and send some data!
 In your Druid directory, run the following command:
 
 ```bash
-cd quickstart
+cd quickstart/tutorial
 gunzip -k wikiticker-2015-09-12-sampled.json.gz
 ```
 
@@ -65,7 +84,7 @@ In your Kafka directory, run the following command, where {PATH_TO_DRUID} is rep
 
 ```bash
 export KAFKA_OPTS="-Dfile.encoding=UTF-8"
-./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic wikipedia < {PATH_TO_DRUID}/quickstart/wikiticker-2015-09-12-sampled.json
+./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic wikipedia < {PATH_TO_DRUID}/quickstart/tutorial/wikiticker-2015-09-12-sampled.json
 ```
 
 The previous command posted sample events to the *wikipedia* Kafka topic which were then ingested into Druid by the Kafka indexing service. You're now ready to run some queries!

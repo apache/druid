@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.druid.extendedset.intset;
 
 
@@ -1272,9 +1271,9 @@ public class ConciseSet extends AbstractIntSet implements Serializable
     final ConciseSet other = convert(o);
 
     // the word at the end must be the same
-    int res = this.last - other.last;
+    int res = Integer.compare(this.last, other.last);
     if (res != 0) {
-      return res < 0 ? -1 : 1;
+      return res;
     }
 
     // scan words from MSB to LSB
@@ -1295,9 +1294,9 @@ public class ConciseSet extends AbstractIntSet implements Serializable
               return -1;
             }
             // compare two sequences of zeros
-            res = getSequenceCount(otherWord) - getSequenceCount(thisWord);
+            res = Integer.compare(getSequenceCount(otherWord), getSequenceCount(thisWord));
             if (res != 0) {
-              return res < 0 ? -1 : 1;
+              return res;
             }
           } else {
             if (isZeroSequence(otherWord)) {
@@ -1305,9 +1304,9 @@ public class ConciseSet extends AbstractIntSet implements Serializable
               return 1;
             }
             // compare two sequences of ones
-            res = getSequenceCount(thisWord) - getSequenceCount(otherWord);
+            res = Integer.compare(getSequenceCount(thisWord), getSequenceCount(otherWord));
             if (res != 0) {
-              return res < 0 ? -1 : 1;
+              return res;
             }
           }
           // if the sequences are the same (both zeros or both ones)
@@ -1363,9 +1362,10 @@ public class ConciseSet extends AbstractIntSet implements Serializable
           otherWord--;
         }
       } else {
-        res = thisWord - otherWord; // equals getLiteralBits(thisWord) - getLiteralBits(otherWord)
+        // equals compare(getLiteralBits(thisWord), getLiteralBits(otherWord))
+        res = Integer.compare(thisWord, otherWord);
         if (res != 0) {
-          return res < 0 ? -1 : 1;
+          return res;
         }
         if (--thisIndex >= 0) {
           thisWord = this.words[thisIndex];

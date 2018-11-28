@@ -154,7 +154,7 @@ public class ReplicationThrottler
         lifetime = maxLifetime;
         lifetimes.put(tier, lifetime);
       }
-      lifetimes.put(tier, --lifetime);
+      lifetimes.put(tier, lifetime - 1);
     }
 
     public void resetLifetime(String tier)

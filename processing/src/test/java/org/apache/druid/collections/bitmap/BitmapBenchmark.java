@@ -100,9 +100,9 @@ public class BitmapBenchmark
 
   protected static void printSizeStats(double density, String name)
   {
-    System.out.println("");
+    System.out.println();
     System.out.println("## " + name);
-    System.out.println("");
+    System.out.println();
     System.out.printf(Locale.ENGLISH, " d = %06.5f | Concise | Roaring%n", density);
     System.out.println("-------------|---------|---------");
     System.out.printf(Locale.ENGLISH, "Count        |   %5d |   %5d %n", conciseCount, roaringCount);

@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ---
 layout: doc_page
 ---
@@ -64,6 +83,7 @@ Period load rules are of the form:
 {
   "type" : "loadByPeriod",
   "period" : "P1M",
+  "includeFuture" : true,
   "tieredReplicants": {
       "hot": 1,
       "_default_tier" : 1
@@ -73,9 +93,10 @@ Period load rules are of the form:
 
 * `type` - this should always be "loadByPeriod"
 * `period` - A JSON Object representing ISO-8601 Periods
+* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 * `tieredReplicants` - A JSON Object where the keys are the tier names and values are the number of replicas for that tier.
 
-The interval of a segment will be compared against the specified period. The rule matches if the period overlaps the interval.
+The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
 
 Drop Rules
 ----------
@@ -120,14 +141,16 @@ Period drop rules are of the form:
 ```json
 {
   "type" : "dropByPeriod",
-  "period" : "P1M"
+  "period" : "P1M",
+  "includeFuture" : true
 }
 ```
 
 * `type` - this should always be "dropByPeriod"
 * `period` - A JSON Object representing ISO-8601 Periods
+* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the current time. The rule matches if the period contains the interval.
+The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *contains* the interval. This drop rule always dropping recent data.
 
 ### Period Drop Before Rule
 
@@ -189,15 +212,17 @@ Period broadcast rules are of the form:
 {
   "type" : "broadcastByPeriod",
   "colocatedDataSources" : [ "target_source1", "target_source2" ],
-  "period" : "P1M"
+  "period" : "P1M",
+  "includeFuture" : true
 }
 ```
 
 * `type` - this should always be "broadcastByPeriod"
 * `colocatedDataSources` - A JSON List containing data source names to be co-located. `null` and empty list means broadcasting to every node in the cluster.
 * `period` - A JSON Object representing ISO-8601 Periods
+* `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 
-The interval of a segment will be compared against the specified period. The period is from some time in the past to the current time. The rule matches if the period contains the interval.
+The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
 
 <div class="note caution">
 broadcast rules don't guarantee that segments of the data sources are always co-located because segments for the colocated data sources are not loaded together atomically.

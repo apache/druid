@@ -40,6 +40,10 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   @NotNull
   private String feed = null;
 
+  @JsonProperty
+  @NotNull
+  private RequestLogEventBuilderFactory requestLogEventBuilderFactory = null;
+
   @JacksonInject
   @NotNull
   private ServiceEmitter emitter = null;
@@ -52,7 +56,7 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    EmittingRequestLogger logger = new EmittingRequestLogger(emitter, feed);
+    EmittingRequestLogger logger = new EmittingRequestLogger(emitter, feed, requestLogEventBuilderFactory);
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }

@@ -40,6 +40,7 @@ import java.util.List;
 public class GraphiteEmitterModule implements DruidModule
 {
   private static final String EMITTER_TYPE = "graphite";
+
   @Override
   public List<? extends Module> getJacksonModules()
   {

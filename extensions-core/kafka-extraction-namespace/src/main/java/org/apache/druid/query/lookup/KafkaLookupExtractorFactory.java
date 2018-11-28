@@ -117,7 +117,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.cacheManager = cacheManager;
     this.connectTimeout = connectTimeout;
     this.injective = injective;
-    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID().toString();
+    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID();
   }
 
   public KafkaLookupExtractorFactory(

@@ -340,22 +340,18 @@ public class CardinalityAggregatorTest
         false
     );
 
-
     String superJsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn superFn = new JavaScriptExtractionFn(superJsFn, false, JavaScriptConfig.getEnabledInstance());
     dim1WithExtraction = new TestDimensionSelector(values1, superFn);
     dim2WithExtraction = new TestDimensionSelector(values2, superFn);
-    selectorListWithExtraction = Lists.newArrayList(
-        (DimensionSelector) dim1WithExtraction,
-        dim2WithExtraction
-    );
+    selectorListWithExtraction = Lists.newArrayList(dim1WithExtraction, dim2WithExtraction);
     dimInfoListWithExtraction = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim1WithExtraction
         ),
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim2WithExtraction
@@ -366,17 +362,14 @@ public class CardinalityAggregatorTest
     ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
     dim1ConstantVal = new TestDimensionSelector(values1, helloFn);
     dim2ConstantVal = new TestDimensionSelector(values2, helloFn);
-    selectorListConstantVal = Lists.newArrayList(
-        (DimensionSelector) dim1ConstantVal,
-        dim2ConstantVal
-    );
+    selectorListConstantVal = Lists.newArrayList(dim1ConstantVal, dim2ConstantVal);
     dimInfoListConstantVal = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim1ConstantVal
         ),
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim2ConstantVal

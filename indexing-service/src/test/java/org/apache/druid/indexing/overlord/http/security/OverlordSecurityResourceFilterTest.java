@@ -47,10 +47,12 @@ import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @RunWith(Parameterized.class)
 public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
 {
+  private static final Pattern WORD = Pattern.compile("\\w+");
 
   @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}")
   public static Collection<Object[]> data()
@@ -190,7 +192,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   @Test
   public void testDatasourcesResourcesFilteringBadPath()
   {
-    final String badRequestPath = requestPath.replaceAll("\\w+", "droid");
+    final String badRequestPath = WORD.matcher(requestPath).replaceAll("droid");
     EasyMock.expect(request.getPath()).andReturn(badRequestPath).anyTimes();
     EasyMock.replay(req, request, authorizerMapper);
     Assert.assertFalse(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(badRequestPath));

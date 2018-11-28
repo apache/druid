@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,8 +27,6 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.linq4j.Enumerable;
-import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -39,8 +38,10 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
@@ -54,6 +55,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -64,6 +66,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -147,10 +150,10 @@ public class SystemSchemaTest extends CalciteTestBase
     responseHandler = EasyMock.createMockBuilder(BytesAccumulatingResponseHandler.class)
                               .withConstructor()
                               .addMockedMethod(
-                                      "handleResponse",
-                                      HttpResponse.class,
-                                      HttpResponseHandler.TrafficCop.class
-                                  )
+                                  "handleResponse",
+                                  HttpResponse.class,
+                                  HttpResponseHandler.TrafficCop.class
+                              )
                               .addMockedMethod("getStatus")
                               .createMock();
     request = EasyMock.createMock(Request.class);
@@ -339,13 +342,13 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(segmentsTable);
 
     EasyMock
-        .expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments"))
+        .expect(client.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/metadata/segments", false))
         .andReturn(request)
         .anyTimes();
     SettableFuture<InputStream> future = SettableFuture.create();
     EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
     final int ok = HttpServletResponse.SC_OK;
-    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).once();
+    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
 
     EasyMock
         .expect(request.getUrl())
@@ -441,36 +444,34 @@ public class SystemSchemaTest extends CalciteTestBase
         return CalciteTests.SUPER_USER_AUTH_RESULT;
       }
     };
-    Enumerable<Object[]> rows = segmentsTable.scan(dataContext);
-    Enumerator<Object[]> enumerator = rows.enumerator();
 
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row1 = enumerator.current();
+    final List<Object[]> rows = segmentsTable.scan(dataContext).toList();
+
+    Assert.assertEquals(6, rows.size());
+
+    Object[] row0 = rows.get(0);
     //segment 6 is published and unavailable, num_replicas is 0
-    Assert.assertEquals(1L, row1[9]);
-    Assert.assertEquals(0L, row1[7]);
-    Assert.assertEquals(0L, row1[8]); //numRows = 0
+    Assert.assertEquals(1L, row0[9]);
+    Assert.assertEquals(0L, row0[7]);
+    Assert.assertEquals(0L, row0[8]); //numRows = 0
 
-    Assert.assertEquals(true, enumerator.moveNext());
-    Assert.assertEquals(true, enumerator.moveNext());
-    Assert.assertEquals(true, enumerator.moveNext());
-    Assert.assertEquals(true, enumerator.moveNext());
-
-    Object[] row5 = enumerator.current();
+    Object[] row4 = rows.get(4);
     //segment 2 is published and has 2 replicas
-    Assert.assertEquals(1L, row5[9]);
-    Assert.assertEquals(2L, row5[7]);
-    Assert.assertEquals(3L, row5[8]);  //numRows = 3
-    Assert.assertEquals(true, enumerator.moveNext());
-    Assert.assertEquals(false, enumerator.moveNext());
+    Assert.assertEquals(1L, row4[9]);
+    Assert.assertEquals(2L, row4[7]);
+    Assert.assertEquals(3L, row4[8]);  //numRows = 3
 
+    // Verify value types.
+    verifyTypes(rows, SystemSchema.SEGMENTS_SIGNATURE);
   }
 
   @Test
   public void testServersTable()
   {
 
-    SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class).withConstructor(serverView, authMapper).createMock();
+    SystemSchema.ServersTable serversTable = EasyMock.createMockBuilder(SystemSchema.ServersTable.class)
+                                                     .withConstructor(serverView, authMapper)
+                                                     .createMock();
     EasyMock.replay(serversTable);
 
     EasyMock.expect(serverView.getDruidServers())
@@ -503,14 +504,17 @@ public class SystemSchemaTest extends CalciteTestBase
         return CalciteTests.SUPER_USER_AUTH_RESULT;
       }
     };
-    Enumerable<Object[]> rows = serversTable.scan(dataContext);
-    Assert.assertEquals(2, rows.count());
-    Object[] row1 = rows.first();
+    final List<Object[]> rows = serversTable.scan(dataContext).toList();
+    Assert.assertEquals(2, rows.size());
+    Object[] row1 = rows.get(0);
     Assert.assertEquals("localhost:0000", row1[0]);
     Assert.assertEquals("realtime", row1[4].toString());
-    Object[] row2 = rows.last();
+    Object[] row2 = rows.get(1);
     Assert.assertEquals("server2:1234", row2[0]);
     Assert.assertEquals("historical", row2[4].toString());
+
+    // Verify value types.
+    verifyTypes(rows, SystemSchema.SERVERS_SIGNATURE);
   }
 
   @Test
@@ -550,8 +554,6 @@ public class SystemSchemaTest extends CalciteTestBase
         return CalciteTests.SUPER_USER_AUTH_RESULT;
       }
     };
-    Enumerable<Object[]> rows = serverSegmentsTable.scan(dataContext);
-    Assert.assertEquals(5, rows.count());
 
     //server_segments table is the join of servers and segments table
     // it will have 5 rows as follows
@@ -561,34 +563,31 @@ public class SystemSchemaTest extends CalciteTestBase
     // server2:1234   |  test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4(segment4)
     // server2:1234   |  test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5(segment5)
 
-    Enumerator<Object[]> enumerator = rows.enumerator();
-    Assert.assertEquals(true, enumerator.moveNext());
+    final List<Object[]> rows = serverSegmentsTable.scan(dataContext).toList();
+    Assert.assertEquals(5, rows.size());
 
-    Object[] row1 = rows.first();
+    Object[] row0 = rows.get(0);
+    Assert.assertEquals("localhost:0000", row0[0]);
+    Assert.assertEquals("test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", row0[1]);
+
+    Object[] row1 = rows.get(1);
     Assert.assertEquals("localhost:0000", row1[0]);
-    Assert.assertEquals("test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", row1[1]);
+    Assert.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", row1[1]);
 
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row2 = enumerator.current();
-    Assert.assertEquals("localhost:0000", row2[0]);
-    Assert.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", row2[1]);
+    Object[] row2 = rows.get(2);
+    Assert.assertEquals("server2:1234", row2[0]);
+    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row2[1]);
 
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row3 = enumerator.current();
+    Object[] row3 = rows.get(3);
     Assert.assertEquals("server2:1234", row3[0]);
-    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row3[1]);
+    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row3[1]);
 
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row4 = enumerator.current();
+    Object[] row4 = rows.get(4);
     Assert.assertEquals("server2:1234", row4[0]);
-    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row4[1]);
+    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row4[1]);
 
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row5 = rows.last();
-    Assert.assertEquals("server2:1234", row5[0]);
-    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row5[1]);
-
-    Assert.assertEquals(false, enumerator.moveNext());
+    // Verify value types.
+    verifyTypes(rows, SystemSchema.SERVER_SEGMENTS_SIGNATURE);
   }
 
   @Test
@@ -599,11 +598,11 @@ public class SystemSchemaTest extends CalciteTestBase
                                                  .withConstructor(client, mapper, responseHandler, authMapper)
                                                  .createMock();
     EasyMock.replay(tasksTable);
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks")).andReturn(request).anyTimes();
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks", false)).andReturn(request).anyTimes();
     SettableFuture<InputStream> future = SettableFuture.create();
     EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
     final int ok = HttpServletResponse.SC_OK;
-    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).once();
+    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
     EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
@@ -672,26 +671,78 @@ public class SystemSchemaTest extends CalciteTestBase
         return CalciteTests.SUPER_USER_AUTH_RESULT;
       }
     };
-    Enumerable<Object[]> rows = tasksTable.scan(dataContext);
-    Enumerator<Object[]> enumerator = rows.enumerator();
+    final List<Object[]> rows = tasksTable.scan(dataContext).toList();
 
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row1 = enumerator.current();
-    Assert.assertEquals("index_wikipedia_2018-09-20T22:33:44.911Z", row1[0].toString());
-    Assert.assertEquals("FAILED", row1[5].toString());
-    Assert.assertEquals("NONE", row1[6].toString());
-    Assert.assertEquals(-1L, row1[7]);
-    Assert.assertEquals("testHost:1234", row1[8]);
+    Object[] row0 = rows.get(0);
+    Assert.assertEquals("index_wikipedia_2018-09-20T22:33:44.911Z", row0[0].toString());
+    Assert.assertEquals("FAILED", row0[5].toString());
+    Assert.assertEquals("NONE", row0[6].toString());
+    Assert.assertEquals(-1L, row0[7]);
+    Assert.assertEquals("testHost:1234", row0[8]);
 
-    Assert.assertEquals(true, enumerator.moveNext());
-    Object[] row2 = enumerator.current();
-    Assert.assertEquals("index_wikipedia_2018-09-21T18:38:47.773Z", row2[0].toString());
-    Assert.assertEquals("RUNNING", row2[5].toString());
-    Assert.assertEquals("RUNNING", row2[6].toString());
-    Assert.assertEquals(null, row2[7]);
-    Assert.assertEquals("192.168.1.6:8100", row2[8]);
+    Object[] row1 = rows.get(1);
+    Assert.assertEquals("index_wikipedia_2018-09-21T18:38:47.773Z", row1[0].toString());
+    Assert.assertEquals("RUNNING", row1[5].toString());
+    Assert.assertEquals("RUNNING", row1[6].toString());
+    Assert.assertEquals(0L, row1[7]);
+    Assert.assertEquals("192.168.1.6:8100", row1[8]);
 
-    Assert.assertEquals(false, enumerator.moveNext());
+    // Verify value types.
+    verifyTypes(rows, SystemSchema.TASKS_SIGNATURE);
   }
 
+  private static void verifyTypes(final List<Object[]> rows, final RowSignature signature)
+  {
+    final RelDataType rowType = signature.getRelDataType(new JavaTypeFactoryImpl());
+
+    for (Object[] row : rows) {
+      Assert.assertEquals(row.length, signature.getRowOrder().size());
+
+      for (int i = 0; i < row.length; i++) {
+        final Class<?> expectedClass;
+
+        final ValueType columnType = signature.getColumnType(signature.getRowOrder().get(i));
+        final boolean nullable = rowType.getFieldList().get(i).getType().isNullable();
+
+        switch (columnType) {
+          case LONG:
+            expectedClass = Long.class;
+            break;
+          case FLOAT:
+            expectedClass = Float.class;
+            break;
+          case DOUBLE:
+            expectedClass = Double.class;
+            break;
+          case STRING:
+            expectedClass = String.class;
+            break;
+          default:
+            throw new IAE("Don't know what class to expect for valueType[%s]", columnType);
+        }
+
+        if (nullable) {
+          Assert.assertTrue(
+              StringUtils.format(
+                  "Column[%s] is a [%s] or null (was %s)",
+                  signature.getRowOrder().get(i),
+                  expectedClass.getName(),
+                  row[i] == null ? null : row[i].getClass().getName()
+              ),
+              row[i] == null || expectedClass.isAssignableFrom(row[i].getClass())
+          );
+        } else {
+          Assert.assertTrue(
+              StringUtils.format(
+                  "Column[%s] is a [%s] (was %s)",
+                  signature.getRowOrder().get(i),
+                  expectedClass.getName(),
+                  row[i] == null ? null : row[i].getClass().getName()
+              ),
+              row[i] != null && expectedClass.isAssignableFrom(row[i].getClass())
+          );
+        }
+      }
+    }
+  }
 }

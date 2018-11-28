@@ -34,8 +34,7 @@ public class DefaultGroupByQueryMetricsFactory implements GroupByQueryMetricsFac
 
   /**
    * Should be used only in tests, directly or indirectly (via {@link
-   * GroupByQueryQueryToolChest#GroupByQueryQueryToolChest(org.apache.druid.query.groupby.strategy.GroupByStrategySelector,
-   * org.apache.druid.query.IntervalChunkingQueryRunnerDecorator)}).
+   * GroupByQueryQueryToolChest#GroupByQueryQueryToolChest}).
    */
   @VisibleForTesting
   public static GroupByQueryMetricsFactory instance()

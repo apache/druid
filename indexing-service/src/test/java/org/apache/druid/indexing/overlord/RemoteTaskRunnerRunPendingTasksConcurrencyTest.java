@@ -101,19 +101,19 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
 
     if (remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[2].getId())
         && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[3].getId())) {
-      remoteTaskRunner.shutdown("task4");
+      remoteTaskRunner.shutdown("task4", "test");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[3], tasks[2]);
       Assert.assertEquals(TaskState.SUCCESS, results[3].get().getStatusCode());
       Assert.assertEquals(TaskState.SUCCESS, results[2].get().getStatusCode());
     } else if (remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[3].getId())
                && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[4].getId())) {
-      remoteTaskRunner.shutdown("task2");
+      remoteTaskRunner.shutdown("task2", "test");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[4], tasks[3]);
       Assert.assertEquals(TaskState.SUCCESS, results[4].get().getStatusCode());
       Assert.assertEquals(TaskState.SUCCESS, results[3].get().getStatusCode());
     } else if (remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[4].getId())
                && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[2].getId())) {
-      remoteTaskRunner.shutdown("task3");
+      remoteTaskRunner.shutdown("task3", "test");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[4], tasks[2]);
       Assert.assertEquals(TaskState.SUCCESS, results[4].get().getStatusCode());
       Assert.assertEquals(TaskState.SUCCESS, results[2].get().getStatusCode());

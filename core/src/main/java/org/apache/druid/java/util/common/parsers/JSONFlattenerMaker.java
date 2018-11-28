@@ -24,10 +24,10 @@ import com.google.common.collect.FluentIterable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
+import org.apache.druid.data.input.impl.FastJacksonJsonNodeJsonProvider;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -45,7 +45,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
 {
   private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
-                   .jsonProvider(new JacksonJsonNodeJsonProvider())
+                   .jsonProvider(new FastJacksonJsonNodeJsonProvider())
                    .mappingProvider(new JacksonMappingProvider())
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
@@ -119,7 +119,9 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     if (val.isArray()) {
       List<Object> newList = new ArrayList<>();
       for (JsonNode entry : val) {
-        newList.add(valueConversionFunction(entry));
+        if (!entry.isNull()) {
+          newList.add(valueConversionFunction(entry));
+        }
       }
       return newList;
     }

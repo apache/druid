@@ -254,6 +254,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   {
     final int size = offsetHeap.getHeapSize();
 
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     final List<Integer> wrappedOffsets = new AbstractList<Integer>()
     {
       @Override
