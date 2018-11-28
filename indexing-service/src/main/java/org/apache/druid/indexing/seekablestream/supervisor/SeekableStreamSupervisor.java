@@ -453,7 +453,6 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   protected final ObjectMapper sortingMapper;
   protected final List<PartitionType> partitionIds = new CopyOnWriteArrayList<>();
-  protected volatile Map<PartitionType, SequenceType> latestSequenceFromStream;
   protected volatile DateTime sequenceLastUpdated;
 
 
@@ -2542,7 +2541,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
-  private void updateLatestOffsetsFromStream()
+  protected void updateLatestOffsetsFromStream()
   {
     synchronized (recordSupplierLock) {
       Set<PartitionType> partitionIds = null;
@@ -2562,14 +2561,15 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       recordSupplier.assign(partitions);
       recordSupplier.seekToLatest(partitions);
 
-      latestSequenceFromStream = partitions.stream()
-                                           .collect(Collectors.toMap(
-                                               StreamPartition::getPartitionId,
-                                               x -> recordSupplier.getPosition(x)
-                                           ));
+      updateLatestSequenceFromStream(recordSupplier, partitions);
     }
 
   }
+
+  protected abstract void updateLatestSequenceFromStream(
+      RecordSupplier<PartitionType, SequenceType> recordSupplier,
+      Set<StreamPartition<PartitionType>> partitions
+  );
 
   protected Map<PartitionType, SequenceType> getHighestCurrentOffsets()
   {

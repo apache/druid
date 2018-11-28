@@ -42,7 +42,6 @@ import org.apache.druid.indexing.kinesis.aws.ConstructibleAWSCredentialsConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -57,7 +56,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +82,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     private final AmazonKinesis kinesisProxy;
     private final Object startLock = new Object();
 
-    private String currIterator; // tracks current position
     private volatile String shardIterator;
     private volatile boolean started;
     private volatile boolean stopRequested;
@@ -458,27 +455,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                                    .filter(x -> partitionResources.containsKey(x.getStreamPartition()))
                                    .collect(Collectors.toList());
 
-      // update currIterator in each PartitionResource
-      // first, build a map of shardId -> latest record we've polled
-      // since polledRecords is ordered from earliest to latest, the final ordering of partitionSequenceMap
-      // is guranteed to be latest
-      Map<String, OrderedPartitionableRecord<String, String>> partitionSequenceMap = new HashMap<>();
-      polledRecords.forEach(x -> partitionSequenceMap.put(x.getPartitionId(), x));
-
-      // then get the next shardIterator for each shard and update currIterator
-      partitionSequenceMap.forEach((shardId, record) -> partitionResources.get(record.getStreamPartition()).currIterator =
-          record.getSequenceNumber().equals(OrderedPartitionableRecord.END_OF_SHARD_MARKER) ?
-          null :
-          getKinesisProxy(shardId)
-              .getShardIterator(
-                  record.getStream(),
-                  record.getPartitionId(),
-                  ShardIteratorType.AFTER_SEQUENCE_NUMBER.toString(),
-                  record.getSequenceNumber()
-              )
-              .getShardIterator());
-
-
       return polledRecords;
     }
     catch (InterruptedException e) {
@@ -506,24 +482,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public String getPosition(StreamPartition<String> partition)
   {
-    checkIfClosed();
-    if (partitionResources.containsKey(partition)) {
-      String iter = partitionResources.get(partition).currIterator;
-      if (iter == null) {
-        log.warn(
-            "attempting to get position in shard[%s], stream[%s] with null sharditerator, is shard closed or did you forget to seek?",
-            partition.getPartitionId(),
-            partition.getStream()
-        );
-      }
-      return getSequenceNumberInternal(partition, iter);
-    } else {
-      throw new IAE(
-          "attempting to get position in unassigned shard[%s], stream[%s]",
-          partition.getPartitionId(),
-          partition.getStream()
-      );
-    }
+    throw new UnsupportedOperationException("getPosition is not supported in Kinesiss");
   }
 
   @Override
@@ -591,8 +550,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         iteratorEnum.toString(),
         sequenceNumber
     ).getShardIterator();
-
-    resource.currIterator = resource.shardIterator;
 
     resource.start();
 

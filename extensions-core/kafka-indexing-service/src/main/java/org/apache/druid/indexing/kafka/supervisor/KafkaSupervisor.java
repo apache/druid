@@ -46,6 +46,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
@@ -88,6 +89,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
+  private volatile Map<Integer, Long> latestSequenceFromStream;
 
 
   private final KafkaSupervisorSpec spec;
@@ -361,6 +363,19 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   protected Runnable updateCurrentAndLatestOffsets()
   {
     return super.updateCurrentAndLatestOffsets();
+  }
+
+  @Override
+  protected void updateLatestSequenceFromStream(
+      RecordSupplier<Integer, Long> recordSupplier,
+      Set<StreamPartition<Integer>> partitions
+  )
+  {
+    latestSequenceFromStream = partitions.stream()
+                                         .collect(Collectors.toMap(
+                                             StreamPartition::getPartitionId,
+                                             recordSupplier::getPosition
+                                         ));
   }
 
   @Override

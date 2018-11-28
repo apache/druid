@@ -33,6 +33,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Collections;
+
 public class KinesisIOConfigTest
 {
   private final ObjectMapper mapper;
@@ -86,7 +88,7 @@ public class KinesisIOConfigTest
     Assert.assertEquals(config.getFetchDelayMillis(), 0);
     Assert.assertNull(config.getAwsAccessKeyId());
     Assert.assertNull(config.getAwsSecretAccessKey());
-    Assert.assertNull(config.getExclusiveStartSequenceNumberPartitions());
+    Assert.assertEquals(Collections.emptySet(), config.getExclusiveStartSequenceNumberPartitions());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
     Assert.assertFalse(config.isDeaggregate());
