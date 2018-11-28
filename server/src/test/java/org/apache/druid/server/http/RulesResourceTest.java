@@ -26,6 +26,9 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordinator.rules.IntervalDropRule;
+import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -254,4 +257,25 @@ public class RulesResourceTest
     EasyMock.verify(auditManager);
   }
 
+  @Test
+  public void testIsSpecificIntervalDroppedByRule()
+  {
+    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null);
+    Rule dropRule = new IntervalDropRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"));
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.eq("dataSource1")))
+            .andReturn(ImmutableList.of(loadRule, dropRule))
+            .times(2);
+    EasyMock.replay(databaseRuleManager);
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+
+    String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
+    Response response1 = rulesResource.isSpecificIntervalDroppedByRule("dataSource1", interval1);
+    Assert.assertTrue((boolean) response1.getEntity());
+
+    String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
+    Response response2 = rulesResource.isSpecificIntervalDroppedByRule("dataSource1", interval2);
+    Assert.assertFalse((boolean) response2.getEntity());
+
+    EasyMock.verify(databaseRuleManager);
+  }
 }

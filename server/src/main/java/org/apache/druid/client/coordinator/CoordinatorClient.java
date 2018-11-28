@@ -49,7 +49,6 @@ public class CoordinatorClient
     this.druidLeaderClient = druidLeaderClient;
   }
 
-
   public List<ImmutableSegmentLoadInfo> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
   {
     try {
@@ -74,6 +73,38 @@ public class CoordinatorClient
           response.getContent(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
           {
 
+          }
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public boolean isSpecificIntervalDroppedByRule(String dataSource, Interval interval)
+  {
+    try {
+      FullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format(
+                  "/druid/coordinator/v1/rules/%s/intervals/%s/dropped",
+                  dataSource,
+                  interval.toString().replace("/", "_")
+              )
+          )
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching information status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      return jsonMapper.readValue(
+          response.getContent(), new TypeReference<Boolean>()
+          {
           }
       );
     }

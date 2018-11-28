@@ -95,6 +95,17 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry = itr.next();
         SegmentDescriptor descriptor = entry.getKey();
         try {
+          if (coordinatorClient.isSpecificIntervalDroppedByRule(dataSource, descriptor.getInterval())) {
+            log.info(
+                "Segment already dropped by drop rules for dataSource[%s] Segment[%s], ignore it!",
+                dataSource,
+                descriptor
+            );
+            entry.getValue().lhs.execute(entry.getValue().rhs);
+            itr.remove();
+            continue;
+          }
+
           List<ImmutableSegmentLoadInfo> loadedSegments = coordinatorClient.fetchServerView(
               dataSource,
               descriptor.getInterval(),
