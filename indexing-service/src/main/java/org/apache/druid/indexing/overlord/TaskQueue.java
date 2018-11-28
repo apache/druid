@@ -105,8 +105,8 @@ public class TaskQueue
 
   private final Map<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
   private final Map<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
-  private Map<String, Long> prevSuccessfulTaskCount = new HashMap<>();
-  private Map<String, Long> prevFailedTaskCount = new HashMap<>();
+  private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
+  private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 
   @Inject
   public TaskQueue(
@@ -520,11 +520,11 @@ public class TaskQueue
                 );
 
                 if (status.isSuccess()) {
-                  totalSuccessfulTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong());
-                  totalSuccessfulTaskCount.get(task.getDataSource()).incrementAndGet();
+                  totalSuccessfulTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong())
+                                          .incrementAndGet();
                 } else {
-                  totalFailedTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong());
-                  totalFailedTaskCount.get(task.getDataSource()).incrementAndGet();
+                  totalFailedTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong())
+                                      .incrementAndGet();
                 }
               }
             }
@@ -604,34 +604,68 @@ public class TaskQueue
 
   private Map<String, Long> getDeltaValues(Map<String, Long> total, Map<String, Long> prev)
   {
-    return total.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue() - prev.getOrDefault(e.getKey(), 0L)));
+    return total.entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue() - prev.getOrDefault(e.getKey(), 0L)));
   }
 
   public Map<String, Long> getSuccessfulTaskCount()
   {
-    Map<String, Long> total = totalSuccessfulTaskCount.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get()));
-    Map<String, Long> delta = getDeltaValues(total, prevSuccessfulTaskCount);
-    prevSuccessfulTaskCount = total;
+    Map<String, Long> total = totalSuccessfulTaskCount.entrySet()
+                                                      .stream()
+                                                      .collect(Collectors.toMap(
+                                                          Map.Entry::getKey,
+                                                          e -> e.getValue().get()
+                                                      ));
+    Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
+    prevTotalSuccessfulTaskCount = total;
     return delta;
   }
 
   public Map<String, Long> getFailedTaskCount()
   {
-    Map<String, Long> total = totalFailedTaskCount.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get()));
-    Map<String, Long> delta = getDeltaValues(total, prevFailedTaskCount);
-    prevFailedTaskCount = total;
+    Map<String, Long> total = totalFailedTaskCount.entrySet()
+                                                  .stream()
+                                                  .collect(Collectors.toMap(
+                                                      Map.Entry::getKey,
+                                                      e -> e.getValue().get()
+                                                  ));
+    Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
+    prevTotalFailedTaskCount = total;
     return delta;
   }
 
   public Map<String, Long> getRunningTaskCount()
   {
     Map<String, String> taskDatasources = tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
-    return taskRunner.getRunningTasks().stream().collect(Collectors.toMap(e -> taskDatasources.getOrDefault(e.getTaskId(), ""), e -> 1L, Long::sum));
+    return taskRunner.getRunningTasks()
+                     .stream()
+                     .collect(Collectors.toMap(
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> 1L,
+                         Long::sum
+                     ));
   }
 
   public Map<String, Long> getPendingTaskCount()
   {
     Map<String, String> taskDatasources = tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
-    return taskRunner.getPendingTasks().stream().collect(Collectors.toMap(e -> taskDatasources.getOrDefault(e.getTaskId(), ""), e -> 1L, Long::sum));
+    return taskRunner.getPendingTasks()
+                     .stream()
+                     .collect(Collectors.toMap(
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> 1L,
+                         Long::sum
+                     ));
+  }
+
+  public Map<String, Long> getWaitingTaskCount()
+  {
+    Set<String> runnerKnownTaskIds = taskRunner.getKnownTasks()
+                                               .stream()
+                                               .map(TaskRunnerWorkItem::getTaskId)
+                                               .collect(Collectors.toSet());
+    return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
+                .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
   }
 }

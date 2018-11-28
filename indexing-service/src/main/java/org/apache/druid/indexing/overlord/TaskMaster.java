@@ -311,4 +311,15 @@ public class TaskMaster implements TaskCountStatsProvider
       return null;
     }
   }
+
+  @Override
+  public Map<String, Long> getWaitingTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getWaitingTaskCount();
+    } else {
+      return null;
+    }
+  }
 }

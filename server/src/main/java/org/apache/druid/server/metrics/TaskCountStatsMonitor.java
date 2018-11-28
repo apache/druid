@@ -45,6 +45,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     emit(emitter, "task/failed/count", statsProvider.getFailedTaskCount());
     emit(emitter, "task/running/count", statsProvider.getRunningTaskCount());
     emit(emitter, "task/pending/count", statsProvider.getPendingTaskCount());
+    emit(emitter, "task/waiting/count", statsProvider.getWaitingTaskCount());
     return true;
   }
 

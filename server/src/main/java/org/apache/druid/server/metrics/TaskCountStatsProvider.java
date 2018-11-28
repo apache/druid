@@ -43,4 +43,8 @@ public interface TaskCountStatsProvider
    */
   Map<String, Long> getPendingTaskCount();
 
+  /**
+   * Return the number of current waiting tasks for each datasource.
+   */
+  Map<String, Long> getWaitingTaskCount();
 }
