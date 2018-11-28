@@ -311,7 +311,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
           )
       );
 
-      int newRuleCount = newRules.values().stream().mapToInt(List::size).sum();
+      final int newRuleCount = newRules.values().stream().mapToInt(List::size).sum();
       log.info("Polled and found %,d rule(s) for %,d datasource(s)", newRuleCount, newRules.size());
 
       rules.set(newRules);
