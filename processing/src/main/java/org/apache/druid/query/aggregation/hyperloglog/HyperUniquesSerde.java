@@ -90,9 +90,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(
-      ByteBuffer byteBuffer, ColumnBuilder columnBuilder
-  )
+  public void deserializeColumn(ByteBuffer byteBuffer, ColumnBuilder columnBuilder)
   {
     final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
     columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));

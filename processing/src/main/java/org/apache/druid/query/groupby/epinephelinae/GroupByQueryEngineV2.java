@@ -236,7 +236,8 @@ public class GroupByQueryEngineV2
   {
     @Override
     public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities, ColumnValueSelector selector
+        ColumnCapabilities capabilities,
+        ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();
@@ -751,7 +752,8 @@ public class GroupByQueryEngineV2
 
     @Override
     public Grouper.BufferComparator bufferComparatorWithAggregators(
-        AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets
+        AggregatorFactory[] aggregatorFactories,
+        int[] aggregatorOffsets
     )
     {
       // not called on this

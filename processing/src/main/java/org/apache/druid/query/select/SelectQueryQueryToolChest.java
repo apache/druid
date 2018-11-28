@@ -57,6 +57,7 @@ import org.joda.time.Interval;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -143,7 +144,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
   @Override
   public Function<Result<SelectResultValue>, Result<SelectResultValue>> makePreComputeManipulatorFn(
-      final SelectQuery query, final MetricManipulationFn fn
+      final SelectQuery query,
+      final MetricManipulationFn fn
   )
   {
     return Functions.identity();
@@ -339,7 +341,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         {
           @Override
           public Sequence<Result<SelectResultValue>> run(
-              QueryPlus<Result<SelectResultValue>> queryPlus, Map<String, Object> responseContext
+              QueryPlus<Result<SelectResultValue>> queryPlus,
+              Map<String, Object> responseContext
           )
           {
             SelectQuery selectQuery = (SelectQuery) queryPlus.getQuery();
@@ -383,10 +386,13 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     List<Interval> intervals = Lists.newArrayList(
         Iterables.transform(filteredPagingKeys, DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
     );
-    Collections.sort(
-        intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()
-                                        : Comparators.intervalsByStartThenEnd()
-    );
+    Comparator<Interval> comparator;
+    if (query.isDescending()) {
+      comparator = Comparators.intervalsByEndThenStart();
+    } else {
+      comparator = Comparators.intervalsByStartThenEnd();
+    }
+    Collections.sort(intervals, comparator);
 
     TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();
     for (Interval interval : intervals) {

@@ -152,9 +152,8 @@ public class BasicHTTPAuthenticator implements Authenticator
 
 
     @Override
-    public void doFilter(
-        ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
-    ) throws IOException, ServletException
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+        throws IOException, ServletException
     {
       HttpServletResponse httpResp = (HttpServletResponse) servletResponse;
 

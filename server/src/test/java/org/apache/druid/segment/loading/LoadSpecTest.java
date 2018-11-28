@@ -86,12 +86,8 @@ public class LoadSpecTest
 
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
     mapper.setAnnotationIntrospectors(
-        new AnnotationIntrospectorPair(
-            guiceIntrospector, mapper.getSerializationConfig().getAnnotationIntrospector()
-        ),
-        new AnnotationIntrospectorPair(
-            guiceIntrospector, mapper.getDeserializationConfig().getAnnotationIntrospector()
-        )
+        new AnnotationIntrospectorPair(guiceIntrospector, mapper.getSerializationConfig().getAnnotationIntrospector()),
+        new AnnotationIntrospectorPair(guiceIntrospector, mapper.getDeserializationConfig().getAnnotationIntrospector())
     );
   }
 

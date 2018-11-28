@@ -53,12 +53,8 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   @Test
   public void testHandoffCallbackNotCalled()
   {
-    Interval interval = Intervals.of(
-        "2011-04-01/2011-04-02"
-    );
-    SegmentDescriptor descriptor = new SegmentDescriptor(
-        interval, "v1", 2
-    );
+    Interval interval = Intervals.of("2011-04-01/2011-04-02");
+    SegmentDescriptor descriptor = new SegmentDescriptor(interval, "v1", 2);
     DataSegment segment = new DataSegment(
         "test_ds",
         interval,
@@ -104,12 +100,8 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   @Test
   public void testHandoffCallbackCalled()
   {
-    Interval interval = Intervals.of(
-        "2011-04-01/2011-04-02"
-    );
-    SegmentDescriptor descriptor = new SegmentDescriptor(
-        interval, "v1", 2
-    );
+    Interval interval = Intervals.of("2011-04-01/2011-04-02");
+    SegmentDescriptor descriptor = new SegmentDescriptor(interval, "v1", 2);
     DataSegment segment = new DataSegment(
         "test_ds",
         interval,

@@ -195,7 +195,8 @@ public class HttpLoadQueuePeonTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler
     )
     {
       throw new UnsupportedOperationException("Not Implemented.");
@@ -203,7 +204,9 @@ public class HttpLoadQueuePeonTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler, Duration duration
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+        Duration duration
     )
     {
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);

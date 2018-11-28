@@ -136,9 +136,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         new JsonDeserializer<ByteOrder>()
         {
           @Override
-          public ByteOrder deserialize(
-              JsonParser jp, DeserializationContext ctxt
-          ) throws IOException, JsonProcessingException
+          public ByteOrder deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException
           {
             if (ByteOrder.BIG_ENDIAN.toString().equals(jp.getText())) {
               return ByteOrder.BIG_ENDIAN;

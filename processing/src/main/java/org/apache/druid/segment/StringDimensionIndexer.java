@@ -765,7 +765,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
   @Override
   public void fillBitmapsFromUnsortedEncodedKeyComponent(
-      int[] key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
+      int[] key,
+      int rowNum,
+      MutableBitmap[] bitmapIndexes,
+      BitmapFactory factory
   )
   {
     if (!hasBitmapIndexes) {

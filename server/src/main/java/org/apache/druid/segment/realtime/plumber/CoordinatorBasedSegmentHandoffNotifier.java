@@ -60,9 +60,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   }
 
   @Override
-  public boolean registerSegmentHandoffCallback(
-      SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
-  )
+  public boolean registerSegmentHandoffCallback(SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable)
   {
     log.info("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s]", dataSource, descriptor);
     Pair<Executor, Runnable> prev = handOffCallbacks.putIfAbsent(

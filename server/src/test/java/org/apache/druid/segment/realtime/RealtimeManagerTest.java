@@ -74,7 +74,6 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.plumber.Plumber;
-import org.apache.druid.segment.realtime.plumber.PlumberSchool;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -178,30 +177,12 @@ public class RealtimeManagerTest
             return new TestFirehose(rows.iterator());
           }
         },
-        new PlumberSchool()
-        {
-          @Override
-          public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-          )
-          {
-            return plumber;
-          }
-        },
+        (schema, config, metrics) -> plumber,
         null
     );
     RealtimeIOConfig ioConfig2 = new RealtimeIOConfig(
         null,
-        new PlumberSchool()
-        {
-          @Override
-          public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-          )
-          {
-            return plumber2;
-          }
-        },
+        (schema, config, metrics) -> plumber2,
         new FirehoseFactoryV2()
         {
           @Override

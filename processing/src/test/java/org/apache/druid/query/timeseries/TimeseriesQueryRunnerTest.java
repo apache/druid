@@ -119,7 +119,8 @@ public class TimeseriesQueryRunnerTest
   private final List<AggregatorFactory> aggregatorFactoryList;
 
   public TimeseriesQueryRunnerTest(
-      QueryRunner runner, boolean descending,
+      QueryRunner runner,
+      boolean descending,
       List<AggregatorFactory> aggregatorFactoryList
   )
   {

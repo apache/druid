@@ -277,6 +277,16 @@ public class GroupByStrategyV2 implements GroupByStrategy
           @Override
           public Row apply(final Row row)
           {
+            if (query.getContextBoolean(GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY, false)) {
+              // When executing nested queries, we need to make sure that we are
+              // extracting out the event from the row.  Post aggregators are not invoked since
+              // they should only be used after merging all the nested query responses. Timestamp
+              // if it needs to be fudged, it is ok to do here.
+              return new MapBasedRow(
+                  fudgeTimestamp != null ? fudgeTimestamp : row.getTimestamp(),
+                  ((MapBasedRow) row).getEvent()
+              );
+            }
             // Apply postAggregators and fudgeTimestamp if present and if this is the outermost mergeResults.
 
             if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
@@ -306,9 +316,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<Row> applyPostProcessing(
-      Sequence<Row> results, GroupByQuery query
-  )
+  public Sequence<Row> applyPostProcessing(Sequence<Row> results, GroupByQuery query)
   {
     // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
     if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
@@ -323,7 +331,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
       GroupByQuery subquery,
       GroupByQuery query,
       GroupByQueryResource resource,
-      Sequence<Row> subqueryResult
+      Sequence<Row> subqueryResult,
+      boolean wasQueryPushedDown
   )
   {
     // This contains all closeable objects which are closed when the returned iterator iterates all the elements,
@@ -335,13 +344,14 @@ public class GroupByStrategyV2 implements GroupByStrategy
           () -> GroupByRowProcessor.createGrouper(
               query,
               subqueryResult,
-              GroupByQueryHelper.rowSignatureFor(subquery),
+              GroupByQueryHelper.rowSignatureFor(wasQueryPushedDown ? query : subquery),
               configSupplier.get(),
               resource,
               spillMapper,
               processingConfig.getTmpDir(),
               processingConfig.intermediateComputeSizeBytes(),
-              closeOnExit
+              closeOnExit,
+              wasQueryPushedDown
           )
       );
 
@@ -403,7 +413,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
               spillMapper,
               processingConfig.getTmpDir(),
               processingConfig.intermediateComputeSizeBytes(),
-              closeOnExit
+              closeOnExit,
+              false
           )
       );
       List<Sequence<Row>> subtotalsResults = new ArrayList<>(subtotals.size());
@@ -450,10 +461,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public QueryRunner<Row> mergeRunners(
-      ListeningExecutorService exec,
-      Iterable<QueryRunner<Row>> queryRunners
-  )
+  public QueryRunner<Row> mergeRunners(ListeningExecutorService exec, Iterable<QueryRunner<Row>> queryRunners)
   {
     return new GroupByMergingQueryRunnerV2(
         configSupplier.get(),
@@ -469,11 +477,14 @@ public class GroupByStrategyV2 implements GroupByStrategy
   }
 
   @Override
-  public Sequence<Row> process(
-      GroupByQuery query,
-      StorageAdapter storageAdapter
-  )
+  public Sequence<Row> process(GroupByQuery query, StorageAdapter storageAdapter)
   {
     return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get().withOverrides(query));
+  }
+
+  @Override
+  public boolean supportsNestedQueryPushDown()
+  {
+    return true;
   }
 }

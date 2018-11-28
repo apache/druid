@@ -442,11 +442,11 @@ public class TaskLifecycleTest
       {
         return new SegmentHandoffNotifier()
         {
-
-
           @Override
           public boolean registerSegmentHandoffCallback(
-              SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+              SegmentDescriptor descriptor,
+              Executor exec,
+              Runnable handOffRunnable
           )
           {
             handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));

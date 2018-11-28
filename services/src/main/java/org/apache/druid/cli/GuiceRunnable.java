@@ -65,9 +65,7 @@ public abstract class GuiceRunnable implements Runnable
   public Injector makeInjector()
   {
     try {
-      return Initialization.makeInjectorWithModules(
-          baseInjector, getModules()
-      );
+      return Initialization.makeInjectorWithModules(baseInjector, getModules());
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

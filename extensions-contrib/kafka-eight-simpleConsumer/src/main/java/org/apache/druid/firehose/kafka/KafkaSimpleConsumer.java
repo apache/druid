@@ -196,9 +196,7 @@ public class KafkaSimpleConsumer
             earliest ? kafka.api.OffsetRequest.EarliestTime() : kafka.api.OffsetRequest.LatestTime(), 1
         )
     );
-    OffsetRequest request = new OffsetRequest(
-        requestInfo, kafka.api.OffsetRequest.CurrentVersion(), clientId
-    );
+    OffsetRequest request = new OffsetRequest(requestInfo, kafka.api.OffsetRequest.CurrentVersion(), clientId);
     OffsetResponse response = null;
     try {
       response = consumer.getOffsetsBefore(request);
@@ -323,7 +321,11 @@ public class KafkaSimpleConsumer
       catch (Exception e) {
         ensureNotInterrupted(e);
         log.warn(
-            e, "error communicating with Kafka Broker [%s] to find leader for [%s] - [%s]", broker, topic, partitionId
+            e,
+            "error communicating with Kafka Broker [%s] to find leader for [%s] - [%s]",
+            broker,
+            topic,
+            partitionId
         );
       }
       finally {

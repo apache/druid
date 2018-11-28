@@ -111,25 +111,13 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
         }
     );
 
-    emitTieredStats(
-        emitter, "segment/cost/raw",
-        stats, "initialCost"
-    );
+    emitTieredStats(emitter, "segment/cost/raw", stats, "initialCost");
 
-    emitTieredStats(
-        emitter, "segment/cost/normalization",
-        stats, "normalization"
-    );
+    emitTieredStats(emitter, "segment/cost/normalization", stats, "normalization");
 
-    emitTieredStats(
-        emitter, "segment/moved/count",
-        stats, "movedCount"
-    );
+    emitTieredStats(emitter, "segment/moved/count", stats, "movedCount");
 
-    emitTieredStats(
-        emitter, "segment/deleted/count",
-        stats, "deletedCount"
-    );
+    emitTieredStats(emitter, "segment/deleted/count", stats, "deletedCount");
 
     stats.forEachTieredStat(
         "normalizedInitialCostTimesOneThousand",

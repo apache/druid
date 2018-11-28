@@ -462,9 +462,7 @@ public class BatchDeltaIngestionTest
                     new LongSumAggregatorFactory("visited_sum", "visited_num"),
                     new HyperUniquesAggregatorFactory("unique_hosts", "host2")
                 },
-                new UniformGranularitySpec(
-                    Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)
-                ),
+                new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)),
                 null,
                 MAPPER
             ),

@@ -183,7 +183,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
 
   @Override
   public QueryRunner<SegmentAnalysis> mergeRunners(
-      ExecutorService exec, Iterable<QueryRunner<SegmentAnalysis>> queryRunners
+      ExecutorService exec,
+      Iterable<QueryRunner<SegmentAnalysis>> queryRunners
   )
   {
     final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(exec);
