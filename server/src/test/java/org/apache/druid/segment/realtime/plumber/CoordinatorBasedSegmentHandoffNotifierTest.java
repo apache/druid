@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
-import junit.framework.Assert;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.Intervals;
@@ -33,6 +32,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -67,6 +67,9 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
 
     CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
+    EasyMock.expect(coordinatorClient.isSpecificIntervalDroppedByRule("test_ds", interval))
+            .andReturn(false)
+            .once();
     EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
             .andReturn(
                 Collections.singletonList(
@@ -114,6 +117,9 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
     final AtomicBoolean callbackCalled = new AtomicBoolean(false);
     CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
+    EasyMock.expect(coordinatorClient.isSpecificIntervalDroppedByRule("test_ds", interval))
+            .andReturn(false)
+            .once();
     EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
             .andReturn(
                 Collections.singletonList(
@@ -142,6 +148,26 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     // callback should have been removed
     Assert.assertTrue(notifier.getHandOffCallbacks().isEmpty());
     Assert.assertTrue(callbackCalled.get());
+    EasyMock.verify(coordinatorClient);
+
+    EasyMock.reset(coordinatorClient);
+    EasyMock.expect(coordinatorClient.isSpecificIntervalDroppedByRule("test_ds", interval))
+            .andReturn(true)
+            .once();
+    EasyMock.replay(coordinatorClient);
+
+    notifier.registerSegmentHandoffCallback(
+        descriptor,
+        MoreExecutors.sameThreadExecutor(),
+        () -> callbackCalled.set(true)
+    );
+    Assert.assertEquals(1, notifier.getHandOffCallbacks().size());
+    Assert.assertTrue(notifier.getHandOffCallbacks().containsKey(descriptor));
+    notifier.checkForSegmentHandoffs();
+    // callback should have been removed
+    Assert.assertTrue(notifier.getHandOffCallbacks().isEmpty());
+    Assert.assertTrue(callbackCalled.get());
+
     EasyMock.verify(coordinatorClient);
   }
 
