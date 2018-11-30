@@ -125,8 +125,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
- * Interface for abstracting the indexing task run logic. Only used by Kafka indexing tasks,
- * but will also be used by Kinesis indexing tasks once implemented
+ * Interface for abstracting the indexing task run logic.
  *
  * @param <PartitionType> Partition Number Type
  * @param <SequenceType>  Sequence Number Type
@@ -141,6 +140,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
     PAUSED,
     PUBLISHING
   }
+
+  protected enum Type
+  {
+    KAFKA,
+    KINESIS
+  }
+
 
   private final EmittingLogger log = new EmittingLogger(this.getClass());
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
@@ -201,9 +207,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
   private final Map<PartitionType, SequenceType> initialOffsetsSnapshot = new HashMap<>();
   private final Set<PartitionType> exclusiveStartingPartitions = new HashSet<>();
 
-  // true for kafka, falsse for kinesis
-  private final boolean isSkipSegmentLineageCheck;
-
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
   private volatile TaskToolbox toolbox;
@@ -225,8 +228,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       final AuthorizerMapper authorizerMapper,
       final Optional<ChatHandlerProvider> chatHandlerProvider,
       final CircularBuffer<Throwable> savedParseExceptions,
-      final RowIngestionMetersFactory rowIngestionMetersFactory,
-      final boolean isSkipSegmentLineageCheck
+      final RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     Preconditions.checkNotNull(task);
@@ -240,8 +242,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
     this.savedParseExceptions = savedParseExceptions;
     this.stream = ioConfig.getStartPartitions().getStream();
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
-    this.isSkipSegmentLineageCheck = isSkipSegmentLineageCheck;
-
     this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndPartitions().getPartitionSequenceNumberMap());
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
@@ -283,7 +283,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
         Map.Entry<Integer, Map<PartitionType, SequenceType>> previous = sequenceOffsets.next();
         while (sequenceOffsets.hasNext()) {
           Map.Entry<Integer, Map<PartitionType, SequenceType>> current = sequenceOffsets.next();
-          sequences.add(createSequenceMetaData(
+          sequences.add(createSequenceMetadata(
               previous.getKey(),
               StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
               previous.getValue(),
@@ -294,7 +294,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
           previous = current;
           exclusive = true;
         }
-        sequences.add(createSequenceMetaData(
+        sequences.add(createSequenceMetadata(
             previous.getKey(),
             StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
             previous.getValue(),
@@ -303,7 +303,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
             exclusive ? previous.getValue().keySet() : null
         ));
       } else {
-        sequences.add(createSequenceMetaData(
+        sequences.add(createSequenceMetadata(
             0,
             StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), 0),
             ioConfig.getStartPartitions().getPartitionSequenceNumberMap(),
@@ -498,7 +498,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
           maybePersistAndPublishSequences(committerSupplier);
 
 
-          // calling getReocrd() ensures that excpetions specific to kafka/kinesis like OffsetOutOfRangeException
+          // calling getRecord() ensures that exceptions specific to kafka/kinesis like OffsetOutOfRangeException
           // are handled in the subclasses
           List<OrderedPartitionableRecord<PartitionType, SequenceType>> records = getRecords(recordSupplier, toolbox);
 
@@ -515,7 +515,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
 
             // for the first message we receive, check that we were given a message with a sequenceNumber that matches our
             // expected starting sequenceNumber
-            if (!verifyInitialRecordAndSkipExclusiveParition(record, initialOffsetsSnapshot)) {
+            if (!verifyInitialRecordAndSkipExclusivePartition(record, initialOffsetsSnapshot)) {
               continue;
             }
 
@@ -535,15 +535,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
                 createSequenceNumber(endOffsets.get(record.getPartitionId()))) <= 0) {
 
 
-              if (!record.getSequenceNumber().equals(currOffsets.get(record.getPartitionId()))) {
-                if (!ioConfig.isSkipOffsetGaps()) {
-                  throw new ISE(
-                      "WTF?! Got sequence[%s] after sequence[%s] in partition[%s].",
-                      record.getSequenceNumber(),
-                      currOffsets.get(record.getPartitionId()),
-                      record.getPartitionId()
-                  );
-                }
+              if (!record.getSequenceNumber().equals(currOffsets.get(record.getPartitionId()))
+                  && !ioConfig.isSkipOffsetGaps()) {
+                throw new ISE(
+                    "WTF?! Got sequence[%s] after sequence[%s] in partition[%s].",
+                    record.getSequenceNumber(),
+                    currOffsets.get(record.getPartitionId()),
+                    record.getPartitionId()
+                );
               }
 
               try {
@@ -580,8 +579,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
                         row,
                         sequenceToUse.getSequenceName(),
                         committerSupplier,
-                        // true for kafka, false for kinesis
-                        isSkipSegmentLineageCheck,
+                        true,
                         // do not allow incremental persists to happen until all the rows from this batch
                         // of rows are indexed
                         false
@@ -637,8 +635,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
 
               // in kafka, we can easily get the next offset by adding 1, but for kinesis, there's no way
               // to get the next sequence number without having to make an expensive api call. So the behavior
-              // here for kafka is to +1 while for kinesis we simply save the current sequence numberkkkkk
-              currOffsets.put(record.getPartitionId(), getNextSequenceNumber(record.getSequenceNumber()));
+              // here for kafka is to +1 while for kinesis we simply save the current sequence number
+              currOffsets.put(record.getPartitionId(), getSequenceNumberToStoreAfterRead(record.getSequenceNumber()));
             }
 
             if ((currOffsets.get(record.getPartitionId()).equals(endOffsets.get(record.getPartitionId()))
@@ -1495,7 +1493,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
           exclusiveStartingPartitions.addAll(exclusivePartitions);
 
           // create new sequence
-          final SequenceMetadata newSequence = createSequenceMetaData(
+          final SequenceMetadata newSequence = createSequenceMetadata(
               latestSequence.getSequenceId() + 1,
               StringUtils.format("%s_%d", ioConfig.getBaseSequenceName(), latestSequence.getSequenceId() + 1),
               sequenceNumbers,
@@ -1656,7 +1654,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
     return startTime;
   }
 
-  protected abstract SequenceMetadata createSequenceMetaData(
+  protected abstract SequenceMetadata createSequenceMetadata(
       int sequenceId,
       String sequenceName,
       Map<PartitionType, SequenceType> startOffsets,
@@ -1667,20 +1665,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
 
   protected abstract class SequenceMetadata
   {
+    private final int sequenceId;
+    private final String sequenceName;
+    private final Set<PartitionType> exclusiveStartPartitions;
+    private final Set<PartitionType> assignments;
+    private final boolean sentinel;
+    private boolean checkpointed;
+
     /**
      * Lock for accessing {@link #endOffsets} and {@link #checkpointed}. This lock is required because
      * {@link #setEndOffsets)} can be called by both the main thread and the HTTP thread.
      */
     protected final ReentrantLock lock = new ReentrantLock();
-
-    private final int sequenceId;
-    private final String sequenceName;
     protected final Map<PartitionType, SequenceType> startOffsets;
     protected final Map<PartitionType, SequenceType> endOffsets;
-    private final Set<PartitionType> exclusiveStartPartitions;
-    private final Set<PartitionType> assignments;
-    private final boolean sentinel;
-    private boolean checkpointed;
 
 
     @JsonCreator
@@ -1690,7 +1688,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
         @JsonProperty("startOffsets") Map<PartitionType, SequenceType> startOffsets,
         @JsonProperty("endOffsets") Map<PartitionType, SequenceType> endOffsets,
         @JsonProperty("checkpointed") boolean checkpointed,
-        @JsonProperty("exclusiveStartParittions") Set<PartitionType> exclusiveStartPartitions
+        @JsonProperty("exclusiveStartPartitions") Set<PartitionType> exclusiveStartPartitions
     )
     {
       Preconditions.checkNotNull(sequenceName);
@@ -1798,25 +1796,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
     }
 
     protected abstract boolean canHandle(OrderedPartitionableRecord<PartitionType, SequenceType> record);
-
-    boolean acanHandle(OrderedPartitionableRecord<PartitionType, SequenceType> record)
-    {
-      lock.lock();
-      try {
-        final OrderedSequenceNumber<SequenceType> partitionEndOffset = createSequenceNumber(endOffsets.get(record.getPartitionId()));
-        final OrderedSequenceNumber<SequenceType> partitionStartOffset = createSequenceNumber(startOffsets.get(record.getPartitionId()));
-        final OrderedSequenceNumber<SequenceType> recordOffset = createSequenceNumber(record.getSequenceNumber());
-        return isOpen()
-               && recordOffset != null
-               && partitionEndOffset != null
-               && partitionStartOffset != null
-               && recordOffset.compareTo(partitionStartOffset) >= 0
-               && recordOffset.compareTo(partitionEndOffset) < 0;
-      }
-      finally {
-        lock.unlock();
-      }
-    }
 
     @Override
     public String toString()
@@ -1937,7 +1916,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
 
   }
 
-  private boolean verifyInitialRecordAndSkipExclusiveParition(
+  private boolean verifyInitialRecordAndSkipExclusivePartition(
       final OrderedPartitionableRecord<PartitionType, SequenceType> record,
       final Map<PartitionType, SequenceType> intialSequenceSnapshot
   )
@@ -1979,9 +1958,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       SeekableStreamIndexTask<PartitionType, SequenceType> task
   ) throws IOException;
 
-  protected abstract SequenceType getNextSequenceNumber(
-      SequenceType sequenceNumber
-  );
+  protected abstract SequenceType getSequenceNumberToStoreAfterRead(SequenceType sequenceNumber);
 
   protected abstract SeekableStreamPartitions<PartitionType, SequenceType> createSeekableStreamPartitions(
       ObjectMapper mapper,
@@ -2001,10 +1978,4 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
   protected abstract OrderedSequenceNumber<SequenceType> createSequenceNumber(SequenceType sequenceNumber);
 
   protected abstract Type getRunnerType();
-
-  protected enum Type
-  {
-    KAFKA,
-    KINESIS
-  }
 }

@@ -64,21 +64,21 @@ import java.util.concurrent.ThreadLocalRandom;
 public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> extends AbstractTask
     implements ChatHandler
 {
-  private final EmittingLogger log = new EmittingLogger(this.getClass());
   public static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
-
   private static final Random RANDOM = ThreadLocalRandom.current();
+
+  private final EmittingLogger log = new EmittingLogger(this.getClass());
+  private final SeekableStreamIndexTaskRunner<PartitionType, SequenceType> runner;
   protected final DataSchema dataSchema;
   protected final InputRowParser<ByteBuffer> parser;
   protected final SeekableStreamTuningConfig tuningConfig;
   protected final SeekableStreamIOConfig<PartitionType, SequenceType> ioConfig;
   protected final Optional<ChatHandlerProvider> chatHandlerProvider;
-  private final SeekableStreamIndexTaskRunner<PartitionType, SequenceType> runner;
   protected final String type;
   protected final Map<String, Object> context;
   protected final AuthorizerMapper authorizerMapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
-  protected CircularBuffer<Throwable> savedParseExceptions;
+  protected final CircularBuffer<Throwable> savedParseExceptions;
 
   @JsonCreator
   public SeekableStreamIndexTask(

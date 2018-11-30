@@ -252,25 +252,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     expect(supervisorRecordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
     supervisorRecordSupplier.seek(anyObject(), anyString());
     expectLastCall().anyTimes();
-    //supervisorRecordSupplier.close();
-    //expectLastCall().once();
-
-//    taskRecordSupplier.assign(anyObject());
-//    expectLastCall().anyTimes();
-//
-//    expect(taskRecordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
-//
-//    taskRecordSupplier.seek(anyObject(), anyString());
-//    expectLastCall().anyTimes();
-//
-//    expect(taskRecordSupplier.poll(anyLong()))
-//        .andReturn(records)
-//        .once()
-//        .andReturn(Collections.emptyList())
-//        .anyTimes();
-//
-//    taskRecordSupplier.close();
-//    expectLastCall().once();
 
     Capture<KinesisIndexTask> captured = Capture.newInstance();
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();

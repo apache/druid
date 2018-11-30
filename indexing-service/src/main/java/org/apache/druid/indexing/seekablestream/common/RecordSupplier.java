@@ -39,7 +39,7 @@ import java.util.Set;
 public interface RecordSupplier<PartitionType, SequenceType> extends Closeable
 {
   /**
-   * assigns the given parittions to this RecordSupplier
+   * assigns the given partitions to this RecordSupplier
    * and seek to the earliest sequence number. Previously
    * assigned partitions will be replaced.
    *

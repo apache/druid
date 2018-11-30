@@ -309,11 +309,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     if (deaggregate) {
       try {
-        Class<?> KCLUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
+        Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
         MethodHandles.Lookup lookup = MethodHandles.publicLookup();
 
-        Method deaggregateMethod = KCLUserRecordclass.getMethod("deaggregate", List.class);
-        Method getDataMethod = KCLUserRecordclass.getMethod("getData");
+        Method deaggregateMethod = kclUserRecordclass.getMethod("deaggregate", List.class);
+        Method getDataMethod = kclUserRecordclass.getMethod("getData");
 
         deaggregateHandle = lookup.unreflect(deaggregateMethod);
         getDataHandle = lookup.unreflect(getDataMethod);
@@ -328,7 +328,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       deaggregateHandle = null;
       getDataHandle = null;
     }
-
 
     log.info(
         "Creating fetch thread pool of size [%d] (Runtime.availableProcessors=%d)",

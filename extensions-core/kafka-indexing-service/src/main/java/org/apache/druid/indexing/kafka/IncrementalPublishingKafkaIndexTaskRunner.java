@@ -22,7 +22,6 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -82,17 +81,14 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory,
-        true
+        rowIngestionMetersFactory
     );
     this.task = task;
     this.tuningConfig = task.getTuningConfig();
   }
 
   @Override
-  protected Long getNextSequenceNumber(
-      @NotNull Long sequenceNumber
-  )
+  protected Long getSequenceNumberToStoreAfterRead(@NotNull Long sequenceNumber)
   {
     return sequenceNumber + 1;
   }
@@ -150,7 +146,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
             topicPartition.topic(),
             topicPartition.partition()
         );
-        recordSupplier.seekToEarliest(ImmutableSet.of(streamPartition));
         final Long leastAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
         if (leastAvailableOffset == null) {
           throw new ISE(
@@ -213,7 +208,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected SequenceMetadata createSequenceMetaData(
+  protected SequenceMetadata createSequenceMetadata(
       int sequenceId,
       String sequenceName,
       Map<Integer, Long> startOffsets,
@@ -256,7 +251,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   private class KafkaSequenceMetaData extends SequenceMetadata
   {
 
-    public KafkaSequenceMetaData(
+    KafkaSequenceMetaData(
         int sequenceId,
         String sequenceName,
         Map<Integer, Long> startOffsets,

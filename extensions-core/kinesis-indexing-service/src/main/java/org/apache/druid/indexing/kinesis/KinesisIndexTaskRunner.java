@@ -45,16 +45,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisIndexTaskRunner.class);
   private static final long POLL_TIMEOUT = 100;
-  private volatile CopyOnWriteArrayList<SequenceMetadata> sequences;
 
-
-  public KinesisIndexTaskRunner(
+  KinesisIndexTaskRunner(
       KinesisIndexTask task,
       KinesisRecordSupplier recordSupplier,
       InputRowParser<ByteBuffer> parser,
@@ -71,16 +68,13 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory,
-        false
+        rowIngestionMetersFactory
     );
   }
 
 
   @Override
-  protected String getNextSequenceNumber(
-      String sequenceNumber
-  )
+  protected String getSequenceNumberToStoreAfterRead(String sequenceNumber)
   {
     return sequenceNumber;
   }
@@ -129,7 +123,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected SequenceMetadata createSequenceMetaData(
+  protected SequenceMetadata createSequenceMetadata(
       int sequenceId,
       String sequenceName,
       Map<String, String> startOffsets,
@@ -172,7 +166,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   private class KinesisSequenceMetaData extends SequenceMetadata
   {
 
-    public KinesisSequenceMetaData(
+    KinesisSequenceMetaData(
         int sequenceId,
         String sequenceName,
         Map<String, String> startOffsets,

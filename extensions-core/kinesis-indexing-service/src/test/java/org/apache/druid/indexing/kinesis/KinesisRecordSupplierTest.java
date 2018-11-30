@@ -72,7 +72,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   private static GetRecordsResult getRecordsResult0;
   private static GetRecordsResult getRecordsResult1;
   private static StreamDescription streamDescription;
-  private static Shard shard0, shard1;
+  private static Shard shard0;
+  private static Shard shard1;
   private static KinesisRecordSupplier recordSupplier;
   private static List<Record> shard1Records = ImmutableList.of(
       new Record().withData(JB("2011", "d", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
@@ -118,7 +119,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
                                                                                  Collectors
                                                                                      .toList()))
                                                         .build();
-  ;
 
   private static ByteBuffer JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {

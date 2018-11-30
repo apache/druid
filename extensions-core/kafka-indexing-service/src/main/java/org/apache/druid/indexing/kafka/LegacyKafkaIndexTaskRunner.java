@@ -196,8 +196,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
         authorizerMapper,
         chatHandlerProvider,
         savedParseExceptions,
-        rowIngestionMetersFactory,
-        true
+        rowIngestionMetersFactory
     );
     this.task = task;
     this.ioConfig = task.getIOConfig();
@@ -796,7 +795,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   }
 
   @Override
-  protected Long getNextSequenceNumber(Long sequenceNumber)
+  protected Long getSequenceNumberToStoreAfterRead(Long sequenceNumber)
   {
     throw new UnsupportedOperationException();
   }
@@ -1227,7 +1226,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   }
 
   @Override
-  protected SequenceMetadata createSequenceMetaData(
+  protected SequenceMetadata createSequenceMetadata(
       int sequenceId,
       String sequenceName,
       Map<Integer, Long> startOffsets,

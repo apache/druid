@@ -34,7 +34,7 @@ import java.util.Objects;
 public class KinesisTuningConfig extends SeekableStreamTuningConfig
 {
 
-  private static final int DEFAULT_RECORD_BUFFER_SIZE = 100000;
+  private static final int DEFAULT_RECORD_BUFFER_SIZE = 10000;
   private static final int DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT = 5000;
   private static final int DEFAULT_RECORD_BUFFER_FULL_WAIT = 5000;
   private static final int DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT = 20000;

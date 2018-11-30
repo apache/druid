@@ -71,7 +71,7 @@ public class KinesisTuningConfigTest
     Assert.assertTrue(config.getBuildV9Directly());
     Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
-    Assert.assertEquals(100000, config.getRecordBufferSize());
+    Assert.assertEquals(10000, config.getRecordBufferSize());
     Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(5000, config.getRecordBufferFullWait());
     Assert.assertEquals(20000, config.getFetchSequenceNumberTimeout());

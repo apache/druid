@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.errorprone.annotations.DoNotCall;
 
 import javax.validation.constraints.NotNull;
 import java.util.Map;
@@ -47,7 +46,6 @@ import java.util.Objects;
 public class SeekableStreamPartitions<PartitionType, SequenceType>
 {
   public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
-  public static final String BEGINNING_SEQUENCE_NUMBER = "BEGINNING_SEQUENCE_NUMBER";
 
   // stream/topic
   private final String stream;
@@ -57,8 +55,10 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
   @JsonCreator
   public SeekableStreamPartitions(
       @JsonProperty("stream") final String stream,
+      // kept for backward compatibility
       @JsonProperty("topic") final String topic,
       @JsonProperty("partitionSequenceNumberMap") final Map<PartitionType, SequenceType> partitionSequenceNumberMap,
+      // kept for backward compatibility
       @JsonProperty("partitionOffsetMap") final Map<PartitionType, SequenceType> partitionOffsetMap
   )
   {
@@ -85,22 +85,8 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
     return stream;
   }
 
-  @DoNotCall
-  @JsonProperty
-  public final String getTopic()
-  {
-    return stream;
-  }
-
   @JsonProperty
   public Map<PartitionType, SequenceType> getPartitionSequenceNumberMap()
-  {
-    return map;
-  }
-
-  @DoNotCall
-  @JsonProperty
-  public final Map<PartitionType, SequenceType> getPartitionOffsetMap()
   {
     return map;
   }

@@ -3001,7 +3001,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   }
 
   @JsonTypeName("index_kinesis")
-  private class TestableKinesisIndexTask extends KinesisIndexTask
+  private static class TestableKinesisIndexTask extends KinesisIndexTask
   {
     @JsonCreator
     public TestableKinesisIndexTask(

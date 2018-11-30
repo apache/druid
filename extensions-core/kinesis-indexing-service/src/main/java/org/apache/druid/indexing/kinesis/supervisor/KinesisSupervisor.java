@@ -71,7 +71,7 @@ import java.util.concurrent.TimeoutException;
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * Kinesis sequences.
  * <p>
- * the Kinesis supervisor does not yet support incremental handoff and emitLag
+ * the Kinesis supervisor does not yet support lag calculations
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
