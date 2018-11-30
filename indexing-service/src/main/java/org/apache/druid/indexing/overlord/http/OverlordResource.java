@@ -59,6 +59,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -338,8 +339,9 @@ public class OverlordResource
   }
 
   @POST
-  @Path("/task/{dataSource}/shutdownAllTasks")
+  @Path("/datasources/{dataSource}/shutdownAllTasks")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response shutdownTasksForDataSource(@PathParam("dataSource") final String dataSource)
   {
     return asLeaderWith(
@@ -1001,9 +1003,11 @@ public class OverlordResource
   }
 
   @GET
-  @Path("/dataSources/{dataSource}")
+  @Path("/datasources/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getRunningTasksByDataSource(@PathParam("dataSource") String dataSource,
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getRunningTasksByDataSource(
+      @PathParam("dataSource") String dataSource,
       @Context HttpServletRequest request)
   {
     Optional<TaskRunner> ts = taskMaster.getTaskRunner();
@@ -1013,10 +1017,12 @@ public class OverlordResource
     Collection<? extends TaskRunnerWorkItem> runningTasks = ts.get().getRunningTasks();
     if (runningTasks == null || runningTasks.isEmpty()) {
       return Response.status(Response.Status.NOT_FOUND)
-          .entity("No running tasks found for the datasource : " + dataSource).build();
+                     .entity("No running tasks found for the datasource : " + dataSource).build();
     }
-    List<TaskRunnerWorkItem> taskRunnerWorkItemList = runningTasks.stream()
-        .filter(task -> dataSource.equals(task.getDataSource())).collect(Collectors.toList());
+    List<TaskRunnerWorkItem> taskRunnerWorkItemList = runningTasks
+        .stream()
+        .filter(task -> dataSource.equals(task.getDataSource()))
+        .collect(Collectors.toList());
     return Response.ok(taskRunnerWorkItemList).build();
   }
 
