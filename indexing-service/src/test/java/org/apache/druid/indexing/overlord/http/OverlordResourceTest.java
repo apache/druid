@@ -126,20 +126,10 @@ public class OverlordResourceTest
     );
   }
 
-  private void expectAuthorizationTokenCheck()
+  @After
+  public void tearDown()
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
-            .atLeastOnce();
-
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
-    EasyMock.expectLastCall().anyTimes();
-
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.verify(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
   }
 
   @Test
@@ -917,7 +907,6 @@ public class OverlordResourceTest
     Assert.assertEquals(new TaskStatusResponse("othertask", null), taskStatusResponse2);
   }
 
-
   @Test
   public void testShutdownTask()
   {
@@ -942,7 +931,6 @@ public class OverlordResourceTest
         .getEntity();
     Assert.assertEquals("id_1", response.get("task"));
   }
-
 
   @Test
   public void testShutdownAllTasks()
@@ -987,12 +975,20 @@ public class OverlordResourceTest
     Assert.assertEquals("datasource", response.get("dataSource"));
   }
 
-
-
-  @After
-  public void tearDown()
+  private void expectAuthorizationTokenCheck()
   {
-    EasyMock.verify(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(authenticationResult)
+            .atLeastOnce();
+
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
+    EasyMock.expectLastCall().anyTimes();
+
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
   }
 
   private Task getTaskWithIdAndDatasource(String id, String datasource)
@@ -1048,5 +1044,4 @@ public class OverlordResourceTest
     }
 
   }
-
 }
