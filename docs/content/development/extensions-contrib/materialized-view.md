@@ -68,11 +68,11 @@ A sample derivativeDataSource supervisor spec is shown below:
 
 |Field|Description|Required|
 |--------|-----------|---------|
-|Type	|The supervisor type. This should always be derivativeDataSource	|yes|
-|baseDataSource	|The name of base dataSource. This dataSource data should be already stored inside Druid, and the dataSource will be used as input data. See [dataSource inputSpec](http://druid.io/docs/latest/ingestion/update-existing-data.html#datasource "dataSource inputSpec"). 	|yes|
-|dimensionsSpec	|Specifies the dimensions of the data. These dimensions must be the subset of baseDataSource's dimensions.	|yes|
-|metricsSpec	|A list of aggregators. These metrics must be the subset of baseDataSource's metrics. See [aggregations](http://druid.io/docs/latest/querying/aggregations.html "aggregations") 	|yes|
-|tuningConfig	|TuningConfig must be HadoopTuningConfig. See [hadoop tuning config]( http://druid.io/docs/latest/ingestion/batch-ingestion.html#tuningconfig "hadoop tuning config")	|yes|
+|Type	|The supervisor type. This should always be `derivativeDataSource`.|yes|
+|baseDataSource	|The name of base dataSource. This dataSource data should be already stored inside Druid, and the dataSource will be used as input data.|yes|
+|dimensionsSpec	|Specifies the dimensions of the data. These dimensions must be the subset of baseDataSource's dimensions.|yes|
+|metricsSpec	|A list of aggregators. These metrics must be the subset of baseDataSource's metrics. See [aggregations](../../querying/aggregations.html).|yes|
+|tuningConfig	|TuningConfig must be HadoopTuningConfig. See [Hadoop tuning config](../../ingestion/hadoop.html#tuningconfig).|yes|
 |dataSource	|The name of this derived dataSource. 	|no(default=baseDataSource-hashCode of supervisor)|
 |hadoopDependencyCoordinates	|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by druid.extensions.hadoopDependenciesDir	|no|
 |classpathPrefix	|Classpath that will be pre-appended for the peon process.	|no|
@@ -128,6 +128,6 @@ There are 2 parts in a view query:
 |Field|Description|Required|
 |--------|-----------|---------|
 |queryType	|The query type. This should always be view	|yes|
-|query	|The real query of this `view` query. The real query must be [groupby](http://druid.io/docs/latest/querying/groupbyquery.html "groupby")/[topn](http://druid.io/docs/latest/querying/topnquery.html "topn")/[timeseries](http://druid.io/docs/latest/querying/timeseriesquery.html "timeseries") type.	|yes|
+|query	|The real query of this `view` query. The real query must be [groupBy](../../querying/groupbyquery.html), [topN](../../querying/topnquery.html), or [timeseries](../../querying/timeseriesquery.html) type.|yes|
 
 **Note that Materialized View is currently designated as experimental. Please make sure the time of all nodes are the same and increase monotonically. Otherwise, some unexpected errors may happen on query results.**
