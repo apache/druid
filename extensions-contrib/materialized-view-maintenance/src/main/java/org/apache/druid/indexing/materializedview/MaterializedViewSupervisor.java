@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class MaterializedViewSupervisor implements Supervisor
@@ -81,8 +82,8 @@ public class MaterializedViewSupervisor implements Supervisor
   private final String supervisorId;
   private final int maxTaskCount;
   private final long minDataLagMs;
-  private final Map<Interval, HadoopIndexTask> runningTasks = new HashMap<>();
-  private final Map<Interval, String> runningVersion = new HashMap<>();
+  private final Map<Interval, HadoopIndexTask> runningTasks = new ConcurrentHashMap<>();
+  private final Map<Interval, String> runningVersion = new ConcurrentHashMap<>();
   // taskLock is used to synchronize runningTask and runningVersion
   private final Object taskLock = new Object();
   // stateLock is used to synchronize materializedViewSupervisor's status
