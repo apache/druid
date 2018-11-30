@@ -916,65 +916,6 @@ public class OverlordResourceTest
     Assert.assertEquals(new TaskStatusResponse("othertask", null), taskStatusResponse2);
   }
 
-  @Test
-  public void testGetRunningTasksByDataSource()
-  {
-    // This is disabled since OverlordResource.getTaskStatus() is annotated with TaskResourceFilter which is supposed to
-    // set authorization token properly, but isn't called in this test.
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
-    // expectAuthorizationTokenCheck();
-
-    List<String> tasksIds = ImmutableList.of("id_1", "id_2");
-    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
-        ImmutableList.of(
-            new MockTaskRunnerWorkItem(tasksIds.get(0), null),
-            new MockTaskRunnerWorkItem(tasksIds.get(1), null)
-        )
-    );
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(0))).andReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(0), "deny"))).once();
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(1))).andReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow"))).once();
-
-    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
-    List<TaskRunnerWorkItem> responseObjects = (List) overlordResource.getRunningTasksByDataSource("ds_test", req)
-                                                                      .getEntity();
-
-    Assert.assertEquals(2, responseObjects.size());
-    Assert.assertEquals(taskStorageQueryAdapter.getTask("id_1").get().getId(), responseObjects.get(0).getTaskId());
-    Assert.assertEquals(taskStorageQueryAdapter.getTask("id_2").get().getId(), responseObjects.get(1).getTaskId());
-    Assert.assertEquals("DataSource Check", "ds_test", responseObjects.get(0).getDataSource());
-  }
-
-  @Test
-  public void testGetRunningTasksByDataSourceNeg()
-  {
-    // This is disabled since OverlordResource.getTaskStatus() is annotated with TaskResourceFilter which is supposed to
-    // set authorization token properly, but isn't called in this test.
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
-    // expectAuthorizationTokenCheck();
-
-    List<String> tasksIds = ImmutableList.of("id_1", "id_2");
-    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
-        ImmutableList.of(
-            new MockTaskRunnerWorkItem(tasksIds.get(0), null),
-            new MockTaskRunnerWorkItem(tasksIds.get(1), null)
-        )
-    );
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(0))).andReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(0), "deny"))).once();
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(1))).andReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow"))).once();
-
-    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
-    Assert.assertTrue(taskStorageQueryAdapter.getTask("id_1").isPresent());
-    Assert.assertTrue(taskStorageQueryAdapter.getTask("id_2").isPresent());
-    List<TaskRunnerWorkItem> responseObjects = (List) overlordResource.getRunningTasksByDataSource("ds_NA", req)
-                                                                      .getEntity();
-
-    Assert.assertEquals(0, responseObjects.size());
-  }
-
   @After
   public void tearDown()
   {

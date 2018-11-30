@@ -1002,30 +1002,6 @@ public class OverlordResource
     }
   }
 
-  @GET
-  @Path("/datasources/{dataSource}")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getRunningTasksByDataSource(
-      @PathParam("dataSource") String dataSource,
-      @Context HttpServletRequest request)
-  {
-    Optional<TaskRunner> ts = taskMaster.getTaskRunner();
-    if (!ts.isPresent()) {
-      return Response.status(Response.Status.NOT_FOUND).entity("No tasks are running").build();
-    }
-    Collection<? extends TaskRunnerWorkItem> runningTasks = ts.get().getRunningTasks();
-    if (runningTasks == null || runningTasks.isEmpty()) {
-      return Response.status(Response.Status.NOT_FOUND)
-                     .entity("No running tasks found for the datasource : " + dataSource).build();
-    }
-    List<TaskRunnerWorkItem> taskRunnerWorkItemList = runningTasks
-        .stream()
-        .filter(task -> dataSource.equals(task.getDataSource()))
-        .collect(Collectors.toList());
-    return Response.ok(taskRunnerWorkItemList).build();
-  }
-
   private <T> Response asLeaderWith(Optional<T> x, Function<T, Response> f)
   {
     if (x.isPresent()) {
