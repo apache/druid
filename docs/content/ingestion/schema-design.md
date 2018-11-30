@@ -104,9 +104,7 @@ You should query for the number of ingested rows with:
 ## Schema-less dimensions
 
 If the `dimensions` field is left empty in your ingestion spec, Druid will treat every column that is not the timestamp column, 
-a dimension that has been excluded, or a metric column as a dimension. It should be noted that because of [#658](https://github.com/apache/incubator-druid/issues/658) 
-these segments will be slightly larger than if the list of dimensions was explicitly specified in lexicographic order. This limitation 
-does not impact query correctness- just storage requirements.
+a dimension that has been excluded, or a metric column as a dimension.
 
 Note that when using schema-less ingestion, all dimensions will be ingested as String-typed dimensions.
 

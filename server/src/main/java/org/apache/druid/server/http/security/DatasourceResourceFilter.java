@@ -100,7 +100,8 @@ public class DatasourceResourceFilter extends AbstractResourceFilter
     List<String> applicablePaths = ImmutableList.of(
         "druid/coordinator/v1/datasources/",
         "druid/coordinator/v1/metadata/datasources/",
-        "druid/v2/datasources/"
+        "druid/v2/datasources/",
+        "druid/indexer/v1/datasources"
     );
     for (String path : applicablePaths) {
       if (requestPath.startsWith(path) && !requestPath.equals(path)) {
