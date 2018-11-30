@@ -2161,7 +2161,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointForInactiveTaskGroup()
-      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException, NoSuchMethodException,
+             IllegalAccessException, ClassNotFoundException
   {
     supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
@@ -2263,7 +2264,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test(timeout = 60_000L)
-  public void testCheckpointForUnknownTaskGroup() throws InterruptedException
+  public void testCheckpointForUnknownTaskGroup()
+      throws InterruptedException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
@@ -2342,7 +2344,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointWithNullTaskGroupId()
-      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException, NoSuchMethodException,
+             IllegalAccessException, ClassNotFoundException
   {
     supervisor = getSupervisor(1, 3, true, "PT1S", null, null, false);
     //not adding any events
@@ -2889,7 +2892,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       SeekableStreamPartitions<Integer, Long> endPartitions,
       DateTime minimumMessageTime,
       DateTime maximumMessageTime
-  )
+  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     return new KafkaIndexTask(
         id,
@@ -2901,7 +2904,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             "sequenceName-" + taskGroupId,
             startPartitions,
             endPartitions,
-            ImmutableMap.of(),
+            ImmutableMap.of("bootstrap.servers", kafkaHost),
             true,
             minimumMessageTime,
             maximumMessageTime,

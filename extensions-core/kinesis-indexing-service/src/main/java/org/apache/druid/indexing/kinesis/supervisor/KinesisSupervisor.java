@@ -146,7 +146,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       SeekableStreamIOConfig taskIoConfig,
       SeekableStreamTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
-  ) throws JsonProcessingException
+  ) throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     final String checkpoints = sortingMapper.writerFor(new TypeReference<TreeMap<Integer, Map<String, String>>>()
     {
@@ -180,6 +180,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return taskList;
   }
 
+
   @Override
   protected RecordSupplier<String, String> setupRecordSupplier()
       throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException
@@ -188,14 +189,16 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     KinesisTuningConfig taskTuningConfig = spec.getTuningConfig();
 
     return new KinesisRecordSupplier(
-        ioConfig.getEndpoint(),
-        ioConfig.getAwsAccessKeyId(),
-        ioConfig.getAwsSecretAccessKey(),
+        KinesisRecordSupplier.getAmazonKinesisClient(
+            ioConfig.getEndpoint(),
+            ioConfig.getAwsAccessKeyId(),
+            ioConfig.getAwsSecretAccessKey(),
+            ioConfig.getAwsAssumedRoleArn(),
+            ioConfig.getAwsExternalId()
+        ),
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
         1,
-        ioConfig.getAwsAssumedRoleArn(),
-        ioConfig.getAwsExternalId(),
         ioConfig.isDeaggregate(),
         taskTuningConfig.getRecordBufferSize(),
         taskTuningConfig.getRecordBufferOfferTimeout(),
@@ -291,7 +294,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   @VisibleForTesting
   protected void runInternal()
-      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException, NoSuchMethodException,
+             IllegalAccessException, ClassNotFoundException
   {
     super.runInternal();
   }

@@ -169,7 +169,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
   private final Condition hasPaused = pauseLock.newCondition();
   private final Condition shouldResume = pauseLock.newCondition();
 
-  protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
+  public final AtomicBoolean stopRequested = new AtomicBoolean(false);
   private final AtomicBoolean publishOnStop = new AtomicBoolean(false);
 
   // [statusLock] is used to synchronize the Jetty thread calling stopGracefully() with the main run thread. It prevents
@@ -185,6 +185,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
   protected final Condition isAwaitingRetry = pollRetryLock.newCondition();
 
   private final SeekableStreamIndexTask<PartitionType, SequenceType> task;
+  private final RecordSupplier<PartitionType, SequenceType> recordSupplier;
   private final SeekableStreamIOConfig<PartitionType, SequenceType> ioConfig;
   private final SeekableStreamTuningConfig tuningConfig;
   private final InputRowParser<ByteBuffer> parser;
@@ -219,6 +220,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionType, SequenceType> task,
+      final RecordSupplier<PartitionType, SequenceType> recordSupplier,
       final InputRowParser<ByteBuffer> parser,
       final AuthorizerMapper authorizerMapper,
       final Optional<ChatHandlerProvider> chatHandlerProvider,
@@ -227,7 +229,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       final boolean isSkipSegmentLineageCheck
   )
   {
+    Preconditions.checkNotNull(task);
     this.task = task;
+    this.recordSupplier = recordSupplier;
     this.ioConfig = task.getIOConfig();
     this.tuningConfig = task.getTuningConfig();
     this.parser = parser;
@@ -346,7 +350,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
     );
 
     Throwable caughtExceptionOuter = null;
-    try (final RecordSupplier<PartitionType, SequenceType> recordSupplier = task.newRecordSupplier()) {
+    try {
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 

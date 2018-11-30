@@ -19,16 +19,15 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import cloud.localstack.LocalstackTestRunner;
-import cloud.localstack.TestUtils;
-import cloud.localstack.docker.LocalstackDockerTestRunner;
-import cloud.localstack.docker.annotation.LocalstackDockerProperties;
-import com.amazonaws.http.SdkHttpMetadata;
 import com.amazonaws.services.kinesis.AmazonKinesis;
-import com.amazonaws.services.kinesis.model.PutRecordsRequest;
-import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
-import com.amazonaws.services.kinesis.model.PutRecordsResult;
-import com.amazonaws.services.kinesis.model.PutRecordsResultEntry;
+import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.amazonaws.services.kinesis.model.DescribeStreamResult;
+import com.amazonaws.services.kinesis.model.GetRecordsRequest;
+import com.amazonaws.services.kinesis.model.GetRecordsResult;
+import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
+import com.amazonaws.services.kinesis.model.Record;
+import com.amazonaws.services.kinesis.model.Shard;
+import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -38,91 +37,93 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.easymock.Capture;
+import org.easymock.EasyMockSupport;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@RunWith(LocalstackDockerTestRunner.class)
-@LocalstackDockerProperties(services = {"kinesis"})
-public class KinesisRecordSupplierTest
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.anyString;
+import static org.easymock.EasyMock.capture;
+import static org.easymock.EasyMock.eq;
+import static org.easymock.EasyMock.expect;
+
+public class KinesisRecordSupplierTest extends EasyMockSupport
 {
-  static {
-    TestUtils.setEnv("AWS_CBOR_DISABLE", "1");
-  }
-
-  private static final Logger log = new Logger(KinesisRecordSupplierTest.class);
-  private static String stream = "streamm";
+  private static final String stream = "stream";
   private static long poll_timeout_millis = 2000;
-  private static String shardId1 = "shardId-000000000001";
-  private static String shardId0 = "shardId-000000000000";
-  private static int streamPosFix = 0;
-  private static int pollRetry = 10;
+  private static int recordsPerFetch;
+  private static String shardId1 = "1";
+  private static String shardId0 = "0";
+  private static String shard1Iterator = "1";
+  private static String shard0Iterator = "0";
+  private static AmazonKinesis kinesis;
+  private static DescribeStreamResult describeStreamResult;
+  private static GetShardIteratorResult getShardIteratorResult0;
+  private static GetShardIteratorResult getShardIteratorResult1;
+  private static GetRecordsResult getRecordsResult0;
+  private static GetRecordsResult getRecordsResult1;
+  private static StreamDescription streamDescription;
+  private static Shard shard0, shard1;
   private static KinesisRecordSupplier recordSupplier;
-  private static final List<PutRecordsRequestEntry> records = ImmutableList.of(
-      generateRequestEntry(
-          "1",
-          JB("2011", "d", "y", "10", "20.0", "1.0")
-      ),
-      generateRequestEntry(
-          "1",
-          JB("2011", "e", "y", "10", "20.0", "1.0")
-      ),
-      generateRequestEntry(
-          "1",
-          JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
-      ),
-      generateRequestEntry("1", StringUtils.toUtf8("unparseable")),
-      generateRequestEntry(
-          "1",
-          StringUtils.toUtf8("unparseable2")
-      ),
-      generateRequestEntry("1", StringUtils.toUtf8("{}")),
-      generateRequestEntry(
-          "1",
-          JB("2013", "f", "y", "10", "20.0", "1.0")
-      ),
-      generateRequestEntry(
-          "1",
-          JB("2049", "f", "y", "notanumber", "20.0", "1.0")
-      ),
-      generateRequestEntry(
-          "123123",
-          JB("2012", "g", "y", "10", "20.0", "1.0")
-      ),
-      generateRequestEntry(
-          "123123",
-          JB("2011", "h", "y", "10", "20.0", "1.0")
-      ),
-      generateRequestEntry(
-          "123123",
-          JB("2008", "a", "y", "10", "20.0", "1.0")
-      ),
-      generateRequestEntry(
-          "123123",
-          JB("2009", "b", "y", "10", "20.0", "1.0")
-      )
+  private static List<Record> shard1Records = ImmutableList.of(
+      new Record().withData(JB("2011", "d", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
+      new Record().withData(JB("2011", "e", "y", "10", "20.0", "1.0")).withSequenceNumber("1"),
+      new Record().withData(JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")).withSequenceNumber("2"),
+      new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable"))).withSequenceNumber("3"),
+      new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable2"))).withSequenceNumber("4"),
+      new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("{}"))).withSequenceNumber("5"),
+      new Record().withData(JB("2013", "f", "y", "10", "20.0", "1.0")).withSequenceNumber("6"),
+      new Record().withData(JB("2049", "f", "y", "notanumber", "20.0", "1.0")).withSequenceNumber("7"),
+      new Record().withData(JB("2012", "g", "y", "10", "20.0", "1.0")).withSequenceNumber("8"),
+      new Record().withData(JB("2011", "h", "y", "10", "20.0", "1.0")).withSequenceNumber("9")
   );
+  private static List<Record> shard0Records = ImmutableList.of(
+      new Record().withData(JB("2008", "a", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
+      new Record().withData(JB("2009", "b", "y", "10", "20.0", "1.0")).withSequenceNumber("1")
+  );
+  private static List<Object> allRecords = ImmutableList.builder()
+                                                        .addAll(shard0Records.stream()
+                                                                             .map(x -> new OrderedPartitionableRecord<>(
+                                                                                 stream,
+                                                                                 shardId0,
+                                                                                 x.getSequenceNumber(),
+                                                                                 Collections
+                                                                                     .singletonList(
+                                                                                         toByteArray(
+                                                                                             x.getData()))
+                                                                             ))
+                                                                             .collect(
+                                                                                 Collectors
+                                                                                     .toList()))
+                                                        .addAll(shard1Records.stream()
+                                                                             .map(x -> new OrderedPartitionableRecord<>(
+                                                                                 stream,
+                                                                                 shardId1,
+                                                                                 x.getSequenceNumber(),
+                                                                                 Collections
+                                                                                     .singletonList(
+                                                                                         toByteArray(
+                                                                                             x.getData()))
+                                                                             ))
+                                                                             .collect(
+                                                                                 Collectors
+                                                                                     .toList()))
+                                                        .build();
+  ;
 
-  private static PutRecordsRequestEntry generateRequestEntry(String partition, byte[] data)
-  {
-    return new PutRecordsRequestEntry().withPartitionKey(partition)
-                                       .withData(ByteBuffer.wrap(data));
-  }
-
-  private static byte[] JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
+  private static ByteBuffer JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
     try {
-      return new ObjectMapper().writeValueAsBytes(
+      return ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(
           ImmutableMap.builder()
                       .put("timestamp", timestamp)
                       .put("dim1", dim1)
@@ -131,56 +132,26 @@ public class KinesisRecordSupplierTest
                       .put("dimFloat", dimFloat)
                       .put("met1", met1)
                       .build()
-      );
+      ));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }
 
-
-  private AmazonKinesis getKinesisClientInstance() throws InterruptedException
-  {
-    AmazonKinesis kinesis = TestUtils.getClientKinesis();
-    SdkHttpMetadata createRes = kinesis.createStream(stream, 2).getSdkHttpMetadata();
-    // sleep required because of kinesalite
-    Thread.sleep(500);
-    return kinesis;
-  }
-
-  private static PutRecordsRequest generateRecordsRequests(String stream)
-  {
-    return new PutRecordsRequest()
-        .withStreamName(stream)
-        .withRecords(records);
-  }
-
-  private static PutRecordsRequest generateRecordsRequests(String stream, int first, int last)
-  {
-    return new PutRecordsRequest()
-        .withStreamName(stream)
-        .withRecords(records.subList(first, last));
-  }
-
-  private static List<PutRecordsResultEntry> insertData(
-      AmazonKinesis kinesis,
-      PutRecordsRequest req
-  )
-  {
-    PutRecordsResult res = kinesis.putRecords(req);
-    Assert.assertEquals((int) res.getFailedRecordCount(), 0);
-    return res.getRecords();
-  }
-
-  private static String getStreamName()
-  {
-    return "stream-" + streamPosFix++;
-  }
-
   @Before
   public void setupTest()
   {
-    stream = getStreamName();
+    kinesis = createMock(AmazonKinesisClient.class);
+    describeStreamResult = createMock(DescribeStreamResult.class);
+    getShardIteratorResult0 = createMock(GetShardIteratorResult.class);
+    getShardIteratorResult1 = createMock(GetShardIteratorResult.class);
+    getRecordsResult0 = createMock(GetRecordsResult.class);
+    getRecordsResult1 = createMock(GetRecordsResult.class);
+    streamDescription = createMock(StreamDescription.class);
+    shard0 = createMock(Shard.class);
+    shard1 = createMock(Shard.class);
+    recordsPerFetch = 1;
   }
 
   @After
@@ -192,10 +163,16 @@ public class KinesisRecordSupplierTest
 
   @Test
   public void testSupplierSetup()
-      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
+    Capture<String> captured = Capture.newInstance();
+    expect(kinesis.describeStream(capture(captured))).andReturn(describeStreamResult).once();
+    expect(describeStreamResult.getStreamDescription()).andReturn(streamDescription).once();
+    expect(streamDescription.getShards()).andReturn(ImmutableList.of(shard0, shard1)).once();
+    expect(shard0.getShardId()).andReturn(shardId0).once();
+    expect(shard1.getShardId()).andReturn(shardId1).once();
 
-    getKinesisClientInstance();
+    replayAll();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
         StreamPartition.of(stream, shardId0),
@@ -203,14 +180,10 @@ public class KinesisRecordSupplierTest
     );
 
     recordSupplier = new KinesisRecordSupplier(
-        LocalstackTestRunner.getEndpointKinesis(),
-        TestUtils.TEST_ACCESS_KEY,
-        TestUtils.TEST_SECRET_KEY,
-        1,
+        kinesis,
+        recordsPerFetch,
         0,
         2,
-        null,
-        null,
         false,
         100,
         5000,
@@ -226,37 +199,71 @@ public class KinesisRecordSupplierTest
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(ImmutableSet.of(shardId1, shardId0), recordSupplier.getPartitionIds(stream));
     Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
+
+    verifyAll();
+    Assert.assertEquals(stream, captured.getValue());
+  }
+
+  private static GetRecordsRequest generateGetRecordsReq(String shardIterator, int limit)
+  {
+    return new GetRecordsRequest().withShardIterator(shardIterator).withLimit(limit);
+  }
+
+  // filter out EOS markers
+  private static List<OrderedPartitionableRecord<String, String>> cleanRecords(List<OrderedPartitionableRecord<String, String>> records)
+  {
+    return records.stream()
+                  .filter(x -> !x.getSequenceNumber()
+                                 .equals(OrderedPartitionableRecord.END_OF_SHARD_MARKER))
+                  .collect(Collectors.toList());
   }
 
   @Test
   public void testPoll()
-      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException, InterruptedException
   {
-    AmazonKinesis kinesis = getKinesisClientInstance();
-    List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
-    Set<OrderedPartitionableRecord<String, String>> initialRecords = insertDataResults.stream()
-                                                                                      .map(r -> new OrderedPartitionableRecord<>(
-                                                                                          stream,
-                                                                                          r.getShardId(),
-                                                                                          r.getSequenceNumber(),
-                                                                                          null
-                                                                                      ))
-                                                                                      .collect(Collectors.toSet());
+    recordsPerFetch = 100;
+
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId0),
+        anyString(),
+        anyString()
+    )).andReturn(
+        getShardIteratorResult0).anyTimes();
+
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId1),
+        anyString(),
+        anyString()
+    )).andReturn(
+        getShardIteratorResult1).anyTimes();
+
+    expect(getShardIteratorResult0.getShardIterator()).andReturn(shard0Iterator).anyTimes();
+    expect(getShardIteratorResult1.getShardIterator()).andReturn(shard1Iterator).anyTimes();
+    expect(kinesis.getRecords(generateGetRecordsReq(shard0Iterator, recordsPerFetch))).andReturn(getRecordsResult0)
+                                                                                      .anyTimes();
+    expect(kinesis.getRecords(generateGetRecordsReq(shard1Iterator, recordsPerFetch))).andReturn(getRecordsResult1)
+                                                                                      .anyTimes();
+    expect(getRecordsResult0.getRecords()).andReturn(shard0Records).once();
+    expect(getRecordsResult1.getRecords()).andReturn(shard1Records).once();
+    expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
+    expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
+
+    replayAll();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
         StreamPartition.of(stream, shardId0),
         StreamPartition.of(stream, shardId1)
     );
 
+
     recordSupplier = new KinesisRecordSupplier(
-        LocalstackTestRunner.getEndpointKinesis(),
-        TestUtils.TEST_ACCESS_KEY,
-        TestUtils.TEST_SECRET_KEY,
-        100,
+        kinesis,
+        recordsPerFetch,
         0,
         2,
-        null,
-        null,
         false,
         100,
         5000,
@@ -267,156 +274,122 @@ public class KinesisRecordSupplierTest
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
+    recordSupplier.start();
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
-      Thread.sleep(200);
+    while (recordSupplier.bufferSize() < 12) {
+      Thread.sleep(100);
     }
+
+    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+        poll_timeout_millis));
+
+    verifyAll();
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(initialRecords.size(), polledRecords.size());
-    Assert.assertTrue(polledRecords.containsAll(initialRecords));
-  }
-
-  @Test
-  public void testPollAfterMoreDataAdded()
-      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
-  {
-    AmazonKinesis kinesis = getKinesisClientInstance();
-    List<PutRecordsResultEntry> insertDataResults1 = insertData(kinesis, generateRecordsRequests(stream, 0, 5));
-    Set<OrderedPartitionableRecord<String, String>> initialRecords = insertDataResults1.stream()
-                                                                                       .map(r -> new OrderedPartitionableRecord<>(
-                                                                                           stream,
-                                                                                           r.getShardId(),
-                                                                                           r.getSequenceNumber(),
-                                                                                           null
-                                                                                       ))
-                                                                                       .collect(Collectors.toSet());
-
-    Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        StreamPartition.of(stream, shardId0),
-        StreamPartition.of(stream, shardId1)
-    );
-
-    recordSupplier = new KinesisRecordSupplier(
-        LocalstackTestRunner.getEndpointKinesis(),
-        TestUtils.TEST_ACCESS_KEY,
-        TestUtils.TEST_SECRET_KEY,
-        1,
-        0,
-        2,
-        null,
-        null,
-        false,
-        100,
-        5000,
-        5000,
-        60000,
-        5
-    );
-
-    recordSupplier.assign(partitions);
-    recordSupplier.seekToEarliest(partitions);
-
-    List<OrderedPartitionableRecord<String, String>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
-      Thread.sleep(200);
-    }
-
-    List<PutRecordsResultEntry> insertDataResults2 = insertData(kinesis, generateRecordsRequests(stream, 5, 12));
-    insertDataResults2.forEach(entry -> initialRecords.add(new OrderedPartitionableRecord<>(
-        stream,
-        entry.getShardId(),
-        entry.getSequenceNumber(),
-        null
-    )));
-
-    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
-      Thread.sleep(200);
-    }
-
-    Assert.assertEquals(initialRecords.size(), polledRecords.size());
-    Assert.assertTrue(polledRecords.containsAll(initialRecords));
+    Assert.assertTrue(polledRecords.containsAll(allRecords));
   }
 
   @Test
   public void testSeek()
       throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
-    AmazonKinesis kinesis = getKinesisClientInstance();
-    List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
+    recordsPerFetch = 100;
 
-    StreamPartition<String> shard0 = StreamPartition.of(stream, shardId0);
-    StreamPartition<String> shard1 = StreamPartition.of(stream, shardId1);
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId0),
+        anyString(),
+        anyString()
+    )).andReturn(
+        getShardIteratorResult0).anyTimes();
+
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId1),
+        anyString(),
+        anyString()
+    )).andReturn(
+        getShardIteratorResult1).anyTimes();
+
+    expect(getShardIteratorResult0.getShardIterator()).andReturn(shard0Iterator).anyTimes();
+    expect(getShardIteratorResult1.getShardIterator()).andReturn(shard1Iterator).anyTimes();
+    expect(kinesis.getRecords(generateGetRecordsReq(shard0Iterator, recordsPerFetch))).andReturn(getRecordsResult0)
+                                                                                      .anyTimes();
+    expect(kinesis.getRecords(generateGetRecordsReq(shard1Iterator, recordsPerFetch))).andReturn(getRecordsResult1)
+                                                                                      .anyTimes();
+    expect(getRecordsResult0.getRecords()).andReturn(shard0Records.subList(1, shard0Records.size())).once();
+    expect(getRecordsResult1.getRecords()).andReturn(shard1Records.subList(2, shard1Records.size())).once();
+    expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
+    expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
+
+    replayAll();
+
+    StreamPartition<String> shard0Partition = StreamPartition.of(stream, shardId0);
+    StreamPartition<String> shard1Partition = StreamPartition.of(stream, shardId1);
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        shard0,
-        shard1
+        shard0Partition,
+        shard1Partition
     );
 
     recordSupplier = new KinesisRecordSupplier(
-        LocalstackTestRunner.getEndpointKinesis(),
-        TestUtils.TEST_ACCESS_KEY,
-        TestUtils.TEST_SECRET_KEY,
-        1,
+        kinesis,
+        recordsPerFetch,
         0,
         2,
-        null,
-        null,
         false,
         100,
         5000,
         5000,
         60000,
-        5
+        100
     );
 
     recordSupplier.assign(partitions);
+    recordSupplier.seek(shard1Partition, shard1Records.get(2).getSequenceNumber());
+    recordSupplier.seek(shard0Partition, shard0Records.get(1).getSequenceNumber());
+    recordSupplier.start();
 
-    Assert.assertEquals(insertDataResults.get(0).getSequenceNumber(), recordSupplier.getEarliestSequenceNumber(shard1));
-    Assert.assertEquals(insertDataResults.get(8).getSequenceNumber(), recordSupplier.getEarliestSequenceNumber(shard0));
-
-    recordSupplier.seek(shard1, insertDataResults.get(2).getSequenceNumber());
-    recordSupplier.seek(shard0, insertDataResults.get(10).getSequenceNumber());
-
-    Set<OrderedPartitionableRecord<String, String>> initialRecords1 = insertDataResults.subList(2, 8).stream()
-                                                                                       .map(r -> new OrderedPartitionableRecord<>(
-                                                                                           stream,
-                                                                                           r.getShardId(),
-                                                                                           r.getSequenceNumber(),
-                                                                                           null
-                                                                                       ))
-                                                                                       .collect(Collectors.toSet());
-
-    Set<OrderedPartitionableRecord<String, String>> initialRecords2 = insertDataResults.subList(10, 12).stream()
-                                                                                       .map(r -> new OrderedPartitionableRecord<>(
-                                                                                           stream,
-                                                                                           r.getShardId(),
-                                                                                           r.getSequenceNumber(),
-                                                                                           null
-                                                                                       ))
-                                                                                       .collect(Collectors.toSet());
-
-    List<OrderedPartitionableRecord<String, String>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-    for (int i = 0; polledRecords.size() != 8 && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
-      Thread.sleep(200);
+    while (recordSupplier.bufferSize() < 9) {
+      Thread.sleep(100);
     }
 
-    Assert.assertEquals(8, polledRecords.size());
-    Assert.assertTrue(polledRecords.containsAll(initialRecords1));
-    Assert.assertTrue(polledRecords.containsAll(initialRecords2));
+    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+        poll_timeout_millis));
+
+    verifyAll();
+    Assert.assertEquals(9, polledRecords.size());
+    Assert.assertTrue(polledRecords.containsAll(allRecords.subList(4, 12)));
+    Assert.assertTrue(polledRecords.containsAll(allRecords.subList(1, 2)));
 
   }
+
 
   @Test
   public void testSeekToLatest()
       throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
-    AmazonKinesis kinesis = getKinesisClientInstance();
-    List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
+    recordsPerFetch = 100;
+
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId0),
+        anyString(),
+        anyString()
+    )).andReturn(
+        getShardIteratorResult0).anyTimes();
+
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId1),
+        anyString(),
+        anyString()
+    )).andReturn(
+        getShardIteratorResult1).anyTimes();
+
+    expect(getShardIteratorResult0.getShardIterator()).andReturn(null).once();
+    expect(getShardIteratorResult1.getShardIterator()).andReturn(null).once();
+
+    replayAll();
 
     StreamPartition<String> shard0 = StreamPartition.of(stream, shardId0);
     StreamPartition<String> shard1 = StreamPartition.of(stream, shardId1);
@@ -426,39 +399,34 @@ public class KinesisRecordSupplierTest
     );
 
     recordSupplier = new KinesisRecordSupplier(
-        LocalstackTestRunner.getEndpointKinesis(),
-        TestUtils.TEST_ACCESS_KEY,
-        TestUtils.TEST_SECRET_KEY,
-        1,
+        kinesis,
+        recordsPerFetch,
         0,
         2,
-        null,
-        null,
         false,
         100,
         5000,
         5000,
         60000,
-        5
+        100
     );
 
-
     recordSupplier.assign(partitions);
-
-    Assert.assertEquals(insertDataResults.get(0).getSequenceNumber(), recordSupplier.getEarliestSequenceNumber(shard1));
-    Assert.assertEquals(insertDataResults.get(8).getSequenceNumber(), recordSupplier.getEarliestSequenceNumber(shard0));
-
     recordSupplier.seekToLatest(partitions);
-    Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(poll_timeout_millis));
+    recordSupplier.start();
+
+    while (recordSupplier.bufferSize() < 2) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(Collections.emptyList(), cleanRecords(recordSupplier.poll(poll_timeout_millis)));
+
+    verifyAll();
   }
 
   @Test(expected = ISE.class)
   public void testSeekUnassigned()
-      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
-    AmazonKinesis kinesis = getKinesisClientInstance();
-    List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
-
     StreamPartition<String> shard0 = StreamPartition.of(stream, shardId0);
     StreamPartition<String> shard1 = StreamPartition.of(stream, shardId1);
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
@@ -466,14 +434,10 @@ public class KinesisRecordSupplierTest
     );
 
     recordSupplier = new KinesisRecordSupplier(
-        LocalstackTestRunner.getEndpointKinesis(),
-        TestUtils.TEST_ACCESS_KEY,
-        TestUtils.TEST_SECRET_KEY,
+        kinesis,
         1,
         0,
         2,
-        null,
-        null,
         false,
         100,
         5000,
@@ -483,32 +447,50 @@ public class KinesisRecordSupplierTest
     );
 
     recordSupplier.assign(partitions);
-
-    Assert.assertEquals(insertDataResults.get(0).getSequenceNumber(), recordSupplier.getEarliestSequenceNumber(shard1));
-
     recordSupplier.seekToEarliest(Collections.singleton(shard0));
   }
+
 
   @Test
   public void testPollAfterSeek()
       throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
-    AmazonKinesis kinesis = getKinesisClientInstance();
-    List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
+    // tests that after doing a seek, the now invalid records in buffer is cleaned up properly
+    recordsPerFetch = 100;
+
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId1),
+        anyString(),
+        eq("5")
+    )).andReturn(
+        getShardIteratorResult1).once();
+
+    expect(kinesis.getShardIterator(anyObject(), eq(shardId1), anyString(), eq("7"))).andReturn(getShardIteratorResult0)
+                                                                                     .once();
+
+    expect(getShardIteratorResult1.getShardIterator()).andReturn(shard1Iterator).once();
+    expect(getShardIteratorResult0.getShardIterator()).andReturn(shard0Iterator).once();
+    expect(kinesis.getRecords(generateGetRecordsReq(shard1Iterator, recordsPerFetch))).andReturn(getRecordsResult1)
+                                                                                      .once();
+    expect(kinesis.getRecords(generateGetRecordsReq(shard0Iterator, recordsPerFetch))).andReturn(getRecordsResult0)
+                                                                                      .once();
+    expect(getRecordsResult1.getRecords()).andReturn(shard1Records.subList(5, shard1Records.size())).once();
+    expect(getRecordsResult0.getRecords()).andReturn(shard1Records.subList(7, shard1Records.size())).once();
+    expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
+    expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
+
+    replayAll();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
         StreamPartition.of(stream, shardId1)
     );
 
     recordSupplier = new KinesisRecordSupplier(
-        LocalstackTestRunner.getEndpointKinesis(),
-        TestUtils.TEST_ACCESS_KEY,
-        TestUtils.TEST_SECRET_KEY,
-        10,
+        kinesis,
+        recordsPerFetch,
         0,
         2,
-        null,
-        null,
         false,
         100,
         5000,
@@ -518,72 +500,80 @@ public class KinesisRecordSupplierTest
     );
 
     recordSupplier.assign(partitions);
-    recordSupplier.seek(StreamPartition.of(stream, shardId1), getSequenceNumber(insertDataResults, shardId1, 5));
+    recordSupplier.seek(StreamPartition.of(stream, shardId1), "5");
+    recordSupplier.start();
 
-    for (int i = 0; recordSupplier.bufferSize() < 2 && i < pollRetry; i++) {
-      Thread.sleep(200);
+    while (recordSupplier.bufferSize() < 6) {
+      Thread.sleep(100);
     }
+
     OrderedPartitionableRecord<String, String> firstRecord = recordSupplier.poll(poll_timeout_millis).get(0);
 
     Assert.assertEquals(
-        getSequenceNumber(insertDataResults, shardId1, 5),
-        firstRecord.getSequenceNumber()
+        allRecords.get(7),
+        firstRecord
     );
 
-    recordSupplier.seek(StreamPartition.of(stream, shardId1), getSequenceNumber(insertDataResults, shardId1, 7));
-    for (int i = 0; recordSupplier.bufferSize() < 2 && i < pollRetry; i++) {
-      Thread.sleep(200);
+    recordSupplier.seek(StreamPartition.of(stream, shardId1), "7");
+    recordSupplier.start();
+
+    while (recordSupplier.bufferSize() < 4) {
+      Thread.sleep(100);
     }
 
     OrderedPartitionableRecord<String, String> record2 = recordSupplier.poll(poll_timeout_millis).get(0);
 
-    Assert.assertNotNull(record2);
-    Assert.assertEquals(stream, record2.getStream());
-    Assert.assertEquals(shardId1, record2.getPartitionId());
-    Assert.assertEquals(getSequenceNumber(insertDataResults, shardId1, 7), record2.getSequenceNumber());
-
-    recordSupplier.seek(StreamPartition.of(stream, shardId1), getSequenceNumber(insertDataResults, shardId1, 2));
-    for (int i = 0; recordSupplier.bufferSize() < 2 && i < pollRetry; i++) {
-      Thread.sleep(200);
-    }
-    OrderedPartitionableRecord<String, String> record3 = recordSupplier.poll(poll_timeout_millis).get(0);
-
-    Assert.assertNotNull(record3);
-    Assert.assertEquals(stream, record3.getStream());
-    Assert.assertEquals(shardId1, record3.getPartitionId());
-    Assert.assertEquals(getSequenceNumber(insertDataResults, shardId1, 2), record3.getSequenceNumber());
+    Assert.assertEquals(allRecords.get(9), record2);
+    verifyAll();
   }
 
 
   @Test
-  public void testDeaggregate()
-      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+  public void testPollDeaggregate()
+      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException, InterruptedException
   {
-    AmazonKinesis kinesis = getKinesisClientInstance();
-    List<PutRecordsResultEntry> insertDataResults = insertData(kinesis, generateRecordsRequests(stream));
-    Set<OrderedPartitionableRecord<String, String>> initialRecords = insertDataResults.stream()
-                                                                                      .map(r -> new OrderedPartitionableRecord<>(
-                                                                                          stream,
-                                                                                          r.getShardId(),
-                                                                                          r.getSequenceNumber(),
-                                                                                          null
-                                                                                      ))
-                                                                                      .collect(Collectors.toSet());
+    recordsPerFetch = 100;
+
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId0),
+        anyString(),
+        anyString()
+    )).andReturn(
+        getShardIteratorResult0).anyTimes();
+
+    expect(kinesis.getShardIterator(
+        anyObject(),
+        eq(shardId1),
+        anyString(),
+        anyString()
+    )).andReturn(
+        getShardIteratorResult1).anyTimes();
+
+    expect(getShardIteratorResult0.getShardIterator()).andReturn(shard0Iterator).anyTimes();
+    expect(getShardIteratorResult1.getShardIterator()).andReturn(shard1Iterator).anyTimes();
+    expect(kinesis.getRecords(generateGetRecordsReq(shard0Iterator, recordsPerFetch))).andReturn(getRecordsResult0)
+                                                                                      .anyTimes();
+    expect(kinesis.getRecords(generateGetRecordsReq(shard1Iterator, recordsPerFetch))).andReturn(getRecordsResult1)
+                                                                                      .anyTimes();
+    expect(getRecordsResult0.getRecords()).andReturn(shard0Records).once();
+    expect(getRecordsResult1.getRecords()).andReturn(shard1Records).once();
+    expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
+    expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
+
+    replayAll();
 
     Set<StreamPartition<String>> partitions = ImmutableSet.of(
         StreamPartition.of(stream, shardId0),
         StreamPartition.of(stream, shardId1)
     );
 
+
     recordSupplier = new KinesisRecordSupplier(
-        LocalstackTestRunner.getEndpointKinesis(),
-        TestUtils.TEST_ACCESS_KEY,
-        TestUtils.TEST_SECRET_KEY,
-        100,
+        kinesis,
+        recordsPerFetch,
         0,
         2,
-        null,
-        null,
         true,
         100,
         5000,
@@ -594,25 +584,36 @@ public class KinesisRecordSupplierTest
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
+    recordSupplier.start();
 
-    List<OrderedPartitionableRecord<String, String>> polledRecords = recordSupplier.poll(poll_timeout_millis);
-    for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
-      polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
-      Thread.sleep(200);
+    while (recordSupplier.bufferSize() < 12) {
+      Thread.sleep(100);
     }
 
+    List<OrderedPartitionableRecord<String, String>> polledRecords = cleanRecords(recordSupplier.poll(
+        poll_timeout_millis));
+
+    verifyAll();
+
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(initialRecords.size(), polledRecords.size());
-    Assert.assertTrue(polledRecords.containsAll(initialRecords));
+    Assert.assertTrue(polledRecords.containsAll(allRecords));
   }
 
-
-  private static String getSequenceNumber(List<PutRecordsResultEntry> entries, String shardId, int sequence)
+  /**
+   * Returns an array with the content between the position and limit of "buffer". This may be the buffer's backing
+   * array itself. Does not modify position or limit of the buffer.
+   */
+  private static byte[] toByteArray(final ByteBuffer buffer)
   {
-    List<PutRecordsResultEntry> sortedEntries = entries.stream()
-                                                       .filter(e -> e.getShardId().equals(shardId))
-                                                       .sorted(Comparator.comparing(e -> KinesisSequenceNumber.of(e.getSequenceNumber())))
-                                                       .collect(Collectors.toList());
-    return sortedEntries.get(sequence).getSequenceNumber();
+    if (buffer.hasArray()
+        && buffer.arrayOffset() == 0
+        && buffer.position() == 0
+        && buffer.array().length == buffer.limit()) {
+      return buffer.array();
+    } else {
+      final byte[] retVal = new byte[buffer.remaining()];
+      buffer.duplicate().get(retVal);
+      return retVal;
+    }
   }
 }

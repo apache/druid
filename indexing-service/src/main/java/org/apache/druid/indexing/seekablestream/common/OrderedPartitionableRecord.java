@@ -89,6 +89,7 @@ public class OrderedPartitionableRecord<PartitionType, SequenceType>
     return Objects.equals(stream, that.stream) &&
            Objects.equals(partitionId, that.partitionId) &&
            Objects.equals(sequenceNumber, that.sequenceNumber);
+
   }
 
   @Override

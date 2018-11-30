@@ -38,7 +38,6 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -81,7 +80,6 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
   protected CircularBuffer<Throwable> savedParseExceptions;
 
-
   @JsonCreator
   public SeekableStreamIndexTask(
       @JsonProperty("id") String id,
@@ -94,7 +92,7 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
       String type
-  )
+  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     super(
         id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt(), type) : id,
@@ -245,9 +243,6 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
     );
   }
 
-  protected abstract RecordSupplier<PartitionType, SequenceType> newRecordSupplier()
-      throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException;
-
   public boolean withinMinMaxRecordTime(final InputRow row)
   {
     final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
@@ -283,7 +278,8 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
     return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 
-  protected abstract SeekableStreamIndexTaskRunner<PartitionType, SequenceType> createTaskRunner();
+  protected abstract SeekableStreamIndexTaskRunner<PartitionType, SequenceType> createTaskRunner()
+      throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException;
 
   @VisibleForTesting
   public Appenderator getAppenderator()

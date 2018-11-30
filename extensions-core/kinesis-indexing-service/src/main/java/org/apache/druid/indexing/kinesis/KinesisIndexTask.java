@@ -22,11 +22,11 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -35,9 +35,6 @@ import java.util.Map;
 
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 {
-  private final KinesisIOConfig ioConfig;
-  private final KinesisTuningConfig tuningConfig;
-
   @JsonCreator
   public KinesisIndexTask(
       @JsonProperty("id") String id,
@@ -49,7 +46,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
-  )
+  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     super(
         id,
@@ -63,47 +60,51 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         rowIngestionMetersFactory,
         "index_kinesis"
     );
-
-    this.ioConfig = ioConfig;
-    this.tuningConfig = tuningConfig;
   }
 
+
   @Override
-  protected RecordSupplier<String, String> newRecordSupplier()
+  protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
+      throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  {
+    return new KinesisIndexTaskRunner(
+        this,
+        newTaskRecordSupplier(),
+        parser,
+        authorizerMapper,
+        chatHandlerProvider,
+        savedParseExceptions,
+        rowIngestionMetersFactory
+    );
+  }
+
+  @VisibleForTesting
+  protected KinesisRecordSupplier newTaskRecordSupplier()
       throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException
   {
+    KinesisIOConfig ioConfig = ((KinesisIOConfig) super.ioConfig);
+    KinesisTuningConfig tuningConfig = ((KinesisTuningConfig) super.tuningConfig);
     int fetchThreads = tuningConfig.getFetchThreads() != null
                        ? tuningConfig.getFetchThreads()
                        : Math.max(1, ioConfig.getStartPartitions().getPartitionSequenceNumberMap().size());
 
     return new KinesisRecordSupplier(
-        ioConfig.getEndpoint(),
-        ioConfig.getAwsAccessKeyId(),
-        ioConfig.getAwsSecretAccessKey(),
+        KinesisRecordSupplier.getAmazonKinesisClient(
+            ioConfig.getEndpoint(),
+            ioConfig.getAwsAccessKeyId(),
+            ioConfig.getAwsSecretAccessKey(),
+            ioConfig.getAwsAssumedRoleArn(),
+            ioConfig.getAwsExternalId()
+        ),
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
         fetchThreads,
-        ioConfig.getAwsAssumedRoleArn(),
-        ioConfig.getAwsExternalId(),
         ioConfig.isDeaggregate(),
         tuningConfig.getRecordBufferSize(),
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
         tuningConfig.getFetchSequenceNumberTimeout(),
         tuningConfig.getMaxRecordsPerPoll()
-    );
-  }
-
-  @Override
-  protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
-  {
-    return new KinesisIndexTaskRunner(
-        this,
-        parser,
-        authorizerMapper,
-        chatHandlerProvider,
-        savedParseExceptions,
-        rowIngestionMetersFactory
     );
   }
 

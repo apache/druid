@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -70,7 +69,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
       @JacksonInject ObjectMapper configMapper
-  )
+  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     super(
         id,
@@ -92,26 +91,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   long getPollRetryMs()
   {
     return pollRetryMs;
-  }
-
-  @Override
-  protected RecordSupplier<Integer, Long> newRecordSupplier()
-  {
-    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-    try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-
-      final Map<String, Object> props = new HashMap<>(ioConfig.getConsumerProperties());
-
-      props.put("auto.offset.reset", "none");
-      props.put("key.deserializer", ByteArrayDeserializer.class.getName());
-      props.put("value.deserializer", ByteArrayDeserializer.class.getName());
-
-      return new KafkaRecordSupplier(props, configMapper);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(currCtxCl);
-    }
   }
 
   @Deprecated
@@ -162,6 +141,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         && ((boolean) context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
       return new IncrementalPublishingKafkaIndexTaskRunner(
           this,
+          newTaskRecordSupplier(),
           parser,
           authorizerMapper,
           chatHandlerProvider,
@@ -171,12 +151,33 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     } else {
       return new LegacyKafkaIndexTaskRunner(
           this,
+          newTaskRecordSupplier(),
           parser,
           authorizerMapper,
           chatHandlerProvider,
           savedParseExceptions,
           rowIngestionMetersFactory
       );
+    }
+  }
+
+  @VisibleForTesting
+  protected KafkaRecordSupplier newTaskRecordSupplier()
+  {
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+
+      final Map<String, Object> props = new HashMap<>(((KafkaIOConfig) super.ioConfig).getConsumerProperties());
+
+      props.put("auto.offset.reset", "none");
+      props.put("key.deserializer", ByteArrayDeserializer.class.getName());
+      props.put("value.deserializer", ByteArrayDeserializer.class.getName());
+
+      return new KafkaRecordSupplier(props, configMapper);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
     }
   }
 

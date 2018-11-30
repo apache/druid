@@ -220,7 +220,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    */
   private interface Notice
   {
-    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException;
+    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException,
+                         NoSuchMethodException, IllegalAccessException, ClassNotFoundException;
   }
 
   private static class StatsFromTaskResult
@@ -260,7 +261,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private class RunNotice implements Notice
   {
     @Override
-    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException,
+                                NoSuchMethodException, IllegalAccessException, ClassNotFoundException
     {
       long nowTime = System.currentTimeMillis();
       if (nowTime - lastRunTime < MAX_RUN_FREQUENCY_MILLIS) {
@@ -1015,7 +1017,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   @VisibleForTesting
   protected void runInternal()
-      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException, NoSuchMethodException,
+             IllegalAccessException, ClassNotFoundException
   {
     possiblyRegisterListener();
     updatePartitionDataFromStream();
@@ -2223,7 +2226,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
-  private void createNewTasks() throws JsonProcessingException
+  private void createNewTasks()
+      throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     // update the checkpoints in the taskGroup to latest ones so that new tasks do not read what is already published
     verifyAndMergeCheckpoints(
@@ -2451,7 +2455,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
   }
 
-  private void createTasksForGroup(int groupId, int replicas) throws JsonProcessingException
+  private void createTasksForGroup(int groupId, int replicas)
+      throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     TaskGroup group = activelyReadingTaskGroups.get(groupId);
     Map<PartitionType, SequenceType> startPartitions = group.startingSequences;
@@ -2682,7 +2687,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       SeekableStreamIOConfig taskIoConfig,
       SeekableStreamTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
-  ) throws JsonProcessingException;
+  ) throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException;
 
   /**
    * calculates the taskgroup id that the given partition belongs to.

@@ -119,7 +119,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     this.spec = spec;
     this.emitter = spec.getEmitter();
     this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
-
   }
 
 
@@ -228,7 +227,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
       SeekableStreamIOConfig taskIoConfig,
       SeekableStreamTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
-  ) throws JsonProcessingException
+  ) throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     final String checkpoints = sortingMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
     {
@@ -353,7 +352,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   @Override
   @VisibleForTesting
   protected void runInternal()
-      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
+      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException, NoSuchMethodException,
+             IllegalAccessException, ClassNotFoundException
   {
     super.runInternal();
   }
