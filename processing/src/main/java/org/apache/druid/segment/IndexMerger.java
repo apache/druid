@@ -192,7 +192,7 @@ public interface IndexMerger
   File mergeSegmentFiles(
       File[] segmentFiles,
       boolean rollup,
-      final AggregatorFactory[] metricAggs,
+      AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
