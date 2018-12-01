@@ -178,7 +178,7 @@ public class HttpServerInventoryViewTest
         jsonMapper,
         httpClient,
         druidNodeDiscoveryProvider,
-        (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
+        (pair) -> pair.rhs == null || !pair.rhs.getDataSource().equals("non-loading-datasource"),
         new HttpServerInventoryViewConfig(null, null, null)
     );
 
