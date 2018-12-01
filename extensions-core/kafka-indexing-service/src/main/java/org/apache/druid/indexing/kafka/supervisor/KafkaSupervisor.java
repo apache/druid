@@ -305,6 +305,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     return () -> {
       try {
         Map<Integer, Long> highestCurrentOffsets = getHighestCurrentOffsets();
+        String dataSource = spec.getDataSchema().getDataSource();
 
         if (latestSequenceFromStream == null) {
           throw new ISE("Latest offsets from Kafka have not been fetched");
@@ -318,16 +319,24 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           );
         }
 
-        long lag = getLagPerPartition(highestCurrentOffsets)
-            .values()
-            .stream()
-            .mapToLong(x -> Math.max(x, 0))
-            .sum();
+        Map<Integer, Long> partitionLags = getLagPerPartition(highestCurrentOffsets);
+        long maxLag = 0, totalLag = 0, avgLag;
+        for (long lag : partitionLags.values()) {
+          if (lag > maxLag) {
+            maxLag = lag;
+          }
+          totalLag += lag;
+        }
+        avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
 
         emitter.emit(
-            ServiceMetricEvent.builder()
-                              .setDimension("dataSource", spec.getDataSchema().getDataSource())
-                              .build("ingest/kafka/lag", lag)
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", totalLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/maxLag", maxLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/avgLag", avgLag)
         );
       }
       catch (Exception e) {
