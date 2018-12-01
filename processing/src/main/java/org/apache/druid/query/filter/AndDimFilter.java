@@ -102,8 +102,7 @@ public class AndDimFilter implements DimFilter
   public HashSet<String> getRequiredColumns()
   {
     HashSet<String> requiredColumns = new HashSet<>();
-    fields.stream()
-        .forEach(field -> requiredColumns.addAll(field.getRequiredColumns()));
+    fields.forEach(field -> requiredColumns.addAll(field.getRequiredColumns()));
     return requiredColumns;
   }
 

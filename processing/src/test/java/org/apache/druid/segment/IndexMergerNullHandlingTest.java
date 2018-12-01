@@ -119,7 +119,7 @@ public class IndexMergerNullHandlingTest
       try (QueryableIndex index = indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))) {
         final ColumnHolder columnHolder = index.getColumnHolder("d");
 
-        if (subsetList.stream().allMatch(nullFlavors::contains)) {
+        if (nullFlavors.containsAll(subsetList)) {
           // all null -> should be missing
           Assert.assertNull(subsetList.toString(), columnHolder);
         } else {

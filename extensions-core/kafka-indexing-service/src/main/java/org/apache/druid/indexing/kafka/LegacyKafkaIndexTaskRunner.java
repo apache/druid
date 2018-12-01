@@ -86,6 +86,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -454,9 +455,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
                 if (isPersistRequired) {
                   driver.persist(committerSupplier.get());
                 }
-                segmentsToMoveOut.entrySet().forEach(sequenceSegments -> driver.moveSegmentOut(
-                    sequenceSegments.getKey(),
-                    sequenceSegments.getValue().stream().collect(Collectors.toList())
+                segmentsToMoveOut.forEach((String sequence, Set<SegmentIdentifier> segments) -> driver.moveSegmentOut(
+                    sequence,
+                    new ArrayList<SegmentIdentifier>(segments)
                 ));
               }
               catch (ParseException e) {

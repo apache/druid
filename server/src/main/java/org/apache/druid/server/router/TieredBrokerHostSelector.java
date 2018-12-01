@@ -41,6 +41,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,7 +132,7 @@ public class TieredBrokerHostSelector<T>
           new DruidNodeDiscovery.Listener()
           {
             @Override
-            public void nodesAdded(List<DiscoveryDruidNode> nodes)
+            public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
             {
               nodes.forEach(
                   (node) -> {
@@ -144,7 +145,7 @@ public class TieredBrokerHostSelector<T>
             }
 
             @Override
-            public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+            public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
             {
               nodes.forEach(
                   (node) -> {
