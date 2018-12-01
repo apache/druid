@@ -477,9 +477,9 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
                 if (isPersistRequired) {
                   driver.persist(committerSupplier.get());
                 }
-                segmentsToMoveOut.forEach((key, value) -> driver.moveSegmentOut(
-                    key,
-                    new ArrayList<SegmentIdentifier>(value)
+                segmentsToMoveOut.forEach((String sequence, Set<SegmentIdentifier> segments) -> driver.moveSegmentOut(
+                    sequence,
+                    new ArrayList<SegmentIdentifier>(segments)
                 ));
               }
               catch (ParseException e) {

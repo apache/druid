@@ -51,7 +51,7 @@ All the configuration parameters for graphite emitter are under `druid.emitter.g
 
 ### Supported event types
 
-The graphite emitter only emits service metric events to graphite (See http://druid.io/docs/latest/operations/metrics.html for a list of metrics).
+The graphite emitter only emits service metric events to graphite (See [Druid Metrics](../../operations/metrics.html) for a list of metrics).
 
 Alerts and request logs are not sent to graphite. These event types are not well represented in Graphite, which is more suited for timeseries views on numeric metrics, vs. storing non-numeric log events.
 

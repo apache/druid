@@ -185,6 +185,7 @@ public class HttpLoadQueuePeonTest
     public void registerListener(Listener listener)
     {
       listener.nodesAdded(ImmutableList.of());
+      listener.nodeViewInitialized();
       this.listener = listener;
     }
   }

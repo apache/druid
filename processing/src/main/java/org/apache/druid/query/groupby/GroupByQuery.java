@@ -737,7 +737,7 @@ public class GroupByQuery extends BaseQuery<Row>
   private static Map<String, AggregatorFactory> getAggregatorsMap(List<AggregatorFactory> aggregatorSpecs)
   {
     Map<String, AggregatorFactory> map = new HashMap<>(aggregatorSpecs.size());
-    aggregatorSpecs.stream().forEach(v -> map.put(v.getName(), v));
+    aggregatorSpecs.forEach(v -> map.put(v.getName(), v));
     return map;
   }
 
