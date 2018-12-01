@@ -1225,16 +1225,4 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
     return startTime;
   }
 
-  @Override
-  protected SequenceMetadata createSequenceMetadata(
-      int sequenceId,
-      String sequenceName,
-      Map<Integer, Long> startOffsets,
-      Map<Integer, Long> endOffsets,
-      boolean checkpointed,
-      Set<Integer> exclusiveStartPartitions
-  )
-  {
-    throw new UnsupportedOperationException();
-  }
 }

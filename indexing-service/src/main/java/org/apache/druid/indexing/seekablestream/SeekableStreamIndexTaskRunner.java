@@ -283,7 +283,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
         Map.Entry<Integer, Map<PartitionType, SequenceType>> previous = sequenceOffsets.next();
         while (sequenceOffsets.hasNext()) {
           Map.Entry<Integer, Map<PartitionType, SequenceType>> current = sequenceOffsets.next();
-          sequences.add(createSequenceMetadata(
+          sequences.add(new SequenceMetadata(
               previous.getKey(),
               StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
               previous.getValue(),
@@ -294,7 +294,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
           previous = current;
           exclusive = true;
         }
-        sequences.add(createSequenceMetadata(
+        sequences.add(new SequenceMetadata(
             previous.getKey(),
             StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
             previous.getValue(),
@@ -303,7 +303,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
             exclusive ? previous.getValue().keySet() : null
         ));
       } else {
-        sequences.add(createSequenceMetadata(
+        sequences.add(new SequenceMetadata(
             0,
             StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), 0),
             ioConfig.getStartPartitions().getPartitionSequenceNumberMap(),
@@ -1493,7 +1493,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
           exclusiveStartingPartitions.addAll(exclusivePartitions);
 
           // create new sequence
-          final SequenceMetadata newSequence = createSequenceMetadata(
+          final SequenceMetadata newSequence = new SequenceMetadata(
               latestSequence.getSequenceId() + 1,
               StringUtils.format("%s_%d", ioConfig.getBaseSequenceName(), latestSequence.getSequenceId() + 1),
               sequenceNumbers,
@@ -1654,16 +1654,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
     return startTime;
   }
 
-  protected abstract SequenceMetadata createSequenceMetadata(
-      int sequenceId,
-      String sequenceName,
-      Map<PartitionType, SequenceType> startOffsets,
-      Map<PartitionType, SequenceType> endOffsets,
-      boolean checkpointed,
-      Set<PartitionType> exclusiveStartingPartitions
-  );
-
-  protected abstract class SequenceMetadata
+  private class SequenceMetadata
   {
     private final int sequenceId;
     private final String sequenceName;
@@ -1790,12 +1781,35 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       }
     }
 
-    protected boolean isOpen()
+    boolean isOpen()
     {
       return !assignments.isEmpty();
     }
 
-    protected abstract boolean canHandle(OrderedPartitionableRecord<PartitionType, SequenceType> record);
+    boolean canHandle(OrderedPartitionableRecord<PartitionType, SequenceType> record)
+    {
+      lock.lock();
+      try {
+        final OrderedSequenceNumber<SequenceType> partitionEndOffset = createSequenceNumber(endOffsets.get(record.getPartitionId()));
+        final OrderedSequenceNumber<SequenceType> partitionStartOffset = createSequenceNumber(startOffsets.get(record.getPartitionId()));
+        final OrderedSequenceNumber<SequenceType> recordOffset = createSequenceNumber(record.getSequenceNumber());
+        if (!isOpen() || recordOffset == null || partitionEndOffset == null || partitionStartOffset == null) {
+          return false;
+        }
+        if (getRunnerType() == Type.KINESIS) {
+          return recordOffset.compareTo(partitionStartOffset)
+                 >= (getExclusiveStartPartitions().contains(record.getPartitionId()) ? 1 : 0)
+                 && recordOffset.compareTo(partitionEndOffset) <= 0;
+        } else {
+          return recordOffset.compareTo(partitionStartOffset) >= 0
+                 && recordOffset.compareTo(partitionEndOffset) < 0;
+
+        }
+      }
+      finally {
+        lock.unlock();
+      }
+    }
 
     @Override
     public String toString()

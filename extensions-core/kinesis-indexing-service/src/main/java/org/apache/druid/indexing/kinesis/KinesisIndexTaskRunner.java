@@ -43,7 +43,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String>
@@ -122,26 +121,6 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
     return Type.KINESIS;
   }
 
-  @Override
-  protected SequenceMetadata createSequenceMetadata(
-      int sequenceId,
-      String sequenceName,
-      Map<String, String> startOffsets,
-      Map<String, String> endOffsets,
-      boolean checkpointed,
-      Set<String> exclusiveStartPartitions
-  )
-  {
-    return new KinesisSequenceMetaData(
-        sequenceId,
-        sequenceName,
-        startOffsets,
-        endOffsets,
-        checkpointed,
-        exclusiveStartPartitions
-    );
-  }
-
   @Nullable
   @Override
   protected TreeMap<Integer, Map<String, String>> getCheckPointsFromContext(
@@ -162,44 +141,5 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       return null;
     }
   }
-
-  private class KinesisSequenceMetaData extends SequenceMetadata
-  {
-
-    KinesisSequenceMetaData(
-        int sequenceId,
-        String sequenceName,
-        Map<String, String> startOffsets,
-        Map<String, String> endOffsets,
-        boolean checkpointed,
-        Set<String> exclusiveStartPartitions
-    )
-    {
-      super(sequenceId, sequenceName, startOffsets, endOffsets, checkpointed, exclusiveStartPartitions);
-    }
-
-    @Override
-    protected boolean canHandle(OrderedPartitionableRecord<String, String> record)
-    {
-      lock.lock();
-      try {
-        final OrderedSequenceNumber<String> partitionEndOffset = createSequenceNumber(endOffsets.get(record.getPartitionId()));
-        final OrderedSequenceNumber<String> partitionStartOffset = createSequenceNumber(startOffsets.get(record.getPartitionId()));
-        final OrderedSequenceNumber<String> recordOffset = createSequenceNumber(record.getSequenceNumber());
-        return isOpen()
-               && recordOffset != null
-               && partitionEndOffset != null
-               && partitionStartOffset != null
-               && recordOffset.compareTo(partitionStartOffset)
-                  >= (getExclusiveStartPartitions().contains(record.getPartitionId()) ? 1 : 0)
-               && recordOffset.compareTo(partitionEndOffset) <= 0;
-      }
-      finally {
-        lock.unlock();
-      }
-    }
-
-  }
-
 
 }
