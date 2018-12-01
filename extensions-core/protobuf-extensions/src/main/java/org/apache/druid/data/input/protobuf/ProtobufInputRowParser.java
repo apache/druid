@@ -22,6 +22,7 @@ package org.apache.druid.data.input.protobuf;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -53,7 +54,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
   private final ParseSpec parseSpec;
   private final String descriptorFilePath;
   private final String protoMessageType;
-  private final Descriptor descriptor;
+  private Descriptor descriptor;
   private Parser<String, Object> parser;
   private final List<String> dimensions;
 
@@ -67,7 +68,6 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     this.parseSpec = parseSpec;
     this.descriptorFilePath = descriptorFilePath;
     this.protoMessageType = protoMessageType;
-    this.descriptor = getDescriptor(descriptorFilePath);
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
   }
 
@@ -83,6 +83,14 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     return new ProtobufInputRowParser(parseSpec, descriptorFilePath, protoMessageType);
   }
 
+  @VisibleForTesting
+  void initDescriptor()
+  {
+    if (this.descriptor == null) {
+      this.descriptor = getDescriptor(descriptorFilePath);
+    }
+  }
+
   @Override
   public List<InputRow> parseBatch(ByteBuffer input)
   {
@@ -90,6 +98,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
       // parser should be created when it is really used to avoid unnecessary initialization of the underlying
       // parseSpec.
       parser = parseSpec.makeParser();
+      initDescriptor();
     }
     String json;
     try {

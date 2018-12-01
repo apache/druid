@@ -194,6 +194,8 @@ public class QueryResource implements QueryCountStatsProvider
       final String prevEtag = getPreviousEtag(req);
 
       if (prevEtag != null && prevEtag.equals(responseContext.get(HEADER_ETAG))) {
+        queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
+        successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
       }
 

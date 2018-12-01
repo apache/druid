@@ -277,6 +277,12 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
+  public void removeTasksOlderThan(long timestamp)
+  {
+    handler.removeTasksOlderThan(timestamp);
+  }
+
+  @Override
   public List<TaskLock> getLocks(String taskid)
   {
     return ImmutableList.copyOf(

@@ -405,7 +405,7 @@ Endpoint for submitting tasks and supervisor specs to the overlord. Returns the 
 
 Shuts down a task.
 
-* `druid/indexer/v1/task/{dataSource}/shutdownAllTasks`
+* `druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
 
 Shuts down all tasks for a dataSource.
 

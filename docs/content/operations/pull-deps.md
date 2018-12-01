@@ -112,8 +112,6 @@ extensions
 │   ├── twitter4j-core-3.0.3.jar
 │   └── twitter4j-stream-3.0.3.jar
 └── mysql-metadata-storage
-    ├── jdbi-2.32.jar
-    ├── mysql-connector-java-5.1.34.jar
     └── mysql-metadata-storage-#{DRUIDVERSION}.jar
 ```
 
