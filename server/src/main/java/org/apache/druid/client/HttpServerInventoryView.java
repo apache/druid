@@ -390,6 +390,10 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     synchronized (servers) {
       DruidServerHolder holder = servers.get(server.getName());
       if (holder == null) {
+        if (!finalPredicate.apply(Pair.of(server.getMetadata(), null))) {
+          log.debug("Server[%s] is not added due to not match filter.", server.getName());
+          return;
+        }
         log.info("Server[%s] appeared.", server.getName());
         holder = new DruidServerHolder(server);
         servers.put(server.getName(), holder);
