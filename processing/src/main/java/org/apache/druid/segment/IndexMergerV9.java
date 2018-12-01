@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -796,6 +797,41 @@ public class IndexMergerV9 implements IndexMerger
         progress,
         segmentWriteOutMediumFactory
     );
+  }
+
+  @Override
+  public File mergeSegmentFiles(
+      File[] segmentFiles,
+      boolean rollup,
+      AggregatorFactory[] metricAggs,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException
+  {
+    List<QueryableIndex> indexes = Lists.transform(Arrays.asList(segmentFiles), input -> {
+      try {
+        return indexIO.loadIndex(input);
+      }
+      catch (IOException e) {
+        Throwables.propagate(e);
+      }
+      return null;
+    });
+
+    try {
+      return mergeQueryableIndex(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), segmentWriteOutMediumFactory);
+    }
+    finally {
+      for (QueryableIndex index : indexes) {
+        try {
+          index.close();
+        }
+        catch (Exception e) {
+          log.warn(e, "failed to close index when merge");
+        }
+      }
+    }
   }
 
   @Override

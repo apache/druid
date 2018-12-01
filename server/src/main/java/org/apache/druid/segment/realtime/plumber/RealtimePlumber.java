@@ -430,8 +430,20 @@ public class RealtimePlumber implements Plumber
                   closer.register(segmentAndCloseable.rhs);
                 }
 
-                mergedFile = indexMerger.mergeQueryableIndex(
-                    indexes,
+                File[] hydrantDirs = persistDir.listFiles(
+                    new FilenameFilter()
+                    {
+                      @Override
+                      public boolean accept(File dir, String fileName)
+                      {
+                        // To avoid reading and listing of "merged" dir
+                        return !(Ints.tryParse(fileName) == null);
+                      }
+                    }
+                );
+
+                mergedFile = indexMerger.mergeSegmentFiles(
+                    hydrantDirs,
                     schema.getGranularitySpec().isRollup(),
                     schema.getAggregators(),
                     mergedTarget,

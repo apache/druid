@@ -82,6 +82,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -716,8 +717,20 @@ public class AppenderatorImpl implements Appenderator
           closer.register(segmentAndCloseable.rhs);
         }
 
-        mergedFile = indexMerger.mergeQueryableIndex(
-            indexes,
+        File[] hydrantDirs = persistDir.listFiles(
+            new FilenameFilter()
+            {
+              @Override
+              public boolean accept(File dir, String fileName)
+              {
+                // To avoid reading and listing of "merged" dir
+                return !(Ints.tryParse(fileName) == null);
+              }
+            }
+        );
+
+        mergedFile = indexMerger.mergeSegmentFiles(
+            hydrantDirs,
             schema.getGranularitySpec().isRollup(),
             schema.getAggregators(),
             mergedTarget,

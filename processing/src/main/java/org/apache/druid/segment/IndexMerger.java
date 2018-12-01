@@ -189,6 +189,15 @@ public interface IndexMerger
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
+  File mergeSegmentFiles(
+      File[] segmentFiles,
+      boolean rollup,
+      final AggregatorFactory[] metricAggs,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
+
   File mergeQueryableIndex(
       List<QueryableIndex> indexes,
       boolean rollup,
