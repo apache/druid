@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
@@ -125,20 +126,10 @@ public class OverlordResourceTest
     );
   }
 
-  private void expectAuthorizationTokenCheck()
+  @After
+  public void tearDown()
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
-            .anyTimes();
-
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
-    EasyMock.expectLastCall().anyTimes();
-
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.verify(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
   }
 
   @Test
@@ -916,10 +907,88 @@ public class OverlordResourceTest
     Assert.assertEquals(new TaskStatusResponse("othertask", null), taskStatusResponse2);
   }
 
-  @After
-  public void tearDown()
+  @Test
+  public void testShutdownTask()
   {
-    EasyMock.verify(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+    // This is disabled since OverlordResource.doShutdown is annotated with TaskResourceFilter
+    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // expectAuthorizationTokenCheck();
+    TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
+        Optional.of(taskRunner)
+    ).anyTimes();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(
+        Optional.of(mockQueue)
+    ).anyTimes();
+    mockQueue.shutdown("id_1", "Shutdown request from user");
+    EasyMock.expectLastCall();
+
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req, mockQueue);
+
+    final Map<String, Integer> response = (Map<String, Integer>) overlordResource
+        .doShutdown("id_1")
+        .getEntity();
+    Assert.assertEquals("id_1", response.get("task"));
+  }
+
+  @Test
+  public void testShutdownAllTasks()
+  {
+    // This is disabled since OverlordResource.shutdownTasksForDataSource is annotated with DatasourceResourceFilter
+    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // expectAuthorizationTokenCheck();
+    TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
+        Optional.of(taskRunner)
+    ).anyTimes();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(
+        Optional.of(mockQueue)
+    ).anyTimes();
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo("datasource")).andStubReturn(ImmutableList.of(
+        new TaskInfo(
+            "id_1",
+            DateTime.now(ISOChronology.getInstanceUTC()),
+            TaskStatus.success("id_1"),
+            "datasource",
+            getTaskWithIdAndDatasource("id_1", "datasource")
+        ),
+        new TaskInfo(
+            "id_2",
+            DateTime.now(ISOChronology.getInstanceUTC()),
+            TaskStatus.success("id_2"),
+            "datasource",
+            getTaskWithIdAndDatasource("id_2", "datasource")
+        )
+    ));
+    mockQueue.shutdown("id_1", "Shutdown request from user");
+    EasyMock.expectLastCall();
+    mockQueue.shutdown("id_2", "Shutdown request from user");
+    EasyMock.expectLastCall();
+
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req, mockQueue);
+
+    final Map<String, Integer> response = (Map<String, Integer>) overlordResource
+        .shutdownTasksForDataSource("datasource")
+        .getEntity();
+    Assert.assertEquals("datasource", response.get("dataSource"));
+  }
+
+  private void expectAuthorizationTokenCheck()
+  {
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(authenticationResult)
+            .atLeastOnce();
+
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
+    EasyMock.expectLastCall().anyTimes();
+
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
   }
 
   private Task getTaskWithIdAndDatasource(String id, String datasource)
@@ -975,5 +1044,4 @@ public class OverlordResourceTest
     }
 
   }
-
 }
