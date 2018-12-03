@@ -36,7 +36,6 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 
@@ -53,7 +52,6 @@ public class JavaScriptDimFilter implements DimFilter
    * on the fields of the created object
    */
   @MonotonicNonNull
-  @Nullable
   private volatile JavaScriptPredicateFactory predicateFactory;
 
   @JsonCreator

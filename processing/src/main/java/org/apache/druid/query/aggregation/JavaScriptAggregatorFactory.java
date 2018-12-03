@@ -41,7 +41,6 @@ import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
-import javax.annotation.Nullable;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -69,7 +68,6 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
    * on the fields of the created object
    */
   @MonotonicNonNull
-  @Nullable
   private volatile ScriptAggregator compiledScript;
 
   @JsonCreator

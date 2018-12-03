@@ -34,7 +34,6 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
 
-import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -96,7 +95,6 @@ public class JavaScriptPostAggregator implements PostAggregator
    * on the fields of the created object
    */
   @MonotonicNonNull
-  @Nullable
   private volatile Function fn;
 
   @JsonCreator

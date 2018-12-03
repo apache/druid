@@ -77,7 +77,6 @@ public class JavaScriptExtractionFn implements ExtractionFn
    * on the fields of the created object
    */
   @MonotonicNonNull
-  @Nullable
   private volatile Function<Object, String> fn;
 
   @JsonCreator
