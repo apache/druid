@@ -51,8 +51,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static org.apache.druid.query.aggregation.JavaScriptAggregator.ScriptAggregator;
-
 public class JavaScriptAggregatorFactory extends AggregatorFactory
 {
   private final String name;
@@ -67,8 +65,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
    * in {@link #compileScript(String, String, String)} without worrying about final modifiers
    * on the fields of the created object
    */
-  @MonotonicNonNull
-  private volatile ScriptAggregator compiledScript;
+  private volatile JavaScriptAggregator.@MonotonicNonNull ScriptAggregator compiledScript;
 
   @JsonCreator
   public JavaScriptAggregatorFactory(
@@ -293,13 +290,13 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
    * script compilation.
    */
   @EnsuresNonNull("compiledScript")
-  private ScriptAggregator getCompiledScript()
+  private JavaScriptAggregator.ScriptAggregator getCompiledScript()
   {
     // JavaScript configuration should be checked when it's actually used because someone might still want Druid
     // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
     Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
-    ScriptAggregator syncedCompiledScript = compiledScript;
+    JavaScriptAggregator.ScriptAggregator syncedCompiledScript = compiledScript;
     if (syncedCompiledScript == null) {
       synchronized (config) {
         syncedCompiledScript = compiledScript;
@@ -313,7 +310,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   }
 
   @VisibleForTesting
-  static ScriptAggregator compileScript(
+  static JavaScriptAggregator.ScriptAggregator compileScript(
       final String aggregate,
       final String reset,
       final String combine
@@ -330,7 +327,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     final Function fnCombine = context.compileFunction(scope, combine, "combine", 1, null);
     Context.exit();
 
-    return new ScriptAggregator()
+    return new JavaScriptAggregator.ScriptAggregator()
     {
       @Override
       public double aggregate(final double current, final BaseObjectColumnValueSelector[] selectorList)
