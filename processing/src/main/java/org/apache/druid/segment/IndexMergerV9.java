@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -814,9 +813,8 @@ public class IndexMergerV9 implements IndexMerger
         return indexIO.loadIndex(input);
       }
       catch (IOException e) {
-        Throwables.propagate(e);
+        throw new ISE(e, "load index %s failed!?", input.getAbsolutePath());
       }
-      return null;
     });
 
     try {
