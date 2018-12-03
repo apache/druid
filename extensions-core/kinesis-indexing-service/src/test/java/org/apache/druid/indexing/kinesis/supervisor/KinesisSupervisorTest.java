@@ -2812,7 +2812,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointForInactiveTaskGroup()
-      throws InterruptedException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+      throws InterruptedException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException,
+             ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
