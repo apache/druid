@@ -88,7 +88,7 @@ public class CompressionUtils
           final FileChannel fileChannel = FileChannel.open(
               outputZipFile.toPath(),
               StandardOpenOption.WRITE,
-              StandardOpenOption.CREATE_NEW
+              StandardOpenOption.CREATE
           );
           final OutputStream out = Channels.newOutputStream(fileChannel)
       ) {
