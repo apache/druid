@@ -20,14 +20,22 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.rules.IntervalDropRule;
+import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -37,6 +45,10 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.NumberedPartitionChunk;
+import org.apache.druid.timeline.partition.PartitionHolder;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -156,6 +168,7 @@ public class DatasourcesResourceTest
         inventoryView,
         null,
         null,
+        null,
         new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
@@ -240,6 +253,7 @@ public class DatasourcesResourceTest
         inventoryView,
         null,
         null,
+        null,
         new AuthConfig(),
         authMapper
     );
@@ -294,6 +308,7 @@ public class DatasourcesResourceTest
         inventoryView,
         null,
         null,
+        null,
         new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
@@ -323,7 +338,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(), null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
     Response response = datasourcesResource.getTheDataSource("datasource1", "full");
     ImmutableDruidDataSource result = (ImmutableDruidDataSource) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
@@ -340,7 +355,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(), null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
     Assert.assertEquals(204, datasourcesResource.getTheDataSource("none", null).getStatus());
     EasyMock.verify(inventoryView, server);
   }
@@ -361,7 +376,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(), null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
     Response response = datasourcesResource.getTheDataSource("datasource1", null);
     Assert.assertEquals(200, response.getStatus());
     Map<String, Map<String, Object>> result = (Map<String, Map<String, Object>>) response.getEntity();
@@ -400,7 +415,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server, server2, server3);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(), null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
     Response response = datasourcesResource.getTheDataSource("datasource1", null);
     Assert.assertEquals(200, response.getStatus());
     Map<String, Map<String, Object>> result = (Map<String, Map<String, Object>>) response.getEntity();
@@ -431,7 +446,7 @@ public class DatasourcesResourceTest
     List<Interval> expectedIntervals = new ArrayList<>();
     expectedIntervals.add(Intervals.of("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
     expectedIntervals.add(Intervals.of("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(), null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
 
     Response response = datasourcesResource.getSegmentDataSourceIntervals("invalidDataSource", null, null);
     Assert.assertEquals(response.getEntity(), null);
@@ -478,7 +493,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
     EasyMock.replay(inventoryView);
 
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(), null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
     Response response = datasourcesResource.getSegmentDataSourceSpecificInterval(
         "invalidDataSource",
         "2010-01-01/P1D",
@@ -548,6 +563,7 @@ public class DatasourcesResourceTest
     DatasourcesResource datasourcesResource = new DatasourcesResource(
         inventoryView,
         null,
+        null,
         indexingServiceClient,
         new AuthConfig(),
         null
@@ -567,6 +583,7 @@ public class DatasourcesResourceTest
     DatasourcesResource datasourcesResource = new DatasourcesResource(
         inventoryView,
         null,
+        null,
         indexingServiceClient,
         new AuthConfig(),
         null
@@ -579,4 +596,101 @@ public class DatasourcesResourceTest
     EasyMock.verify(indexingServiceClient, server);
   }
 
+  @Test
+  public void testGetSegmentServerview()
+  {
+    MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null);
+    Rule dropRule = new IntervalDropRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"));
+    DatasourcesResource datasourcesResource = new DatasourcesResource(
+        inventoryView,
+        null,
+        databaseRuleManager,
+        null,
+        new AuthConfig(),
+        null
+    );
+
+    // test dropped
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
+            .andReturn(ImmutableList.of(loadRule, dropRule))
+            .once();
+    EasyMock.replay(databaseRuleManager);
+
+    String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
+    Response response1 = datasourcesResource.getSegmentServerview("dataSource1", interval1, true);
+    Assert.assertEquals(
+        ImmutableMap.of("dropped", true, "segmentLoadInfo", new ArrayList<ImmutableSegmentLoadInfo>()),
+        response1.getEntity()
+    );
+
+    EasyMock.verify(databaseRuleManager);
+
+    // test isn't dropped and no timeline found
+    EasyMock.reset(databaseRuleManager);
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
+            .andReturn(ImmutableList.of(loadRule, dropRule))
+            .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource("dataSource1")))
+            .andReturn(null)
+            .once();
+    EasyMock.replay(inventoryView, databaseRuleManager);
+
+    String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
+    Response response2 = datasourcesResource.getSegmentServerview("dataSource1", interval2, true);
+    Assert.assertEquals(
+        ImmutableMap.of("dropped", false, "segmentLoadInfo", new ArrayList<ImmutableSegmentLoadInfo>()),
+        response2.getEntity()
+    );
+
+    EasyMock.verify(inventoryView, databaseRuleManager);
+
+    // test isn't dropped and timeline exist
+    String interval3 = "2013-01-02T02:00:00Z/2013-01-02T03:00:00Z";
+    SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(new DataSegment(
+        "dataSource1",
+        Intervals.of(interval3),
+        "v1",
+        null,
+        null,
+        null,
+        null,
+        1,
+        1L
+    ));
+    VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = new VersionedIntervalTimeline<String, SegmentLoadInfo>(
+        null)
+    {
+      @Override
+      public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval interval)
+      {
+        PartitionHolder<SegmentLoadInfo> partitionHolder = new PartitionHolder<>(new NumberedPartitionChunk<>(
+            1,
+            1,
+            segmentLoadInfo
+        ));
+        List<TimelineObjectHolder<String, SegmentLoadInfo>> ret = new ArrayList<>();
+        ret.add(new TimelineObjectHolder<>(Intervals.of(interval3), "v1", partitionHolder));
+        return ret;
+      }
+    };
+    EasyMock.reset(inventoryView, databaseRuleManager);
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
+            .andReturn(ImmutableList.of(loadRule, dropRule))
+            .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource("dataSource1")))
+            .andReturn(timeline)
+            .once();
+    EasyMock.replay(inventoryView, databaseRuleManager);
+
+    Response response3 = datasourcesResource.getSegmentServerview("dataSource1", interval3, true);
+    List<ImmutableSegmentLoadInfo> loadInfoList = new ArrayList<>();
+    loadInfoList.add(segmentLoadInfo.toImmutableSegmentLoadInfo());
+    Assert.assertEquals(
+        ImmutableMap.of("dropped", false, "segmentLoadInfo", loadInfoList),
+        response3.getEntity()
+    );
+
+    EasyMock.verify(inventoryView, databaseRuleManager);
+  }
 }

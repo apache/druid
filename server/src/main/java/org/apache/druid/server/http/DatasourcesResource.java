@@ -21,6 +21,7 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.CoordinatorServerView;
@@ -37,8 +38,11 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSegmentManager;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.server.coordinator.rules.LoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -85,6 +89,7 @@ public class DatasourcesResource
 
   private final CoordinatorServerView serverInventoryView;
   private final MetadataSegmentManager databaseSegmentManager;
+  private final MetadataRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
@@ -93,6 +98,7 @@ public class DatasourcesResource
   public DatasourcesResource(
       CoordinatorServerView serverInventoryView,
       MetadataSegmentManager databaseSegmentManager,
+      MetadataRuleManager databaseRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper
@@ -100,6 +106,7 @@ public class DatasourcesResource
   {
     this.serverInventoryView = serverInventoryView;
     this.databaseSegmentManager = databaseSegmentManager;
+    this.databaseRuleManager = databaseRuleManager;
     this.indexingServiceClient = indexingServiceClient;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
@@ -620,23 +627,49 @@ public class DatasourcesResource
   @Path("/{dataSourceName}/intervals/{interval}/serverview")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentDataSourceSpecificInterval(
+  public Response getSegmentServerview(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("interval") String interval,
       @QueryParam("partial") final boolean partial
   )
   {
+    final List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSourceName);
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
+    final DateTime now = DateTimes.nowUtc();
+    // init to true, reset to false only if segments inside this interval can be loaded by rules
+    boolean dropped = true;
+    for (Rule rule : rules) {
+      if (rule.appliesTo(theInterval, now)) {
+        if (rule instanceof LoadRule) {
+          dropped = false;
+        }
+        break;
+      }
+    }
+    if (dropped) {
+      return Response.ok(ImmutableMap.of(
+          "dropped",
+          true,
+          "segmentLoadInfo",
+          new ArrayList<ImmutableSegmentLoadInfo>()
+      )).build();
+    }
+
     TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
         new TableDataSource(dataSourceName)
     );
-    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     if (timeline == null) {
       log.debug("No timeline found for datasource[%s]", dataSourceName);
-      return Response.ok(new ArrayList<ImmutableSegmentLoadInfo>()).build();
+      return Response.ok(ImmutableMap.of(
+          "dropped",
+          false,
+          "segmentLoadInfo",
+          new ArrayList<ImmutableSegmentLoadInfo>()
+      )).build();
     }
 
     Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(theInterval);
-    FunctionalIterable<ImmutableSegmentLoadInfo> retval = FunctionalIterable
+    FunctionalIterable<ImmutableSegmentLoadInfo> loadInfo = FunctionalIterable
         .create(lookup).transformCat(
             (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
                 Iterables.transform(
@@ -645,6 +678,6 @@ public class DatasourcesResource
                         chunk.getObject().toImmutableSegmentLoadInfo()
                 )
         );
-    return Response.ok(retval).build();
+    return Response.ok(ImmutableMap.of("dropped", false, "segmentLoadInfo", Lists.newArrayList(loadInfo))).build();
   }
 }

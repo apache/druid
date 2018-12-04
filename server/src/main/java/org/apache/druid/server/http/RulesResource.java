@@ -25,14 +25,11 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.rules.DropRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.RulesResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -153,30 +150,6 @@ public class RulesResource
                      .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
                      .build();
     }
-  }
-
-  @GET
-  @Path("/{dataSourceName}/intervals/{interval}/dropped")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(RulesResourceFilter.class)
-  public Response isSpecificIntervalDroppedByRule(
-      @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("interval") String interval
-  )
-  {
-    final List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSourceName);
-    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
-    final DateTime now = DateTimes.nowUtc();
-    boolean dropped = false;
-    for (Rule rule : rules) {
-      if (rule.appliesTo(theInterval, now)) {
-        if (rule instanceof DropRule) {
-          dropped = true;
-        }
-        break;
-      }
-    }
-    return Response.ok(dropped).build();
   }
 
   private List<AuditEntry> getRuleHistory(

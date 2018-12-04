@@ -95,9 +95,15 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry = itr.next();
         SegmentDescriptor descriptor = entry.getKey();
         try {
-          if (coordinatorClient.isSpecificIntervalDroppedByRule(dataSource, descriptor.getInterval())) {
+          Map<String, Object> segmentServerview = coordinatorClient.fetchServerView(
+              dataSource,
+              descriptor.getInterval(),
+              true
+          );
+
+          if ((boolean) segmentServerview.get("dropped")) {
             log.info(
-                "Segment already dropped by drop rules for dataSource[%s] Segment[%s], ignore it!",
+                "Segment already dropped by drop rules or there are no load rules to load it for dataSource[%s] Segment[%s], so ignore it!",
                 dataSource,
                 descriptor
             );
@@ -106,13 +112,10 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
             continue;
           }
 
-          List<ImmutableSegmentLoadInfo> loadedSegments = coordinatorClient.fetchServerView(
-              dataSource,
-              descriptor.getInterval(),
-              true
-          );
-
-          if (isHandOffComplete(loadedSegments, entry.getKey())) {
+          if (isHandOffComplete(
+              (List<ImmutableSegmentLoadInfo>) segmentServerview.get("segmentLoadInfo"),
+              entry.getKey()
+          )) {
             log.info("Segment Handoff complete for dataSource[%s] Segment[%s]", dataSource, descriptor);
             entry.getValue().lhs.execute(entry.getValue().rhs);
             itr.remove();
@@ -143,9 +146,9 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   }
 
 
-  static boolean isHandOffComplete(List<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
+  static boolean isHandOffComplete(List<ImmutableSegmentLoadInfo> loadInfoList, SegmentDescriptor descriptor)
   {
-    for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : loadInfoList) {
       if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum()
              == descriptor.getPartitionNumber()
@@ -156,6 +159,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
             @Override
             public boolean apply(DruidServerMetadata input)
             {
+              boolean xx = input.segmentReplicatable();
               return input.segmentReplicatable();
             }
           }

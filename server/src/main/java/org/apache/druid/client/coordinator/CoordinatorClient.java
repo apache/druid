@@ -33,6 +33,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Map;
 
 public class CoordinatorClient
 {
@@ -49,17 +50,20 @@ public class CoordinatorClient
     this.druidLeaderClient = druidLeaderClient;
   }
 
-  public List<ImmutableSegmentLoadInfo> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
+
+  public Map<String, Object> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
   {
     try {
       FullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET,
-                                        StringUtils.format(
-                                           "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
-                                           dataSource,
-                                           interval.toString().replace('/', '_'),
-                                           incompleteOk
-                                       ))
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format(
+                  "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
+                  dataSource,
+                  interval.toString().replace('/', '_'),
+                  incompleteOk
+              )
+          )
       );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -69,44 +73,23 @@ public class CoordinatorClient
             response.getContent()
         );
       }
-      return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
-          {
 
+      Map<String, Object> result = jsonMapper.readValue(
+          response.getContent(), new TypeReference<Map<String, Object>>()
+          {
           }
       );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public boolean isSpecificIntervalDroppedByRule(String dataSource, Interval interval)
-  {
-    try {
-      FullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(
-              HttpMethod.GET,
-              StringUtils.format(
-                  "/druid/coordinator/v1/rules/%s/intervals/%s/dropped",
-                  dataSource,
-                  interval.toString().replace('/', '_')
-              )
+      result.computeIfPresent(
+          "segmentLoadInfo",
+          (k, v) -> jsonMapper.convertValue(
+              result.get(k),
+              new TypeReference<List<ImmutableSegmentLoadInfo>>()
+              {
+              }
           )
       );
 
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while fetching information status[%s] content[%s]",
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-      return jsonMapper.readValue(
-          response.getContent(), new TypeReference<Boolean>()
-          {
-          }
-      );
+      return result;
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

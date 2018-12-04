@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.plumber;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
@@ -67,17 +68,14 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
 
     CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
-    EasyMock.expect(coordinatorClient.isSpecificIntervalDroppedByRule("test_ds", interval))
-            .andReturn(false)
-            .once();
     EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
             .andReturn(
-                Collections.singletonList(
+                ImmutableMap.of("dropped", false, "segmentLoadInfo", Collections.singletonList(
                     new ImmutableSegmentLoadInfo(
                         segment,
                         Sets.newHashSet(createRealtimeServerMetadata("a1"))
                     )
-                )
+                ))
             )
             .anyTimes();
     EasyMock.replay(coordinatorClient);
@@ -117,17 +115,15 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
     final AtomicBoolean callbackCalled = new AtomicBoolean(false);
     CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
-    EasyMock.expect(coordinatorClient.isSpecificIntervalDroppedByRule("test_ds", interval))
-            .andReturn(false)
-            .once();
+    // test isn't dropped
     EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
             .andReturn(
-                Collections.singletonList(
+                ImmutableMap.of("dropped", false, "segmentLoadInfo", Collections.singletonList(
                     new ImmutableSegmentLoadInfo(
                         segment,
                         Sets.newHashSet(createHistoricalServerMetadata("a1"))
                     )
-                )
+                ))
             )
             .anyTimes();
     EasyMock.replay(coordinatorClient);
@@ -150,10 +146,13 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     Assert.assertTrue(callbackCalled.get());
     EasyMock.verify(coordinatorClient);
 
+    // test dropped
     EasyMock.reset(coordinatorClient);
-    EasyMock.expect(coordinatorClient.isSpecificIntervalDroppedByRule("test_ds", interval))
-            .andReturn(true)
-            .once();
+    EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
+            .andReturn(
+                ImmutableMap.of("dropped", true)
+            )
+            .anyTimes();
     EasyMock.replay(coordinatorClient);
 
     notifier.registerSegmentHandoffCallback(
@@ -167,7 +166,6 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     // callback should have been removed
     Assert.assertTrue(notifier.getHandOffCallbacks().isEmpty());
     Assert.assertTrue(callbackCalled.get());
-
     EasyMock.verify(coordinatorClient);
   }
 
