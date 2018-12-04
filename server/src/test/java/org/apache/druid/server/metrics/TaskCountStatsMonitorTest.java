@@ -39,13 +39,13 @@ public class TaskCountStatsMonitorTest
       @Override
       public Map<String, Long> getSuccessfulTaskCount()
       {
-        return null;
+        return ImmutableMap.of("d1", 1L);
       }
 
       @Override
       public Map<String, Long> getFailedTaskCount()
       {
-        return null;
+        return ImmutableMap.of("d1", 1L);
       }
 
       @Override
@@ -57,13 +57,13 @@ public class TaskCountStatsMonitorTest
       @Override
       public Map<String, Long> getPendingTaskCount()
       {
-        return null;
+        return ImmutableMap.of("d1", 1L);
       }
 
       @Override
       public Map<String, Long> getWaitingTaskCount()
       {
-        return null;
+        return ImmutableMap.of("d1", 1L);
       }
     };
   }
@@ -74,8 +74,16 @@ public class TaskCountStatsMonitorTest
     final TaskCountStatsMonitor monitor = new TaskCountStatsMonitor(statsProvider);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getEvents().size());
-    Assert.assertEquals("task/running/count", emitter.getEvents().get(0).toMap().get("metric"));
+    Assert.assertEquals(5, emitter.getEvents().size());
+    Assert.assertEquals("task/success/count", emitter.getEvents().get(0).toMap().get("metric"));
     Assert.assertEquals(1L, emitter.getEvents().get(0).toMap().get("value"));
+    Assert.assertEquals("task/failed/count", emitter.getEvents().get(1).toMap().get("metric"));
+    Assert.assertEquals(1L, emitter.getEvents().get(1).toMap().get("value"));
+    Assert.assertEquals("task/running/count", emitter.getEvents().get(2).toMap().get("metric"));
+    Assert.assertEquals(1L, emitter.getEvents().get(2).toMap().get("value"));
+    Assert.assertEquals("task/pending/count", emitter.getEvents().get(3).toMap().get("metric"));
+    Assert.assertEquals(1L, emitter.getEvents().get(3).toMap().get("value"));
+    Assert.assertEquals("task/waiting/count", emitter.getEvents().get(4).toMap().get("metric"));
+    Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
   }
 }
